@@ -1,0 +1,74 @@
+From e951f0e6e47ab7b0ffe4df2de1120685a11cd63a Mon Sep 17 00:00:00 2001
+From: b0hemia <50309975+b0hemia@users.noreply.github.com>
+Date: Tue, 25 Aug 2026 00:02:46 +1000
+Subject: [PATCH 7/8] spl: strip board_init_f test scaffolding (keep bounded
+ polls + sdram diag as hardening)
+
+---
+ arch/mips/cpu/xburst2/x2000/soc.c | 21 ---------------------
+ 1 file changed, 21 deletions(-)
+
+diff --git a/arch/mips/cpu/xburst2/x2000/soc.c b/arch/mips/cpu/xburst2/x2000/soc.c
+index 6b96c5b..ab9e437 100755
+--- a/arch/mips/cpu/xburst2/x2000/soc.c
++++ b/arch/mips/cpu/xburst2/x2000/soc.c
+@@ -67,23 +67,11 @@ extern void ddr_test_refresh(unsigned int start_addr, unsigned int end_addr);
+ extern void flush_cache_all(void);
+ 
+ 
+-/* DIAG: breadcrumb record @0xb24017c0 (shared with ddr_innophy.c). Set 1 to early-return
+- * before sdram_init to prove the mask-ROM return path works in isolation. */
+-#define DIAG_SKIP_SDRAM 0
+-#define BIF_CRUMB(s) do { *(volatile unsigned int*)0xb24017c4 = (s); __asm__ __volatile__("sync"); } while(0)
+-
+ void board_init_f(ulong dummy)
+ {
+ 	/* Set global data pointer */
+ 	gd = &gdata;
+ 
+-	/* DIAG: mark that we reached board_init_f (magic + stage 0xF0) */
+-	*(volatile unsigned int*)0xb24017c0 = 0xD1A6C0DEu;
+-	*(volatile unsigned int*)0xb24017c8 = 0;
+-	*(volatile unsigned int*)0xb24017cc = 0;
+-	*(volatile unsigned int*)0xb24017d0 = 0;
+-	BIF_CRUMB(0xF0);
+-
+ 	/* Setup global info */
+ #ifndef CONFIG_BURNER
+ 	gd->arch.gi = &ginfo;
+@@ -92,7 +80,6 @@ void board_init_f(ulong dummy)
+ #endif
+ 
+ 	gpio_init();
+-	BIF_CRUMB(0xF1);
+ 
+ 	*(volatile unsigned int *)0xb0000020 = 0;	//clk gate enable.
+ 	*(volatile unsigned int *)0xb0000028 = 0;	//clk gate enable.
+@@ -106,24 +93,16 @@ void board_init_f(ulong dummy)
+ #endif
+ 	debug("Timer init\n");
+ 	timer_init();
+-	BIF_CRUMB(0xF2);
+ 
+ 	debug("CLK stop\n");
+ //	clk_prepare();
+ 
+ 	debug("PLL init\n");
+ 	pll_init();
+-	BIF_CRUMB(0xF3);
+ 
+ 	debug("CLK init\n");
+ 	clk_init();
+-	BIF_CRUMB(0xF4);
+ 
+-#if DIAG_SKIP_SDRAM
+-	/* DIAG: return before DDR to test the mask-ROM return path in isolation. */
+-	BIF_CRUMB(0xFE);
+-	return;
+-#endif
+ 
+ 	debug("SDRAM init\n");
+ 	sdram_init();
+-- 
+2.43.0
+

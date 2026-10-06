@@ -1,0 +1,149 @@
+From 15c4698350fdd6ef22a15ce8daaab4b332f9762a Mon Sep 17 00:00:00 2001
+From: b0hemia <50309975+b0hemia@users.noreply.github.com>
+Date: Mon, 24 Aug 2026 23:17:06 +1000
+Subject: [PATCH 3/8] ddr: instrument DDR bring-up with TCSM breadcrumbs +
+ bounded polls (diagnostic build)
+
+---
+ arch/mips/cpu/xburst2/ddr_innophy.c | 45 +++++++++++++++++++++++------
+ 1 file changed, 36 insertions(+), 9 deletions(-)
+
+diff --git a/arch/mips/cpu/xburst2/ddr_innophy.c b/arch/mips/cpu/xburst2/ddr_innophy.c
+index e08a5df..91cf6a3 100755
+--- a/arch/mips/cpu/xburst2/ddr_innophy.c
++++ b/arch/mips/cpu/xburst2/ddr_innophy.c
+@@ -46,6 +46,23 @@
+ #include <asm/io.h>
+ #include <asm/arch/clk.h>
+ #define CONFIG_DWC_DEBUG 0
++
++/* ---- DDR bring-up diagnostics (breadcrumbs to TCSM pad @0xb24017c0, below the
++ * start.S return-shim scratch at 0x17f0). usbboot uploads this region after the SPL
++ * returns to the mask ROM, so ONE device cycle localises any DDR-init stall.
++ * Layout: [0]=magic [1]=last stage reached [2]=first fail id [3]=status@fail [4]=fail count */
++#define DDR_DIAG        ((volatile unsigned int *)0xb24017c0)
++#define DDR_DIAG_MAGIC  0xD1A6C0DEu
++static inline void ddr_diag_init(void){ DDR_DIAG[0]=DDR_DIAG_MAGIC; DDR_DIAG[1]=0; DDR_DIAG[2]=0; DDR_DIAG[3]=0; DDR_DIAG[4]=0; __asm__ __volatile__("sync"); }
++static inline void ddr_diag_stage(unsigned int s){ DDR_DIAG[1]=s; __asm__ __volatile__("sync"); }
++static inline void ddr_diag_fail(unsigned int id, unsigned int status){ if(DDR_DIAG[2]==0){ DDR_DIAG[2]=id; DDR_DIAG[3]=status; } DDR_DIAG[4]++; __asm__ __volatile__("sync"); }
++/* bounded busy-wait: wait for (cond); on ~1e6-iter timeout record (id,statusexpr) and stop waiting
++ * (never spins forever, so the SPL always returns and the breadcrumb is readable). */
++#define DDR_BOUND(cond, id, statusexpr) do { \
++		unsigned int _bt = 1000000u; \
++		while(!(cond)) { if(!--_bt){ ddr_diag_fail((id), (unsigned int)(statusexpr)); break; } } \
++	} while(0)
++
+ #define ddr_hang() do{						\
+ 		printf("%s %d\n",__FUNCTION__,__LINE__);	\
+ 		hang();						\
+@@ -250,7 +267,7 @@ static void ddrp_pll_init(void)
+ 	ddr_writel(0, DDRP_INNOPHY_PLL_CTRL);
+ #endif
+ 
+-	while(!(ddr_readl(DDRP_INNOPHY_PLL_LOCK) & 1 << 3));
++	DDR_BOUND(ddr_readl(DDRP_INNOPHY_PLL_LOCK) & (1 << 3), 10 /*PLL_LOCK*/, ddr_readl(DDRP_INNOPHY_PLL_LOCK));
+ }
+ 
+ static void ddrp_register_cfg(void)
+@@ -311,14 +328,15 @@ static void ddrp_hardware_calibration(void)
+ 	unsigned int timeout = 1000000;
+ 	/* ddr_writel(ddr_readl(DDRP_INNOPHY_TRAINING_CTRL) | 1, DDRP_INNOPHY_TRAINING_CTRL); */
+ 	ddr_writel(1, DDRP_INNOPHY_TRAINING_CTRL);
++	/* bounded (fixes the original timeout-- unsigned wrap); diagnostic, no hang() */
+ 	do
+ 	{
+ 		val = ddr_readl(DDRP_INNOPHY_CALIB_DONE);
+-	} while (((val & 0xf) != 0x3) && timeout--);
++	} while (((val & 0xf) != 0x3) && --timeout);
+ 
+-	if(!timeout) {
+-		printf("timeout:INNOPHY_CALIB_DONE %x\n", ddr_readl(DDRP_INNOPHY_CALIB_DONE));
+-		hang();
++	if(((val & 0xf) != 0x3)) {
++		ddr_diag_fail(30 /*CALIB_DONE*/, val);
++		ddr_writel(0, DDRP_INNOPHY_TRAINING_CTRL); /* clear training on failure */
+ 	}
+ 
+ 	ddr_writel(0, DDRP_INNOPHY_TRAINING_CTRL);
+@@ -424,7 +442,7 @@ static void ddrc_dfi_init(enum ddr_type type, int bypass)
+ 	FUNC_ENTER();
+ 	ddr_writel(DDRC_DWCFG_DFI_INIT_START, DDRC_DWCFG); // dfi_init_start high
+ 	ddr_writel(0, DDRC_DWCFG); // set buswidth 16bit
+-	while(!(ddr_readl(DDRC_DWSTATUS) & DDRC_DWSTATUS_DFI_INIT_COMP)); //polling dfi_init_complete
++	DDR_BOUND(ddr_readl(DDRC_DWSTATUS) & DDRC_DWSTATUS_DFI_INIT_COMP, 20 /*DFI_INIT_COMP*/, ddr_readl(DDRC_DWSTATUS)); //polling dfi_init_complete
+ 
+ 	ddr_writel(0, DDRC_CTRL); //set dfi_reset_n high
+ 	ddr_writel(DDRC_CFG_VALUE, DDRC_CFG);
+@@ -496,8 +514,7 @@ static void ddr_calibration(struct ddr_calib_value *dcv, int div)
+ 	val = REG32(CPM_DDRCDR);
+ 	val |= ((1 << 29) | (1 << 25));
+ 	REG32(CPM_DDRCDR) = val;
+-	while((REG32(CPM_DDRCDR) & (1 << 24)))
+-		;
++	DDR_BOUND(!(REG32(CPM_DDRCDR) & (1 << 24)), 40 /*DDRCDR_BUSY*/, REG32(CPM_DDRCDR));
+ 	/* // Set clock divider */
+ 	val = REG32(CPM_DDRCDR);
+ 	val &= ~(0xf);
+@@ -505,7 +522,7 @@ static void ddr_calibration(struct ddr_calib_value *dcv, int div)
+ 	REG32(CPM_DDRCDR) = val;
+ 
+ 	// Polling PHY_FREQ_DONE
+-	while(((ddr_readl(DDRC_DWSTATUS) & (1 << 3 | 1 << 1)) & 0xf) != 0xa);
++	DDR_BOUND(((ddr_readl(DDRC_DWSTATUS) & (1 << 3 | 1 << 1)) & 0xf) == 0xa, 50 /*PHY_FREQ_DONE*/, ddr_readl(DDRC_DWSTATUS));
+ 	ddrp_hardware_calibration();
+ 	/* ddrp_software_calibration(); */
+ 
+@@ -567,6 +584,8 @@ void sdram_init(void)
+ 	int bypass = 0;
+ 
+ 	debug("sdram init start\n");
++	ddr_diag_init();            /* breadcrumb record @0xb24017c0 */
++	ddr_diag_stage(1);          /* entered sdram_init */
+ 
+ 	soc_ddr_init();
+ 
+@@ -582,26 +601,33 @@ void sdram_init(void)
+ 	rate = clk_get_rate(DDR);
+ 	debug("DDR clk rate %d\n", rate);
+ 
++	ddr_diag_stage(2);
+ 	ddrc_reset_phy();
+ 
++	ddr_diag_stage(3);
+ 	ddr_phy_init();
+ 	dump_ddrp_register();
+ 
++	ddr_diag_stage(4);
+ 	ddrc_dfi_init(type, bypass);
+ 
++	ddr_diag_stage(5);
+ 	ddrc_prev_init();
+ 
+ 	/**
+ 	 * bypass  = 1 or calibration = 0
+ 	 */
+ 	bypass = 0;
++	ddr_diag_stage(6);
+ 	ddrp_calibration(bypass);
+ 
++	ddr_diag_stage(7);
+ 	ddrc_post_init();
+ 
+ 	if(ddr_hook && ddr_hook->post_ddr_init)
+ 		ddr_hook->post_ddr_init(type);
+ 
++	ddr_diag_stage(8);
+ 	get_dynamic_calib_value(rate);
+ 
+ 	if(DDRC_AUTOSR_EN_VALUE) {
+@@ -616,6 +642,7 @@ void sdram_init(void)
+ 
+ 	dump_ddrc_register();
+ 	/* DDRC address remap configure*/
++	ddr_diag_stage(9);          /* 9 = sdram_init completed (success if no fail id recorded) */
+ 	debug("sdram init finished\n");
+ }
+ 
+-- 
+2.43.0
+

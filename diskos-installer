@@ -1,0 +1,21 @@
+#!/bin/sh
+# diskOS installer launcher. Runs the installer from source using the local .venv (created by
+# ./install.sh); falls back to the system python3 if no venv is present. Pass any subcommand
+# straight through, e.g.  ./diskos-installer doctor   or   ./diskos-installer gui
+set -eu
+HERE=$(CDPATH= cd "$(dirname "$0")" && pwd)
+
+if   [ -x "$HERE/.venv/bin/python" ];        then PY="$HERE/.venv/bin/python"
+elif [ -x "$HERE/.venv/Scripts/python.exe" ]; then PY="$HERE/.venv/Scripts/python.exe"
+elif command -v python3 >/dev/null 2>&1;      then PY=$(command -v python3)
+elif command -v python  >/dev/null 2>&1;      then PY=$(command -v python)
+else
+    echo "diskos-installer: no Python 3 found. Run ./install.sh first." >&2
+    exit 1
+fi
+
+# Make the diskos_installer package importable regardless of the caller's working directory,
+# without changing it (so relative --firmware paths still resolve against where the user is).
+PYTHONPATH="$HERE${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH
+exec "$PY" -m diskos_installer "$@"

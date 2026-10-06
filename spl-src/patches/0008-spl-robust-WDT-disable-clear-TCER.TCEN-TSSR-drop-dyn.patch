@@ -1,0 +1,52 @@
+From 7caf048bae01c31460d4d675a52823e5b62ff091 Mon Sep 17 00:00:00 2001
+From: b0hemia <50309975+b0hemia@users.noreply.github.com>
+Date: Tue, 25 Aug 2026 01:52:48 +1000
+Subject: [PATCH 8/8] spl: robust WDT disable (clear TCER.TCEN + TSSR) + drop
+ dynamic-calib sweep (flash-failure root cause)
+
+---
+ arch/mips/cpu/xburst2/ddr_innophy.c | 8 +++++++-
+ arch/mips/cpu/xburst2/x2000/soc.c   | 8 +++++++-
+ 2 files changed, 14 insertions(+), 2 deletions(-)
+
+diff --git a/arch/mips/cpu/xburst2/ddr_innophy.c b/arch/mips/cpu/xburst2/ddr_innophy.c
+index 4c7b921..b78c02b 100755
+--- a/arch/mips/cpu/xburst2/ddr_innophy.c
++++ b/arch/mips/cpu/xburst2/ddr_innophy.c
+@@ -626,7 +626,13 @@ void sdram_init(void)
+ 		ddr_hook->post_ddr_init(type);
+ 
+ 	ddr_diag_stage(8);
+-	get_dynamic_calib_value(rate);
++	/* Dropped get_dynamic_calib_value(rate): the vendor SPL does NOT do this multi-rate
++	 * DVFS calibration sweep. Its result table is never consumed by the burner/writer path,
++	 * and the extra frequency transitions + retraining can leave a marginal final PHY
++	 * calibration that fails under the writer's sustained full-DRAM load (2026-08-25). The
++	 * single ddrp_calibration() above already calibrates at the final 400MHz. */
++	/* get_dynamic_calib_value(rate); */
++	(void)rate;
+ 
+ 	if(DDRC_AUTOSR_EN_VALUE) {
+ 		/* ddr_writel(DDRC_AUTOSR_CNT_VALUE, DDRC_AUTOSR_CNT); */
+diff --git a/arch/mips/cpu/xburst2/x2000/soc.c b/arch/mips/cpu/xburst2/x2000/soc.c
+index ab9e437..6ea4b83 100755
+--- a/arch/mips/cpu/xburst2/x2000/soc.c
++++ b/arch/mips/cpu/xburst2/x2000/soc.c
+@@ -83,7 +83,13 @@ void board_init_f(ulong dummy)
+ 
+ 	*(volatile unsigned int *)0xb0000020 = 0;	//clk gate enable.
+ 	*(volatile unsigned int *)0xb0000028 = 0;	//clk gate enable.
+-	*(volatile unsigned int *)0xb000202c |= 1 << 16; // wdt disable.
++	/* Disable the watchdog ROBUSTLY (match the vendor SPL + the tree's hw_watchdog_disable):
++	 * clear WDT_TCER.TCEN FIRST, then stop the WDT clock via TCU_TSSR (write-1, no RMW).
++	 * The old code stopped only the clock, leaving the counter armed - if the mask ROM
++	 * re-clocks it after we return, it fires and resets the device mid-flash (root cause of
++	 * the 2026-08-25 flash failure: device reset ~36min into the writer and again idle). */
++	*(volatile unsigned int *)0xb0002004 &= ~(1u << 0);  // WDT_TCER.TCEN = 0 (disable counter)
++	*(volatile unsigned int *)0xb000202c  =  (1u << 16); // TCU_TSSR: stop WDT clock
+ 
+ 	/* Init uart first */
+ 	enable_uart_clk();
+-- 
+2.43.0
+

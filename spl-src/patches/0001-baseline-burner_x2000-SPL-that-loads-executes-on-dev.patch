@@ -1,0 +1,120 @@
+From 08f128d82f8e86dac5ca277d4fe4cc3fd7fef204 Mon Sep 17 00:00:00 2001
+From: b0hemia <50309975+b0hemia@users.noreply.github.com>
+Date: Mon, 24 Aug 2026 22:51:34 +1000
+Subject: [PATCH 1/8] baseline: burner_x2000 SPL that loads+executes on device
+ (-fcommon + mask-ROM return shim)
+
+---
+ arch/mips/cpu/xburst2/x2000/start.S |  23 +++++++++++++++++++++++
+ config.mk                           |   2 +-
+ tools/ingenic-tools/mmc_params      | Bin 0 -> 14472 bytes
+ 3 files changed, 24 insertions(+), 1 deletion(-)
+ create mode 100755 tools/ingenic-tools/mmc_params
+
+diff --git a/arch/mips/cpu/xburst2/x2000/start.S b/arch/mips/cpu/xburst2/x2000/start.S
+index caab455..2dcc1e2 100755
+--- a/arch/mips/cpu/xburst2/x2000/start.S
++++ b/arch/mips/cpu/xburst2/x2000/start.S
+@@ -167,6 +167,29 @@ cache_alloc_a_line:
+ 	li sp, 0x80001000
+ #endif
+ 
++#ifdef CONFIG_BURNER
++	/*
++	 * DDR-only USB stage-1 (burner mode): board_init_f() brings up clocks and
++	 * SDRAM and then RETURNS (see arch/mips/cpu/xburst2/x2000/soc.c, the
++	 * CONFIG_BURNER branch).  For usbboot to keep driving the USB session we
++	 * must hand control back to the mask ROM afterwards.  Preserve the mask-ROM
++	 * return address (and sp) in a fixed TCSM scratch slot across the call --
++	 * board_init_f repoints/uses the stack internally, so a stack-relative save
++	 * is not reliable for the outer return.  0xb24017f0 lies in the param/pad
++	 * region below the code (offset 0x800) and is untouched by DDR init.
++	 */
++	li	t0, 0xb24017f0
++	sw	ra, 0(t0)
++	sw	sp, 4(t0)
++	jal	board_init_f
++	nop
++	li	t0, 0xb24017f0
++	lw	ra, 0(t0)
++	lw	sp, 4(t0)
++	jr	ra
++	nop
++#else
+ 	j board_init_f
+ 	nop
++#endif
+ 
+diff --git a/config.mk b/config.mk
+index f71e145..d78be30 100755
+--- a/config.mk
++++ b/config.mk
+@@ -195,7 +195,7 @@ endif
+ ARFLAGS = $(error update your Makefile to use cmd_link_o_target and not AR)
+ RELFLAGS= $(PLATFORM_RELFLAGS)
+ DBGFLAGS= -g # -DDEBUG
+-OPTFLAGS= -Os #-fomit-frame-pointer
++OPTFLAGS= -Os -fcommon #-fomit-frame-pointer  (-fcommon: 2013 tree relies on tentative defs; GCC>=10 defaults -fno-common)
+ 
+ OBJCFLAGS += --gap-fill=0xff
+ 
+diff --git a/tools/ingenic-tools/mmc_params b/tools/ingenic-tools/mmc_params
+new file mode 100755
+index 0000000000000000000000000000000000000000..78adebd875be1ac2ec4d41c346622d76fea5e1c4
+GIT binary patch
+literal 14472
+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
+
+literal 0
+HcmV?d00001
+
+-- 
+2.43.0
+

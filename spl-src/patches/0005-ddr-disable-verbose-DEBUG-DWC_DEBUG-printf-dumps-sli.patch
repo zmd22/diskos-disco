@@ -1,0 +1,35 @@
+From f51bc90392b4c0dc42456d876a37dc05926db445 Mon Sep 17 00:00:00 2001
+From: b0hemia <50309975+b0hemia@users.noreply.github.com>
+Date: Mon, 24 Aug 2026 23:48:18 +1000
+Subject: [PATCH 5/8] ddr: disable verbose DEBUG/DWC_DEBUG printf dumps (slim
+ SPL, no UART-wait in DDR path)
+
+---
+ arch/mips/cpu/xburst2/ddr_innophy.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/mips/cpu/xburst2/ddr_innophy.c b/arch/mips/cpu/xburst2/ddr_innophy.c
+index c9b19f8..b394dad 100755
+--- a/arch/mips/cpu/xburst2/ddr_innophy.c
++++ b/arch/mips/cpu/xburst2/ddr_innophy.c
+@@ -21,7 +21,7 @@
+  * MA 02111-1307 USA
+  */
+ 
+-#define DEBUG
++/* #define DEBUG */   /* off: shrink SPL + remove printf UART-waits from DDR path (breadcrumbs replace it) */
+ /* #define DEBUG_READ_WRITE */
+ #include <config.h>
+ #include <common.h>
+@@ -45,7 +45,7 @@
+ #endif
+ #include <asm/io.h>
+ #include <asm/arch/clk.h>
+-#define CONFIG_DWC_DEBUG 0
++/* #define CONFIG_DWC_DEBUG 0 */  /* off: use the empty dump_ddr*_register() no-ops (shrinks SPL) */
+ 
+ /* ---- DDR bring-up diagnostics (breadcrumbs to TCSM pad @0xb24017c0, below the
+  * start.S return-shim scratch at 0x17f0). usbboot uploads this region after the SPL
+-- 
+2.43.0
+

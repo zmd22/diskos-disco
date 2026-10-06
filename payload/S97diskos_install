@@ -1,0 +1,492 @@
+#!/bin/sh
+# diskOS first-boot installer. Runs at S97 - BEFORE S98FIIO launches the UI, and after
+# S21mount_ubifs has mounted /usr/data. Installs the diskOS UI into /usr/data (which survives
+# rootfs flashes) from the copy EMBEDDED in this rootfs at /opt/diskos/mq_ui (present after a diskOS
+# flash). The old <SD>/diskos/mq_ui fallback source is DISABLED in v1.1.3: this script never mounts or
+# reads the SD card. The copy is installed ONLY after verifying it against the manifest baked into this
+# rootfs (/etc/diskos_manifest): exact size, ELF32-LE, MIPS machine, and SHA-256. This stops a corrupt,
+# wrong, or substituted UI from being copied in and run as root.
+#
+# FAIL-CLOSED CONTRACT: the diskOS boot override in fiio_init.sh runs our UI ONLY when BOTH
+# /usr/data/mq_ui AND the /usr/data/mq_player symlink exist; otherwise it falls back to the STOCK
+# rootfs UI. So the load-bearing safety lever is the mq_player symlink: whenever we cannot PROVE
+# /usr/data/mq_ui matches the manifest (missing/bad manifest, failed verify, failed repair), we
+# remove that symlink (and move the binary aside) so the stock UI runs instead of an unverified
+# binary.
+#
+# RESIDUAL LIMITS (documented, not shell-fixable): a process wedged in uninterruptible (D-state)
+# kernel I/O cannot be killed by any signal, so a truly stuck NAND read can still stall the worker until
+# the kernel gives up on the I/O (the outer supervisor still lets the boot continue into stock); and the
+# per-operation bounds need the `timeout` applet, which V2.09/V2.28/V2.40/V2.57 do not have, so on those
+# firmwares only the outer supervisor bounds this script.
+# EARLIEST fail-closed trap - the FIRST executable statement in the script (only comments precede
+# it; no file operation runs before it). For every catchable TERMINATING signal it arms an inline
+# handler that performs the load-bearing action (drop the mq_player symlink -> boot override
+# disabled; move the binary aside) and exit 1, so even a signal during setup can't leave a
+# pre-existing unverified override enabled for S98. Ordered most-likely-first (TERM/HUP/INT) because
+# POSIX sh has no atomic multi-signal trap: the sub-microsecond gradual-arming window across the
+# loop is an irreducible shell limitation, minimized by arming the boot-relevant signals first.
+# Excludes SIGKILL/SIGSTOP (uncatchable) and the non-terminating/stop/ignore-default signals
+# (TSTP/TTIN/TTOU/WINCH/URG/CHLD/CONT). The trailing `7` is SIGEMT: busybox ash rejects the NAME
+# "EMT" but the deployment arch is MIPS where SIGEMT=7, so it's armed numerically (SIGSTKFLT is
+# undefined on MIPS, so nothing further is needed). Per-signal arming (`2>/dev/null || true`) so a
+# name an odd build rejects can't abort the set. Superseded below by the guarded trap once
+# quarantine() exists.
+# >>> SUPERVISOR BEGIN (tests slice between these markers - keep them)
+# SUPERVISOR. rcS runs the S-scripts SYNCHRONOUSLY, so anything that blocks in here blocks the entire
+# boot and the user reaches NEITHER diskOS nor stock - the one outcome we must never cause. Signalling
+# ourselves cannot fix that: a shell blocked in a command substitution does not run its trap until the
+# substitution finishes. So the real work runs as a CHILD in its OWN session, and this parent enforces a
+# monotonic deadline, then ALWAYS exits 0 - the boot never waits on our verdict.
+#
+# Three things this must get right, each of which was wrong in an earlier version:
+#  - Do not `wait`. A worker stuck in uninterruptible disk I/O never makes wait return, and a worker that
+#    has exited but not been reaped still answers `kill -0`. We poll for a completion marker instead, so
+#    boot continuation depends on neither.
+#  - Kill the worker's whole PROCESS GROUP, not just the worker. Otherwise a copy it started keeps running
+#    after stock has started (this is covered by a test).
+#  - Only kill on TIMEOUT. Reusing a finished worker's pid as a process group id could signal something
+#    unrelated.
+if [ "$1" != "__worker" ]; then
+    rm -f /tmp/.diskos_ready 2>/dev/null          # readiness is per invocation and never inherited
+    # S96 records this boot's choice. Anything but a positive "diskos" record - stock chosen, selector failed,
+    # timed out or never ran - means do no NAND work at all: the user's route to the stock firmware must not
+    # wait on, or be able to be broken by, a diskOS install step. The record is read ONLY through the shared
+    # helper, which rejects a non-regular file before opening it (so a FIFO at the path cannot block us here,
+    # before our supervisor exists, short of the path being swapped mid-check) and applies the same exact rule
+    # as the boot hook and main.c. A missing helper also means stock.
+    # (DISKOS_SELECTED exists only so host tests can point at the payload copy; nothing sets it at boot.)
+    "${DISKOS_SELECTED:-/opt/diskos/bin/diskos-selected}" || exit 0
+    _pidf=/tmp/.diskos_s97.$$.pgid
+    _donef=/tmp/.diskos_s97.$$.done
+    rm -f "$_pidf" "$_donef" 2>/dev/null
+    if command -v setsid >/dev/null 2>&1; then
+        setsid "$0" __worker "$_pidf" "$_donef" "$@" &
+    else
+        "$0" __worker "$_pidf" "$_donef" "$@" &   # no setsid: group cleanup is unavailable, bound still holds
+    fi
+    _worker=$!
+    _now=$(cut -d. -f1 /proc/uptime 2>/dev/null || echo 0)
+    _end=$(( _now + 180 ))
+    _timedout=1
+    while [ "$(cut -d. -f1 /proc/uptime 2>/dev/null || echo "$_end")" -lt "$_end" ]; do
+        if [ -f "$_donef" ]; then _timedout=0; break; fi
+        sleep 1
+    done
+    if [ "$_timedout" = 1 ]; then
+        _wpg=$(cat "$_pidf" 2>/dev/null)
+        [ -n "$_wpg" ] && kill -KILL -"$_wpg" 2>/dev/null
+        kill -KILL "$_worker" 2>/dev/null
+        rm -f /tmp/.diskos_ready 2>/dev/null      # a killed worker must never leave readiness behind
+    fi
+    rm -f "$_pidf" "$_donef" 2>/dev/null
+    exit 0
+fi
+shift                        # drop __worker
+_pidf="$1"; _donef="$2"; shift 2
+echo $$ > "$_pidf" 2>/dev/null            # our pid IS our process group id, thanks to setsid
+trap 'echo 1 > "$_donef" 2>/dev/null' EXIT
+# <<< SUPERVISOR END
+
+SIGS="TERM HUP INT QUIT PWR ABRT ALRM PIPE USR1 USR2 XCPU XFSZ ILL TRAP BUS FPE SEGV SYS VTALRM PROF IO 7"
+_qtrap='rm -rf /usr/data/mq_player 2>/dev/null; [ -e /usr/data/mq_ui ] && mv -f /usr/data/mq_ui /usr/data/mq_ui.rejected 2>/dev/null; exit 1'
+# Arm the standard signals FIRST - this loop is the first executable statement (only the two var
+# assignments above, which touch no files, precede it), so the boot-relevant signals (TERM/HUP/INT)
+# are covered immediately.
+for s in $SIGS; do trap "$_qtrap" "$s" 2>/dev/null || true; done
+# THEN arm each real-time signal (SIGRTMIN..SIGRTMAX, 32..127 on MIPS Linux) AND record it in SIGS
+# within the SAME iteration - so no batch list-build ever precedes arming. RT signals are catchable
+# and default-terminate; nothing sends them to a boot init script, armed only for completeness.
+# Per-signal arming skips any number the running kernel doesn't define (a 64-signal host arms
+# 32..64; the MIPS device arms 32..127).
+n=32; while [ "$n" -le 127 ]; do trap "$_qtrap" "$n" 2>/dev/null || true; SIGS="$SIGS $n"; n=$((n+1)); done
+
+LOG=/usr/data/diskos_install.log
+log() { echo "$(date 2>/dev/null || true) S97: $*" >> "$LOG" 2>/dev/null; }
+
+# override_on: true iff the boot hook would launch our UI (it needs BOTH regular files present).
+override_on() { [ -f /usr/data/mq_ui ] && [ -f /usr/data/mq_player ]; }
+
+# quarantine: fail-closed, with a checked postcondition. Drop the mq_player path FIRST (that alone
+# disables the override), move the binary aside, then PROVE the override is off; if it somehow
+# isn't (e.g. rm/mv failed), remove the binary itself as a last resort and, if even that fails,
+# log CRITICAL and return non-zero rather than silently claiming safety. Returns 0 iff the override
+# is provably disabled.
+quarantine() {
+    rm -rf /usr/data/mq_player 2>/dev/null                     # clear file/dir/symlink at the path
+    [ -e /usr/data/mq_ui ] && mv -f /usr/data/mq_ui /usr/data/mq_ui.rejected 2>/dev/null
+    if override_on; then
+        rm -f /usr/data/mq_ui 2>/dev/null                     # last resort: remove the override binary
+        if override_on; then
+            log "CRITICAL: could NOT disable diskOS override${1:+ ($1)} (fs unwritable?) -- unverified UI MAY run"
+            return 1
+        fi
+    fi
+    log "quarantined${1:+ ($1)} -> stock UI will run"
+    return 0
+}
+
+# Now that quarantine() exists, UPGRADE the early inline trap to the guarded one: while installed!=1
+# a signal quarantines (with the checked postcondition + CRITICAL logging) and exits non-zero; once
+# installed=1 it skips quarantine so a completed install is never torn down. A stray signal before
+# install merely downgrades to the STOCK UI (safe), never up to running something unverified.
+# disarm() clears it on success paths. SIGKILL/SIGSTOP + D-state I/O are non-trappable residuals;
+# and if /usr/data is unwritable, quarantine cannot unlink the override AND this script cannot stop
+# the SysV dispatcher reaching S98 - unrecoverable-from-shell, logged CRITICAL (a true boot
+# fail-stop belongs in the rootfs boot hook, tracked separately, not this S-script).
+# READINESS GATE. The boot hook launches diskOS only when this marker is present. It lives on tmpfs, so
+# it means "S97 completed THIS boot" and nothing else. A worker that was killed by the supervisor, hung,
+# or crashed never reaches disarm and so never writes it - and the hook then boots STOCK without our
+# needing to successfully delete anything from NAND first (quarantine can itself fail on a full or
+# read-only filesystem, which used to leave the override enabled with no one to veto it).
+# write_run: publish WHICH build this boot verified (sha/size + kind), on tmpfs, atomically. The launcher
+# (/opt/diskos/bin/diskos-launch) runs /usr/data/mq_ui only if its bytes hash to this; the UI reads it to
+# write its health marker. MSHA/MSIZE/BUILD/B_* are settled before the first disarm that can reach here.
+write_run() {
+    [ -n "$MSHA" ] && [ -n "$MSIZE" ] || return 1
+    # GOOD_*: only while a build is on TRIAL and a verified good bundle exists - the launcher's fallback target
+    { printf 'SHA256=%s\nSIZE=%s\nBUILD=%s\nEPOCH=%s\nVERSION=%s\n' "$MSHA" "$MSIZE" "${BUILD:-flashed}" "${B_EPOCH:-0}" "${B_VER:-flashed}"
+      [ -n "$G_SHA" ] && printf 'GOOD_SHA256=%s\nGOOD_SIZE=%s\nGOOD_EPOCH=%s\nGOOD_VERSION=%s\n' "$G_SHA" "$G_SIZE" "$G_EPOCH" "$G_VER"
+      [ -n "$P_SHA" ] && printf 'PREV_SHA256=%s\nPREV_SIZE=%s\nPREV_EPOCH=%s\nPREV_VERSION=%s\n' "$P_SHA" "$P_SIZE" "$P_EPOCH" "$P_VER"
+      true; } > /tmp/.diskos_run.tmp 2>/dev/null \
+        && mv -f /tmp/.diskos_run.tmp /tmp/.diskos_run 2>/dev/null
+}
+# The run record exists ONLY when a signed non-flashed build was selected (the hook then uses the launcher); the
+# flashed build (every boot of a user who never updated) publishes readiness exactly as v1.1.3 did, and a failure to
+# write the record never gates readiness (the hook then simply takes the v1.1.3 path, which S97 already verified).
+ready() {
+    override_on || return 1
+    if [ "${BUILD:-flashed}" = flashed ]; then rm -f /tmp/.diskos_run 2>/dev/null; else write_run; fi
+    : > /tmp/.diskos_ready 2>/dev/null
+}
+disarm() { ready; for s in $SIGS; do trap - "$s" 2>/dev/null || true; done; }
+installed=0
+for s in $SIGS; do trap '[ "$installed" = 1 ] || quarantine "signal"; exit 1' "$s" 2>/dev/null || true; done
+
+# TO: run a command under a hard time bound. Prefer SIGKILL (-s KILL) so a stuck-but-killable op
+# is force-terminated, not just SIGTERM'd. Falls back to running directly only if `timeout` is
+# absent (logged once) - the one case we cannot bound from shell.
+warned_to=0
+TO() {
+    if command -v timeout >/dev/null 2>&1; then
+        timeout -s KILL 60 "$@"
+    else
+        [ "$warned_to" = 1 ] || { log "WARNING: no 'timeout' applet -> per-step bounds unavailable (outer supervisor still applies)"; warned_to=1; }
+        "$@"
+    fi
+}
+
+# publish_symlink: make an already-verified /usr/data/mq_ui runnable (exec bit + mq_player link) and
+# PROVE the symlink resolves to exactly /usr/data/mq_ui. Nukes whatever sits at the mq_player path
+# first (a pre-existing dir/file/stale symlink would otherwise make `ln -sf` succeed without
+# publishing the right target). Returns non-zero on any failure so the caller can quarantine.
+publish_symlink() {
+    chmod +x /usr/data/mq_ui 2>/dev/null || return 1          # a 0644 hash-match would boot-select but not exec
+    rm -rf /usr/data/mq_player 2>/dev/null                    # remove any file/dir/symlink at the path
+    ln -sf /usr/data/mq_ui /usr/data/mq_player 2>/dev/null || return 1
+    [ "$(readlink /usr/data/mq_player 2>/dev/null)" = /usr/data/mq_ui ] || return 1   # prove exact target
+    return 0
+}
+
+MAN=/etc/diskos_manifest
+# No/'malformed manifest = we cannot verify anything -> fail closed (quarantine any existing override).
+[ -f "$MAN" ] || { quarantine "no manifest" || exit 1; disarm; exit 0; }
+MSHA=$(grep '^SHA256=' "$MAN" | cut -d= -f2)
+MSIZE=$(grep '^SIZE=' "$MAN" | cut -d= -f2)
+[ -n "$MSHA" ] && [ -n "$MSIZE" ] || { quarantine "malformed manifest" || exit 1; disarm; exit 0; }
+
+# verify_ui <file>: 0 only if it exactly matches the manifest (size, ELF32-LE, MIPS, sha256).
+# Each read is bounded where the firmware provides `timeout` (it does not on V2.09/V2.28/V2.40; the outer
+# supervisor then bounds the whole hook). A timed-out read yields an empty result, which fails its
+# comparison and rejects the candidate - fail-closed, which quarantines to stock.
+verify_ui() {
+    f="$1"
+    TO test -f "$f" || return 1                       # even the existence test can stall on faulty storage
+    sz=$(TO stat -c%s "$f" 2>/dev/null)
+    [ -n "$sz" ] || sz=$(TO sh -c 'wc -c < "$1"' sh "$f" 2>/dev/null | tr -d ' ')   # open INSIDE the bound
+    [ "$sz" = "$MSIZE" ]                      || { log "verify $f: size $sz != $MSIZE"; return 1; }
+    [ "$(TO od -An -tx1 -N4 "$f" | tr -d ' ')" = "7f454c46" ] || { log "verify $f: not ELF"; return 1; }
+    [ "$(TO od -An -tx1 -j4 -N2 "$f" | tr -d ' ')" = "0101" ] || { log "verify $f: not ELF32-LE"; return 1; }  # EI_CLASS=32,EI_DATA=LE
+    [ "$(TO od -An -tx1 -j18 -N2 "$f" | tr -d ' ')" = "0800" ] || { log "verify $f: not MIPS"; return 1; }
+    [ "$(TO sha256sum "$f" | cut -d' ' -f1)" = "$MSHA" ]       || { log "verify $f: sha256 mismatch"; return 1; }
+    return 0
+}
+
+# ======================================================================================================
+# OTA (Tier A) build selection. Decides WHICH signed-or-flashed build this boot installs, by settling
+# MSHA/MSIZE (what verify_ui compares against) and OTA_SRC (where the install path copies it from). Everything
+# below is skipped unless the RO rootfs carries the OTA files (root key, epochs, verifier) AND the staging dir
+# exists; then the flashed build below is exactly the pre-OTA behaviour. Contract: update-system/OTA_CONTRACT.md.
+# State in /usr/data/updates: pending/ active/ trial good/ healthy accepted rollback rejected (see the contract).
+# FAIL-CLOSED: anything that does not verify against the ROOT KEY BAKED IN THE RO ROOTFS is dropped and the
+# last good build (or the flashed one) runs. A signed bundle is verified TWICE (UI at download, here at boot)
+# and every boot again while it stays installed.
+# ======================================================================================================
+OTA_RO=/etc/diskos-ota
+UPD=/usr/data/updates
+OTA_MAXBOOTS=2              # a trial build gets this many boots to write its health marker; the next boot rolls back
+OTA_SRC=; BUILD=flashed; B_EPOCH=0; B_VER=flashed; G_SHA=; G_SIZE=; G_EPOCH=; G_VER=; P_SHA=; P_SIZE=; P_EPOCH=; P_VER=
+FL_MSHA=$MSHA; FL_MSIZE=$MSIZE
+
+kv() { grep "^$2=" "$1" 2>/dev/null | head -n 1 | cut -d= -f2; }
+is_uint() { case "$1" in ''|*[!0-9]*) return 1;; esac; [ "${#1}" -le 18 ]; }
+clean_ver() { printf '%s' "$1" | tr -cd 'A-Za-z0-9._-' | cut -c1-32; }
+
+ota_enabled() {
+    # a boot that never updated has no staging directory: decide that FIRST, before any OTA metadata is read
+    [ -d "$UPD" ] && [ ! -L "$UPD" ] || return 1
+    [ -f "$OTA_RO/root.pub.pem" ] && [ -f "$OTA_RO/epochs" ] && [ -f "$OTA_RO/diskos-verify.sh" ] || return 1
+    OTA_MINKEY=$(kv "$OTA_RO/epochs" MIN_KEY_EPOCH); OTA_MINUI=$(kv "$OTA_RO/epochs" MIN_UI_EPOCH)
+    is_uint "$OTA_MINKEY" && is_uint "$OTA_MINUI"
+}
+
+# ota_bundle_ok <dir> <ui_epoch_floor>: the RO verifier over a PRIVATE tmpfs copy of the five small signed
+# files (so a /usr/data writer cannot swap them between the check and the read of the values), plus the
+# binary in place (its size + sha256 are checked by the verifier and AGAIN by verify_ui on install).
+# Sets O_SHA O_SIZE O_EPOCH O_VER on success.
+ota_bundle_ok() {
+    _od="$1"; _ofl="$2"; _ot=/tmp/.diskos_ota.$$
+    rm -rf "$_ot" 2>/dev/null
+    mkdir "$_ot" 2>/dev/null && chmod 700 "$_ot" 2>/dev/null || return 1
+    for _of in keyauthz keyauthz.sig leafpub.pem update.manifest update.manifest.sig mq_ui; do
+        if [ -L "$_od/$_of" ] || [ ! -f "$_od/$_of" ]; then rm -rf "$_ot"; log "ota: $_od: $_of missing or a symlink"; return 1; fi
+    done
+    for _of in keyauthz keyauthz.sig leafpub.pem update.manifest update.manifest.sig; do
+        TO cp "$_od/$_of" "$_ot/$_of" 2>/dev/null || { rm -rf "$_ot"; log "ota: $_od: cannot read $_of"; return 1; }
+    done
+    if _oout=$(TO /bin/sh "$OTA_RO/diskos-verify.sh" "$OTA_RO/root.pub.pem" "$OTA_MINKEY" "$_ofl" "$_ot" "$_od/mq_ui" 2>&1); then
+        O_DIR=$_od; O_SHA=$(kv "$_ot/update.manifest" sha256); O_SIZE=$(kv "$_ot/update.manifest" size)
+        O_EPOCH=$(kv "$_ot/update.manifest" epoch); O_VER=$(clean_ver "$(kv "$_ot/update.manifest" version)")
+        rm -rf "$_ot"
+        [ -n "$O_SHA" ] && is_uint "$O_SIZE" && is_uint "$O_EPOCH" || { log "ota: $_od: verified but unparsable"; return 1; }
+        return 0
+    fi
+    rm -rf "$_ot"
+    log "ota: $_od: $(printf '%s' "$_oout" | tr -cd '\040-\176' | cut -c1-160)"
+    return 1
+}
+
+# ota_write_accepted <version> <epoch>: the anti-rollback floor, written DURABLY: tmp + mv + sync, then read back.
+# Returns non-zero unless the value on disk is what was asked for (promotion is gated on this).
+ota_write_accepted() {
+    printf 'version=%s\nepoch=%s\n' "$1" "$2" > "$UPD/accepted.tmp" 2>/dev/null \
+        && mv -f "$UPD/accepted.tmp" "$UPD/accepted" 2>/dev/null || return 1
+    TO sync 2>/dev/null || return 1                       # a failed or timed-out sync must never count as durable
+    [ "$(kv "$UPD/accepted" epoch)" = "$2" ] && [ "$(kv "$UPD/accepted" version)" = "$1" ]
+}
+
+ota_marker() {   # <reason> <failed version> : the UI shows this once (contract section 5)
+    _rv=flashed
+    if [ -d "$UPD/good" ]; then _rv=$(clean_ver "$(kv "$UPD/good/update.manifest" version)"); [ -n "$_rv" ] || _rv=good; fi
+    printf 'reason=%s\nfailed=%s\nrestored=%s\n' "$1" "$2" "$_rv" > "$UPD/rollback.tmp" 2>/dev/null \
+        && mv -f "$UPD/rollback.tmp" "$UPD/rollback" 2>/dev/null || log "ota: could not write rollback marker"
+}
+
+ota_rollback() {  # <reason> <failed version> <failed sha or empty>
+    log "ota: ROLLBACK ($1) of ${2:-?} -> ${3:+remembering $3; }previous good or flashed build"
+    if [ -n "$3" ]; then
+        { [ -f "$UPD/rejected" ] && tail -n 7 "$UPD/rejected"; echo "$3"; } > "$UPD/rejected.tmp" 2>/dev/null \
+            && mv -f "$UPD/rejected.tmp" "$UPD/rejected" 2>/dev/null
+    fi
+    rm -rf "$UPD/active" 2>/dev/null; rm -f "$UPD/trial" "$UPD/trial.crashed" "$UPD/trial.launched" "$UPD/healthy" 2>/dev/null
+    ota_marker "$1" "$2"
+}
+
+ota_select() {
+    ota_enabled || return 0
+    CH_DIR=; CH_KIND=; O_DIR=
+    # good.prev = the previous good build, kept until the promoted one has been re-verified on a LATER boot
+    if [ ! -d "$UPD/good" ] && [ -d "$UPD/good.prev" ]; then mv "$UPD/good.prev" "$UPD/good" 2>/dev/null; fi
+    rm -rf "$UPD/incoming" 2>/dev/null
+    # an interrupted replacement of pending/ (the UI keeps the old one until the new one is durable): put it back,
+    # or drop the leftover if the new one made it
+    if [ -d "$UPD/pending.old" ]; then
+        if [ -d "$UPD/pending" ]; then rm -rf "$UPD/pending.old" 2>/dev/null
+        else mv "$UPD/pending.old" "$UPD/pending" 2>/dev/null; log "ota: recovered an interrupted pending replacement"; fi
+    fi
+    [ -d "$UPD/active" ] || rm -f "$UPD/trial" "$UPD/trial.launched" 2>/dev/null
+    _acc=$(kv "$UPD/accepted" epoch); is_uint "$_acc" || _acc=0
+
+    # 1. a build on trial: promote it, keep it on trial, or roll it back
+    if [ -d "$UPD/active" ]; then
+        if [ -e "$UPD/trial.crashed" ]; then
+            # the launcher refused to start the trial again after repeated starts in ONE boot: no more boots for it
+            if ota_bundle_ok "$UPD/active" "$OTA_MINUI"; then ota_rollback crashloop "$O_VER" "$O_SHA"; else ota_rollback crashloop "" ""; fi
+        elif ota_bundle_ok "$UPD/active" "$OTA_MINUI"; then
+            _tsha=$(kv "$UPD/trial" sha256); _tb=$(kv "$UPD/trial" boots)
+            _h=; [ -f "$UPD/healthy" ] && [ ! -L "$UPD/healthy" ] && _h=$(head -n 1 "$UPD/healthy" 2>/dev/null)
+            # the user's "Go back" (UI-written revert = exactly SHA256=<this trial>) beats everything, healthy included
+            _rvt=; [ -f "$UPD/revert" ] && [ ! -L "$UPD/revert" ] && _rvt=$(head -n 1 "$UPD/revert" 2>/dev/null)
+            _l=; [ -f "$UPD/trial.launched" ] && [ ! -L "$UPD/trial.launched" ] && _l=$(head -n 1 "$UPD/trial.launched" 2>/dev/null)
+            # promote only when the UI vouched (healthy) AND the launcher recorded that exactly these bytes were
+            # started (trial.launched: a fallback build never writes it) AND the new floor is durably on disk
+            if [ "$_rvt" = "SHA256=$O_SHA" ]; then
+                ota_rollback user "$O_VER" "$O_SHA"
+            elif [ "$_tsha" = "$O_SHA" ] && [ "$_h" = "SHA256=$O_SHA" ] && [ "$_l" = "SHA256=$O_SHA" ] \
+               && ota_write_accepted "$O_VER" "$O_EPOCH"; then
+                [ -d "$UPD/good" ] && { rm -rf "$UPD/good.prev" 2>/dev/null; mv "$UPD/good" "$UPD/good.prev" 2>/dev/null; }
+                if mv "$UPD/active" "$UPD/good" 2>/dev/null; then
+                    rm -f "$UPD/trial" "$UPD/trial.crashed" "$UPD/trial.launched" "$UPD/healthy" 2>/dev/null
+                    log "ota: PROMOTED $O_VER (epoch $O_EPOCH) after a healthy boot; previous good kept until the next boot"
+                    CH_DIR=$UPD/good; CH_KIND=good; O_DIR=$CH_DIR
+                else
+                    [ ! -d "$UPD/good" ] && [ -d "$UPD/good.prev" ] && mv "$UPD/good.prev" "$UPD/good" 2>/dev/null
+                    log "ota: promotion rename failed; staying on trial"
+                    CH_DIR=$UPD/active; CH_KIND=trial
+                fi
+            elif [ "$_tsha" = "$O_SHA" ] && is_uint "$_tb" && [ "$_tb" -lt "$OTA_MAXBOOTS" ]; then
+                printf 'boots=%s\nsha256=%s\n' "$((_tb + 1))" "$O_SHA" > "$UPD/trial.tmp" 2>/dev/null \
+                    && mv -f "$UPD/trial.tmp" "$UPD/trial" 2>/dev/null
+                log "ota: trial $O_VER has not proven health yet (boot $((_tb + 1)) of $OTA_MAXBOOTS)"
+                CH_DIR=$UPD/active; CH_KIND=trial
+            else
+                ota_rollback unhealthy "$O_VER" "$O_SHA"
+            fi
+        else
+            ota_rollback verify "" ""
+        fi
+    fi
+
+    # a revert file is consumed here whatever it said: one naming this trial has just rolled it back (removing it
+    # LAST keeps a power cut in between harmless: next boot no trial matches it and it is dropped), any other is stale
+    rm -f "$UPD/revert" 2>/dev/null
+
+    # 2. a newly staged bundle: verify it again, then start its trial
+    if [ -z "$CH_DIR" ] && [ -d "$UPD/pending" ]; then
+        _fl=$OTA_MINUI; [ "$((_acc + 1))" -gt "$_fl" ] && _fl=$((_acc + 1))
+        if [ -f "$UPD/pending/ready" ] && ota_bundle_ok "$UPD/pending" "$_fl" \
+           && ! { [ -f "$UPD/rejected" ] && grep -qx "$O_SHA" "$UPD/rejected"; }; then
+            printf 'boots=1\nsha256=%s\n' "$O_SHA" > "$UPD/trial.tmp" 2>/dev/null \
+                && mv -f "$UPD/trial.tmp" "$UPD/trial" 2>/dev/null
+            rm -f "$UPD/healthy" "$UPD/trial.crashed" "$UPD/trial.launched" 2>/dev/null
+            if [ -f "$UPD/trial" ] && mv "$UPD/pending" "$UPD/active" 2>/dev/null; then
+                log "ota: staged $O_VER (epoch $O_EPOCH) verified -> trial boot 1 of $OTA_MAXBOOTS"
+                CH_DIR=$UPD/active; CH_KIND=trial; O_DIR=$CH_DIR
+            else
+                rm -f "$UPD/trial" 2>/dev/null; log "ota: could not start trial for staged bundle"
+            fi
+        else
+            log "ota: staged bundle rejected/ignored (floor $_fl); removing it"
+            rm -rf "$UPD/pending" 2>/dev/null
+        fi
+    fi
+
+    # 3. otherwise the last good bundle, re-verified this boot (falling back to the one it replaced)
+    if [ -z "$CH_DIR" ] && [ -d "$UPD/good" ]; then
+        if ! ota_bundle_ok "$UPD/good" "$OTA_MINUI"; then
+            log "ota: good bundle no longer verifies"
+            rm -rf "$UPD/good" 2>/dev/null
+            if [ -d "$UPD/good.prev" ] && mv "$UPD/good.prev" "$UPD/good" 2>/dev/null && ota_bundle_ok "$UPD/good" "$OTA_MINUI"; then
+                log "ota: using the previous good bundle"
+            else
+                rm -rf "$UPD/good" 2>/dev/null
+            fi
+        fi
+        if [ -d "$UPD/good" ]; then
+            CH_DIR=$UPD/good; CH_KIND=good
+            rm -rf "$UPD/good.prev" 2>/dev/null            # the promoted build has now been re-verified on a later boot
+            # the floor follows the good build: rebuild `accepted` if a power cut (or a wipe) left it behind
+            _acc2=$(kv "$UPD/accepted" epoch); is_uint "$_acc2" || _acc2=0
+            if [ "$O_EPOCH" -gt "$_acc2" ]; then ota_write_accepted "$O_VER" "$O_EPOCH" || log "ota: could not rebuild accepted"; fi
+        fi
+    fi
+
+    # 4. settle what the rest of this script installs; O_* still hold the chosen bundle's values except after
+    #    a promotion or a re-verify of another dir, so re-derive them from the chosen dir when needed
+    if [ -n "$CH_DIR" ]; then
+        [ "$O_DIR" = "$CH_DIR" ] || ota_bundle_ok "$CH_DIR" "$OTA_MINUI" || { log "ota: chosen bundle failed final verify -> flashed build"; return 0; }
+        MSHA=$O_SHA; MSIZE=$O_SIZE; OTA_SRC=$CH_DIR/mq_ui; BUILD=$CH_KIND; B_EPOCH=$O_EPOCH; B_VER=$O_VER
+        if [ "$CH_KIND" = trial ] && [ -d "$UPD/good" ] && ota_bundle_ok "$UPD/good" "$OTA_MINUI"; then
+            G_SHA=$O_SHA; G_SIZE=$O_SIZE; G_EPOCH=$O_EPOCH; G_VER=$O_VER      # the launcher's fallback while on trial
+        fi
+        if [ -d "$UPD/good.prev" ] && ota_bundle_ok "$UPD/good.prev" "$OTA_MINUI"; then
+            P_SHA=$O_SHA; P_SIZE=$O_SIZE; P_EPOCH=$O_EPOCH; P_VER=$O_VER      # and the one before it, while it is kept
+        fi
+        log "ota: running $BUILD build $B_VER (epoch $B_EPOCH)"
+    fi
+}
+ota_select
+
+rm -f /usr/data/.mq_ui.tmp 2>/dev/null   # never trust a leftover temp from a prior interrupted run
+
+# FAST PATH: an already-installed matching UI -> just repair exec bit + symlink and boot.
+if verify_ui /usr/data/mq_ui; then
+    if publish_symlink; then
+        installed=1
+        log "already installed + verified -> repaired +x/symlink, booting diskOS"
+        disarm                                  # publish readiness AFTER the last NAND write, so a worker
+        exit 0                                  # killed during that write does not leave diskOS enabled
+    fi
+    log "already-installed repair (chmod/ln) failed -> quarantining"
+    quarantine "repair failed" || exit 1   # can't guarantee it launches -> fall back to stock
+    disarm; exit 0
+fi
+
+# Reaching here means /usr/data/mq_ui is absent or does NOT match the manifest. Pre-emptively
+# QUARANTINE any existing override NOW - BEFORE the copy - so an interrupted copy can never
+# leave the unverified binary enabled for S98 to launch. A successful install below republishes
+# a verified one. (The whole-run trap above already covers signals; this closes the window
+# deterministically even absent a signal.)
+if [ -e /usr/data/mq_ui ] || [ -e /usr/data/mq_player ]; then
+    quarantine "unverified at boot" || exit 1
+fi
+
+# INSTALL PATH: the copy EMBEDDED in this rootfs at /opt/diskos/mq_ui (present after a diskOS flash) is
+# the ONLY source in v1.1.3. It is staged to a local temp and must pass verify_ui; it is re-verified and
+# published below. If it is absent or fails verification, nothing is installed and stock boots.
+copied=0; src=
+stage_tmp() { { [ -n "$OTA_SRC" ] && ln "$EMBED" /usr/data/.mq_ui.tmp 2>/dev/null; } || TO cp "$EMBED" /usr/data/.mq_ui.tmp 2>/dev/null; }
+EMBED=${OTA_SRC:-/opt/diskos/mq_ui}     # OTA_SRC: the chosen signed bundle's mq_ui (already verified above)
+if [ -f "$EMBED" ]; then
+    # Embedded copy lives in the read-only rootfs we just flashed. TO-bound the cp for consistency
+    # (a NAND read fault shouldn't stall boot), and verify_ui the temp IN-BRANCH. A signed bundle's binary is
+    # hard-linked when it can be (no second copy on the small /usr/data); verify_ui hashes the very inode.
+    if stage_tmp && verify_ui /usr/data/.mq_ui.tmp; then
+        copied=1; src=embedded; log "staged verified UI from embedded rootfs copy ($EMBED)"
+    else
+        rm -f /usr/data/.mq_ui.tmp 2>/dev/null
+        log "embedded UI absent or failed verify"
+    fi
+fi
+
+# SD FALLBACK: DISABLED in v1.1.3. This hook runs under an outer time limit, and when that limit fires the
+# boot continues into stock - so an SD mount or copy still running at that moment could overlap the stock
+# player's own handling of the card. The installer always embeds a verified UI in the rootfs, so the
+# fallback only ever mattered for recovery. If the embedded copy is absent or fails verification, nothing is
+# installed this boot, readiness is not published, and the device boots stock. The card is never touched.
+if [ "$copied" != 1 ]; then
+    log "embedded UI unavailable or unverified -> not installing this boot (SD fallback disabled); stock boots"
+fi
+
+if [ "$copied" = 1 ]; then
+    # Verify the LOCAL copy, then publish atomically. installed=1 is gated on the CORRECTNESS steps
+    # only (verify -> chmod -> mv -> publish_symlink[proves exact target] -> re-verify); it works
+    # entirely on the local copy.
+    # Durability rides on /usr/data being sync-mounted ubifs; the explicit sync is TO-bounded and
+    # deliberately NOT part of the success gate.
+    if verify_ui /usr/data/.mq_ui.tmp \
+       && chmod +x /usr/data/.mq_ui.tmp \
+       && mv -f /usr/data/.mq_ui.tmp /usr/data/mq_ui \
+       && publish_symlink \
+       && verify_ui /usr/data/mq_ui; then
+        installed=1; log "installed verified mq_ui from ${src:-?} (size $MSIZE, build $BUILD)"
+        [ "$BUILD" = flashed ] || rm -f /usr/data/mq_ui.rejected 2>/dev/null   # the swap's leftover copy (space is tight)
+        TO sync 2>/dev/null || log "post-install sync slow/timed-out (ubifs is sync-mounted; already durable)"
+    else
+        log "staged copy failed verification/publish -> not installed"
+    fi
+fi
+rm -f /usr/data/.mq_ui.tmp 2>/dev/null   # always clean the temp, incl. a timed-out/partial copy
+
+# FINALIZE (fail-closed): if we did not publish this boot, make sure only a manifest-verified UI
+# can run. A verified-but-unpublished binary gets its exec bit + symlink repaired; anything that
+# does NOT verify is quarantined so the stock UI runs.
+if [ "$installed" != 1 ]; then
+    if verify_ui /usr/data/mq_ui; then
+        publish_symlink || quarantine "finalize repair failed" || exit 1
+    elif [ -e /usr/data/mq_ui ] || [ -e /usr/data/mq_player ]; then
+        quarantine "unverified override" || exit 1
+    fi
+fi
+disarm   # clean end: fail-closed state is settled, disarm so no late signal quarantines it
+exit 0

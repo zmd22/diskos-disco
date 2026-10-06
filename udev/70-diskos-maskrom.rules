@@ -1,0 +1,14 @@
+# diskOS - USB access to the FiiO Snowsky Disc in Ingenic X2000 mask-ROM (flash) mode.
+#
+# Lets your normal (non-root) user talk to the device so you never have to run the installer as root.
+# Install:
+#   sudo cp udev/70-diskos-maskrom.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules && sudo udevadm trigger
+# Then put the device in mask-ROM (power off, hold Vol-Down, plug USB) and run ./diskos-installer.
+#
+# TAG+="uaccess" grants the active local user access via systemd-logind (the standard path on modern
+# desktops, including Arch Linux, CachyOS, Fedora, Ubuntu, and Debian). MODE="0660" alone is root:root,
+# so on a system WITHOUT logind (or headless/SSH sessions) you must also give the node a group your user
+# is in - e.g. add GROUP="uucp" (Arch) or GROUP="plugdev" (Debian) here and `usermod -aG <group> <you>`,
+# or (less tight) use MODE="0666".
+SUBSYSTEM=="usb", ATTR{idVendor}=="a108", ATTR{idProduct}=="eaef", MODE="0660", TAG+="uaccess"

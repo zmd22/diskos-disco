@@ -1,0 +1,217 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 diskOS contributors */
+#include "sdio.h"
+#include "artcache.h"
+#include "art.h"
+#include <stdio.h>
+#include <string.h>
+#include <stdint.h>
+#include <sys/stat.h>
+#include <sys/statvfs.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <stdatomic.h>
+
+/* cache lives on the (large) SD card so it persists across reboots */
+#define CACHE_ROOT "/tmp/sdcard/.diskos/artcache"
+#define MIN_FREE_BYTES (1024ULL*1024*1024)   /* stop caching if < 1GB free */
+/* Bump when the art RECIPE changes (cover/thumb/backdrop generation in art.c) so old
+ * cached files auto-invalidate: it's mixed into the fingerprint -> all keys change ->
+ * miss -> re-decode. v2 = axis-wash backdrop (was gblur). v3 = 2x2 smooth colour gradient.
+ * v4 = blurred cover art (gblur sigma 28). v5 = sharper blur (sigma 14). v6 = sigma 19. */
+#define ART_RECIPE_VER 7   /* 7: diskos-artdec replaces the stock ffmpeg recipe (orientation, alpha, blur changed) */
+
+/* fingerprint = FNV-1a(path + size + mtime) -> 16 hex chars. Changes if the file
+ * is replaced/edited, so a stale cache entry simply misses (and is orphaned).
+ * NO inode: exfat/vfat hand out inode numbers from a counter when a file is looked up, so the same file gets
+ * a new number after every mount or icache eviction - a key built on it misses the whole cache every boot. */
+static int fingerprint(const char *track, char *out, int cap){
+    struct stat stt;
+    if(!track || stat(track, &stt) != 0) return -1;
+    uint64_t h = 1469598103934665603ULL;
+    h ^= (unsigned)ART_RECIPE_VER; h *= 1099511628211ULL;   /* recipe salt -> bump invalidates old cache */
+    for(const char *p=track; *p; p++){ h ^= (unsigned char)*p; h *= 1099511628211ULL; }
+    uint64_t sz=(uint64_t)stt.st_size, mt=(uint64_t)stt.st_mtime;
+    for(int i=0;i<8;i++){ h ^= (sz>>(i*8))&0xff; h *= 1099511628211ULL; }
+    for(int i=0;i<8;i++){ h ^= (mt>>(i*8))&0xff; h *= 1099511628211ULL; }
+    art_sidecar_signature(track, &h);                       /* sidecar covers replaced/added/removed -> new key */
+    snprintf(out, cap, "%016llx", (unsigned long long)h);
+    return 0;
+}
+/* fsync the directory that CONTAINS `path` so a just-completed rename is durable: on a non-journaled
+ * FS a power cut can otherwise leave the directory block without the new entry even though the file
+ * data hit the disk. Best-effort - a driver that doesn't implement directory fsync just no-ops. */
+static void fsync_parent_dir(const char *path){
+    char d[600]; snprintf(d, sizeof d, "%s", path);
+    char *slash = strrchr(d, '/');
+    if(!slash) return;
+    if(slash == d) slash[1] = 0; else slash[0] = 0;   /* keep a leading "/" as the dir */
+    int fd = open(d, O_RDONLY | O_DIRECTORY);
+    if(fd < 0) return;
+    fsync(fd);                                         /* errors (incl. unsupported) are non-fatal */
+    close(fd);
+}
+/* A cache entry is used only if it has the exact layout a fresh decode must have (see art_bmp_valid). */
+#define CV_OK(p) art_bmp_valid(p, 148)
+#define TH_OK(p) art_bmp_valid(p, 42)
+#define BG_OK(p) art_bmp_valid(p, 360)
+static void cache_paths(const char *fp, char *cv, char *th, char *bg, int cap){
+    snprintf(cv,cap,"%s/%s/c.bmp",CACHE_ROOT,fp);
+    snprintf(th,cap,"%s/%s/t.bmp",CACHE_ROOT,fp);
+    snprintf(bg,cap,"%s/%s/b.bmp",CACHE_ROOT,fp);
+}
+static int copy_file(const char *src, const char *dst){
+    FILE *in=fopen(src,"rb"); if(!in) return -1;
+    /* unique tmp per call: a live decode + a prewarm decode can copy the SAME dst
+     * concurrently; a shared "<dst>.tmp" would let them interleave and expose a
+     * partial file. Unique tmp + the atomic rename below means dst is only ever
+     * replaced by a complete file. */
+    static _Atomic unsigned g_tmp_ctr = 0;
+    unsigned seq = atomic_fetch_add(&g_tmp_ctr, 1u);
+    char tmp[600]; snprintf(tmp,sizeof tmp,"%s.tmp%u",dst,seq);
+    FILE *out=fopen(tmp,"wb"); if(!out){ fclose(in); return -1; }
+    char buf[16384]; size_t n; int ok=1;
+    while((n=fread(buf,1,sizeof buf,in))>0){ if(fwrite(buf,1,n,out)!=n){ ok=0; break; } }
+    if(ferror(in)) ok=0;                       /* read error mid-copy -> don't publish a truncated file */
+    fclose(in);
+    if(fflush(out)!=0) ok=0;
+    /* fsync the data onto the card BEFORE the rename publishes it, so a power cut / yanked card can't
+     * surface a rename pointing at unflushed content (the exact non-journaled-exFAT corruption window).
+     * A driver that doesn't implement fsync (EINVAL/ENOSYS/EOPNOTSUPP) is tolerated. */
+    if(ok){
+        int fd = fileno(out);
+        if(fd >= 0 && fsync(fd) != 0 && errno != EINVAL && errno != ENOSYS && errno != EOPNOTSUPP) ok = 0;
+    }
+    fclose(out);
+    if(!ok){ unlink(tmp); return -1; }
+    if(rename(tmp,dst)!=0){ unlink(tmp); return -1; }
+    fsync_parent_dir(dst);                     /* make the rename itself durable */
+    return 0;
+}
+static int enough_free(void){
+    struct statvfs v;
+    if(statvfs("/tmp/sdcard", &v) != 0) return 0;     /* unknown -> don't cache */
+    return ((uint64_t)v.f_bavail * v.f_frsize) > MIN_FREE_BYTES;
+}
+
+static int artcache_has_leased(const char *track){
+    char fp[24]; if(fingerprint(track,fp,sizeof fp)!=0) return 0;
+    char cv[600],th[600],bg[600]; cache_paths(fp,cv,th,bg,600);
+    return CV_OK(cv) && TH_OK(th) && BG_OK(bg);
+}
+
+static int artcache_get_leased(const char *track, const char *cover_out, const char *thumb_out, const char *bg_out){
+    char fp[24]; if(fingerprint(track,fp,sizeof fp)!=0) return -1;
+    char cv[600],th[600],bg[600]; cache_paths(fp,cv,th,bg,600);
+    if(!(CV_OK(cv) && TH_OK(th) && BG_OK(bg))) return -1;
+    /* copy cache -> the worker's /tmp output paths (fast vs ffmpeg) */
+    if(copy_file(cv,cover_out)!=0) return -1;
+    if(copy_file(th,thumb_out)!=0) return -1;
+    if(copy_file(bg,bg_out)!=0)    return -1;
+    return 0;
+}
+
+static int artcache_get_thumb_leased(const char *track, const char *thumb_out){
+    char fp[24]; if(fingerprint(track,fp,sizeof fp)!=0) return -1;
+    char cv[600],th[600],bg[600]; cache_paths(fp,cv,th,bg,600);
+    if(!TH_OK(th)) return -1;            /* thumb not cached (or damaged) */
+    if(copy_file(th,thumb_out)!=0) return -1;
+    return 0;
+}
+
+/* Return the native path of the cached 148px cover for a track (no copy), so a caller can read/decode it
+ * directly (e.g. an off-thread cover loader). Returns 0 + fills out on a cache hit, -1 if not cached. */
+static int artcache_cover_path_leased(const char *track, char *out, int cap){
+    char fp[24]; if(fingerprint(track,fp,sizeof fp)!=0) return -1;
+    char cv[600],th[600],bg[600]; cache_paths(fp,cv,th,bg,600);
+    if(!CV_OK(cv)) return -1;
+    snprintf(out, cap, "%s", cv);
+    return 0;
+}
+
+/* Copy JUST the cached 148px cover (no thumb/backdrop) - used by the Album Wall, which only needs the
+ * cover, so it avoids copying the ~360px backdrop every step. Returns 0 on hit, -1 if not cached. */
+static int artcache_get_cover_leased(const char *track, const char *cover_out){
+    char fp[24]; if(fingerprint(track,fp,sizeof fp)!=0) return -1;
+    char cv[600],th[600],bg[600]; cache_paths(fp,cv,th,bg,600);
+    if(!CV_OK(cv)) return -1;
+    if(copy_file(cv,cover_out)!=0) return -1;
+    return 0;
+}
+
+/* Monotonic counter bumped whenever a new cover lands in the cache (any decoder: live NP art,
+ * per-track prewarm, or the album prewarm). The cover flow watches it to re-bake placeholders. */
+static _Atomic unsigned g_ac_gen;
+unsigned artcache_gen(void){ return atomic_load(&g_ac_gen); }
+
+/* fp_before: the key captured BEFORE the decode. If the track or its sidecar covers changed while decoding, the
+ * key is different now and the (old) pixels are not stored under the new identity. NULL = no such check. */
+static void artcache_put_leased(const char *track, const char *fp_before, const char *cover, const char *thumb, const char *bg){
+    char fp[24]; if(fingerprint(track,fp,sizeof fp)!=0) return;
+    if(fp_before && strcmp(fp, fp_before) != 0) return;
+    if(!enough_free()) return;
+    if(!sd_write_begin()) return;   /* M18: card is host-owned or an export is in progress -> skip the SD write */
+    char dir[600];
+    mkdir("/tmp/sdcard/.diskos", 0755);   /* ignore EEXIST */
+    mkdir(CACHE_ROOT, 0755);
+    snprintf(dir,sizeof dir,"%s/%s",CACHE_ROOT,fp);
+    mkdir(dir, 0755);
+    char cv[600],th[600],bg2[600]; cache_paths(fp,cv,th,bg2,600);
+    int cover_ok = (copy_file(cover,cv)==0);
+    copy_file(thumb,th); copy_file(bg,bg2);
+    sd_write_end();
+    if(cover_ok) atomic_fetch_add(&g_ac_gen, 1);   /* signal the cover flow that a new cover is available */
+}
+
+int artcache_has(const char *track){
+    if(!sd_io_begin()) return 0;
+    int result = artcache_has_leased(track);
+    sd_io_end();
+    return result;
+}
+
+int artcache_get(const char *track, const char *cover_out, const char *thumb_out, const char *bg_out){
+    if(!sd_io_begin()) return -1;
+    int result = artcache_get_leased(track, cover_out, thumb_out, bg_out);
+    sd_io_end();
+    return result;
+}
+
+int artcache_get_thumb(const char *track, const char *thumb_out){
+    if(!sd_io_begin()) return -1;
+    int result = artcache_get_thumb_leased(track, thumb_out);
+    sd_io_end();
+    return result;
+}
+
+int artcache_get_cover(const char *track, const char *cover_out){
+    if(!sd_io_begin()) return -1;
+    int result = artcache_get_cover_leased(track, cover_out);
+    sd_io_end();
+    return result;
+}
+
+int artcache_cover_path(const char *track, char *out, int cap){
+    if(!sd_io_begin()) return -1;
+    int result = artcache_cover_path_leased(track, out, cap);
+    sd_io_end();
+    return result;
+}
+
+void artcache_put(const char *track, const char *cover, const char *thumb, const char *bg){
+    if(!sd_io_begin()) return;
+    artcache_put_leased(track, NULL, cover, thumb, bg);
+    sd_io_end();
+}
+int artcache_key(const char *track, char *out, int cap){
+    if(cap < 24 || !sd_io_begin()) return -1;
+    int r = fingerprint(track, out, cap);
+    sd_io_end();
+    return r;
+}
+void artcache_put_if(const char *track, const char *fp_before, const char *cover, const char *thumb, const char *bg){
+    if(!sd_io_begin()) return;
+    artcache_put_leased(track, fp_before, cover, thumb, bg);
+    sd_io_end();
+}

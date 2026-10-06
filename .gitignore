@@ -1,0 +1,84 @@
+# === diskOS installer - publication .gitignore ===
+# Excludes secrets, FiiO-derived artifacts, build outputs, and release binaries.
+# The public repo ships SOURCE; large/built artifacts go on GitHub Releases.
+# NOTE: gitignore has NO inline comments - every comment is on its own line.
+
+# --- SECRETS - never publish (private ECC update-signing key lives here) ---
+signing/
+*.pem
+!payload/diskos-root.pub.pem
+*.key
+
+# --- FiiO-derived images (contain FiiO rootfs - never redistribute) ---
+diskos_dev*.bin
+diskos_public*.bin
+diskos_v209_recovery.bin
+*_recovery.bin
+*.squashfs
+
+# --- retired unlicensed blob ---
+_retired_unlicensed/
+
+# --- build outputs / venvs / caches ---
+build/venv/
+build/work/
+build/dist/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# --- prebuilt native binaries (Release artifacts / rebuilt by build/ scripts) ---
+# source is in src/usbboot/ ; static builds via build/build-*-static.sh
+vendor/*/usbboot
+vendor/*/mksquashfs
+vendor/*/unsquashfs
+vendor/*/*.bak
+vendor/*/lib/
+flash/usbboot
+
+# --- top-level duplicates of payload/* (keep only payload/) ---
+/mq_ui
+/S97diskos_install
+/S99usbserial
+
+# --- deprecated/unsafe legacy shell installer (superseded by the Python installer; never publish) ---
+# Kept on disk for reference but excluded from the public repo AND the release tarball.
+INSTALL.md
+mkdiskos.sh
+flash/flash_diskos.sh
+flash/extract_stock_rootfs.sh
+
+# --- internal process / release-engineering docs (not for the public repo) ---
+PUBLICATION_PLAN.md
+BETA_CHECKLIST.md
+RELEASE.md
+RELEASE_READINESS.md
+UPDATE2_DRAFT.md
+UPDATE_ARCHITECTURE.md
+INSTALL_v209_legacy.md
+
+# --- source-tree checksums are fragile; release checksums are generated at staging ---
+SHA256SUMS
+
+# --- unsupported developer diagnostics (hardcoded paths / no clean public build) ---
+flash/qual_lpddr3.sh
+flash/scan_check.sh
+flash/my_write5_scan_dram.bin
+
+# --- extra build/release scratch ---
+build/release/
+*.sqfs
+
+# NOTE: the SPL corresponding-source tarball (spl-src/*.tar.gz) is deliberately NOT ignored -
+# it is the GPL corresponding source and must ship with the repo.
+
+# --- scratch / OS noise ---
+*.log
+*.tmp
+.DS_Store
+
+# owner signing keys and signed bundles - never commit
+diskos-keys/
+*.key
+diskos-update/

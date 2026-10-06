@@ -1,0 +1,34 @@
+# Build artifacts
+*.o
+*.d
+*.log
+
+# Compiled binaries (main UI + on-device tools)
+ipodos-ui
+fbshot
+mqfeed
+mqsend
+touchcap
+touchdisc
+
+# Backups / scratch
+*.bak
+*.working.bak
+*.raw
+
+# Font source blobs (fonts are shipped as generated font_*.c arrays)
+*.ttf
+config.mk
+mq_ui.debug
+mq_ui.manifest
+# host test binaries (built under tests/)
+tests/config_test
+tests/playstate_test
+
+# On-device helper builds
+diskos-artdec
+diskos-bootprobe
+tests/host_build/
+
+# Native/UI intermediate executables stay available locally, never enter the source tree.
+/mq_ui

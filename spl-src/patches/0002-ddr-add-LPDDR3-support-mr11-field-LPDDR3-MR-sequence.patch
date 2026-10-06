@@ -1,0 +1,76 @@
+From 8f93e72bd6b1c770269ce746d401cebb063e71dc Mon Sep 17 00:00:00 2001
+From: b0hemia <50309975+b0hemia@users.noreply.github.com>
+Date: Mon, 24 Aug 2026 22:55:29 +1000
+Subject: [PATCH 2/8] =?UTF-8?q?ddr:=20add=20LPDDR3=20support=20(mr11=20fie?=
+ =?UTF-8?q?ld,=20LPDDR3=20MR=20sequence,=20W63AH6NKB=20type-force)=20?=
+ =?UTF-8?q?=E2=80=94=20ported=20from=20tobunto=20X2000?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ arch/mips/cpu/xburst2/ddr_innophy.c  | 20 ++++++++++++++++++++
+ arch/mips/cpu/xburst2/ddr_reg_data.h |  2 ++
+ 2 files changed, 22 insertions(+)
+
+diff --git a/arch/mips/cpu/xburst2/ddr_innophy.c b/arch/mips/cpu/xburst2/ddr_innophy.c
+index 5257e3a..e08a5df 100755
+--- a/arch/mips/cpu/xburst2/ddr_innophy.c
++++ b/arch/mips/cpu/xburst2/ddr_innophy.c
+@@ -454,6 +454,21 @@ static void ddrc_dfi_init(enum ddr_type type, int bypass)
+ 		ddr_writel(DDRC_LMR_MR(2), DDRC_LMR); //MR2
+ 		ddr_writel(DDRC_LMR_MR(3), DDRC_LMR); //MR3
+ 		ddr_writel(DDRC_DLMR_VALUE | DDRC_LMR_START | DDRC_LMR_CMD_ZQCL_CS0, DDRC_LMR); //ZQCL
++#undef DDRC_LMR_MR
++		break;
++	case LPDDR3:
++		/* LPDDR3 MR sequence - ported from tobunto/u-boot X2000 (matches the vendor
++		 * disc_spl.bin trace): MR63,10,1,2,3,11 each followed by mdelay(1); no ZQ. */
++#define DDRC_LMR_MR(n)													\
++		DDRC_DLMR_VALUE | DDRC_LMR_START | DDRC_LMR_CMD_LMR |			\
++			((DDR_MR##n##_VALUE & 0xff) << 24) |						\
++			(((DDR_MR##n##_VALUE >> 8) & 0xff) << (16))
++		ddr_writel(DDRC_LMR_MR(63), DDRC_LMR); mdelay(1); //set MRS reset
++		ddr_writel(DDRC_LMR_MR(10), DDRC_LMR); mdelay(1); //set IO calibration
++		ddr_writel(DDRC_LMR_MR(1),  DDRC_LMR); mdelay(1); //set MR1
++		ddr_writel(DDRC_LMR_MR(2),  DDRC_LMR); mdelay(1); //set MR2
++		ddr_writel(DDRC_LMR_MR(3),  DDRC_LMR); mdelay(1); //set MR3
++		ddr_writel(DDRC_LMR_MR(11), DDRC_LMR); mdelay(1); //set MR11
+ #undef DDRC_LMR_MR
+ 		break;
+ 	default:
+@@ -556,6 +571,11 @@ void sdram_init(void)
+ 	soc_ddr_init();
+ 
+ 	type = get_ddr_type();
++	/* Snowsky Disc = Winbond W63AH6NKB-BI LPDDR3. The controller CFG.TYPE field reads as
++	 * LPDDR2(5) for this part (the vendor SPL dispatches on the logical record type=3, not
++	 * CFG.TYPE), so force the LPDDR3 MR sequence here. Only ddrc_dfi_init consumes `type`
++	 * (the X2000 prev_ddr_init hook is a no-op). */
++	type = LPDDR3;
+ 	clk_set_rate(DDR, gd->arch.gi->ddrfreq);
+ 	if(ddr_hook && ddr_hook->prev_ddr_init)
+ 		ddr_hook->prev_ddr_init(type);
+diff --git a/arch/mips/cpu/xburst2/ddr_reg_data.h b/arch/mips/cpu/xburst2/ddr_reg_data.h
+index 4878267..b48575f 100755
+--- a/arch/mips/cpu/xburst2/ddr_reg_data.h
++++ b/arch/mips/cpu/xburst2/ddr_reg_data.h
+@@ -27,6 +27,7 @@ struct ddr_registers
+ 	uint32_t ddr_mr2;
+ 	uint32_t ddr_mr3;
+ 	uint32_t ddr_mr10;
++	uint32_t ddr_mr11;
+ 	uint32_t ddr_mr63;
+ 	uint32_t ddr_chip0_size;
+ 	uint32_t ddr_chip1_size;
+@@ -59,6 +60,7 @@ extern struct ddr_registers *g_ddr_param;
+ #define DDR_MR2_VALUE                   g_ddr_param->ddr_mr2
+ #define DDR_MR3_VALUE                   g_ddr_param->ddr_mr3
+ #define DDR_MR10_VALUE                  g_ddr_param->ddr_mr10
++#define DDR_MR11_VALUE                  g_ddr_param->ddr_mr11
+ #define DDR_MR63_VALUE                  g_ddr_param->ddr_mr63
+ #define DDR_CHIP_0_SIZE                 g_ddr_param->ddr_chip0_size
+ #define DDR_CHIP_1_SIZE                 g_ddr_param->ddr_chip1_size
+-- 
+2.43.0
+

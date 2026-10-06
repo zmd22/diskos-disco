@@ -1,0 +1,311 @@
+# diskOS interface strings. One row per English text passed to tr(); columns:
+# en, zh (Simplified), tw (Traditional), ja, ko, es, pt, it, de, fr, ru. Tab separated, UTF-8. An empty cell = no
+# translation (the English text shows). Original translations written for diskOS (no stock FiiO string tables
+# were copied; only the language NAMES are stock's, as its picker lists them). Regenerate i18n_tables.c with
+# tools/generate_i18n.py after editing.
+en	zh	tw	ja	ko	es	pt	it	de	fr	ru
+Settings	设置	設定	設定	설정	Ajustes	Definições	Impostazioni	Einstellungen	Réglages	Настройки
+Playback	播放	播放	再生	재생	Reproducción	Reprodução	Riproduzione	Wiedergabe	Lecture	Воспроизведение
+Audio	音频	音訊	オーディオ	오디오	Audio	Áudio	Audio	Audio	Audio	Звук
+Display	显示	顯示	表示	화면	Pantalla	Ecrã	Schermo	Anzeige	Affichage	Экран
+Network	网络	網路	ネットワーク	네트워크	Red	Rede	Rete	Netzwerk	Réseau	Сеть
+System	系统	系統	システム	시스템	Sistema	Sistema	Sistema	System	Système	Система
+Library	音乐库	音樂庫	ライブラリ	라이브러리	Música	Biblioteca	Libreria	Musik	Musique	Медиатека
+Songs	歌曲	歌曲	曲	노래	Canciones	Músicas	Brani	Titel	Titres	Песни
+Albums	专辑	專輯	アルバム	앨범	Álbumes	Álbuns	Album	Alben	Albums	Альбомы
+Artists	艺术家	藝人	アーティスト	아티스트	Artistas	Artistas	Artisti	Interpreten	Artistes	Исполнители
+Genres	流派	曲風	ジャンル	장르	Géneros	Géneros	Generi	Genres	Genres	Жанры
+Playlists	播放列表	播放清單	プレイリスト	재생목록	Listas	Listas de reprodução	Playlist	Wiedergabelisten	Playlists	Плейлисты
+Favourites	收藏	收藏	お気に入り	즐겨찾기	Favoritos	Favoritos	Preferiti	Favoriten	Favoris	Избранное
+Folders	文件夹	資料夾	フォルダ	폴더	Carpetas	Pastas	Cartelle	Ordner	Dossiers	Папки
+Books	有声书	有聲書	オーディオブック	오디오북	Libros	Audiolivros	Libri	Bücher	Livres	Книги
+History	历史	歷史	履歴	기록	Historial	Histórico	Cronologia	Verlauf	Historique	История
+Most Played	最常播放	最常播放	再生回数順	많이 재생	Más reproducidas	Mais ouvidas	Più ascoltati	Meistgespielt	Les plus écoutés	Часто играют
+Recently Played	最近播放	最近播放	最近再生	최근 재생	Recientes	Recentes	Ascoltati di recente	Zuletzt gespielt	Récemment écoutés	Недавние
+Files	文件	檔案	ファイル	파일	Archivos	Ficheiros	File	Dateien	Fichiers	Файлы
+Lyrics	歌词	歌詞	歌詞	가사	Letra	Letras	Testo	Songtext	Paroles	Текст
+Weather	天气	天氣	天気	날씨	Tiempo	Meteorologia	Meteo	Wetter	Météo	Погода
+Song Info	歌曲信息	歌曲資訊	曲情報	곡 정보	Info de canción	Info da música	Info brano	Titelinfo	Infos titre	О треке
+Up Next	接下来	接下來	次に再生	다음 곡	A continuación	A seguir	Prossimi	Als Nächstes	À suivre	Далее
+Options	选项	選項	オプション	옵션	Opciones	Opções	Opzioni	Optionen	Options	Параметры
+Add to Playlist	添加到播放列表	加入播放清單	プレイリストに追加	재생목록에 추가	Añadir a lista	Adicionar à lista	Aggiungi a playlist	Zur Wiedergabeliste	Ajouter à la playlist	В плейлист
+Chapters	章节	章節	チャプター	챕터	Capítulos	Capítulos	Capitoli	Kapitel	Chapitres	Главы
+Working Mode	工作模式	工作模式	動作モード	작동 모드	Modo de trabajo	Modo de trabalho	Modalità di lavoro	Betriebsmodus	Mode de travail	Режим работы
+Custom EQ	自定义均衡器	自訂等化器	カスタムEQ	사용자 EQ	EQ personalizado	EQ personalizado	EQ personalizzato	Eigener EQ	Égaliseur perso	Свой эквалайзер
+Accent	强调色	強調色	アクセント	강조색	Acento	Cor de destaque	Accento	Akzent	Accent	Акцент
+Bluetooth	蓝牙	藍牙	Bluetooth	블루투스	Bluetooth	Bluetooth	Bluetooth	Bluetooth	Bluetooth	Bluetooth
+Wi-Fi	无线网络	無線網路	Wi-Fi	Wi-Fi	Wi-Fi	Wi-Fi	Wi-Fi	WLAN	Wi-Fi	Wi-Fi
+Date & Time	日期和时间	日期與時間	日付と時刻	날짜 및 시간	Fecha y hora	Data e hora	Data e ora	Datum und Uhrzeit	Date et heure	Дата и время
+Quick Settings	快捷设置	快速設定	クイック設定	빠른 설정	Ajustes rápidos	Ajustes rápidos	Impostazioni rapide	Schnelleinstellungen	Réglages rapides	Быстрые настройки
+Sleep Timer	睡眠定时	睡眠計時	スリープタイマー	수면 타이머	Temporizador	Temporizador	Timer di spegnimento	Schlaftimer	Minuterie	Таймер сна
+Play Mode	播放模式	播放模式	再生モード	재생 모드	Modo de reproducción	Modo de reprodução	Modalità riproduzione	Wiedergabemodus	Mode de lecture	Режим воспроизведения
+Equalizer	均衡器	等化器	イコライザー	이퀄라이저	Ecualizador	Equalizador	Equalizzatore	Equalizer	Égaliseur	Эквалайзер
+DSD Output	DSD输出	DSD輸出	DSD出力	DSD 출력	Salida DSD	Saída DSD	Uscita DSD	DSD-Ausgabe	Sortie DSD	Выход DSD
+Resume Playback	恢复播放	恢復播放	再生を再開	재생 이어하기	Reanudar reproducción	Retomar reprodução	Riprendi riproduzione	Wiedergabe fortsetzen	Reprendre la lecture	Продолжить воспроизведение
+Play Through Folders	连续播放文件夹	連續播放資料夾	フォルダを連続再生	폴더 연속 재생	Reproducir carpetas seguidas		Riproduci cartelle di seguito	Ordner durchspielen	Enchaîner les dossiers	Играть папки подряд
+Gain	增益	增益	ゲイン	게인	Ganancia	Ganho	Guadagno	Verstärkung	Gain	Усиление
+DAC Filter	DAC滤波器	DAC濾波器	DACフィルター	DAC 필터	Filtro DAC	Filtro DAC	Filtro DAC	DAC-Filter	Filtre DAC	Фильтр ЦАП
+ReplayGain	回放增益	回放增益	リプレイゲイン	리플레이게인	ReplayGain	ReplayGain	ReplayGain	ReplayGain	ReplayGain	ReplayGain
+DRE	DRE	DRE	DRE	DRE	DRE	DRE	DRE	DRE	DRE	DRE
+Gapless	无缝播放	無縫播放	ギャップレス	끊김 없는 재생	Sin pausas	Sem pausas	Gapless	Lückenlos	Sans blanc	Без пауз
+Max Volume	最大音量	最大音量	最大音量	최대 볼륨	Volumen máximo	Volume máximo	Volume massimo	Maximale Lautstärke	Volume maximal	Макс. громкость
+Balance	平衡	平衡	バランス	밸런스	Balance	Balanço	Bilanciamento	Balance	Balance	Баланс
+Brightness	亮度	亮度	明るさ	밝기	Brillo	Brilho	Luminosità	Helligkeit	Luminosité	Яркость
+Theme	主题	主題	テーマ	테마	Tema	Tema	Tema	Design	Thème	Тема
+Appearance	外观	外觀	外観	모양	Apariencia	Aspeto	Aspetto	Erscheinungsbild	Apparence	Оформление
+Font Size	字体大小	字體大小	文字サイズ	글꼴 크기	Tamaño de letra	Tamanho da letra	Dimensione testo	Schriftgröße	Taille du texte	Размер шрифта
+Outdoor Mode	户外模式	戶外模式	屋外モード	야외 모드	Modo exterior	Modo exterior	Modalità esterni	Außenmodus	Mode extérieur	Режим на улице
+Track Numbers	曲目编号	曲目編號	トラック番号	트랙 번호	Números de pista	Números das faixas	Numeri di traccia	Titelnummern	Numéros de piste	Номера треков
+Online Album Art	在线专辑封面	線上專輯封面	オンラインジャケット	온라인 앨범 아트	Carátulas en línea	Capas online	Copertine online	Online-Cover	Pochettes en ligne	Обложки из сети
+Online Lyrics	在线歌词	線上歌詞	オンライン歌詞	온라인 가사	Letras en línea	Letras online	Testi online	Online-Songtexte	Paroles en ligne	Тексты из сети
+Now Playing	正在播放	正在播放	再生中	재생 중	Reproduciendo		In riproduzione	Aktuelle Wiedergabe	Lecture en cours	Сейчас играет
+Album View	专辑视图	專輯檢視	アルバム表示	앨범 보기	Vista de álbumes		Vista album	Albumansicht	Vue des albums	Вид альбомов
+Accent Colour	强调色	強調色	アクセントカラー	강조 색상	Color de acento		Colore accento	Akzentfarbe	Couleur d'accent	Цвет акцента
+Album Art Cache	封面缓存	封面快取	ジャケットキャッシュ	앨범 아트 캐시	Caché de carátulas		Cache copertine	Cover-Cache	Cache des pochettes	Кэш обложек
+Screensaver	屏保	螢幕保護	スクリーンセーバー	화면 보호기	Salvapantallas		Salvaschermo	Bildschirmschoner	Économiseur d'écran	Заставка
+Saver Style	屏保样式	螢幕保護樣式	セーバーの種類	보호기 스타일	Estilo de salvapantallas		Stile salvaschermo	Schonerstil	Style d'écran de veille	Стиль заставки
+Screen Off	息屏	關閉螢幕	画面オフ	화면 끄기	Apagar pantalla		Spegni schermo	Bildschirm aus	Extinction écran	Выкл. экрана
+24-Hour Time	24小时制	24小時制	24時間表示	24시간제	Formato 24 h		Formato 24 ore	24-Stunden-Format	Format 24 h	24-часовой формат
+Animations	动画	動畫	アニメーション	애니메이션	Animaciones		Animazioni	Animationen	Animations	Анимации
+Disc Colour	光盘颜色	光碟顏色	ディスクの色	디스크 색상	Color del disco	Cor do Disc	Colore del disco	Diskfarbe	Couleur du disque	Цвет диска
+Weather on Home	主页天气	主頁天氣	ホームに天気	홈 날씨	Tiempo en inicio		Meteo in home	Wetter auf Start	Météo à l'accueil	Погода на главной
+Back-swipe	滑动返回	滑動返回	スワイプで戻る	스와이프 뒤로	Deslizar atrás		Scorri indietro	Zurückwischen	Balayer retour	Свайп назад
+Language	语言	語言	言語	언어	Idioma	Idioma	Lingua	Sprache	Langue	Язык
+When Sleep Ends	睡眠结束时	睡眠結束時	スリープ終了時	수면 종료 시	Al terminar	No fim do temporizador	Al termine	Nach Ablauf	À la fin	По окончании
+Idle Power-off	空闲关机	閒置關機	待機で電源オフ	유휴 시 전원 끄기	Apagado por inactividad		Spegnimento inattivo	Auto-Ausschalten	Arrêt si inactif	Автовыключение
+Charging Limit	充电限制	充電限制	充電制限	충전 제한	Límite de carga	Limite de carga	Limite di carica	Ladelimit	Limite de charge	Лимит зарядки
+Rescan Library	重新扫描音乐库	重新掃描音樂庫	ライブラリを再スキャン	라이브러리 다시 검색	Reescanear biblioteca	Reanalisar biblioteca	Riesegui scansione	Bibliothek neu scannen	Réanalyser la bibliothèque	Пересканировать
+Import Playlists	导入播放列表	匯入播放清單	プレイリストを取り込む	재생목록 가져오기	Importar listas	Importar listas	Importa playlist	Playlists importieren	Importer des playlists	Импорт плейлистов
+Default UI	默认界面	預設介面	既定のUI	기본 UI	Interfaz por defecto	Interface padrão	Interfaccia predefinita	Standard-Oberfläche	Interface par défaut	Интерфейс по умолч.
+Automatic Time	自动校时	自動校時	自動時刻設定	자동 시간	Hora automática	Hora automática	Ora automatica	Automatische Zeit	Heure automatique	Авто-время
+Set Date & Time	设置日期和时间	設定日期與時間	日付と時刻を設定	날짜 및 시간 설정	Ajustar fecha y hora	Definir data e hora	Imposta data e ora	Datum und Uhrzeit einstellen	Régler date et heure	Установить дату и время
+Time Zone	时区	時區	タイムゾーン	시간대	Zona horaria	Fuso horário	Fuso orario	Zeitzone	Fuseau horaire	Часовой пояс
+Restart	重启	重新啟動	再起動	다시 시작	Reiniciar	Reiniciar	Riavvia	Neustart	Redémarrer	Перезапуск
+Debug Mode	调试模式	除錯模式	デバッグモード	디버그 모드	Modo de depuración	Modo de depuração	Modalità debug	Debug-Modus	Mode débogage	Режим отладки
+Temperature	温度	溫度	温度	온도	Temperatura	Temperatura	Temperatura	Temperatur	Température	Температура
+About	关于	關於	情報	정보	Acerca de	Sobre	Info	Info	À propos	О системе
+Sequential	顺序播放	順序播放	順次再生	순차 재생	Secuencial	Sequencial	Sequenziale	Der Reihe nach	Séquentiel	По порядку
+Shuffle	随机播放	隨機播放	シャッフル	셔플	Aleatorio	Aleatório	Casuale	Zufall	Aléatoire	Вперемешку
+Repeat One	单曲循环	單曲循環	1曲リピート	한 곡 반복	Repetir una	Repetir uma	Ripeti uno	Titel wiederholen	Répéter un titre	Повтор трека
+Repeat All	列表循环	清單循環	全曲リピート	전체 반복	Repetir todas	Repetir todas	Ripeti tutti	Alle wiederholen	Tout répéter	Повтор всех
+Single	单曲播放	單曲播放	1曲のみ	한 곡만	Una sola	Uma só	Singolo	Einzeln	Un seul	Один трек
+Off	关	關	オフ	끔	Desactivado	Desligado	Off	Aus	Désactivé	Выкл.
+On	开	開	オン	켬	Activado	Ligado	On	An	Activé	Вкл.
+Position	位置	位置	位置	위치	Posición	Posição	Posizione	Position	Position	Позиция
+Song	歌曲	歌曲	曲	곡	Canción	Música	Brano	Titel	Titre	Трек
+By Artist	按艺术家	依藝人	アーティスト別	아티스트별	Por artista	Por artista	Per artista	Nach Interpret	Par artiste	По исполнителю
+By Album Artist	按专辑艺术家	依專輯藝人	アルバムアーティスト別	앨범 아티스트별	Por artista del álbum	Por artista do álbum	Per artista album	Nach Albuminterpret	Par artiste de l'album	По артисту альбома
+Low	低	低	低	낮음	Bajo	Baixo	Basso	Niedrig	Faible	Низкий
+High	高	高	高	높음	Alto	Alto	Alto	Hoch	Élevé	Высокий
+Track	单曲	單曲	トラック	트랙	Pista	Faixa	Traccia	Titel	Piste	Трек
+Album	专辑	專輯	アルバム	앨범	Álbum	Álbum	Album	Album	Album	Альбом
+Dark	深色	深色	ダーク	어둡게	Oscuro	Escuro	Scuro	Dunkel	Sombre	Тёмный
+Light	浅色	淺色	ライト	밝게	Claro	Claro	Chiaro	Hell	Clair	Светлый
+Small	小	小	小	작게	Pequeño	Pequeno	Piccolo	Klein	Petit	Мелкий
+Medium	中	中	中	보통	Mediano	Médio	Medio	Mittel	Moyen	Средний
+Large	大	大	大	크게	Grande	Grande	Grande	Groß	Grand	Крупный
+Cover	封面	封面	ジャケット	커버	Carátula	Capa	Copertina	Cover	Pochette	Обложка
+Vinyl	黑胶	黑膠	ビニール	바이닐	Vinilo	Vinil	Vinile	Vinyl	Vinyle	Винил
+List	列表	清單	リスト	목록	Lista	Lista	Elenco	Liste	Liste	Список
+Cover Flow	封面流	封面流	カバーフロー	커버 플로우	Cover Flow		Cover Flow	Cover Flow	Cover Flow	Cover Flow
+Analog	模拟	類比	アナログ	아날로그	Analógico	Analógico	Analogico	Analog	Analogique	Аналоговые
+Minimal	极简	極簡	ミニマル	미니멀	Mínimo	Minimalista	Minimale	Minimal	Minimal	Минимализм
+Digital	数字	數位	デジタル	디지털	Digital	Digital	Digitale	Digital	Numérique	Цифровые
+Black	黑色	黑色	ブラック	검정	Negro	Preto	Nero	Schwarz	Noir	Чёрный
+Turquoise	青绿色	青綠色	ターコイズ	청록색	Turquesa	Turquesa	Turchese	Türkis	Turquoise	Бирюзовый
+Pink	粉色	粉紅色	ピンク	분홍색	Rosa	Rosa	Rosa	Rosa	Rose	Розовый
+Stock	原厂	原廠	標準	기본	Original	Original	Originale	Original	Origine	Штатный
+Covers only	仅封面	僅封面	ジャケットのみ	커버만	Solo carátulas		Solo copertine	Nur Cover	Pochettes seules	Только обложки
+When Idle	空闲时	閒置時	待機中	유휴 시	En reposo		A riposo	Bei Leerlauf	Au repos	В простое
+Idle & Charging	空闲和充电时	閒置與充電時	待機・充電中	유휴·충전 시	Reposo y carga		Riposo e carica	Leerlauf und Laden	Repos et charge	Простой и зарядка
+Pause	暂停	暫停	一時停止	일시정지	Pausar	Pausar	Pausa	Pause	Pause	Пауза
+Shut down	关机	關機	シャットダウン	종료	Apagar	Desligar	Spegni	Herunterfahren	Éteindre	Выключить
+Auto	自动	自動	自動	자동	Auto	Auto	Auto	Auto	Auto	Авто
+Automatic	自动	自動	自動	자동	Automático	Automático	Automatico	Automatisch	Automatique	Авто
+Not on this firmware	此固件不支持	此韌體不支援	このファームウェアでは非対応	이 펌웨어에서 지원 안 함	No disponible		Non disponibile	Nicht verfügbar	Non disponible	Недоступно
+Stop	停止	停止	停止	중지	Detener	Parar	Stop	Stopp	Arrêter	Стоп
+Scan	扫描	掃描	スキャン	검색	Buscar	Analisar	Scansiona	Scannen	Analyser	Скан.
+Import	导入	匯入	取り込む	가져오기	Importar	Importar	Importa	Import	Importer	Импорт
+End of chapter	章节结束	章節結束	チャプター終了	챕터 끝	Fin del capítulo		Fine capitolo	Kapitelende	Fin du chapitre	Конец главы
+Not Playing	未在播放	未在播放	再生していません	재생 안 함	Sin reproducción	Sem reprodução	Nessuna riproduzione	Keine Wiedergabe	Aucune lecture	Не играет
+No Track	无曲目	無曲目	曲なし	곡 없음	Sin pista	Sem faixa	Nessun brano	Kein Titel	Aucun titre	Нет трека
+Play All	全部播放	全部播放	すべて再生	모두 재생	Reproducir	Tocar tudo	Riproduci	Alle abspielen	Tout lire	Играть все
+Playlist	播放列表	播放清單	プレイリスト	재생목록	Lista	Lista de reprodução	Playlist	Wiedergabeliste	Playlist	Плейлист
+New Playlist	新建播放列表	新增播放清單	新規プレイリスト	새 재생목록	Nueva lista	Nova lista	Nuova playlist	Neue Wiedergabeliste	Nouvelle playlist	Новый плейлист
+Scan Library	扫描音乐库	掃描音樂庫	ライブラリをスキャン	라이브러리 검색	Buscar música	Analisar biblioteca	Scansiona libreria	Bibliothek scannen	Analyser la bibliothèque	Сканировать
+Jump to	跳转到	跳至	移動	이동	Ir a	Ir para	Vai a	Springe zu	Aller à	Перейти
+All Songs	所有歌曲	所有歌曲	すべての曲	모든 곡	Todas las canciones	Todas as músicas	Tutti i brani	Alle Titel	Tous les titres	Все треки
+No songs found	未找到歌曲	找不到歌曲	曲が見つかりません	곡을 찾을 수 없음	No hay canciones	Nenhuma música encontrada	Nessun brano	Keine Titel gefunden	Aucun titre trouvé	Треки не найдены
+No albums found	未找到专辑	找不到專輯	アルバムが見つかりません	앨범을 찾을 수 없음	No hay álbumes	Nenhum álbum encontrado	Nessun album	Keine Alben gefunden	Aucun album trouvé	Альбомы не найдены
+No artists found	未找到艺术家	找不到藝人	アーティストが見つかりません	아티스트를 찾을 수 없음	No hay artistas	Nenhum artista encontrado	Nessun artista	Keine Interpreten gefunden	Aucun artiste trouvé	Исполнители не найдены
+No genres found	未找到流派	找不到曲風	ジャンルが見つかりません	장르를 찾을 수 없음	No hay géneros	Nenhum género encontrado	Nessun genere	Keine Genres gefunden	Aucun genre trouvé	Жанры не найдены
+No Favourites yet	还没有收藏	尚無收藏	お気に入りはまだありません	즐겨찾기가 없습니다	Aún no hay favoritos	Ainda sem favoritos	Nessun preferito	Noch keine Favoriten	Pas encore de favoris	Избранного пока нет
+Nothing played yet	尚未播放	尚未播放	まだ再生していません	아직 재생한 곡 없음	Nada reproducido aún	Ainda sem reproduções	Nulla riprodotto	Noch nichts gespielt	Rien lu pour l'instant	Пока ничего не играло
+Remove from Favourites	从收藏中移除	從收藏中移除	お気に入りから削除	즐겨찾기에서 삭제	Quitar de favoritos	Remover dos favoritos	Rimuovi dai preferiti	Aus Favoriten entfernen	Retirer des favoris	Убрать из избранного
+Add to Favourites	添加到收藏	加入收藏	お気に入りに追加	즐겨찾기에 추가	Añadir a favoritos	Adicionar aos favoritos	Aggiungi ai preferiti	Zu Favoriten hinzufügen	Ajouter aux favoris	В избранное
+Go to Album	转到专辑	前往專輯	アルバムへ移動	앨범으로 이동	Ir al álbum	Ir para álbum	Vai all'album	Zum Album	Aller à l'album	К альбому
+Go to Artist	转到艺术家	前往藝人	アーティストへ移動	아티스트로 이동	Ir al artista	Ir para artista	Vai all'artista	Zum Interpreten	Aller à l'artiste	К исполнителю
+Full-screen Art	全屏封面	全螢幕封面	全画面ジャケット	전체 화면 아트	Carátula completa		Copertina a schermo intero	Vollbild-Cover	Pochette plein écran	Обложка на весь экран
+Add anyway	仍然添加	仍要加入	それでも追加	그래도 추가	Añadir igualmente	Adicionar na mesma	Aggiungi comunque	Trotzdem hinzufügen	Ajouter quand même	Всё равно добавить
+Cancel	取消	取消	キャンセル	취소	Cancelar	Cancelar	Annulla	Abbrechen	Annuler	Отмена
+Remove	移除	移除	削除	삭제	Quitar	Remover	Rimuovi	Entfernen	Retirer	Убрать
+Already in this playlist	已在此播放列表中	已在此播放清單中	すでにこのプレイリストにあります	이미 이 재생목록에 있음	Ya está en esta lista	Já está nesta lista	Già in questa playlist	Bereits in dieser Liste	Déjà dans cette playlist	Уже в этом плейлисте
+PLAY MODE	播放模式	播放模式	再生モード	재생 모드	MODO	MODO DE REPRODUÇÃO	MODALITÀ	MODUS	MODE	РЕЖИМ
+EQUALIZER	均衡器	等化器	イコライザー	이퀄라이저	ECUALIZADOR	EQUALIZADOR	EQUALIZZATORE	EQUALIZER	ÉGALISEUR	ЭКВАЛАЙЗЕР
+EQ	EQ	EQ	EQ	EQ	EQ	EQ	EQ	EQ	EQ	EQ
+Search	搜索	搜尋	検索	검색	Buscar	Pesquisar	Cerca	Suchen	Recherche	Поиск
+Rescan	重新扫描	重新掃描	再スキャン	재검색	Reescanear	Reanalisar	Riscansiona	Neu scannen	Réanalyser	Скан.
+Source	音源	音源	ソース	소스	Fuente	Fonte	Sorgente	Quelle	Source	Источник
+Screen off	息屏	關閉螢幕	画面オフ	화면 끄기	Pantalla off	Ecrã desligado	Schermo off	Display aus	Écran off	Экран выкл.
+Favourite	收藏	收藏	お気に入り	즐겨찾기	Favorito	Favorito	Preferito	Favorit	Favori	Избр.
+Timer	定时	計時	タイマー	타이머	Temporiz.	Temporizador	Timer	Timer	Minuterie	Таймер
+High Gain	高增益	高增益	高ゲイン	고게인	Ganancia alta	Ganho alto	Guadagno alto	Hohe Verst.	Gain élevé	Выс. усиление
+Outdoor	户外	戶外	屋外	야외	Exterior	Exterior	Esterni	Außen	Extérieur	Улица
+Hold an item to play all	长按项目可全部播放	長按項目可全部播放	長押しで全曲再生	길게 눌러 모두 재생	Mantén pulsado para reproducir todo		Tieni premuto per riprodurre tutto	Gedrückt halten: alles abspielen	Appui long : tout lire	Удерживайте, чтобы играть все
+Hold to remove	长按移除	長按移除	長押しで削除	길게 눌러 삭제	Mantén pulsado para quitar		Tieni premuto per rimuovere	Gedrückt halten zum Entfernen	Appui long pour retirer	Удерживайте для удаления
+Added to Favourites	已添加到收藏	已加入收藏	お気に入りに追加しました	즐겨찾기에 추가됨	Añadido a favoritos	Adicionado aos favoritos	Aggiunto ai preferiti	Zu Favoriten hinzugefügt	Ajouté aux favoris	Добавлено в избранное
+Removed from Favourites	已从收藏中移除	已從收藏中移除	お気に入りから削除しました	즐겨찾기에서 삭제됨	Quitado de favoritos	Removido dos favoritos	Rimosso dai preferiti	Aus Favoriten entfernt	Retiré des favoris	Убрано из избранного
+Sleep timer off	睡眠定时已关闭	睡眠計時已關閉	スリープタイマーをオフにしました	수면 타이머 꺼짐	Temporizador desactivado	Temporizador desligado	Timer spento	Schlaftimer aus	Minuterie désactivée	Таймер сна выключен
+Sleep at end of chapter	章节结束时睡眠	章節結束時睡眠	チャプター終了でスリープ	챕터 끝에서 수면	Dormir al final del capítulo		Sospendi a fine capitolo	Schlaf am Kapitelende	Veille à la fin du chapitre	Сон в конце главы
+Return to local playback first	请先返回本地播放	請先返回本機播放	先にローカル再生に戻してください	먼저 로컬 재생으로 돌아가세요	Vuelve antes a la reproducción local		Torna prima alla riproduzione locale	Erst zur lokalen Wiedergabe wechseln	Revenez d'abord à la lecture locale	Сначала вернитесь к локальному воспроизведению
+Couldn't seek - try again	无法跳转，请重试	無法跳轉，請重試	シークできません。もう一度お試しください	이동할 수 없습니다. 다시 시도하세요	No se pudo avanzar, inténtalo de nuevo		Impossibile spostarsi, riprova	Suchen fehlgeschlagen, erneut versuchen	Impossible de se déplacer, réessayez	Не удалось перемотать, повторите
+Player busy - try again	播放器繁忙，请重试	播放器忙碌中，請重試	プレーヤーがビジー状態です。もう一度お試しください	플레이어가 사용 중입니다. 다시 시도하세요	Reproductor ocupado, inténtalo de nuevo	Leitor ocupado - tente novamente	Lettore occupato, riprova	Player beschäftigt, erneut versuchen	Lecteur occupé, réessayez	Плеер занят, повторите
+No track playing	没有正在播放的曲目	沒有正在播放的曲目	再生中の曲はありません	재생 중인 곡 없음	Ninguna pista en reproducción	Nenhuma faixa em reprodução	Nessun brano in riproduzione	Kein Titel wird gespielt	Aucun titre en lecture	Ничего не играет
+Nothing to add	没有可添加的内容	沒有可加入的內容	追加するものがありません	추가할 항목 없음	Nada que añadir	Nada para adicionar	Niente da aggiungere	Nichts hinzuzufügen	Rien à ajouter	Нечего добавлять
+Out of memory	内存不足	記憶體不足	メモリ不足	메모리 부족	Sin memoria	Memória insuficiente	Memoria esaurita	Speicher voll	Mémoire insuffisante	Не хватает памяти
+No album info	没有专辑信息	沒有專輯資訊	アルバム情報がありません	앨범 정보 없음	Sin info del álbum		Nessuna info album	Keine Albuminfo	Pas d'infos d'album	Нет данных об альбоме
+No artist info	没有艺术家信息	沒有藝人資訊	アーティスト情報がありません	아티스트 정보 없음	Sin info del artista		Nessuna info artista	Keine Interpreteninfo	Pas d'infos d'artiste	Нет данных об исполнителе
+No song to add	没有可添加的歌曲	沒有可加入的歌曲	追加する曲がありません	추가할 곡 없음	Ninguna canción que añadir		Nessun brano da aggiungere	Kein Titel zum Hinzufügen	Aucun titre à ajouter	Нет трека для добавления
+Nothing new to add	没有新内容可添加	沒有新內容可加入	追加する新しい曲はありません	새로 추가할 항목 없음	Nada nuevo que añadir		Niente di nuovo da aggiungere	Nichts Neues hinzuzufügen	Rien de nouveau à ajouter	Нет новых для добавления
+Kept in playlist	已保留在播放列表中	已保留在播放清單中	プレイリストに保持しました	재생목록에 유지됨	Se mantiene en la lista		Mantenuto nella playlist	In Liste behalten	Conservé dans la playlist	Оставлено в плейлисте
+Added to playlist	已添加到播放列表	已加入播放清單	プレイリストに追加しました	재생목록에 추가됨	Añadido a la lista	Adicionado à lista	Aggiunto alla playlist	Zur Liste hinzugefügt	Ajouté à la playlist	Добавлено в плейлист
+Couldn't add	无法添加	無法加入	追加できませんでした	추가할 수 없음	No se pudo añadir	Não foi possível adicionar	Impossibile aggiungere	Hinzufügen fehlgeschlagen	Ajout impossible	Не удалось добавить
+Playlist created	已创建播放列表	已建立播放清單	プレイリストを作成しました	재생목록 생성됨	Lista creada	Lista criada	Playlist creata	Wiedergabeliste erstellt	Playlist créée	Плейлист создан
+Couldn't apply EQ	无法应用均衡器	無法套用等化器	EQを適用できませんでした	EQ를 적용할 수 없음	No se pudo aplicar el EQ		Impossibile applicare l'EQ	EQ konnte nicht angewendet werden	Impossible d'appliquer l'égaliseur	Не удалось применить эквалайзер
+EQ off	均衡器已关闭	等化器已關閉	EQオフ	EQ 꺼짐	EQ desactivado	EQ desligado	EQ disattivato	EQ aus	Égaliseur désactivé	Эквалайзер выключен
+Not available in books	有声书中不可用	有聲書中無法使用	ブックでは使用できません	책에서는 사용할 수 없음	No disponible en libros		Non disponibile nei libri	In Büchern nicht verfügbar	Indisponible dans les livres	Недоступно в книгах
+Not supported on this firmware yet	此固件暂不支持	此韌體暫不支援	このファームウェアはまだ非対応です	이 펌웨어는 아직 지원하지 않음	Aún no compatible con este firmware		Non ancora supportato da questo firmware	Von dieser Firmware noch nicht unterstützt	Pas encore pris en charge par ce firmware	Пока не поддерживается этой прошивкой
+Turn off a tile first	请先关闭一个磁贴	請先關閉一個圖磚	先にタイルを1つオフにしてください	먼저 타일 하나를 끄세요	Desactiva antes un icono		Disattiva prima un riquadro	Zuerst eine Kachel ausschalten	Désactivez d'abord une tuile	Сначала отключите одну плитку
+Wi-Fi off	无线网络已关闭	無線網路已關閉	Wi-Fiオフ	Wi-Fi 꺼짐	Wi-Fi desactivado	Wi-Fi desligado	Wi-Fi disattivato	WLAN aus	Wi-Fi désactivé	Wi-Fi выключен
+Turning on Wi-Fi...	正在开启无线网络...	正在開啟無線網路...	Wi-Fiをオンにしています...	Wi-Fi 켜는 중...	Activando Wi-Fi...		Attivazione Wi-Fi...	WLAN wird eingeschaltet...	Activation du Wi-Fi...	Включение Wi-Fi...
+Bluetooth off	蓝牙已关闭	藍牙已關閉	Bluetoothオフ	블루투스 꺼짐	Bluetooth desactivado	Bluetooth desligado	Bluetooth disattivato	Bluetooth aus	Bluetooth désactivé	Bluetooth выключен
+Turning on Bluetooth...	正在开启蓝牙...	正在開啟藍牙...	Bluetoothをオンにしています...	블루투스 켜는 중...	Activando Bluetooth...		Attivazione Bluetooth...	Bluetooth wird eingeschaltet...	Activation du Bluetooth...	Включение Bluetooth...
+Shuffle on	随机播放已开启	隨機播放已開啟	シャッフルオン	셔플 켜짐	Aleatorio activado	Aleatório ligado	Casuale attivo	Zufall an	Aléatoire activé	Перемешивание вкл.
+Shuffle off	随机播放已关闭	隨機播放已關閉	シャッフルオフ	셔플 꺼짐	Aleatorio desactivado	Aleatório desligado	Casuale disattivato	Zufall aus	Aléatoire désactivé	Перемешивание выкл.
+Loved	已收藏	已收藏	お気に入りに登録	즐겨찾기 등록	Marcado	Adicionado aos favoritos	Aggiunto	Favorit	Aimé	В избранном
+Unloved	已取消收藏	已取消收藏	お気に入りを解除	즐겨찾기 해제	Desmarcado	Removido dos favoritos	Rimosso	Favorit entfernt	Retiré	Убрано
+Gapless on	无缝播放已开启	無縫播放已開啟	ギャップレスオン	끊김 없는 재생 켜짐	Sin pausas activado	Sem pausas ligado	Gapless attivo	Lückenlos an	Sans blanc activé	Без пауз вкл.
+Gapless off	无缝播放已关闭	無縫播放已關閉	ギャップレスオフ	끊김 없는 재생 꺼짐	Sin pausas desactivado	Sem pausas desligado	Gapless disattivato	Lückenlos aus	Sans blanc désactivé	Без пауз выкл.
+High gain	高增益	高增益	高ゲイン	고게인	Ganancia alta	Ganho alto	Guadagno alto	Hohe Verstärkung	Gain élevé	Высокое усиление
+Low gain	低增益	低增益	低ゲイン	저게인	Ganancia baja	Ganho baixo	Guadagno basso	Niedrige Verstärkung	Gain faible	Низкое усиление
+Restarting...	正在重启...	正在重新啟動...	再起動しています...	다시 시작하는 중...	Reiniciando...	A reiniciar...	Riavvio...	Neustart...	Redémarrage...	Перезапуск...
+No new playlists found	未找到新的播放列表	找不到新的播放清單	新しいプレイリストが見つかりません	새 재생목록 없음	No hay listas nuevas		Nessuna nuova playlist	Keine neuen Wiedergabelisten	Aucune nouvelle playlist	Новых плейлистов нет
+Couldn't set the time zone	无法设置时区	無法設定時區	タイムゾーンを設定できません	시간대를 설정할 수 없음	No se pudo fijar la zona horaria		Impossibile impostare il fuso orario	Zeitzone konnte nicht gesetzt werden	Impossible de régler le fuseau horaire	Не удалось задать часовой пояс
+Couldn't change boot UI	无法更改启动界面	無法變更啟動介面	起動UIを変更できません	부팅 UI를 변경할 수 없음	No se pudo cambiar la interfaz de inicio		Impossibile cambiare l'interfaccia di avvio	Start-Oberfläche nicht änderbar	Impossible de changer l'interface de démarrage	Не удалось сменить интерфейс загрузки
+Applies after the next restart	下次重启后生效	下次重新啟動後生效	次回の再起動後に反映されます	다음 재시작 후 적용	Se aplica tras reiniciar	Aplica-se após reiniciar	Si applica al prossimo riavvio	Gilt nach dem nächsten Neustart	S'applique au prochain redémarrage	Применится после перезапуска
+Couldn't change it - try again	无法更改，请重试	無法變更，請重試	変更できません。もう一度お試しください	변경할 수 없습니다. 다시 시도하세요	No se pudo cambiar, inténtalo de nuevo		Impossibile modificare, riprova	Änderung fehlgeschlagen, erneut versuchen	Modification impossible, réessayez	Не удалось изменить, повторите
+15 min	15分钟	15分鐘	15分	15분	15 min		15 min	15 Min.	15 min	15 мин
+30 min	30分钟	30分鐘	30分	30분	30 min		30 min	30 Min.	30 min	30 мин
+45 min	45分钟	45分鐘	45分	45분	45 min		45 min	45 Min.	45 min	45 мин
+60 min	60分钟	60分鐘	60分	60분	60 min		60 min	60 Min.	60 min	60 мин
+90 min	90分钟	90分鐘	90分	90분	90 min		90 min	90 Min.	90 min	90 мин
+120 min	120分钟	120分鐘	120分	120분	120 min		120 min	120 Min.	120 min	120 мин
+5 min	5分钟	5分鐘	5分	5분	5 min		5 min	5 Min.	5 min	5 мин
+10 min	10分钟	10分鐘	10分	10분	10 min		10 min	10 Min.	10 min	10 мин
+1 min	1分钟	1分鐘	1分	1분	1 min		1 min	1 Min.	1 min	1 мин
+2 min	2分钟	2分鐘	2分	2분	2 min		2 min	2 Min.	2 min	2 мин
+30 sec	30秒	30秒	30秒	30초	30 s		30 s	30 Sek.	30 s	30 сек
+Keep this orientation?						Manter esta orientação?				
+Reverting in						A reverter em				
+The drawer shows up to 6 tiles (5 with playback controls).						O painel mostra até 6 atalhos (5 com controlos de reprodução).				
+Album covers preload in the background so browsing stays smooth. Per-track art is decoded only as you play it (default).										
+Covers preload, plus every track's art is pre-decoded while idle. Decoding can warm the player; it pauses automatically if it gets hot.										
+Covers preload, plus every track's art is pre-decoded while idle AND charging. Decoding can warm the player; it pauses automatically if it gets hot.										
+Play through the list in order, then stop.										
+Play tracks in a random order.	随机顺序播放曲目。	隨機順序播放曲目。	曲をランダムな順序で再生します。		Reproduce las pistas en orden aleatorio.	Reproduz as faixas por ordem aleatória.	Riproduce i brani in ordine casuale.	Spielt Titel in zufälliger Reihenfolge ab.	Lit les titres dans un ordre aléatoire.	Воспроизводит треки в случайном порядке.
+Repeat the current track over and over.	重复播放当前曲目。	重複播放目前曲目。	現在の曲を繰り返し再生します。		Repite la pista actual.	Repete a faixa atual.	Ripete il brano corrente.	Wiederholt den aktuellen Titel.	Répète le titre en cours.	Повторяет текущий трек.
+Loop the whole list when it ends.										
+Play the current track once, then stop.										
+Album cover shown as a rounded square.										
+Spinning vinyl record while a track plays.										
+How the player advances through tracks.										
+Tone preset sent to the player; audible effect is still being verified.										
+Adjust the 10-band custom EQ. Applies live and saves on the device.										
+The player auto-selects the DSD mode; this control isn't user-adjustable yet.										
+On power-on: Off = start fresh, Position = resume the exact spot, Song = reopen the last track.										
+Group the Artists list by each song's artist, or by its album artist - the same choice as the stock player.										
+When an album, artist, genre or folder finishes, keep playing the next one. Works with Sequential, Shuffle and Loop All.										
+Switch the audio source: local playback, USB DAC, Bluetooth receiving, or USB storage.										
+Headphone output gain. High drives demanding headphones louder.										
+CS43131 digital filter roll-off. A subtle tone/transient tradeoff.										
+Level the volume across tracks. Track uses each song's gain; Album keeps an album's relative dynamics.										
+Dynamic Range Enhancement (CS43131) for quieter listening.										
+Play tracks with no silent gap between them.			曲間を空けずに再生します。		Reproduce las pistas sin pausas.	Reproduz as faixas sem pausas.	Riproduce i brani senza pause.	Spielt Titel ohne Pause dazwischen.	Lit les titres sans blanc entre eux.	Воспроизводит треки без пауз между ними.
+Cap the maximum volume level (protects your ears / headphones).										
+Left/right channel balance. 0 = centred; negative = left, positive = right.										
+Send audio to the digital SPDIF output instead of the internal DAC. Playback pauses for a moment while it switches.										
+Screen backlight level. While Outdoor Mode is on the screen stays at full brightness.										
+Colour theme for the whole interface. Each has dark and light screens (see Appearance).										
+Dark or light screens. Changing it redraws the screen in a moment; music keeps playing.										
+Size of list and body text: Small, Medium or Large. Titles and clocks keep their size. The screen redraws in a moment.										
+Turn the picture and touch clockwise: Normal, 90, 180 or 270 degrees. Stored by the player, as in the stock menu.										
+Light screens at full brightness, easier to read in sunlight. Uses more battery. Turning it off returns your own brightness.										
+Show each song's track number in album lists.										
+Songs with no cover of their own get one from the internet (Wi-Fi). Each album is looked up once; playback is never touched.										
+Songs with no lyrics of their own (no .lrc file, none in the song's tags) are looked up on lrclib.net (Wi-Fi). Off stops diskOS's own lookup; lyrics from the SD card or the song's tags still show.										
+Choose which tiles appear in the pull-down Quick Settings drawer.										
+Album art style on the Now Playing screen.										
+How the Albums list looks: a text list, or a cover flow you flick through.										
+Now Playing accent: derived from album art, or any fixed colour you pick.										
+Pre-decode album art so covers load instantly. Background decoding can warm the player; it throttles on heat.										
+Idle time before the clock screensaver appears and the screen dims.										
+Screensaver look: Cover art, Analog clock, Minimal, Digital, or spinning Vinyl.										
+How long after the screensaver the screen turns fully off.										
+Use a 24-hour clock instead of AM/PM.										
+Slide animations between screens.										
+The colour of the Disc drawn on the startup screen. Set it to match yours.										
+Show the weather glance on the home screen and screensaver (tap it to open the full forecast). Off skips the background fetch to save battery.										
+Swipe distance needed to go back. Lower is more sensitive.										
+Scan for and connect to Wi-Fi networks.										
+Pair Bluetooth devices. Audio routes to connected headphones or speakers (SBC, beta).										
+Codec for Bluetooth headphones, as in the stock player. Applies the next time the headphones connect. If they lack the codec, SBC is used. AAC and LDAC are heavier for this player and may stutter.										
+Interface language. Song, artist and album names are always shown as they are tagged.										
+Pause playback, or shut the device down (see When Sleep Ends), after this long. Resets on restart.										
+What the Sleep Timer does. Shut down closes the card safely first, then powers the device off.										
+Power the device off after this long with nothing playing and no touch or key press. Closes the card safely first.										
+The player's Charging optimization: stops charging at about 80% to slow battery wear.										
+What the volume keys do on a single press: adjust the volume or switch track. Stored by the player, as in the stock menu.										
+What the volume keys do on a double press: adjust the volume or switch track.										
+What the volume keys do when held: adjust the volume or switch track.										
+Re-scan the SD card for new or removed music.										
+Import .m3u / .m3u8 playlists found on the SD card.										
+Which UI boots by default. To boot the other one, hold Vol-Up from power-on until it appears.										
+Set the time and time zone from the internet whenever Wi-Fi connects. A change applies after the next restart.										
+Set the clock by hand. With Automatic Time on, Wi-Fi may correct it later.										
+Automatic follows your location when Wi-Fi connects (with Automatic Time on). Pick a zone to set it yourself.										
+Restart the device. Boots your default UI; hold Vol-Up for the other one.										
+Model, stock firmware, diskOS build, MAC addresses, storage and battery.										
+Look for a file on the SD card named like a stock update and show how it is used. Information only: diskOS never runs it.										
+Look up the newest diskOS release on GitHub (needs Wi-Fi). If it carries a signed update, download and verify it, then restart to finish. Nothing changes until you confirm.										
+Put diskOS's look and behaviour settings back to defaults. Music, Wi-Fi, Bluetooth, Last.fm, EQ and audio settings are kept.										
+Enable temporary SSH over Wi-Fi (fresh random password) for debugging. Off by default.										
+Battery/board temperature from the fuel gauge (this SoC exposes no core sensor).										
+diskOS - a custom music player UI. The code in brackets identifies this exact build.										
+Play	播放	播放	再生	재생	Reproducir	Reproduzir	Riproduci	Abspielen	Lire	Играть
+Screen redraws after selection.					La pantalla se redibuja.	O ecrã é atualizado.	Lo schermo si aggiorna.	Bildschirm wird neu gezeichnet.	L'écran se redessine.	Экран обновится после выбора.
+Keep diskOS %s?										
+This update has been running for a few minutes. Keep it, or go back to the previous version (the device restarts).										
+Go back										
+Keep										
+Restart to go back to the previous version.										
+Couldn't save your choice. Try again.										
+Allow diskOS Updates										
+diskOS only updates when you tap Update diskOS, and only with signed releases.										
+Not supported on this install										
+diskOS %s is available (you have %s). Updates are turned off in Settings. Turn on Allow diskOS Updates, or install it with the installer from github.com/b0hemia/diskos.										
+diskOS updates										
+Couldn't discard the update										
+Discard										
+Turn off updates?										
+Turning updates off discards the downloaded update.										
+Update discarded. Updates are off.										

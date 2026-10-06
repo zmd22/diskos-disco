@@ -1,0 +1,144 @@
+From eb05eaef0f7dac0fb1f166f88d69e1b895eb2e1a Mon Sep 17 00:00:00 2001
+From: b0hemia <50309975+b0hemia@users.noreply.github.com>
+Date: Mon, 24 Aug 2026 23:46:16 +1000
+Subject: [PATCH 4/8] ddr: bound clk.c DDR-clock polls + constrain
+ dynamic-calib div; board_init_f breadcrumbs
+
+---
+ arch/mips/cpu/xburst2/ddr_innophy.c         |  1 +
+ arch/mips/cpu/xburst2/x2000/clk.c           |  6 +++---
+ arch/mips/cpu/xburst2/x2000/soc.c           | 22 +++++++++++++++++++++
+ arch/mips/include/asm/arch-x2000/ddr_diag.h | 17 ++++++++++++++++
+ 4 files changed, 43 insertions(+), 3 deletions(-)
+ create mode 100644 arch/mips/include/asm/arch-x2000/ddr_diag.h
+
+diff --git a/arch/mips/cpu/xburst2/ddr_innophy.c b/arch/mips/cpu/xburst2/ddr_innophy.c
+index 91cf6a3..c9b19f8 100755
+--- a/arch/mips/cpu/xburst2/ddr_innophy.c
++++ b/arch/mips/cpu/xburst2/ddr_innophy.c
+@@ -563,6 +563,7 @@ static void get_dynamic_calib_value(unsigned int rate)
+ 			ddr_calibration(&dcv[cur_div], cur_div);
+ 			break;
+ 		}
++		if(div > 0xf) { ddr_diag_fail(60 /*calib div overflow - bad DDR rate*/, (unsigned int)rate); break; }
+ 		dcv[div].rate = drate;
+ 		dcv[div].refcnt = get_refcnt_value(div);
+ 		ddr_calibration(&dcv[div], div);
+diff --git a/arch/mips/cpu/xburst2/x2000/clk.c b/arch/mips/cpu/xburst2/x2000/clk.c
+index c700a03..30764b6 100755
+--- a/arch/mips/cpu/xburst2/x2000/clk.c
++++ b/arch/mips/cpu/xburst2/x2000/clk.c
+@@ -27,6 +27,7 @@
+ #include <asm/gpio.h>
+ #include <asm/arch/cpm.h>
+ #include <asm/arch/clk.h>
++#include <asm/arch/ddr_diag.h>
+ #include <generated/clk_reg_values.h>
+ 
+ DECLARE_GLOBAL_DATA_PTR;
+@@ -68,7 +69,7 @@ void clk_prepare(void)
+ 			/*set div max*/
+ 			regval |= cgusetting[i].val;
+ 			writel(regval, reg);
+-			while (readl(reg) & (1 << cgusetting[i].busy));
++			DDR_BOUND(!(readl(reg) & (1 << cgusetting[i].busy)), 4 /*cgu init busy*/, readl(reg));
+ 		} else {
+ 			regval &= ~(1 << cgusetting[i].ce);
+ 			writel(regval, reg);
+@@ -244,8 +245,7 @@ void clk_set_rate(int clk_id, unsigned long rate)
+ 	regval &= ~(3 << cgu->stop | 0xff);
+ 	regval |= ((1 << cgu->ce) | cdr);
+ 	writel(regval, reg);
+-	while (readl(reg) & (1 << cgu->busy))
+-		;
++	DDR_BOUND(!(readl(reg) & (1 << cgu->busy)), 5 /*DDR clk busy (clk_set_rate)*/, readl(reg));
+ #ifdef DUMP_CGU_SELECT
+ 	printf("%s(0x%x) :0x%x\n",clk_name[clk_id] ,reg,  readl(reg));
+ #endif
+diff --git a/arch/mips/cpu/xburst2/x2000/soc.c b/arch/mips/cpu/xburst2/x2000/soc.c
+index 54ff3b7..6b96c5b 100755
+--- a/arch/mips/cpu/xburst2/x2000/soc.c
++++ b/arch/mips/cpu/xburst2/x2000/soc.c
+@@ -67,11 +67,23 @@ extern void ddr_test_refresh(unsigned int start_addr, unsigned int end_addr);
+ extern void flush_cache_all(void);
+ 
+ 
++/* DIAG: breadcrumb record @0xb24017c0 (shared with ddr_innophy.c). Set 1 to early-return
++ * before sdram_init to prove the mask-ROM return path works in isolation. */
++#define DIAG_SKIP_SDRAM 0
++#define BIF_CRUMB(s) do { *(volatile unsigned int*)0xb24017c4 = (s); __asm__ __volatile__("sync"); } while(0)
++
+ void board_init_f(ulong dummy)
+ {
+ 	/* Set global data pointer */
+ 	gd = &gdata;
+ 
++	/* DIAG: mark that we reached board_init_f (magic + stage 0xF0) */
++	*(volatile unsigned int*)0xb24017c0 = 0xD1A6C0DEu;
++	*(volatile unsigned int*)0xb24017c8 = 0;
++	*(volatile unsigned int*)0xb24017cc = 0;
++	*(volatile unsigned int*)0xb24017d0 = 0;
++	BIF_CRUMB(0xF0);
++
+ 	/* Setup global info */
+ #ifndef CONFIG_BURNER
+ 	gd->arch.gi = &ginfo;
+@@ -80,6 +92,7 @@ void board_init_f(ulong dummy)
+ #endif
+ 
+ 	gpio_init();
++	BIF_CRUMB(0xF1);
+ 
+ 	*(volatile unsigned int *)0xb0000020 = 0;	//clk gate enable.
+ 	*(volatile unsigned int *)0xb0000028 = 0;	//clk gate enable.
+@@ -93,15 +106,24 @@ void board_init_f(ulong dummy)
+ #endif
+ 	debug("Timer init\n");
+ 	timer_init();
++	BIF_CRUMB(0xF2);
+ 
+ 	debug("CLK stop\n");
+ //	clk_prepare();
+ 
+ 	debug("PLL init\n");
+ 	pll_init();
++	BIF_CRUMB(0xF3);
+ 
+ 	debug("CLK init\n");
+ 	clk_init();
++	BIF_CRUMB(0xF4);
++
++#if DIAG_SKIP_SDRAM
++	/* DIAG: return before DDR to test the mask-ROM return path in isolation. */
++	BIF_CRUMB(0xFE);
++	return;
++#endif
+ 
+ 	debug("SDRAM init\n");
+ 	sdram_init();
+diff --git a/arch/mips/include/asm/arch-x2000/ddr_diag.h b/arch/mips/include/asm/arch-x2000/ddr_diag.h
+new file mode 100644
+index 0000000..68654ec
+--- /dev/null
++++ b/arch/mips/include/asm/arch-x2000/ddr_diag.h
+@@ -0,0 +1,17 @@
++#ifndef _ASM_ARCH_DDR_DIAG_H
++#define _ASM_ARCH_DDR_DIAG_H
++/* Shared DDR bring-up breadcrumb record @0xb24017c0 (TCSM pad below the start.S return
++ * shim scratch at 0x17f0). usbboot uploads it after the SPL returns to the mask ROM.
++ * Layout: [0]=magic [1]=stage [2]=first fail id [3]=status@fail [4]=fail count */
++#define DDR_DIAG        ((volatile unsigned int *)0xb24017c0)
++#define DDR_DIAG_MAGIC  0xD1A6C0DEu
++#define ddr_diag_fail_raw(id, status) do { \
++		if(DDR_DIAG[2]==0){ DDR_DIAG[2]=(unsigned int)(id); DDR_DIAG[3]=(unsigned int)(status); } \
++		DDR_DIAG[4]++; __asm__ __volatile__("sync"); \
++	} while(0)
++/* bounded busy-wait: wait for (cond); on ~1e6-iter timeout record (id,statusexpr) and stop. */
++#define DDR_BOUND(cond, id, statusexpr) do { \
++		unsigned int _bt = 1000000u; \
++		while(!(cond)) { if(!--_bt){ ddr_diag_fail_raw((id), (statusexpr)); break; } } \
++	} while(0)
++#endif
+-- 
+2.43.0
+

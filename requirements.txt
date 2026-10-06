@@ -1,0 +1,5 @@
+# Python runtime dependencies for the diskOS installer.
+# install.sh pip-installs these into a local .venv. Versions are pinned so the
+# vendored license texts in licenses/ match what actually gets installed.
+pyusb==1.3.1          # mask-ROM USB device detection (BSD-3-Clause)
+pycryptodome==3.23.0  # AES-decrypt of FiiO OTA chunks (BSD-2-Clause + public-domain)
