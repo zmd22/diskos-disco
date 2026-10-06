@@ -452,7 +452,7 @@ half an hour on battery. Without a set clock the 24-hour figures show "-".
 - **The stock interface is always there.** If the Disco! interface ever stops, the Disc falls back to FiiO's
   own interface until the next restart; your music and settings are untouched. Settings > System > Default UI
   can make stock the normal choice, and holding Volume Up from power-on boots the other interface once.
-- **Settings > System > About** shows the version (e.g. "Disco! 1.0.1") with the exact build ID, and the diskOS
+- **Settings > System > About** shows the version (e.g. "Disco! 1.0.2") with the exact build ID, and the diskOS
   version underneath.
 - **The rescan dot.** While the library is being rescanned, a small dot runs around the rim of the screen.
 

@@ -5,6 +5,19 @@ All notable changes to diskOS Disco! (and the diskOS releases underneath) are do
 Entries follow the Keep a Changelog format, with Added, Changed, and Fixed categories where applicable.
 diskOS remains beta software; version numbers do not imply broad hardware or feature validation.
 
+## [Disco! 1.0.2] - 2026-10-07
+
+Settings > About shows "Disco! 1.0.2".
+
+### Fixed
+- **"Player didn't respond" a few seconds after start-up.** diskOS turns the player's own idle power-off off at start-up
+  (it runs its own); that request is sent before the player is ready and repeated until the player confirms, and every
+  early attempt raised the toast. It now waits for the player quietly. Real failures of things you do still show it.
+- **A fresh flash now always runs the build you flashed.** Builds installed from the SD card are kept on the Disc's data
+  partition, which survives a flash, and the start-up script preferred them over the flashed one - so after flashing, an
+  older SD-card build could keep running. The script now recognises a new flash (by the flashed build's checksum) and
+  drops the kept SD-card builds once; SD-card updates installed afterwards work as before.
+
 ## [Disco! 1.0.1] - 2026-10-07
 
 A stability fix for talking to the player, and a CD look for Immersive. Settings > About shows "Disco! 1.0.1".

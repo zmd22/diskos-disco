@@ -122,7 +122,7 @@ Library). A small dot runs around the rim while it scans.
 **Update from the SD card.**
 
 1. On your computer, make a signed update with the signing script:
-   `sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 1.0.1` (the last part is the version label shown on the Disc).
+   `sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 1.0.2` (the last part is the version label shown on the Disc).
 2. Copy the resulting `diskos-update` folder to the root of the SD card.
 3. On the Disc: Settings > System > Update from SD Card > Update, then restart.
 4. The new version starts as a **trial**. Play some music (or tap **Keep** when asked) to keep it. If it
@@ -131,7 +131,7 @@ Library). A small dot runs around the rim while it scans.
 Updates are signed with your own keys, made once with `diskos-keys.sh`; the Disc only accepts updates signed with
 the key it was installed with.
 
-**See which version you're on.** Settings > System > About ("Disco! 1.0.1" plus the build ID).
+**See which version you're on.** Settings > System > About ("Disco! 1.0.2" plus the build ID).
 
 **If a restart is refused.** The toast says why; for details, `cat /tmp/restart_last` over SSH (Debug Mode).
 

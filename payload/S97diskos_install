@@ -292,8 +292,24 @@ ota_rollback() {  # <reason> <failed version> <failed sha or empty>
     ota_marker "$1" "$2"
 }
 
+# A NEW FLASH WINS. /usr/data survives a flash, and the kept SD-card builds (good/ trial/ pending) would otherwise be
+# chosen over the build just flashed. The flashed build is identified by its manifest SHA-256 (the RO rootfs only changes
+# by flashing); when it differs from the one recorded at the last boot, every kept SD-card build is dropped and the
+# flashed one runs. `accepted` (the replay floor) and `rejected` stay. An SD update installed afterwards wins as before.
+ota_new_flash() {
+    _fs=$(kv "$UPD/flashed" SHA256)
+    [ "$_fs" = "$FL_MSHA" ] && return 0
+    if [ -d "$UPD/good" ] || [ -d "$UPD/good.prev" ] || [ -d "$UPD/active" ] || [ -d "$UPD/pending" ]; then
+        rm -rf "$UPD/good" "$UPD/good.prev" "$UPD/active" "$UPD/pending" "$UPD/pending.old" "$UPD/incoming" 2>/dev/null
+        rm -f "$UPD/trial" "$UPD/trial.tmp" "$UPD/trial.launched" "$UPD/trial.crashed" "$UPD/healthy" "$UPD/revert" 2>/dev/null
+        log "ota: new flash (sha256 $FL_MSHA) -> kept SD-card builds dropped; running the flashed build"
+    fi
+    printf 'SHA256=%s\n' "$FL_MSHA" > "$UPD/flashed.tmp" 2>/dev/null && mv -f "$UPD/flashed.tmp" "$UPD/flashed" 2>/dev/null \
+        || log "ota: could not record the flashed build"
+}
 ota_select() {
     ota_enabled || return 0
+    ota_new_flash
     CH_DIR=; CH_KIND=; O_DIR=
     # good.prev = the previous good build, kept until the promoted one has been re-verified on a LATER boot
     if [ ! -d "$UPD/good" ] && [ -d "$UPD/good.prev" ]; then mv "$UPD/good.prev" "$UPD/good" 2>/dev/null; fi
