@@ -341,6 +341,7 @@ int main(int argc, char **argv){
         cfg_set_int_deferred("eq_preset",11);cfg_set_int_deferred("eq_last",11);cfg_set_str("eq_name11","Warm analogue");
         if(getenv("DISCO_QS"))cfg_set_int_deferred("disco_qs",atoi(getenv("DISCO_QS")));
         if(getenv("DISCO_PROG"))cfg_set_int_deferred("disco_progress",atoi(getenv("DISCO_PROG")));
+        if(getenv("DISCO_IMMSTYLE"))cfg_set_int_deferred("disco_imm",atoi(getenv("DISCO_IMMSTYLE")));
         if(getenv("DISCO_SHAPE"))cfg_set_int_deferred("disco_prog_shape",atoi(getenv("DISCO_SHAPE")));
         if(getenv("DISCO_TAL"))cfg_set_int_deferred("disco_title_al",atoi(getenv("DISCO_TAL")));
         if(getenv("DISCO_SHEEN"))cfg_set_int_deferred("disco_sheen",atoi(getenv("DISCO_SHEEN")));
@@ -416,7 +417,7 @@ int main(int argc, char **argv){
             lv_obj_t *t=find_text(screen_get_root(SCR_HOME),st.title); assert(t); lv_obj_send_event(lv_obj_get_parent(t),LV_EVENT_LONG_PRESSED,NULL);
             for(int i=0;i<60;i++){lv_tick_inc(10);lv_timer_handler();}
         }
-        if(getenv("DISCO_IMM")){ disco_open_np_immersive(); for(int i=0;i<60;i++){lv_tick_inc(10);lv_timer_handler();} assert(ui_np_fsart_active()); }
+        if(getenv("DISCO_IMM")){ void ui_imm_style_apply(void); ui_imm_style_apply(); disco_open_np_immersive(); for(int i=0;i<60;i++){lv_tick_inc(10);lv_timer_handler();} assert(ui_np_fsart_active()); }
         if(getenv("DISCO_NAV")){                 /* DISCO_NAV=1 open; =o<ms> opening after ms; =c<ms> closing after ms */
             const char *nv=getenv("DISCO_NAV"); int ms=atoi(nv+1);
             disco_nav_set_open(1);
@@ -435,6 +436,8 @@ int main(int argc, char **argv){
             clock_gettime(CLOCK_MONOTONIC,&t1);
             fprintf(stderr,"PERF idle %.2f ms/s\n",((t1.tv_sec-t0.tv_sec)*1e3+(t1.tv_nsec-t0.tv_nsec)/1e6)/200);
         }
+        if(getenv("MODES_PENDING")){ void modes_test_pending(int); modes_test_pending(atoi(getenv("MODES_PENDING"))); for(int i=0;i<25;i++){lv_tick_inc(10);lv_timer_handler();} }
+        if(getenv("MODES_INFO")){ void modes_test_info(int); scr=SCR_MODEINFO; screen_show(scr); modes_test_info(atoi(getenv("MODES_INFO"))); for(int i=0;i<30;i++){lv_tick_inc(10);lv_timer_handler();} }
         if(getenv("BACK_HINT")){ ui_back_hint(180, atoi(getenv("BACK_HINT"))); for(int i=0;i<10;i++){lv_tick_inc(10);lv_timer_handler();} }
         if(getenv("HOME_HINT")){ ui_home_hint(180, atoi(getenv("HOME_HINT"))); for(int i=0;i<10;i++){lv_tick_inc(10);lv_timer_handler();} }
         if(getenv("DISCO_MENU")){ disco_menu_open(); for(int i=0;i<20;i++){lv_tick_inc(10);lv_timer_handler();} }

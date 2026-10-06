@@ -2,6 +2,7 @@
 #include "imm_record.h"
 #include <math.h>
 #include <stddef.h>
+#include <stdlib.h>
 static int smoothing=1;
 static imm_overlay_t ovl[IMM_MAX_OVERLAYS]; static int novl;
 void imm_record_set_overlays(const imm_overlay_t *o,int n){
@@ -52,6 +53,53 @@ static void bake_extras(uint32_t *out){
     }
 }
 void imm_record_set_smoothing(int enabled){smoothing=!!enabled;}
+/* ---- the CD layer: per pixel, out = cover * K + T (K 0..256 = what is kept of the cover, T = the premultiplied
+ * sheen colour), both with the lyric fade already applied. Built once per fade height (~0.7 MB, freed when off). */
+static int cd_on, cd_fade=-1;
+static uint16_t *cd_k; static uint32_t *cd_t;
+void imm_record_set_cd(int on){
+    cd_on=!!on; cd_fade=-1;
+    if(!cd_on){ free(cd_k); free(cd_t); cd_k=NULL; cd_t=NULL; }
+}
+static const uint8_t IRI[7][3]={{255,90,160},{255,180,90},{255,240,106},{98,242,140},{74,216,255},{106,140,255},{179,107,255}};
+static void iri(double t,double *rgb){
+    t-=floor(t); double f=t*7; int i=(int)f; double u=f-i; const uint8_t *a=IRI[i%7],*b=IRI[(i+1)%7];
+    for(int k=0;k<3;k++) rgb[k]=a[k]+(b[k]-a[k])*u;
+}
+#define CD_SPOKES 24
+static void cd_build(const int *keep){
+    if(!cd_k) cd_k=malloc(360*360*sizeof *cd_k);
+    if(!cd_t) cd_t=malloc(360*360*sizeof *cd_t);
+    if(!cd_k||!cd_t){ free(cd_k); free(cd_t); cd_k=NULL; cd_t=NULL; cd_on=0; return; }
+    const double PI=3.141592653589793;
+    for(int y=0;y<360;y++)for(int x=0;x<360;x++){
+        double dx=x+0.5-180,dy=y+0.5-180,r=sqrt(dx*dx+dy*dy),ang=atan2(dy,dx);
+        double rgb[3]={0,0,0},a=0;
+        if(r<180){
+            /* the sheen: a faint rainbow wash over the disc, stronger toward the rim */
+            double rr=r/180.0, wash=0.10+0.20*rr*rr*rr;
+            if(r>36){ iri(ang/(2*PI)*2.0,rgb); a=wash; }
+            /* the spokes: thin rainbow lines from the hub to the rim, fading at both ends */
+            if(r>38&&r<178){
+                double ph=ang/(2*PI)*CD_SPOKES+0.5+0.13*CD_SPOKES/(2*PI); ph-=floor(ph);
+                double dist=fabs(ph-0.5)*(2*PI*r/CD_SPOKES);              /* px from the nearest spoke */
+                if(dist<1.6){
+                    double t=(r-38)/140.0, env=pow(sin(PI*fmin(1,t*1.1)),0.8), sa=0.22*env*(1.6-dist)/1.6;
+                    int k=(int)floor(ang/(2*PI)*CD_SPOKES+0.5); double sc[3]; iri((double)k/CD_SPOKES*2.0,sc);
+                    double na=sa+a*(1-sa);
+                    if(na>0) for(int c=0;c<3;c++) rgb[c]=(sc[c]*sa+rgb[c]*a*(1-sa))/na;
+                    a=na;
+                }
+            }
+        }
+        int ia=(int)(a*256+0.5); if(ia>256) ia=256;
+        int kp=keep[y];                                                  /* the lyric fade of this row (0..256) */
+        cd_k[y*360+x]=(uint16_t)((256-ia)*kp>>8);
+        uint32_t t=0;
+        for(int c=0;c<3;c++){ int v=(int)(rgb[c]*ia/256.0*kp/256.0+0.5); if(v>255)v=255; t|=(uint32_t)v<<(16-8*c); }
+        cd_t[y*360+x]=t;
+    }
+}
 static inline uint32_t sample(const uint32_t *s,int w,int h,int x,int y){
     return (unsigned)x<(unsigned)w && (unsigned)y<(unsigned)h ? s[y*w+x] : 0;
 }
@@ -81,6 +129,8 @@ void imm_record_render(const uint32_t *src,int w,int h,uint32_t *out,int angle,i
         }
         cached_height=fade_height;
     }
+    if(cd_on && cd_fade!=fade_height){ cd_build(keep); cd_fade=fade_height; }
+    const int cd=cd_on && cd_k && cd_t;
     double a=angle*3.141592653589793/1800.0;
     int32_t c=(int32_t)lround(cos(a)*65536),sn=(int32_t)lround(sin(a)*65536);
     /* fork perf: the output disc (r=180) maps inside the square source, so the per-sample bounds tests of the old
@@ -96,7 +146,8 @@ void imm_record_render(const uint32_t *src,int w,int h,uint32_t *out,int angle,i
                 int xi=sx>>16,yi=sy>>16;
                 if((unsigned)xi>(unsigned)lx||(unsigned)yi>(unsigned)ly){*o++=0xFF000000u;continue;}
                 uint32_t p=src[yi*w+xi];
-                if(m!=256)p=(((p&0x00FF00FFu)*m>>8)&0x00FF00FFu)|(((p&0x0000FF00u)*m>>8)&0x0000FF00u);
+                if(cd){ int i=y*360+x; unsigned k=cd_k[i]; p=((((p&0x00FF00FFu)*k>>8)&0x00FF00FFu)|(((p&0x0000FF00u)*k>>8)&0x0000FF00u))+cd_t[i]; }
+                else if(m!=256)p=(((p&0x00FF00FFu)*m>>8)&0x00FF00FFu)|(((p&0x0000FF00u)*m>>8)&0x0000FF00u);
                 *o++=p|0xFF000000u;
             }
         } else {
@@ -108,7 +159,8 @@ void imm_record_render(const uint32_t *src,int w,int h,uint32_t *out,int angle,i
                     p=lerp(lerp(q[0],q[1],fx),lerp(q[w],q[w+1],fx),fy);
                 } else p=lerp(lerp(sample(src,w,h,xi,yi),sample(src,w,h,xi+1,yi),fx),
                              lerp(sample(src,w,h,xi,yi+1),sample(src,w,h,xi+1,yi+1),fx),fy);   /* the rim: as before */
-                if(m!=256)p=(((p&0x00FF00FFu)*m>>8)&0x00FF00FFu)|(((p&0x0000FF00u)*m>>8)&0x0000FF00u);
+                if(cd){ int i=y*360+x; unsigned k=cd_k[i]; p=((((p&0x00FF00FFu)*k>>8)&0x00FF00FFu)|(((p&0x0000FF00u)*k>>8)&0x0000FF00u))+cd_t[i]; }
+                else if(m!=256)p=(((p&0x00FF00FFu)*m>>8)&0x00FF00FFu)|(((p&0x0000FF00u)*m>>8)&0x0000FF00u);
                 *o++=p|0xFF000000u;
             }
         }

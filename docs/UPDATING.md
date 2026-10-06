@@ -42,7 +42,7 @@ hash, answer **N** — nothing is written.
 ## Every build
 
 ```sh
-sh ui/tools/owner-keys/diskos-sign.sh ui/mq_ui 1.0      # [version] [keys-folder] [out-folder]
+sh ui/tools/owner-keys/diskos-sign.sh ui/mq_ui 1.0.1    # [version] [keys-folder] [out-folder]
 ```
 
 1. Copy the whole `diskos-update/` folder to the **root** of the SD card (`<SD>/diskos-update/`).

@@ -633,6 +633,14 @@ static void imm_bind_record(void){
     }
     if(imm_scrim){if(imm_fast)lv_obj_add_flag(imm_scrim,LV_OBJ_FLAG_HIDDEN);else lv_obj_remove_flag(imm_scrim,LV_OBJ_FLAG_HIDDEN);}
 }
+/* Disco Options > Immersive: 0 Vinyl (grooves + label), 1 CD (clear hub, still rainbow sheen + spokes). Disco only. */
+static int imm_cd_mode(void){ return th_disco() && cfg_get_int("disco_imm", 0) == 1; }
+static void spin_from_poster(void);
+void ui_imm_style_apply(void){                             /* re-bake the record (the cover itself is unchanged) */
+    if(!g_posterdsc.data) return;
+    spin_from_poster();
+    if(imm_fast) imm_render_frame();
+}
 static void spin_from_poster(void){                       /* RGB888 -> the display's native XRGB8888, once */
     g_spin_ok = 0;
     int w = g_posterdsc.header.w, h = g_posterdsc.header.h;
@@ -649,6 +657,34 @@ static void spin_from_poster(void){                       /* RGB888 -> the displ
      * masks), baked they cost nothing per frame. */
     static const float groove[4] = { 170.f, 148.f, 126.f, 104.f };
     const float cx = w / 2.0f - 0.5f, cy = h / 2.0f - 0.5f;
+    int cdm = imm_cd_mode();
+    imm_record_set_cd(cdm);                                  /* Disco Options > Immersive: CD (the still sheen + spokes) */
+    if(cdm){                                                 /* the CD's clear hub instead of the label: round, so baked */
+        for(int y = 0; y < h; y++){
+            float dy = y - cy;
+            for(int x = 0; x < w; x++){
+                float dx = x - cx, r = sqrtf(dx * dx + dy * dy);
+                if(r > 38.5f) continue;
+                uint8_t *p = g_spinbuf + ((size_t)y * w + x) * 4;
+                int wa = 0, dark = 0;                               /* white over the cover, or the dark hole */
+                if(r < 12.5f){ dark = r < 11.5f ? 255 : (int)(255 * (12.5f - r)); if(r >= 11.5f) wa = 70; }
+                else {
+                    wa = 46;                                        /* clear plastic */
+                    float d1 = fabsf(r - 22.5f), d2 = fabsf(r - 37.0f);   /* the stacking ring, the hub's edge */
+                    if(d1 < 1.6f) wa = 46 + (int)(44 * (1.6f - d1) / 1.6f);
+                    if(d2 < 1.4f) wa = 46 + (int)(64 * (1.4f - d2) / 1.4f);
+                    if(r > 37.0f) wa = (int)(wa * (38.5f - r) / 1.5f);
+                }
+                for(int c = 0; c < 3; c++){
+                    int v = p[c] + (255 - p[c]) * wa / 255;
+                    v = v * (255 - dark) / 255 + 0x0C * dark / 255;
+                    p[c] = (uint8_t)v;
+                }
+            }
+        }
+        g_spin_ok = 1;
+        return;
+    }
     for(int y = 0; y < h; y++){
         float dy = y - cy;
         for(int x = 0; x < w; x++){

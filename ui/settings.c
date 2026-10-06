@@ -334,7 +334,10 @@ static const char *OPT_DTAL[] = { "Centred", "Left" };
 static const char *OPT_DHOLD[] = { "Immersive", "Favourite", "Nothing" };
 void dhome_title_apply(void);
 static void apply_disco_title(int v){ (void)v; dhome_title_apply(); }
-static void apply_disco_hold(int v){ (void)v; }                       /* read on each hold; marks the row as Disco's */
+static void apply_disco_hold(int v){ (void)v; }
+static const char *OPT_DIMM[] = { "Vinyl", "CD" };
+void ui_imm_style_apply(void);
+static void apply_disco_imm(int v){ (void)v; ui_imm_style_apply(); }                       /* read on each hold; marks the row as Disco's */
 void eqcustom_style_apply(void);
 static void apply_disco_eq(int v){ (void)v; eqcustom_style_apply(); }
 static void apply_shortcuts(int v){ (void)v; screen_show(SCR_SCCONFIG); }  /* opens the Shortcuts picker */
@@ -722,6 +725,8 @@ static const setting_t TABLE[] = {
       "Where the title and artist sit on Music: centred, or from the left.", NULL },
     { "Disco Options", "Title Hold", ST_CYCLER, "disco_title_hold", 0,0,0, OPT_DHOLD, 3, NULL, apply_disco_hold, 0,
       "What holding the title on Music does: open the cover full screen, or favourite (or unfavourite) the song. A tap still opens the track menu.", NULL },
+    { "Disco Options", "Immersive", ST_CYCLER, "disco_imm", 0,0,0, OPT_DIMM, 2, NULL, apply_disco_imm, 0,
+      "The full-screen spinning cover: Vinyl (grooves and a dark label) or CD (a clear hub, a still rainbow sheen and faint spokes, like light on a spinning disc). The lyrics shade stays the same.", NULL },
     { "Display",  "Shortcuts", ST_ACTION, NULL, 0,0,0, NULL,0, LV_SYMBOL_RIGHT, apply_shortcuts, 0,
       "Choose up to five shortcuts for the panel opened by swiping left from Home.", NULL },
     { "Display",  "Now Playing", ST_CYCLER, "np_style",   0,0,0, OPT_NPSTYLE, 4, NULL, apply_np_style, 0,
@@ -1291,7 +1296,7 @@ void setlist_refresh(void){
         if(strcmp(s->group, g_active_group)) continue;   /* only rows in this category */
         if(th_disco() && (s->apply == apply_np_style || !strcmp(s->label, "Disc Colour") || !strcmp(s->label, "Saver Style"))) continue;   /* Disco has its own Music + standby: these don't apply */
         if(!th_disco() && s->apply == apply_disco_options) continue;
-        if(!th_disco() && (s->apply == apply_disco_menu || s->apply == apply_disco_clock || s->apply == apply_disco_progress || s->apply == apply_disco_sheen || s->apply == apply_disco_times || s->apply == apply_disco_eq || s->apply == apply_disco_title || s->apply == apply_disco_hold)) continue;   /* fork: Disco rows */
+        if(!th_disco() && (s->apply == apply_disco_menu || s->apply == apply_disco_clock || s->apply == apply_disco_progress || s->apply == apply_disco_sheen || s->apply == apply_disco_times || s->apply == apply_disco_eq || s->apply == apply_disco_title || s->apply == apply_disco_hold || s->apply == apply_disco_imm)) continue;   /* fork: Disco rows */
 
         lv_obj_t *row = setting_card(list);
         ui_on(row, row_cb, LV_EVENT_CLICKED, (void*)(uintptr_t)i, "settings.row", UI_CORE);

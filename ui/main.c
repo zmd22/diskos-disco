@@ -3069,7 +3069,9 @@ int main(int argc, char **argv){
         if(bl_state != 2 && ui_take_art_applied()){
             ui_publish_art_surfaces(&st,playing);
         }
-        /* playback-start timeout: no track update within 6s of a rebuild-play */
+        /* playback-start timeout: no track update within 6s of a rebuild-play. The 6 s count from when the play
+         * actually reached the player: while it is still waiting in our outbound line (a busy player) the clock waits. */
+        if(g_play_pending && ipc_tx_waiting()){ g_play_pending = lv_tick_get(); if(!g_play_pending) g_play_pending = 1; }
         if(g_play_pending && lv_tick_elaps(g_play_pending) > 6000){
             g_play_pending = 0;
             ui_toast("Couldn't start playback");   /* early confirm covers path/title/pos_id changes; a rare false toast (equal titles, no row change) is cosmetic since nothing is sent to the player */
@@ -3095,6 +3097,7 @@ int main(int argc, char **argv){
             if(cfg_take_save_error())       ui_toast("Couldn't save settings");
             else if(ipc_take_send_error())  ui_toast("Player didn't respond");
         }
+        ipc_tx_pump();   /* frames that waited for a busy player go out as soon as it reads again (in order) */
 #ifdef DISKOS_PROFILE
         struct timespec pa, pb; clock_gettime(CLOCK_MONOTONIC, &pa);
 #endif

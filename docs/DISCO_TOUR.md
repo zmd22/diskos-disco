@@ -228,11 +228,11 @@ are written to the player, and only when you change something.
 
 ### Working mode
 
-Choose where the music comes from and goes to: **Local playback** (normal listening), **USB storage** (the
-computer sees the card; eject it there before switching back), **Bluetooth DAC**, **USB DAC** and **AirPlay**.
-The active mode has an accent outline and a tick; while a change is in progress it shows a turning-arrows icon
-and a "Switching..." note. While a
-mode other than Local is active, its own screen shows what is connected.
+Choose where the music comes from and goes to: **Playback** (normal listening), **USB storage** (the computer
+sees the card; eject it there before switching back), **Bluetooth DAC**, **USB DAC** and **AirPlay**. The active
+mode has an accent outline and a tick; while a change is in progress, spinning arrows take the tick's place.
+While a mode other than Playback is active, its own screen shows what is connected; tap **Modes** there, then
+**Playback**, to go back to normal listening.
 
 <table>
 <tr>
@@ -351,6 +351,7 @@ Display > Disco Options (only shown with the Disco theme):
 | Progress Shape | Linear (a line under the title) or Arc (around the rim, from just below the menu, clockwise, to just above it). |
 | Title Position | Centred or Left. |
 | Title Hold | What holding the title does: Immersive, Favourite or Nothing. |
+| Immersive | The full-screen cover: Vinyl (grooves and a dark label) or CD (a clear hub, a still rainbow sheen and faint spokes). |
 
 <table>
 <tr>
@@ -451,7 +452,7 @@ half an hour on battery. Without a set clock the 24-hour figures show "-".
 - **The stock interface is always there.** If the Disco! interface ever stops, the Disc falls back to FiiO's
   own interface until the next restart; your music and settings are untouched. Settings > System > Default UI
   can make stock the normal choice, and holding Volume Up from power-on boots the other interface once.
-- **Settings > System > About** shows the version (e.g. "Disco! 1.0") with the exact build ID, and the diskOS
+- **Settings > System > About** shows the version (e.g. "Disco! 1.0.1") with the exact build ID, and the diskOS
   version underneath.
 - **The rescan dot.** While the library is being rescanned, a small dot runs around the rim of the screen.
 

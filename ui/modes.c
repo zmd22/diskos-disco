@@ -26,7 +26,7 @@ typedef struct { const char *l1, *l2, *glyph; int mode; } modeinfo_t;
  * Row 1: Local / USB DAC / BT DAC   Row 2: BT streaming / AirPlay / USB storage
  * BT streaming (4) and AirPlay (5) use the V2.40-verified 0657 values 07 and 0A. */
 static const modeinfo_t MODES[] = {
-    { "Local",   "playback",  LV_SYMBOL_SD_CARD,    0 },
+    { "Playback", "",         LV_SYMBOL_SD_CARD,    0 },
     { "USB",     "DAC",       LV_SYMBOL_USB,        1 },
     { "BT",      "DAC",       LV_SYMBOL_BLUETOOTH,  2 },
     { "BT",      "streaming", LV_SYMBOL_VOLUME_MAX, 4 },
@@ -217,6 +217,18 @@ static int slot_of_mode(int m){ for(int i=0;i<N_MODES;i++) if(MODES[i].mode == m
 static const int DISCO_ORD[] = { 0, 5, 2, 1, 4 };            /* MODES[] slots: Local, USB storage, BT DAC, USB DAC, AirPlay */
 #define N_DISCO ((int)(sizeof DISCO_ORD / sizeof DISCO_ORD[0]))
 static lv_obj_t *g_drow[N_MODES];
+/* while a mode changes: the turning-arrows icon spins (instead of a "Switching..." text) */
+static void spin_exec(void *o, int32_t v){ lv_obj_set_style_transform_rotation((lv_obj_t *)o, v, 0); }
+static void icon_spin(lv_obj_t *l, int on){
+    if(!l) return;
+    if(!on){ lv_anim_delete(l, spin_exec); lv_obj_set_style_transform_rotation(l, 0, 0); return; }
+    if(lv_anim_get(l, spin_exec)) return;                       /* already turning */
+    lv_obj_update_layout(l);
+    lv_obj_set_style_transform_pivot_x(l, lv_obj_get_width(l) / 2, 0); lv_obj_set_style_transform_pivot_y(l, lv_obj_get_height(l) / 2, 0);
+    lv_anim_t a; lv_anim_init(&a); lv_anim_set_var(&a, l); lv_anim_set_exec_cb(&a, spin_exec);
+    lv_anim_set_values(&a, 0, 3600); lv_anim_set_duration(&a, 1000); lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE);
+    lv_anim_start(&a);
+}
 static void disco_paint(int slot, int pending){
     lv_color_t acc = ui_current_accent();
     for(int i = 0; i < N_MODES; i++){
@@ -224,8 +236,10 @@ static void disco_paint(int slot, int pending){
         int on = (i == slot);
         lv_obj_set_style_border_width(r, on ? 2 : 0, 0); lv_obj_set_style_border_color(r, acc, 0);
         lv_obj_set_style_text_color(lv_obj_get_child(r, 0), on ? acc : TC(TEXT_SECONDARY), 0);
-        lv_label_set_text(lv_obj_get_child(r, 2), on ? (pending ? LV_SYMBOL_REFRESH : LV_SYMBOL_OK) : "");   /* the toast says "Switching..." (no room in the row) */
-        lv_obj_set_style_text_color(lv_obj_get_child(r, 2), acc, 0);
+        lv_obj_t *v = lv_obj_get_child(r, 2);
+        lv_label_set_text(v, on ? (pending ? LV_SYMBOL_REFRESH : LV_SYMBOL_OK) : "");
+        lv_obj_set_style_text_color(v, acc, 0);
+        icon_spin(v, on && pending);                                    /* the arrows turn while it switches */
     }
 }
 static void paint(int slot, const char *glyph){   /* slot = orbit index, or -1 for none */
@@ -234,11 +248,13 @@ static void paint(int slot, const char *glyph){   /* slot = orbit index, or -1 f
     lv_color_t acc = TC(ACCENT_PRIMARY);
     if(pending){                                  /* the tapped mode gets a ring; the hub's ring spins */
         orbit_set_pending(&g_orb, slot, acc);
-        orbit_hub_set(&g_orb, LV_SYMBOL_REFRESH, acc, "Switching...");   /* ASCII: the caption font has no ellipsis */
+        orbit_hub_set(&g_orb, LV_SYMBOL_REFRESH, acc, "");                /* turning arrows, no text */
+        icon_spin(g_orb.hub_icon, 1);
         orbit_hub_ring(&g_orb, ORBIT_RING_SPIN, acc, 0);
         return;
     }
     orbit_set_pending(&g_orb, -1, acc);
+    icon_spin(g_orb.hub_icon, 0);
     for(int i = 0; i < N_MODES; i++) orbit_set_on(&g_orb, i, i == slot, acc);   /* the active mode: filled */
     if(slot >= 0){ orbit_hub_set(&g_orb, MODES[slot].glyph, acc, "Back"); orbit_hub_ring(&g_orb, ORBIT_RING_FULL, acc, 0); }
     else { orbit_hub_set(&g_orb, LV_SYMBOL_SD_CARD, TC(TEXT_PRIMARY), "Back"); orbit_hub_ring(&g_orb, ORBIT_RING_GREY, acc, 0); }
@@ -291,7 +307,7 @@ static void row_cb(int slot){                 /* a tap inside a slice (the wheel
     /* Serialise: ignore taps while the previous switch is still applying (the player's gadget
      * state-machine is asynchronous). NB we do NOT early-return on "same mode" - re-issuing must
      * always be allowed so Local works as a recover even if our cached mode is stale. */
-    if(g_last_switch && lv_tick_elaps(g_last_switch) < 3000){ ui_toast("Switching..."); return; }
+    if(g_last_switch && lv_tick_elaps(g_last_switch) < 3000) return;   /* still switching: the arrows are turning */
     g_last_switch = lv_tick_get();
     if(m == ROW_USB_AUDIO){   /* USB Audio: an output route of the Local source, not a source mode */
         if(modes_output_mode_switch(OUT_USB) == 0){
@@ -309,7 +325,7 @@ static void row_cb(int slot){                 /* a tap inside a slice (the wheel
         g_settle = lv_timer_create(settle_cb, 500, NULL);   /* settle to the checkmark after the switch window */
         /* honest wording: the frames are queued; the async switch completes a moment later. */
         static const char *msg[] = {
-            "Switching to local playback", "Switching to USB DAC",
+            "Switching to playback", "Switching to USB DAC",
             "Switching to Bluetooth receiving", "Switching to USB storage",
             "Bluetooth streaming on", "AirPlay on \xE2\x80\x93 pick the Disc on your device" };
         ui_toast(msg[m]);
@@ -335,11 +351,11 @@ void modes_create(lv_obj_t *root){
 
     if(th_disco()){
         disco_title(root, "Working mode");
-        static const char *NM[N_MODES] = { "Local playback", "USB DAC", "Bluetooth DAC", "BT streaming", "AirPlay", "USB storage" };
+        static const char *NM[N_MODES] = { "Playback", "USB DAC", "Bluetooth DAC", "BT streaming", "AirPlay", "USB storage" };
         memset(g_drow, 0, sizeof g_drow);
         for(int k = 0; k < N_DISCO; k++){
             int i = DISCO_ORD[k];
-            g_drow[i] = disco_row(root, 66 + k * 50, 44, MODES[i].glyph, NULL, NM[i], disco_row_cb, (void *)(intptr_t)i);
+            g_drow[i] = disco_row(root, 62 + k * 54, 48, MODES[i].glyph, NULL, NM[i], disco_row_cb, (void *)(intptr_t)i);
         }
         mark_selected();
         return;
@@ -409,9 +425,15 @@ static void mi_set_wait(int wait){                           /* Ring: a turning 
 }
 static void mi_text(lv_obj_t *l, const char *t){ if(l && strcmp(lv_label_get_text(l), t)) lv_label_set_text(l, t); }
 
+static void modeinfo_fill(int m);
 void modeinfo_refresh(void){
     int m = cur_mode();
     if(m == 0){ screen_back(); return; }                     /* nothing active: nothing to show */
+    modeinfo_fill(m);
+}
+void modes_test_pending(int m){ mark_pending(m); }           /* host renders */
+void modes_test_info(int m){ modeinfo_fill(m); }
+static void modeinfo_fill(int m){
     if(m < 0 || m > 5) m = 1;
     int slot = slot_of_mode(m); if(slot < 0) slot = 1;       /* the SAME table the orbit menu is built from: identical icon + name */
     if(m != g_mi_mode){
@@ -459,13 +481,6 @@ void modeinfo_refresh(void){
 static void modeinfo_refresh_and_show(void){ screen_show(SCR_MODEINFO); }
 static void mi_tick(lv_timer_t *t){ (void)t; if(screen_current() == SCR_MODEINFO) modeinfo_refresh(); }
 static void mi_modes_cb(lv_event_t *e){ if(lv_event_get_code(e) == LV_EVENT_CLICKED) screen_show(SCR_WORKMODE); }
-static void mi_local_cb(lv_event_t *e){
-    if(lv_event_get_code(e) != LV_EVENT_CLICKED) return;
-    if(g_last_switch && lv_tick_elaps(g_last_switch) < 3000){ ui_toast("Switching..."); return; }
-    g_last_switch = lv_tick_get();
-    if(ui_set_source_mode(0) == 0){ ui_toast("Switching to local playback"); g_mi_mode = -1; screen_back(); }
-    else ui_toast("Couldn't switch mode");
-}
 static lv_obj_t *mi_pill(lv_obj_t *root, const char *txt, int x, int primary, lv_event_cb_t cb){
     lv_obj_t *b = lv_button_create(root);
     lv_obj_remove_style_all(b);
@@ -517,7 +532,6 @@ void modeinfo_create(lv_obj_t *root){
     g_mi_status  = mi_label(root, br ? br_font(16, 0) : TF(UI_16), br ? BR_ACC : TH_ACCENT, 36, 260);
     g_mi_detail1 = mi_label(root, br ? br_font(14, 0) : TH_F_DETAIL, br ? BR_TXT2 : TH_TXT2, 64, 250);
     g_mi_detail2 = mi_label(root, br ? br_font(14, 0) : TH_F_DETAIL, br ? BR_TXT3 : TH_TXT3, 86, 250);
-    mi_pill(root, "Modes", -58, 0, mi_modes_cb);
-    mi_pill(root, "Local",  58, 1, mi_local_cb);
+    mi_pill(root, "Modes", 0, 0, mi_modes_cb);                       /* back to Playback: from the Modes list */
     g_mi_timer = lv_timer_create(mi_tick, 1000, NULL);
 }

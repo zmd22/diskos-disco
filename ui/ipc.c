@@ -411,9 +411,9 @@ void ipc_seed_state(const track_state_t *s){
  * stall the caller or the player; mq_send is thread-safe. */
 static volatile int g_send_err = 0;   /* sticky until ipc_take_send_error() reads it */
 
-/* quiet=1 -> never set the user-facing error flag (background state-sync / health
- * probes must not raise "Player didn't respond" during the startup connect race). */
-static int ipc_send_internal(const char*frame, int quiet){
+/* One delivery attempt: 0 sent, 1 /player is full (EAGAIN: the player is busy - booting, rebuilding a list), -1 no
+ * player / another error. g_tx is O_NONBLOCK, so this never blocks the UI. */
+static int tx_open(void){
     if(g_tx_stale && g_tx!=(mqd_t)-1){ mq_close(g_tx); g_tx=(mqd_t)-1; }  /* health saw /player recreated */
     g_tx_stale = 0;
     if(g_tx==(mqd_t)-1){
@@ -421,26 +421,86 @@ static int ipc_send_internal(const char*frame, int quiet){
         g_tx_dev = 0; g_tx_ino = 0;   /* clear first: a failed capture must not leave a stale identity */
         if(g_tx!=(mqd_t)-1) mq_identity(g_tx, &g_tx_dev, &g_tx_ino);
     }
-    if(g_tx==(mqd_t)-1){ if(!quiet) g_send_err=1; return -1; }
-    size_t len = strlen(frame);
-    /* g_tx is O_NONBLOCK so a full /player queue returns EAGAIN immediately. A user
-     * action (play/seek/volume) shouldn't be silently dropped, so retry briefly
-     * (~15ms max) to let the player drain; only EAGAIN is retried, other errors fail. */
-    int err = 0;
-    for(int a=0;a<5;a++){
-        if(mq_send(g_tx, frame, len, 0) == 0) return 0;
-        err = errno;                 /* capture before usleep, which may touch errno */
-        if(err != EAGAIN) break;
-        usleep(3000);
-    }
-    /* ANY failure -> drop the fd so the next send re-opens the CURRENT named /player. Covers a
-     * non-EAGAIN error (player went away) AND EAGAIN-exhaustion (queue full 5x - an orphaned
-     * queue after a restart looks exactly like this; H1). Reopening a merely transiently-full
-     * healthy queue is harmless: same queue object, no messages lost. */
-    if(g_tx!=(mqd_t)-1){ mq_close(g_tx); g_tx=(mqd_t)-1; }
-    if(!quiet){ g_send_err = 1; fprintf(stderr,"ipc_send_cmd '%s' failed: %s\n", frame, strerror(err)); }
+    return g_tx!=(mqd_t)-1;
+}
+static int tx_try(const char *frame, int *err){
+    if(!tx_open()){ *err = ENOENT; return -1; }
+    if(mq_send(g_tx, frame, strlen(frame), 0) == 0) return 0;
+    *err = errno;
+    if(*err == EAGAIN) return 1;
+    mq_close(g_tx); g_tx=(mqd_t)-1;   /* the player went away: reopen the CURRENT named /player next time */
     return -1;
 }
+/* How many frames are waiting in /player right now (-1 unknown). The player reads it serially; a deep queue means
+ * it is busy, and more probes would only fill it up for the frames that matter. */
+static long tx_depth(void){
+    struct mq_attr a;
+    if(!tx_open() || mq_getattr(g_tx, &a) != 0) return -1;
+    return a.mq_curmsgs;
+}
+
+/* ---- the outbound line --------------------------------------------------------------------------------------------
+ * /player holds 20 frames. While the player is busy (cold boot, a playlist rebuild) it stops reading, and a send used to
+ * be dropped after ~15 ms of EAGAIN: "Player didn't respond", or - worse - half of a play sequence (0666 route sent,
+ * 0657 work-mode or 0100 play dropped), which leaves the player unable to start playback. Now a frame that doesn't fit
+ * waits here, IN ORDER (every later frame queues behind it, so a sequence is never reordered or split), and goes out as
+ * soon as the player reads again. Only a frame that still can't be delivered after TX_HOLD_MS fails (and toasts). */
+#define TX_MAX 48
+#define TX_HOLD_MS 6000
+#define TX_HOLD_BOOT_MS 30000                                          /* before the player has ever answered (cold boot) */
+/* At cold boot the player creates /player only after a while: until then there is no mailbox at all (ENOENT). That is
+ * "not yet", not "gone": such a frame waits too, for up to 30 s while the player has never answered this session. */
+static int tx_not_yet(int err){ return err == ENOENT; }
+static uint32_t tx_hold(void){ return ipc_rx_frames() ? TX_HOLD_MS : TX_HOLD_BOOT_MS; }
+typedef struct { char f[448]; uint32_t t0; int quiet; } txe_t;   /* a play frame is up to ~420 */
+static txe_t g_txq[TX_MAX];
+static int g_txh, g_txn;
+static pthread_mutex_t g_txmu = PTHREAD_MUTEX_INITIALIZER;
+static uint32_t tx_ms(void){ struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return (uint32_t)(t.tv_sec * 1000u + t.tv_nsec / 1000000u); }
+static void tx_fail(const txe_t *e, int err){
+    if(!e->quiet){ g_send_err = 1; fprintf(stderr,"ipc_send_cmd '%s' failed: %s\n", e->f, strerror(err)); }
+}
+/* deliver as much of the line as the player takes now (caller holds g_txmu) */
+static void tx_drain_locked(void){
+    while(g_txn > 0){
+        txe_t *e = &g_txq[g_txh]; int err = 0;
+        int r = tx_try(e->f, &err);
+        if(r == 1 || (r < 0 && tx_not_yet(err))){                         /* still full, or no player yet */
+            if(tx_ms() - e->t0 < tx_hold()) return;
+            r = -1; if(!err) err = EAGAIN;
+        }
+        if(r < 0) tx_fail(e, err);
+        g_txh = (g_txh + 1) % TX_MAX; g_txn--;
+    }
+}
+/* quiet=1 -> never set the user-facing error flag (background state-sync / health probes). */
+static int ipc_send_internal(const char*frame, int quiet){
+    if(strlen(frame) >= sizeof g_txq[0].f){ if(!quiet) g_send_err = 1; return -1; }
+    pthread_mutex_lock(&g_txmu);
+    tx_drain_locked();
+    int rc = 0;
+    if(g_txn == 0){                                                        /* nothing waiting: straight out */
+        int err = 0, r = tx_try(frame, &err);
+        for(int a = 0; r == 1 && a < 3; a++){ usleep(2000); r = tx_try(frame, &err); }   /* a brief wait first */
+        if(r == 0){ pthread_mutex_unlock(&g_txmu); return 0; }
+        if(r < 0 && !tx_not_yet(err)){ txe_t e; snprintf(e.f, sizeof e.f, "%s", frame); e.quiet = quiet; tx_fail(&e, err);
+                   pthread_mutex_unlock(&g_txmu); return -1; }
+    }
+    if(g_txn >= TX_MAX){ txe_t e; snprintf(e.f, sizeof e.f, "%s", frame); e.quiet = quiet; tx_fail(&e, EAGAIN); rc = -1; }
+    else {
+        txe_t *e = &g_txq[(g_txh + g_txn) % TX_MAX];
+        snprintf(e->f, sizeof e->f, "%s", frame); e->t0 = tx_ms(); e->quiet = quiet; g_txn++;
+        fprintf(stderr,"ipc: player busy, '%.12s' waits (%d in line)\n", frame, g_txn);
+    }
+    pthread_mutex_unlock(&g_txmu);
+    return rc;                                                             /* accepted: it goes out in order */
+}
+/* main loop, every pass: cheap when the line is empty */
+void ipc_tx_pump(void){
+    if(!g_txn) return;
+    pthread_mutex_lock(&g_txmu); tx_drain_locked(); pthread_mutex_unlock(&g_txmu);
+}
+int ipc_tx_waiting(void){ return g_txn; }
 /* A quiet window (UI thread): sends inside it never raise the toast; failures are counted for the caller instead
  * (the settings re-sync after a player (re)start floods a just-woken player whose queue can be briefly full). */
 static int g_quiet_n, g_quiet_fails;
@@ -451,8 +511,14 @@ int ipc_send_cmd(const char*frame){
     if(g_quiet_n > 0){ int r = ipc_send_internal(frame, 1); if(r < 0) g_quiet_fails++; return r; }
     return ipc_send_internal(frame, 0);
 }
-/* background send (state-sync / health probe): silent, never toasts. */
-int ipc_send_probe(const char*frame){ return ipc_send_internal(frame, 1); }
+/* background send (state-sync / health probe): silent, never toasts. A probe only asks "what's playing?": if the player
+ * already has unread frames (or our own line is waiting) it adds nothing - it would only fill /player while the
+ * player is busy, and push out the frames that matter (the boot re-sync, a play). */
+int ipc_send_probe(const char*frame){
+    long d = tx_depth();
+    if(g_txn > 0 || d >= 2) return 0;
+    return ipc_send_internal(frame, 1);
+}
 /* 1 once the /ui receive queue is open (i.e. ipc_start() succeeded). */
 int ipc_is_ready(void){
     pthread_mutex_lock(&g_recov_mu); int r=g_rx_ready; pthread_mutex_unlock(&g_recov_mu); return r;

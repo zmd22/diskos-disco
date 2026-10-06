@@ -14,4 +14,7 @@ typedef struct { const uint32_t *px; int x, y, w, h, stride; } imm_overlay_t;   
 #define IMM_MAX_OVERLAYS 4
 void imm_record_set_overlays(const imm_overlay_t *o, int n);
 void imm_record_set_ring(int on, int permille, uint32_t track_rgb, uint32_t ind_rgb);
+/* Disco's CD look: a still rainbow sheen over the whole disc plus faint rainbow spokes, like light on a spinning CD.
+ * It does not turn with the cover; it is folded into the lyric fade, so it costs about the same per frame. */
+void imm_record_set_cd(int on);
 #endif

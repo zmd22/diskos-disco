@@ -5,6 +5,31 @@ All notable changes to diskOS Disco! (and the diskOS releases underneath) are do
 Entries follow the Keep a Changelog format, with Added, Changed, and Fixed categories where applicable.
 diskOS remains beta software; version numbers do not imply broad hardware or feature validation.
 
+## [Disco! 1.0.1] - 2026-10-07
+
+A stability fix for talking to the player, and a CD look for Immersive. Settings > About shows "Disco! 1.0.1".
+
+### Added
+- **Disco Options > Immersive: Vinyl or CD.** CD replaces the grooves and dark label with a clear CD hub, a faint
+  rainbow sheen over the disc and thin rainbow spokes. The sheen and spokes stay still while the cover spins (like
+  light on a real CD); the dark shade behind the lyrics is the same as with Vinyl.
+
+### Changed
+- Working mode: "Local playback" is now "Playback"; while a mode changes, spinning arrows replace the "Switching..."
+  text (and a tap during a switch is ignored instead of toasting); taller rows in Disco.
+- The mode screens (USB storage, USB DAC, Bluetooth DAC, AirPlay) drop their "Local" button; "Modes" leads back.
+
+### Fixed
+- **"Player didn't respond" at start-up, and playback that sometimes wouldn't start** when changing tracks or starting a
+  list. The player's command mailbox holds 20 messages and the player stops reading it while it is busy (starting up,
+  rebuilding a playlist). Background "what's playing?" requests filled it up, and a command that didn't fit was dropped
+  after ~15 ms - sometimes half of the three-step play start (output, mode, play), which left the player unable to play.
+  Now a command that doesn't fit waits, in order, and goes out as soon as the player reads again (it only fails, with
+  the toast, after 6 s of a silent player); background requests are only sent when the mailbox is nearly empty; and
+  the 6 s "Couldn't start playback" timer starts when the play command actually reaches the player.
+- At a cold start the player creates its mailbox only after a while; commands sent before that now wait for it (up to
+  30 s while the player hasn't answered yet) instead of failing at once with "Player didn't respond".
+
 ## [Disco! 1.0] - 2026-10-06
 
 The fork becomes **diskOS Disco!**, with the new **Disco** theme as the default. Built on Fork 1.2.4 (diskOS 1.2.4
