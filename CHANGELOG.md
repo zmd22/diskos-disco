@@ -5,6 +5,19 @@ All notable changes to diskOS Disco! (and the diskOS releases underneath) are do
 Entries follow the Keep a Changelog format, with Added, Changed, and Fixed categories where applicable.
 diskOS remains beta software; version numbers do not imply broad hardware or feature validation.
 
+## [Disco! 1.0.3] - 2026-10-07
+
+Settings > About shows "Disco! 1.0.3".
+
+### Added
+- **Ogg Opus (.opus, .oga).** Indexed with their tags and exact lengths, shown in Folders, and played by the stock
+  decoder; Now Playing shows the tag title instead of the filename. Ported from diskOS PR #19 by
+  [ingvarr777](https://github.com/ingvarr777) - thank you. (.opus verified on V2.57; .oga untested.)
+
+### Fixed
+- **AirPlay and Bluetooth streaming** could not be switched on from Working mode since the move to diskOS 1.2.0 (the
+  tap was silently refused). The commands for both are back.
+
 ## [Disco! 1.0.2] - 2026-10-07
 
 Settings > About shows "Disco! 1.0.2".
