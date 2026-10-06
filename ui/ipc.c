@@ -511,6 +511,9 @@ int ipc_send_cmd(const char*frame){
     if(g_quiet_n > 0){ int r = ipc_send_internal(frame, 1); if(r < 0) g_quiet_fails++; return r; }
     return ipc_send_internal(frame, 0);
 }
+/* a background command that retries itself (e.g. the idle power-off takeover): it waits in line like any command
+ * when the player is busy or not up yet, but a failure is silent - its owner sends it again. */
+int ipc_send_quiet(const char*frame){ return ipc_send_internal(frame, 1); }
 /* background send (state-sync / health probe): silent, never toasts. A probe only asks "what's playing?": if the player
  * already has unread frames (or our own line is waiting) it adds nothing - it would only fill /player while the
  * player is busy, and push out the frames that matter (the boot re-sync, a play). */
