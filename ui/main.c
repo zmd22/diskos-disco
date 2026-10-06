@@ -506,6 +506,15 @@ static int source_send(int mode){
         case 3:
             if(ipc_send_cmd("0642000C0001") < 0) return -1;
             return ipc_send_cmd("0657000C0008");
+        /* BT streaming and AirPlay: the 0657 values verified on the hardware before the 1.2.0 rebase (WORK_MODE 5 and a
+         * listener on port 5000 for AirPlay). The rebase took upstream's switch, which has no such modes, so these two
+         * rows silently did nothing since. */
+        case 4:
+            if(ipc_send_cmd("0642000C0000") < 0) return -1;
+            return ipc_send_cmd("0657000C0007");
+        case 5:
+            if(ipc_send_cmd("0642000C0000") < 0) return -1;
+            return ipc_send_cmd("0657000C000A");
     }
     return -1;
 }
@@ -516,7 +525,7 @@ static void storage_unknown(const char *why){
 }
 int ui_set_source_mode(int mode){
     if(modes_output_busy()){ ui_toast("Switching output - try again"); return -1; }
-    if(mode < 0 || mode > 3) return -1;
+    if(mode < 0 || mode > 5) return -1;                 /* 0 Playback, 1 USB DAC, 2 BT DAC, 3 USB storage, 4 BT streaming, 5 AirPlay */
     if(ui_source_switch_pending()){ ui_toast("Storage is switching"); return -1; }
     if(g_sd_phase == SD_UNKNOWN || g_sd_hold || !sd_io_healthy()){ ui_toast("SD access is held this boot"); return -1; }
     /* Every source change drives the player (and USB/card ownership with it), so none may happen before this

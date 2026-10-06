@@ -329,7 +329,7 @@ static void row_cb(int slot){                 /* a tap inside a slice (the wheel
             "Switching to Bluetooth receiving", "Switching to USB storage",
             "Bluetooth streaming on", "AirPlay on \xE2\x80\x93 pick the Disc on your device" };
         ui_toast(msg[m]);
-    }
+    } else g_last_switch = 0;                                  /* refused (the reason was toasted, if any): tappable again */
 }
 
 void modes_open(void){
