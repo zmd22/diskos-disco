@@ -377,12 +377,37 @@ by the time of day.
 the sections are reached from Home and from round "orbit" menus around a central back button. The gestures,
 settings, Queue, Search, hold menus, EQ functions and Quick Settings are the same.
 
+#### Ring
+
+The progress ring is the whole idea. On **Home** the clock sits inside the playing song's progress ring, with the
+date and weather above it and the cover riding along the ring. **Now Playing** shows a round cover with the progress
+ring hugging it (drag the ring to seek), the heart and the play mode at the ring's sides, and large title and
+artist. Menus are round "orbits" of buttons. Ring is black with red button rims; **Ring Light** is off-white with
+lime. Music surfaces follow the album colour, or your own Accent Colour.
+
+#### Braun
+
+A 1970s hi-fi in the spirit of Dieter Rams' Braun SK4 radio. **Home** is an analogue clock dial on a speaker-grille
+face, with the weather in a small window and the song on a solid panel that follows the round edge. Switches are
+knobs (off points up, on turns 45° and goes orange), the equalizer is a fader bank, the volume popup is a rim scale
+with a big number, and lists stay straight with a single orange dot for the current row. **Braun** is warm white;
+**Braun Dark** is charcoal with aluminium knobs.
+
+#### Stone
+
+diskOS's own rounded theme, kept from upstream: pill-shaped controls, a clock split into hour and minute blocks, and
+on Now Playing a thick seek ring with a pill-shaped play key. It keeps upstream's Home and Now Playing screens; menus,
+lists and popups follow this project's layouts in Stone's colours and fonts.
+
 <table>
 <tr>
 <td align="center" valign="top" width="25%"><img src="disco/ring-music.png" width="180" alt="Ring"><br><sub>Ring</sub></td>
 <td align="center" valign="top" width="25%"><img src="disco/ring-light-music.png" width="180" alt="Ring Light"><br><sub>Ring Light</sub></td>
 <td align="center" valign="top" width="25%"><img src="disco/braun-music.png" width="180" alt="Braun"><br><sub>Braun</sub></td>
 <td align="center" valign="top" width="25%"><img src="disco/braun-dark-music.png" width="180" alt="Braun Dark"><br><sub>Braun Dark</sub></td>
+</tr>
+<tr>
+<td align="center" valign="top" width="25%"><img src="tour/now-playing-stone.png" width="180" alt="Stone Now Playing"><br><sub>Stone (Now Playing)</sub></td>
 </tr>
 </table>
 
