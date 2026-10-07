@@ -360,9 +360,7 @@ System covers language, power, library maintenance, time, updates, recovery, and
 | When Sleep Ends | Pause by default; V2.57 can instead request Shut down. |
 | Idle Power-off | Off by default; V2.57 offers 5, 10, 30, 60, 90, or 120 minutes without playback or input. |
 | Charging Limit | Off by default; V2.57 can request the stock charging optimization, around 80%. |
-| Vol Keys: Press | Adjust Volume by default; on V2.57 a single press can instead Switch Track. |
-| Vol Keys: Double Press | Adjust Volume by default; on V2.57 a double press can instead Switch Track. |
-| Vol Keys: Long Press | Adjust Volume by default; on V2.57 a hold can instead Switch Track. |
+| Volume Keys | A submenu: Press, Double Press and Long Press each Adjust Volume by default; on V2.57 they can instead Switch Track. |
 | Rescan Library | Scan the card with progress shown; tap Stop to cancel pending scan changes. |
 | Import Playlists | Import recognized .m3u and .m3u8 lists from the card. |
 | Default UI | diskOS by default; choose Stock for future normal boots. |
@@ -372,7 +370,6 @@ System covers language, power, library maintenance, time, updates, recovery, and
 | Device Info | Show model, firmware, diskOS build, addresses, storage, and battery details. |
 | Update from SD Card | Find a stock-style update filename and explain the stock route; diskOS does not run it. |
 | Allow diskOS Updates | On by default in the 1.2.0 release image; Off blocks download and staging, but a release check remains possible. |
-| Update diskOS | Check for a later signed diskOS app update over Wi-Fi, then confirm download and restart. |
 | Reset diskOS Settings | Confirm reset of diskOS appearance and behavior choices; music, radios, Last.fm, EQ, and audio settings remain. |
 | Debug Mode | Off by default; enable temporary SSH over Wi-Fi with a new shown password. |
 | Temperature; About | Read battery or board temperature and the exact diskOS build identifier. |
@@ -387,15 +384,11 @@ System covers language, power, library maintenance, time, updates, recovery, and
 
 ### Updates, startup, and power
 
-Installing 1.2.0 requires a full flash; it installs the update feature, so the first update over
-Wi-Fi will be a later release. The 1.2.0 release image includes the diskOS release key by default;
-untick "Allow diskOS updates over Wi-Fi" when flashing to omit it. Update diskOS checks for a
-newer signed diskOS app bundle. It replaces only the app, not stock firmware or the whole image.
-After restarting into a trial, choose Keep or Go back; a broken update rolls back automatically.
-Allow diskOS Updates can stop downloads on the Disc. Turning it off with a staged update offers
-Discard or Cancel. An install without a key reports that updates are unsupported.
+diskOS Disco! has no updates over Wi-Fi: install a new version from the SD card (Settings > System > Update from
+SD Card, a signed `diskos-update` folder) or by flashing. An SD-card update runs as a trial; choose Keep or Go back
+after restarting, and a broken update rolls back automatically.
 
-At startup, the Disc animation uses the body color selected under Display > Disc Colour. The stock player handles the physical power button: one press blanks the display and another restores it; the physical play/pause button controls playback through that player. The Volume Up and Volume Down keys adjust volume by default, or switch tracks according to the V2.57 Vol Keys settings. A tap wakes the idle saver, and the separate Screensaver, Screen Off, Sleep Timer, and Idle Power-off choices control later idle behavior. For USB Storage, eject the card safely on the computer before changing modes; diskOS can refuse the switch when card ownership is uncertain.
+At startup, the Disc animation uses the body color selected under Display > Disc Colour. The stock player handles the physical power button: one press blanks the display and another restores it; the physical play/pause button controls playback through that player. The Volume Up and Volume Down keys adjust volume by default, or switch tracks according to the V2.57 Volume Keys settings. A tap wakes the idle saver, and the separate Screensaver, Screen Off, Sleep Timer, and Idle Power-off choices control later idle behavior. For USB Storage, eject the card safely on the computer before changing modes; diskOS can refuse the switch when card ownership is uncertain.
 
 <table>
 <tr>

@@ -57,7 +57,7 @@ static const char *mode_glyph(void){
 }
 static void paint_radios(void){
     lv_color_t acc = th_ringlike()?ui_current_accent():TC(ACCENT_PRIMARY);
-    orbit_set_on(&g_orb, T_WIFI, cfg_get_int("wifi_on", 1), acc);
+    orbit_set_on(&g_orb, T_WIFI, wifi_radio_live(), acc);           /* the real radio, not the saved intent */
     int bs = bt_state();                                        /* the real radio, not the saved intent */
     orbit_set_on(&g_orb, T_BT, bs == BT_ON, acc);
     orbit_set_pending(&g_orb, bs == BT_TURNING_ON ? T_BT : -1, acc);   /* ringed while it comes up */
@@ -117,17 +117,22 @@ static void rescan_show(int on){
 #define DQ_CX 272                                                   /* the field's visible middle */
 #define DQ_CY 180
 static int g_hub_d = ORBIT_HUB;                                    /* the cover disc (Disco: bigger) */
-static lv_obj_t *g_dq_row[T_N], *g_dq_ico[T_N], *g_dq_val[T_N], *g_dq_name[T_N];
+static lv_obj_t *g_dq_row[T_N], *g_dq_ico[T_N], *g_dq_val[T_N], *g_dq_name[T_N], *g_dq_badge[T_N];
 static void set_text_if(lv_obj_t *l, const char *t){ if(l && strcmp(lv_label_get_text(l), t)) lv_label_set_text(l, t); }
 static void set_col_if(lv_obj_t *l, lv_color_t c){ if(l && !lv_color_eq(lv_obj_get_style_text_color(l, 0), c)) lv_obj_set_style_text_color(l, c, 0); }
 static void dq_paint(void){                                          /* runs every second: only what changed is touched */
     if(!th_disco()) return;
     lv_color_t acc = ui_current_accent();
-    int on[T_N] = { cfg_get_int("wifi_on", 1), bt_state() == BT_ON, 0, scanner_active(), 0, 0 };
+    int on[T_N] = { wifi_radio_live(), bt_state() == BT_ON, 0, scanner_active(), 0, 0 };   /* real radio states */
     for(int i = 0; i < T_N; i++){
         if(!g_dq_ico[i]) continue;
         set_col_if(g_dq_ico[i], on[i] ? acc : TC(TEXT_PRIMARY));
         set_text_if(g_dq_val[i], i <= T_BT ? (on[i] ? "On" : "Off") : i == T_RESCAN ? "" : LV_SYMBOL_RIGHT);
+        if(g_dq_badge[i]){                                         /* the radios' badge: accent when on */
+            lv_color_t bc = on[i] ? acc : TC(SURFACE_RAISED);
+            if(!lv_color_eq(lv_obj_get_style_bg_color(g_dq_badge[i], 0), bc)) lv_obj_set_style_bg_color(g_dq_badge[i], bc, 0);
+            set_col_if(g_dq_val[i], on[i] ? theme_on_color(acc) : TC(TEXT_PRIMARY));
+        }
         if(i == T_RESCAN) set_text_if(g_dq_name[i], on[i] ? "Scanning" : "Rescan");   /* in the name: no room for both */
     }
     set_text_if(g_dq_ico[T_MODE], mode_glyph());
@@ -168,34 +173,50 @@ static void disco_layout(lv_obj_t *root){
     for(int i = 0; i < T_N; i++){ lv_obj_add_flag(g_orb.btn[i], LV_OBJ_FLAG_HIDDEN); if(g_orb.cap[i]) lv_obj_add_flag(g_orb.cap[i], LV_OBJ_FLAG_HIDDEN); }
     static const char *const G[T_N] = { LV_SYMBOL_WIFI, LV_SYMBOL_BLUETOOTH, LV_SYMBOL_DIRECTORY, LV_SYMBOL_REFRESH, LV_SYMBOL_SD_CARD, LV_SYMBOL_SETTINGS };
     static const char *const N[T_N] = { "Wi-Fi", "Bluetooth", "Library", "Rescan", "Mode", "Settings" };
-    static const int ORD[T_N] = { T_WIFI, T_BT, T_MODE, T_LIB, T_RESCAN, T_SET };
     /* the sun and the battery glyph move to the right-hand ends of their arcs (clear of the rows), a little bigger */
     if(g_sun){ lv_obj_set_style_transform_scale(g_sun, 176, 0); lv_obj_set_style_transform_pivot_x(g_sun, lv_pct(50), 0); lv_obj_set_style_transform_pivot_y(g_sun, lv_pct(50), 0);
                lv_obj_align(g_sun, LV_ALIGN_CENTER, 126, -100); }
     if(g_batt_icon){ lv_obj_set_style_text_font(g_batt_icon, TF(UI_20), 0); lv_obj_align(g_batt_icon, LV_ALIGN_CENTER, 126, 102); }
-    /* Wi-Fi centred under the brightness arc, four rows beside the field, Settings centred in the battery arc */
-    static const struct { int x, y, w; } RP[T_N] = { { 95, 38, 170 }, { 0, 87, 0 }, { 0, 136, 0 }, { 0, 185, 0 }, { 0, 235, 0 }, { 98, 284, 164 } };   /* evenly spaced */
+    /* five rows of tall pills, 6 px apart: Wi-Fi and Bluetooth share the top one (icon + a round On/Off badge set into
+     * the pill), then Mode, Library, Rescan beside the field, Settings centred in the battery arc */
+    #define DQ_H 50
+    static const struct { int i, x, y, w; } RP[T_N] = {
+        { T_WIFI,  80, 46, 98 }, { T_BT, 184, 46, 98 },
+        { T_MODE,   0, 102, 0 }, { T_LIB, 0, 158, 0 }, { T_RESCAN, 0, 214, 0 },
+        { T_SET,   86, 270, 188 } };
     for(int k = 0; k < T_N; k++){
-        int i = ORD[k], y = RP[k].y, left = RP[k].x, w = RP[k].w;
-        if(!w){
-            int mid = y + 21, dy = mid - 180; if(dy < 0) dy = -dy;
-            left = 180 - (int)sqrtf((float)(176 * 176 - (dy + 21) * (dy + 21))) + 8; if(left < 14) left = 14;
+        int i = RP[k].i, y = RP[k].y, left = RP[k].x, w = RP[k].w;
+        if(!w){                                                       /* follow the rim on the left, stop short of the field */
+            int d1 = y - 180, d2 = y + DQ_H - 180; if(d1 < 0) d1 = -d1; if(d2 < 0) d2 = -d2;
+            int dy = d1 > d2 ? d1 : d2;
+            left = 180 - (int)sqrtf((float)(176 * 176 - dy * dy)) + 10; if(left < 16) left = 16;
             w = 190 - left;
         }
+        int radio = (i == T_WIFI || i == T_BT);
         lv_obj_t *r = lv_obj_create(root); lv_obj_remove_style_all(r); g_dq_row[i] = r;
-        lv_obj_set_pos(r, left, y); lv_obj_set_size(r, w, 44);
+        lv_obj_set_pos(r, left, y); lv_obj_set_size(r, w, DQ_H);
         lv_obj_set_style_radius(r, LV_RADIUS_CIRCLE, 0); lv_obj_set_style_bg_color(r, TC(SURFACE), 0); lv_obj_set_style_bg_opa(r, 150, 0);
         lv_obj_set_style_bg_color(r, TC(SURFACE_RAISED), LV_STATE_PRESSED);
         lv_obj_add_flag(r, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_USER_2); lv_obj_clear_flag(r, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_add_event_cb(r, dq_row_cb, LV_EVENT_SHORT_CLICKED, (void *)(intptr_t)i);
         lv_obj_add_event_cb(r, dq_row_cb, LV_EVENT_LONG_PRESSED, (void *)(intptr_t)i);
-        g_dq_ico[i] = lv_label_create(r); lv_label_set_text(g_dq_ico[i], G[i]); lv_obj_set_style_text_font(g_dq_ico[i], TF(UI_20), 0);
-        lv_obj_align(g_dq_ico[i], LV_ALIGN_LEFT_MID, 14, 0);
-        lv_obj_t *n = g_dq_name[i] = lv_label_create(r); lv_label_set_text(n, N[i]); lv_obj_set_style_text_font(n, TF(UI_20), 0);
-        lv_obj_set_style_text_color(n, TC(TEXT_PRIMARY), 0); lv_obj_align(n, LV_ALIGN_LEFT_MID, 44, 0);
-        g_dq_val[i] = lv_label_create(r); lv_obj_set_style_text_font(g_dq_val[i], TF(UI_14), 0);
-        lv_obj_set_style_text_color(g_dq_val[i], TC(TEXT_SECONDARY), 0); lv_obj_align(g_dq_val[i], LV_ALIGN_RIGHT_MID, -14, 0);
-        if(i == T_BT) lv_obj_add_flag(g_dq_val[i], LV_OBJ_FLAG_HIDDEN);   /* no room for On/Off here: the icon's accent says it */
+        g_dq_ico[i] = lv_label_create(r); lv_label_set_text(g_dq_ico[i], G[i]); lv_obj_set_style_text_font(g_dq_ico[i], TF(UI_24), 0);
+        lv_obj_align(g_dq_ico[i], LV_ALIGN_LEFT_MID, radio ? 18 : 16, 0);
+        if(radio){                                                    /* no name: the icon says it; On/Off in a round badge */
+            g_dq_name[i] = NULL;
+            lv_obj_t *b = lv_obj_create(r); lv_obj_remove_style_all(b); g_dq_badge[i] = b;
+            lv_obj_set_size(b, DQ_H - 8, DQ_H - 8); lv_obj_align(b, LV_ALIGN_RIGHT_MID, -4, 0);
+            lv_obj_set_style_radius(b, LV_RADIUS_CIRCLE, 0); lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
+            lv_obj_set_style_bg_color(b, TC(SURFACE_RAISED), 0);
+            lv_obj_clear_flag(b, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+            g_dq_val[i] = lv_label_create(b); lv_obj_set_style_text_font(g_dq_val[i], TF(UI_14), 0);
+            lv_obj_set_style_text_color(g_dq_val[i], TC(TEXT_PRIMARY), 0); lv_label_set_text(g_dq_val[i], "Off"); lv_obj_center(g_dq_val[i]);
+        } else {
+            lv_obj_t *n = g_dq_name[i] = lv_label_create(r); lv_label_set_text(n, N[i]); lv_obj_set_style_text_font(n, TF(UI_24), 0);
+            lv_obj_set_style_text_color(n, TC(TEXT_PRIMARY), 0); lv_obj_align(n, LV_ALIGN_LEFT_MID, 52, 0);
+            g_dq_val[i] = lv_label_create(r); lv_obj_set_style_text_font(g_dq_val[i], TF(UI_16), 0);
+            lv_obj_set_style_text_color(g_dq_val[i], TC(TEXT_SECONDARY), 0); lv_obj_align(g_dq_val[i], LV_ALIGN_RIGHT_MID, -16, 0);
+        }
     }
     dq_paint();
 }

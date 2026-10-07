@@ -50,6 +50,7 @@ static const dsec_t SEC[] = {
     { "songs",     "Songs",     LV_SYMBOL_PLAY,      SCR_LIBRARY,   open_songs,        0 },
     { "myqueue",   "Queue",     LV_SYMBOL_PASTE,     SCR_QUEUE,     open_queue,        0 },
     { "weather",   "Weather",   LV_SYMBOL_IMAGE,     SCR_WEATHER,   weather_app_open,  0 },
+    { "ma",        "Sendspin",  "MA",               SCR_MA,       NULL,              0 },
 };
 #define NSEC ((int)(sizeof SEC / sizeof SEC[0]))
 #define MAXM 10                                    /* the picker holds at most ten (the dots must fit) */
@@ -60,7 +61,7 @@ static int menu_has_screen(int scr);
 static int in_menu(int s){ for(int i = 0; i < g_nmenu; i++) if(g_menu[i] == s) return i; return -1; }
 static int menu_has_screen(int scr){ for(int i = 0; i < g_nmenu; i++) if(SEC[g_menu[i]].screen == scr) return 1; return 0; }
 /* parse cfg "disco_menu": unknown and duplicate ids are skipped, missing protected ones come back (never locked out) */
-static const char CODE[] = "mlsoceFaudbwrgq";                 /* one letter per SEC[] entry, same order */
+static const char CODE[] = "mlsoceFaudbwrgqM";                 /* one letter per SEC[] entry, same order */
 static void menu_load(void){
     char buf[256]; snprintf(buf, sizeof buf, "%s", cfg_get_str("disco_menu", "music,library,settings,modes,shortcuts,eq"));
     g_nmenu = 0;
@@ -238,7 +239,7 @@ static int picker_wanted(int which){
     switch(which){
         case SCR_HOME: case SCR_LIBRARY: case SCR_SETTINGS: case SCR_SETLIST: case SCR_WORKMODE: case SCR_APPS:
         case SCR_PLVIEW: case SCR_FOLDER: case SCR_BOOKS: case SCR_ALBUMWALL: case SCR_UPNEXT: case SCR_WIFI:
-        case SCR_BT: case SCR_WEATHER: case SCR_MODEINFO: case SCR_USAGE: case SCR_EQ: return 1;
+        case SCR_BT: case SCR_WEATHER: case SCR_MODEINFO: case SCR_USAGE: case SCR_EQ: case SCR_MA: return 1;
         case SCR_SEARCH: return search_landing_active();             /* the landing page has the menu; the keyboard doesn't */
         default: return 0;
     }
@@ -248,12 +249,12 @@ static void picker_paint(void){
     const dsec_t *s = &SEC[g_menu[g_cur]];
     lv_color_t acc = ui_current_accent();
     lv_label_set_text(g_pk_icon, s->icon);
-    lv_obj_set_style_text_font(g_pk_icon, !strcmp(s->icon, "EQ") ? TF(UI_28) : !strcmp(s->icon, IC_MIC) ? TF(ICON_28) : (!strcmp(s->icon, TH_IC_SEARCH) ? &font_theme_24 : TF(UI_36)), 0);
+    lv_obj_set_style_text_font(g_pk_icon, (!strcmp(s->icon, "EQ") || !strcmp(s->icon, "MA")) ? TF(UI_28) : !strcmp(s->icon, IC_MIC) ? TF(ICON_28) : (!strcmp(s->icon, TH_IC_SEARCH) ? &font_theme_24 : TF(UI_36)), 0);
     lv_obj_set_style_outline_color(g_pk_glow, acc, 0); lv_obj_set_style_border_color(g_pk_glow, acc, 0);   /* the glow follows the accent */
     lv_obj_set_style_bg_color(g_pk_glow, acc, 0);
     lv_label_set_text(g_pk_name, s->name);
     if(g_tab_icon){ lv_label_set_text(g_tab_icon, s->icon);
-                    lv_obj_set_style_text_font(g_tab_icon, !strcmp(s->icon, "EQ") ? TF(UI_12) : !strcmp(s->icon, IC_MIC) ? TF(ICON_20) : (!strcmp(s->icon, TH_IC_SEARCH) ? &font_theme_20 : TF(UI_18)), 0);
+                    lv_obj_set_style_text_font(g_tab_icon, (!strcmp(s->icon, "EQ") || !strcmp(s->icon, "MA")) ? TF(UI_12) : !strcmp(s->icon, IC_MIC) ? TF(ICON_20) : (!strcmp(s->icon, TH_IC_SEARCH) ? &font_theme_20 : TF(UI_18)), 0);
                     lv_obj_set_style_border_color(g_tab, acc, 0); }
     for(int i = 0; i < MAXM; i++){
         if(!g_pk_dot[i]) continue;
@@ -508,7 +509,7 @@ static void ed_row(int s, int pos){
     lv_obj_set_style_bg_color(r, TC(SURFACE), 0); lv_obj_set_style_bg_opa(r, pos >= 0 ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
     lv_obj_clear_flag(r, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_t *ic = lv_label_create(r); lv_label_set_text(ic, SEC[s].icon);
-    lv_obj_set_style_text_font(ic, !strcmp(SEC[s].icon, TH_IC_SEARCH) ? &font_theme_20 : !strcmp(SEC[s].icon, IC_MIC) ? TF(ICON_20) : (!strcmp(SEC[s].icon, "EQ") ? TF(UI_14) : TF(UI_18)), 0);
+    lv_obj_set_style_text_font(ic, !strcmp(SEC[s].icon, TH_IC_SEARCH) ? &font_theme_20 : !strcmp(SEC[s].icon, IC_MIC) ? TF(ICON_20) : ((!strcmp(SEC[s].icon, "EQ") || !strcmp(SEC[s].icon, "MA")) ? TF(UI_14) : TF(UI_18)), 0);
     lv_obj_set_style_text_color(ic, pos >= 0 ? ui_current_accent() : TC(TEXT_MUTED), 0); lv_obj_align(ic, LV_ALIGN_LEFT_MID, 12, 0);
     lv_obj_t *nm = lv_label_create(r); lv_label_set_text(nm, SEC[s].name);
     lv_obj_set_style_text_font(nm, TF(UI_16), 0);

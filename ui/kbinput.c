@@ -6,169 +6,96 @@
 #include <stdio.h>
 #include <string.h>
 
-/* On-screen keyboard shaped to the bottom SEMICIRCLE of the 360px round panel
- * the natural QWERTY taper (10/9/7 keys) already
- * follows the circle's narrowing chord, so each row is centred to the chord at
- * its bottom edge and every key stays >=32px and fully inside the circle. The
- * top half holds the field + Cancel/Save. Individually-positioned lv_buttons -
- * no per-touch math, cheap on MIPS. */
+/* Text entry (Wi-Fi password, MA Sendspin server and name, playlist names): a full-screen modal with Search's
+ * field and big keyboard. */
 
-/* ---- semicircle keyboard ------------------------------------------------- */
-#define SKB_W 360
-#define SKB_Y 180            /* keyboard occupies y 180..360 (bottom half)      */
-#define SKB_H 180
-#define SKB_ROW_H 32
-#define SKB_MAX_KEYS 31
-
-typedef enum { SKB_LOWER, SKB_UPPER, SKB_NUM, SKB_SYM } skb_mode_t;
-typedef enum { SKB_CHAR, SKB_SHIFT, SKB_MODE, SKB_SPACE, SKB_BKSP, SKB_OK } skb_kind_t;
-
-typedef struct skb_s skb_t;
-typedef struct { skb_t *ctx; skb_kind_t kind; uint8_t row, col; lv_obj_t *btn, *label; } skb_key_t;
-struct skb_s {
-    lv_obj_t *kb, *ta;
-    void (*submit)(void);
-    skb_mode_t mode;
-    skb_key_t keys[SKB_MAX_KEYS];
-    uint8_t key_count;
-};
-
-static const char skb_lower[3][11] = { "qwertyuiop", "asdfghjkl", "zxcvbnm" };
-static const char skb_upper[3][11] = { "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM" };
-static const char skb_numr [3][11] = { "1234567890", "-/:;()$&@", ".,?!'\"+" };
-/* second symbol page (iOS "#+=" style) - the chars not on the number page,
- * incl. the ones Wi-Fi passwords commonly need: _ # % = * ^ etc. All printable
- * ASCII, so montserrat renders them. Row lengths must match skb_rows (10/9/7). */
-static const char skb_syms [3][11] = { "[]{}#%^*+=", "_\\|~<>/-:", ";()&$!?" };
-
-typedef struct { int16_t y; uint8_t count, gap, key_w; const uint8_t *widths; } skb_rowl_t;
-static const uint8_t skb_util_w[5] = { 32, 32, 52, 32, 32 };  /* Aa 123 space bksp OK */
-static const skb_rowl_t skb_rows[4] = {
-    {184, 10, 3, 32, NULL},          /* qwertyuiop  total 347 (chord ~353) */
-    {222,  9, 3, 33, NULL},          /* asdfghjkl   total 321 (chord ~329) */
-    {260,  7, 4, 36, NULL},          /* zxcvbnm     total 276 (chord ~283) */
-    {298,  5, 3,  0, skb_util_w},    /* utility     total 192 (chord ~199) */
-};
-
-static int16_t skb_row_w(const skb_rowl_t *r){
-    int16_t w = 0;
-    for(uint8_t i=0;i<r->count;i++) w += r->widths ? r->widths[i] : r->key_w;
-    if(r->count>1) w += (int16_t)(r->count-1)*r->gap;
-    return w;
-}
-static char skb_char(const skb_t *c, uint8_t row, uint8_t col){
-    if(c->mode==SKB_SYM)   return skb_syms [row][col];
-    if(c->mode==SKB_NUM)   return skb_numr [row][col];
-    if(c->mode==SKB_UPPER) return skb_upper[row][col];
-    return skb_lower[row][col];
-}
-static void skb_refresh(skb_t *c){
-    for(uint8_t i=0;i<c->key_count;i++){
-        skb_key_t *k=&c->keys[i];
-        switch(k->kind){
-        case SKB_CHAR: { char s[2]={ skb_char(c,k->row,k->col), 0 }; lv_label_set_text(k->label,s); break; }
-        case SKB_SHIFT:
-            /* on letter pages = case shift; on number/symbol pages = toggle the
-             * two symbol pages (NUM <-> SYM), iOS "#+=" / "123" style. */
-            if(c->mode==SKB_NUM){      lv_label_set_text(k->label,"#+="); lv_obj_remove_state(k->btn,LV_STATE_CHECKED); }
-            else if(c->mode==SKB_SYM){ lv_label_set_text(k->label,"123"); lv_obj_remove_state(k->btn,LV_STATE_CHECKED); }
-            else {
-                lv_label_set_text(k->label,"Aa");
-                if(c->mode==SKB_UPPER) lv_obj_add_state(k->btn,LV_STATE_CHECKED);
-                else                   lv_obj_remove_state(k->btn,LV_STATE_CHECKED);
-            }
-            break;
-        case SKB_MODE:  lv_label_set_text(k->label,
-                            (c->mode==SKB_NUM||c->mode==SKB_SYM)?"abc":"123"); break;
-        case SKB_SPACE: lv_label_set_text(k->label,"space"); break;
-        case SKB_BKSP:  lv_label_set_text(k->label,LV_SYMBOL_BACKSPACE); break;
-        case SKB_OK:    lv_label_set_text(k->label,LV_SYMBOL_OK); break;
+/* ---- the big keyboard (Search's look: big keys in the wide middle of the circle) ------------------------
+ * Four rows of 7/8/7/6 keys, 46 px tall, alphabetical like Search's. Pages: abc, ABC (Aa), 123 and #+= - between
+ * them every printable ASCII character, so any Wi-Fi password can be typed. The last row ends in space and
+ * Backspace (hold = clear all); Aa and 123 sit at the bottom like Search's mode key. */
+#define BK_H 46
+#define BK_P 50
+#define BK_Y 116
+static const int BKN[4] = { 7, 8, 7, 6 };
+static const int BKW[4] = { 42, 39, 40, 36 };
+#define BK_BKSP '\b'
+static const char *const BK_LOW[4] = { "abcdefg", "hijklmno", "pqrstuv", "wxyz \b" };
+static const char *const BK_UP [4] = { "ABCDEFG", "HIJKLMNO", "PQRSTUV", "WXYZ \b" };
+static const char *const BK_NUM[4] = { "1234567", "890'&-.!", "?,:()/+", "#@\"* \b" };
+static const char *const BK_SYM[4] = { "[]{}%^=", "_\\|~<>;$", "`'.,!?-", "@#* \b" };
+typedef struct { lv_obj_t *ta, *key[4][8], *lbl[4][8], *shift_lbl, *mode_lbl, *shift_btn; int page; void (*submit)(void); } bkb_t;
+static bkb_t g_bk;                                    /* one keyboard at a time (the modal) */
+static const char *const *bk_set(void){ return g_bk.page == 1 ? BK_UP : g_bk.page == 2 ? BK_NUM : g_bk.page == 3 ? BK_SYM : BK_LOW; }
+static void bk_paint(void){
+    const char *const *set = bk_set();
+    for(int r = 0; r < 4; r++){
+        int cnt = (int)strlen(set[r]), x = 180 - (cnt * BKW[r] + (cnt - 1) * 4) / 2;
+        for(int c = 0; c < 8; c++){
+            lv_obj_t *k = g_bk.key[r][c]; if(!k) continue;
+            if(c >= cnt){ lv_obj_add_flag(k, LV_OBJ_FLAG_HIDDEN); continue; }
+            char ch = set[r][c];
+            lv_obj_remove_flag(k, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_set_user_data(k, (void *)(uintptr_t)(unsigned char)ch);
+            lv_obj_set_pos(k, x, BK_Y + r * BK_P); x += BKW[r] + 4;
+            lv_obj_t *l = g_bk.lbl[r][c]; char t[2] = { ch, 0 };
+            if(ch == ' '){ lv_label_set_text(l, "space"); lv_obj_set_style_text_font(l, TF(UI_12), 0); lv_obj_set_style_text_color(l, TC(TEXT_SECONDARY), 0); }
+            else if(ch == BK_BKSP){ lv_label_set_text(l, LV_SYMBOL_BACKSPACE); lv_obj_set_style_text_font(l, TF(UI_18), 0); lv_obj_set_style_text_color(l, TC(TEXT_SECONDARY), 0); }
+            else { lv_label_set_text(l, t); lv_obj_set_style_text_font(l, TF(UI_24), 0); lv_obj_set_style_text_color(l, TC(TEXT_PRIMARY), 0); }
         }
-        lv_obj_center(k->label);
     }
+    int sym = g_bk.page >= 2;
+    lv_label_set_text(g_bk.shift_lbl, sym ? (g_bk.page == 2 ? "#+=" : "123") : "Aa");
+    lv_label_set_text(g_bk.mode_lbl, sym ? "abc" : "123");
+    lv_obj_set_style_bg_color(g_bk.shift_btn, g_bk.page == 1 ? ui_current_accent() : TC(SURFACE), 0);
+    lv_obj_set_style_text_color(g_bk.shift_lbl, g_bk.page == 1 ? TC(ON_ACCENT) : TC(TEXT_SECONDARY), 0);
 }
-static void skb_key_cb(lv_event_t *e){
+static void bk_key_cb(lv_event_t *e){
     lv_event_code_t code = lv_event_get_code(e);
-    skb_key_t *k=lv_event_get_user_data(e); skb_t *c=k->ctx;
-    if(code == LV_EVENT_LONG_PRESSED){
-        if(k->kind == SKB_BKSP) lv_textarea_set_text(c->ta, "");   /* hold backspace = clear the whole field */
-        return;
-    }
-    if(code != LV_EVENT_CLICKED) return;
-    switch(k->kind){
-    case SKB_CHAR: {
-        char s[2]={ skb_char(c,k->row,k->col), 0 };
-        lv_textarea_add_text(c->ta,s);
-        if(c->mode==SKB_UPPER){ c->mode=SKB_LOWER; skb_refresh(c); }
-        break; }
-    case SKB_SHIFT:
-        if(c->mode==SKB_NUM)      c->mode = SKB_SYM;            /* number page -> symbol page */
-        else if(c->mode==SKB_SYM) c->mode = SKB_NUM;            /* symbol page -> number page */
-        else c->mode = (c->mode==SKB_UPPER)?SKB_LOWER:SKB_UPPER;/* letter case shift */
-        skb_refresh(c); break;
-    case SKB_MODE:  /* "123"/"abc": jump between letters and the number/symbol pages */
-        c->mode = (c->mode==SKB_NUM||c->mode==SKB_SYM)?SKB_LOWER:SKB_NUM; skb_refresh(c); break;
-    case SKB_SPACE: lv_textarea_add_text(c->ta," "); break;
-    case SKB_BKSP:  lv_textarea_delete_char(c->ta); break;
-    case SKB_OK:    if(c->submit) c->submit(); break;
-    }
+    char ch = (char)(uintptr_t)lv_obj_get_user_data(lv_event_get_current_target(e));
+    if(!g_bk.ta) return;
+    if(code == LV_EVENT_LONG_PRESSED){ if(ch == BK_BKSP) lv_textarea_set_text(g_bk.ta, ""); return; }   /* hold Backspace: clear all */
+    if(code != LV_EVENT_SHORT_CLICKED) return;
+    if(ch == BK_BKSP){ lv_textarea_delete_char(g_bk.ta); return; }
+    char t[2] = { ch, 0 }; lv_textarea_add_text(g_bk.ta, t);
+    if(g_bk.page == 1){ g_bk.page = 0; bk_paint(); }        /* one capital, then back to small letters */
 }
-static void skb_del_cb(lv_event_t *e){ lv_free(lv_event_get_user_data(e)); }
-static void skb_add(skb_t *c, skb_kind_t kind, uint8_t row, uint8_t col,
-                    int16_t x, int16_t y, int16_t w){
-    if(c->key_count>=SKB_MAX_KEYS) return;
-    skb_key_t *k=&c->keys[c->key_count++];
-    memset(k,0,sizeof *k);
-    k->ctx=c; k->kind=kind; k->row=row; k->col=col;
-    k->btn=lv_button_create(c->kb);
-    lv_obj_set_pos(k->btn,x,y);
-    lv_obj_set_size(k->btn,w,SKB_ROW_H);
-    lv_obj_set_ext_click_area(k->btn,1);   /* easier taps; 1px keeps zero overlap inside the 3-4px row gaps */
-    lv_obj_remove_flag(k->btn,LV_OBJ_FLAG_SCROLLABLE);
-    ui_on(k->btn, skb_key_cb, LV_EVENT_CLICKED, k, "kbinput.skb_key", UI_CORE);
-    if(kind==SKB_BKSP) ui_on(k->btn, skb_key_cb, LV_EVENT_LONG_PRESSED, k, "kbinput.skb_key.long", UI_CORE);   /* hold to clear all */
-    lv_obj_set_style_radius(k->btn,7,0);
-    lv_obj_set_style_border_width(k->btn,1,0);
-    lv_obj_set_style_border_color(k->btn,TC(CONTROL_TRACK),0);
-    lv_obj_set_style_bg_color(k->btn,TC(KEY_SURFACE),0);
-    lv_obj_set_style_bg_color(k->btn,TC(CONTROL_TRACK),LV_STATE_PRESSED);
-    lv_obj_set_style_bg_color(k->btn,TC(KEY_SELECTED),LV_STATE_CHECKED);
-    lv_obj_set_style_pad_all(k->btn,0,0);
-    k->label=lv_label_create(k->btn);
-    lv_obj_set_style_text_font(k->label,TF(UI_16),0);
-    lv_obj_set_style_text_color(k->label,TC(KEY_TEXT),0);
+static void bk_shift_cb(lv_event_t *e){ (void)e; g_bk.page = g_bk.page == 0 ? 1 : g_bk.page == 1 ? 0 : g_bk.page == 2 ? 3 : 2; bk_paint(); }
+void kbinput_test_page(void){ g_bk.page = (g_bk.page + 1) % 4; bk_paint(); }   /* host renders */
+static void bk_mode_cb(lv_event_t *e){ (void)e; g_bk.page = g_bk.page >= 2 ? 0 : 2; bk_paint(); }
+static void bk_style(lv_obj_t *k, int radius){
+    lv_obj_remove_style_all(k);
+    lv_obj_set_style_radius(k, radius, 0);
+    lv_obj_set_style_bg_color(k, TC(SURFACE), 0);
+    lv_obj_set_style_bg_opa(k, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_color(k, TC(SURFACE_RAISED), LV_STATE_PRESSED);
 }
-static lv_obj_t *skb_create(lv_obj_t *parent, lv_obj_t *ta, void (*submit)(void)){
-    skb_t *c=lv_malloc(sizeof *c);
-    if(!c) return NULL;
-    memset(c,0,sizeof *c);
-    c->ta=ta; c->submit=submit; c->mode=SKB_LOWER;
-    c->kb=lv_obj_create(parent);
-    lv_obj_set_size(c->kb,SKB_W,SKB_H);
-    lv_obj_set_pos(c->kb,0,SKB_Y);
-    lv_obj_remove_flag(c->kb,LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_set_style_bg_opa(c->kb,LV_OPA_TRANSP,0);
-    lv_obj_set_style_border_width(c->kb,0,0);
-    lv_obj_set_style_pad_all(c->kb,0,0);
-    lv_obj_add_event_cb(c->kb,skb_del_cb,LV_EVENT_DELETE,c);
-    for(uint8_t row=0;row<4;row++){
-        const skb_rowl_t *r=&skb_rows[row];
-        int16_t x=(SKB_W - skb_row_w(r))/2;
-        int16_t y=r->y - SKB_Y;
-        for(uint8_t col=0;col<r->count;col++){
-            int16_t w = r->widths ? r->widths[col] : r->key_w;
-            skb_kind_t kind=SKB_CHAR;
-            if(row==3){
-                switch(col){ case 0:kind=SKB_SHIFT;break; case 1:kind=SKB_MODE;break;
-                             case 2:kind=SKB_SPACE;break; case 3:kind=SKB_BKSP;break;
-                             default:kind=SKB_OK; }
-            }
-            skb_add(c,kind,row,col,x,y,w);
-            x += w + r->gap;
-        }
+static lv_obj_t *bk_small(lv_obj_t *parent, int x, int w, lv_event_cb_t cb, lv_obj_t **lbl){
+    lv_obj_t *b = lv_button_create(parent);
+    bk_style(b, 14);
+    lv_obj_set_size(b, w, 28); lv_obj_align(b, LV_ALIGN_TOP_MID, x, 318);
+    lv_obj_set_ext_click_area(b, 6);
+    lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, NULL);
+    *lbl = lv_label_create(b);
+    lv_obj_set_style_text_font(*lbl, TF(UI_14), 0);
+    lv_obj_set_style_text_color(*lbl, TC(TEXT_SECONDARY), 0);
+    lv_obj_center(*lbl);
+    return b;
+}
+static void bkb_create(lv_obj_t *parent, lv_obj_t *ta, void (*submit)(void)){
+    memset(&g_bk, 0, sizeof g_bk);
+    g_bk.ta = ta; g_bk.submit = submit;
+    for(int r = 0; r < 4; r++) for(int c = 0; c < BKN[r]; c++){
+        lv_obj_t *k = lv_button_create(parent);
+        bk_style(k, 12);
+        lv_obj_set_size(k, BKW[r], BK_H);
+        lv_obj_add_event_cb(k, bk_key_cb, LV_EVENT_SHORT_CLICKED, NULL);
+        lv_obj_add_event_cb(k, bk_key_cb, LV_EVENT_LONG_PRESSED, NULL);
+        g_bk.key[r][c] = k;
+        g_bk.lbl[r][c] = lv_label_create(k); lv_obj_center(g_bk.lbl[r][c]);
     }
-    skb_refresh(c);
-    return c->kb;
+    g_bk.shift_btn = bk_small(parent, -28, 48, bk_shift_cb, &g_bk.shift_lbl);
+    bk_small(parent, 26, 48, bk_mode_cb, &g_bk.mode_lbl);
+    bk_paint();
 }
 
 /* ---- modal wrapper ------------------------------------------------------- */
@@ -180,7 +107,7 @@ int kbinput_active(void){ return g_modal != NULL; }
 
 static void finish(const char *result){
     kbinput_done_cb_t cb = g_done; g_done = NULL;
-    if(g_modal){ lv_obj_delete_async(g_modal); g_modal = NULL; g_ta = NULL; }
+    if(g_modal){ lv_obj_delete_async(g_modal); g_modal = NULL; g_ta = NULL; g_bk.ta = NULL; }
     if(cb) cb(result);
 }
 static void do_save(void){
@@ -196,11 +123,11 @@ static void cancel_btn(lv_event_t *e){ if(lv_event_get_code(e)==LV_EVENT_CLICKED
 static void pill(lv_obj_t *parent, int x, int y, const char *sym, lv_color_t col, lv_event_cb_t cb){
     lv_obj_t *b = lv_button_create(parent);
     lv_obj_remove_style_all(b);
-    lv_obj_set_size(b, 60, 36);
+    lv_obj_set_size(b, 88, 38);
     lv_obj_align(b, LV_ALIGN_TOP_MID, x, y);
     lv_obj_set_ext_click_area(b, 8);   /* Save/Cancel sit in open space - generous hit area */
-    lv_obj_set_style_radius(b, 18, 0);
-    lv_obj_set_style_bg_color(b, TC(SURFACE_RAISED), 0);
+    lv_obj_set_style_radius(b, 20, 0);
+    lv_obj_set_style_bg_color(b, TC(SURFACE), 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
     lv_obj_set_style_bg_color(b, TC(CONTROL_TRACK), LV_STATE_PRESSED);
     lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, NULL);
@@ -236,8 +163,10 @@ void kbinput_open(const char *title, const char *initial, kbinput_done_cb_t cb){
     if(initial && initial[0]) lv_textarea_set_text(g_ta, initial);
     g_keep_spaces = g_mask_next;
     if(g_mask_next){ lv_textarea_set_password_mode(g_ta, true); g_mask_next = 0; }  /* masked secret entry */
-    lv_obj_set_size(g_ta, 240, 40);
-    lv_obj_align(g_ta, LV_ALIGN_TOP_MID, 0, 52);
+    lv_obj_set_size(g_ta, 212, 40);                          /* Search's field look: a pill near the top, inside the circle */
+    lv_obj_align(g_ta, LV_ALIGN_TOP_MID, 0, 22);
+    lv_obj_set_style_radius(g_ta, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_pad_left(g_ta, 18, 0); lv_obj_set_style_pad_right(g_ta, 18, 0);
     lv_obj_set_style_bg_color(g_ta, TC(SURFACE), 0);
     lv_obj_set_style_text_color(g_ta, TC(TEXT_PRIMARY), 0);
     /* typed text and the placeholder ("Password for <SSID>", a playlist name on Rename) are user
@@ -252,8 +181,9 @@ void kbinput_open(const char *title, const char *initial, kbinput_done_cb_t cb){
       if(ta_lbl){ lv_obj_set_style_min_height(ta_lbl, 24, 0); lv_obj_set_style_max_height(ta_lbl, 24, 0); } }
 
     /* Cancel / Save in the wide mid-band, above the keyboard */
-    pill(g_modal, -66, 108, LV_SYMBOL_CLOSE, TC(TEXT_LYRICS), cancel_btn);
-    pill(g_modal,  66, 108, LV_SYMBOL_OK,    TC(STATUS_SUCCESS), save_btn);
+    /* Cancel and Save between the field and the keys, where Search has its Search button */
+    pill(g_modal, -50, 70, LV_SYMBOL_CLOSE, TC(TEXT_SECONDARY), cancel_btn);
+    pill(g_modal,  50, 70, LV_SYMBOL_OK,    TC(STATUS_SUCCESS), save_btn);
 
-    skb_create(g_modal, g_ta, do_save);   /* the keyboard's OK key also saves */
+    bkb_create(g_modal, g_ta, do_save);
 }

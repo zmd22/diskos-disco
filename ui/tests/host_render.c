@@ -346,6 +346,7 @@ int main(int argc, char **argv){
         if(getenv("DISCO_TAL"))cfg_set_int_deferred("disco_title_al",atoi(getenv("DISCO_TAL")));
         if(getenv("DISCO_SHEEN"))cfg_set_int_deferred("disco_sheen",atoi(getenv("DISCO_SHEEN")));
         if(getenv("FONTSZ"))cfg_set_int_deferred("font_size",atoi(getenv("FONTSZ")));
+        if(getenv("DISCO_MNU"))cfg_set_str_deferred("disco_mnu",getenv("DISCO_MNU"));
         screen_set_anim(0);screens_init();ui_set_accent_config(getenv("ACCENT")?1:0,getenv("ACCENT")?(int)strtol(getenv("ACCENT"),NULL,16):0);ui_set_np_style(theme_preset()==THEME_PRESET_RING?3:1);
         track_state_t st={0};snprintf(st.path,sizeof st.path,"%s",argv[5]);
         char *dot=strrchr(st.path,'.');assert(dot);strcpy(dot,".png");
@@ -356,7 +357,13 @@ int main(int argc, char **argv){
             snprintf(st.title,sizeof st.title,"The Last Train Home Through Northern Lights");
             snprintf(st.artist,sizeof st.artist,"The Midnight & The Northern Lights Orchestra");
         }
-        st.have_track=1;st.state=2;st.duration_ms=240000;st.position_ms=92000;ipc_seed_state(&st);ui_update(&st);
+        st.have_track=1;st.state=2;st.duration_ms=240000;st.position_ms=92000;ipc_seed_state(&st);
+        if(getenv("MA_TRACK")){                      /* MA Sendspin: Music shows Music Assistant's track + its sidecar cover */
+            struct timespec tn; clock_gettime(CLOCK_MONOTONIC,&tn);
+            ipc_set_external("Midnight City","M83","Hurry Up, We're Dreaming",getenv("MA_TRACK"),243000,61000,tn.tv_sec*1000LL+tn.tv_nsec/1000000,1000);
+            ipc_get_state(&st); st.state=2;
+        }
+        ui_update(&st);
         int loaded=0;for(int i=0;i<500;i++){ui_art_poll(NULL);if(ui_current_cover_dsc()){loaded=1;break;}usleep(10000);}assert(loaded);
         int art_race=!strncmp(argv[3],"preview-art-race-",17);
         if(art_race){
@@ -381,7 +388,7 @@ int main(int argc, char **argv){
         quicksettings_set_now_playing(st.title,st.artist,1);
         const char *page=argv[3]+(art_race?17:(long_names?13:8));int scr=SCR_HOME;
         if(!strcmp(page,"quick"))scr=SCR_QUICK;else if(!strcmp(page,"np") || !strncmp(page,"immersive",9))scr=SCR_NOWPLAYING;else if(!strcmp(page,"eq"))scr=SCR_EQ;
-        else if(!strcmp(page,"bands"))scr=SCR_EQ_EDITOR;else if(!strcmp(page,"display")){setlist_open("Display");scr=SCR_SETLIST;}
+        else if(!strcmp(page,"bands"))scr=SCR_EQ_EDITOR;else if(!strcmp(page,"display")){setlist_open("Display");scr=SCR_SETLIST;}else if(!strcmp(page,"network")){setlist_open("Network");scr=SCR_SETLIST;}else if(!strcmp(page,"system")){setlist_open("System");scr=SCR_SETLIST;}
         else if(!strcmp(page,"library") || !strcmp(page,"albums"))scr=SCR_LIBRARY;else if(!strcmp(page,"settings"))scr=SCR_SETTINGS;
         else if(!strcmp(page,"upnext"))scr=SCR_UPNEXT;else if(!strcmp(page,"modes"))scr=SCR_WORKMODE;
         else if(!strcmp(page,"shortcuts")){apps_reload();scr=SCR_APPS;}
@@ -437,6 +444,11 @@ int main(int argc, char **argv){
             fprintf(stderr,"PERF idle %.2f ms/s\n",((t1.tv_sec-t0.tv_sec)*1e3+(t1.tv_nsec-t0.tv_nsec)/1e6)/200);
         }
         if(getenv("MODES_PENDING")){ void modes_test_pending(int); modes_test_pending(atoi(getenv("MODES_PENDING"))); for(int i=0;i<25;i++){lv_tick_inc(10);lv_timer_handler();} }
+        if(getenv("KB")){ int pg=atoi(getenv("KB")); kbinput_open("Password for Home", pg==9?"Sn0wsky!":"", NULL); for(int i=0;i<pg && pg<9;i++){ extern void kbinput_test_page(void); kbinput_test_page(); } for(int i=0;i<30;i++){lv_tick_inc(10);lv_timer_handler();} }
+        if(getenv("MA_STATE")){ void ma_test_state(int); scr=SCR_MA; screen_show(scr); ma_test_state(atoi(getenv("MA_STATE"))); for(int i=0;i<30;i++){lv_tick_inc(10);lv_timer_handler();} }
+        if(getenv("MA_DELAY")){ void settings_open_ma_delay(void); cfg_set_int("ma_delay_ms",atoi(getenv("MA_DELAY"))); setlist_open("Network"); settings_open_ma_delay(); scr=SCR_SETTING_DETAIL; for(int i=0;i<40;i++){lv_tick_inc(10);lv_timer_handler();} }
+        if(getenv("VK_SET")){ void settings_open_volkeys(void); setlist_open("System"); scr=SCR_SETLIST; screen_show(scr); settings_open_volkeys(); for(int i=0;i<40;i++){lv_tick_inc(10);lv_timer_handler();} }
+        if(getenv("MA_SET")){ void settings_open_ma(void); setlist_open("Network"); scr=SCR_SETLIST; screen_show(scr); settings_open_ma(); for(int i=0;i<40;i++){lv_tick_inc(10);lv_timer_handler();} }
         if(getenv("MODES_INFO")){ void modes_test_info(int); scr=SCR_MODEINFO; screen_show(scr); modes_test_info(atoi(getenv("MODES_INFO"))); for(int i=0;i<30;i++){lv_tick_inc(10);lv_timer_handler();} }
         if(getenv("BACK_HINT")){ ui_back_hint(180, atoi(getenv("BACK_HINT"))); for(int i=0;i<10;i++){lv_tick_inc(10);lv_timer_handler();} }
         if(getenv("HOME_HINT")){ ui_home_hint(180, atoi(getenv("HOME_HINT"))); for(int i=0;i<10;i++){lv_tick_inc(10);lv_timer_handler();} }

@@ -15,7 +15,7 @@ Two more themes, **Ring** and **Braun**, have the same features and settings, la
 ## On this page
 
 - **Getting around:** [The navigation circle](#the-navigation-circle), [Gestures](#gestures), [Quick Settings](#quick-settings), [Volume](#volume), [Standby](#standby).
-- **Listening:** [Music](#music), [The title menu](#the-title-menu), [Queue and Up Next](#queue-and-up-next), [Equalizer](#equalizer), [Working mode](#working-mode).
+- **Listening:** [Music](#music), [The title menu](#the-title-menu), [Queue and Up Next](#queue-and-up-next), [Equalizer](#equalizer), [Working mode](#working-mode), [MA Sendspin](#ma-sendspin-experimental).
 - **Your library:** [Library](#library), [Hold menus](#hold-menus), [Search](#search), [Shortcuts](#shortcuts).
 - **Make it yours:** [Settings](#settings), [Disco Options](#disco-options), [Themes](#themes).
 - **More:** [Weather](#weather), [Battery](#battery), [Updates and safety](#updates-and-safety), [Limits](#limits).
@@ -77,12 +77,13 @@ Pull down from the top edge. The playing album sits in the round field on the ri
 a play/pause button; tap the cover to go to Music. Drag the **arc at the top** for brightness; the **arc at the
 bottom** shows the battery.
 
-The six rows on the left:
+Five rows of pills on the left; Wi-Fi and Bluetooth share the top one, each an icon with a round **On/Off** badge
+(filled with the accent when on; it shows the radio as it really is):
 
 | Row | Tap | Hold |
 |---|---|---|
-| Wi-Fi | Switch Wi-Fi on or off (shows On/Off). | Open Wi-Fi settings. |
-| Bluetooth | Switch Bluetooth on or off (the icon lights up when on). | Open Bluetooth settings. |
+| Wi-Fi | Switch Wi-Fi on or off. | Open Wi-Fi settings. |
+| Bluetooth | Switch Bluetooth on or off. | Open Bluetooth settings. |
 | Mode | Open Working mode (the icon shows the current one). | |
 | Library | Open the Library. | |
 | Rescan | Rescan the music card (the row reads "Scanning" while it runs). | |
@@ -240,6 +241,34 @@ While a mode other than Playback is active, its own screen shows what is connect
 </tr>
 </table>
 
+### MA Sendspin (experimental)
+
+A Sendspin player for [Music Assistant](https://www.music-assistant.io/): the Disc shows up in Music Assistant as a
+speaker. While Music Assistant plays to it, **Music** shows the track like any song (title, artist, cover,
+progress, Immersive) and its play/pause, next, previous and seeking control Music Assistant. The Disc stays awake
+while it plays.
+
+- **Turn it on** with **Sendspin** in the navigation circle (add it in Disco Options > Disco Menu) or in
+  Settings > Network > MA Sendspin. It switches the Disc to AirPlay (the sound goes through the Disc's own AirPlay
+  receiver) and waits for Music Assistant; picking another working mode turns it off. It comes back on after a
+  restart if it was on.
+- **Settings > Network > MA Sendspin:** **Server** (Auto finds Music Assistant on your network; tap to type its
+  address instead), **Player Name** (how the Disc is called there), **Sync Delay** (-2000 to +2000 ms, moves the
+  Disc's sound later or earlier to line it up with other speakers).
+- The Sendspin screen shows the connection: Off, Looking for Music Assistant, Ready, Playing or Paused with the
+  track, or Can't reach Music Assistant (it keeps trying).
+
+*Experimental.* Made for Music Assistant 2.10, which still accepts the older ("legacy") Sendspin connection this
+uses; a later Music Assistant that drops it will need a Disco update. The Disc's physical buttons still control the
+built-in player, and streaming over Wi-Fi uses more battery than playing from the card.
+
+<table>
+<tr>
+<td align="center" valign="top" width="33%"><img src="disco/sendspin.png" width="220" alt="Sendspin"><br><sub>Sendspin, ready</sub></td>
+<td align="center" valign="top" width="33%"><img src="disco/sendspin-settings.png" width="220" alt="MA Sendspin settings"><br><sub>Settings > Network > MA Sendspin</sub></td>
+</tr>
+</table>
+
 ## Your library
 
 ### Library
@@ -321,11 +350,14 @@ Style) are hidden while Disco is on.
 | Playback | Play Mode, Equalizer, Custom EQ, Resume Playback (Off / Position / Song), Artists by artist or album artist, Play Through Folders, Auto-tag (adds missing lyrics and artwork to tags over Wi-Fi). |
 | Audio | Working Mode, Gain, DAC Filter, ReplayGain, DRE, Gapless, Max Volume, Balance. |
 | Display | Brightness, Theme, Disco Options, Appearance (Dark/Light), Font Size, Screen Rotation, Automatic Appearance (light by day, dark at night), Outdoor Mode, Track Numbers, Online Album Art, Online Lyrics, Shortcuts, Album View, Accent Colour, Album Art Cache, Screensaver, Screen Off, 24-Hour Time, Animations, Weather on Home, Back-swipe. |
-| Network | Wi-Fi, Bluetooth, Bluetooth Codec (SBC, AAC, LDAC levels). |
-| System | Language, Sleep Timer, Idle Power-off, Charging Limit, volume-key actions, Rescan Library, Import Playlists, Default UI, date and time, Restart, Device Info, Update from SD Card, Reset diskOS Settings, Debug Mode, About, Shut down player. |
+| Network | Wi-Fi, MA Sendspin, Bluetooth, Bluetooth Codec (SBC, AAC, LDAC levels). |
+| System | Language, Sleep Timer, Idle Power-off, Charging Limit, Volume Keys (press, double press, hold), Rescan Library, Import Playlists, Default UI, date and time, Restart, Device Info, Update from SD Card, Reset diskOS Settings, Debug Mode, About, Shut down player. |
 | Battery | The [battery](#battery) page. |
 
 Font Size changes the text of lists, titles and search results.
+
+Typing (a Wi-Fi password, the Sendspin server or name, a playlist name) uses a big keyboard like Search's: **Aa**
+for a capital, **123** and **#+=** for digits and symbols, Backspace (hold to clear), then the tick to save.
 
 <table>
 <tr>
@@ -349,6 +381,7 @@ Display > Disco Options (only shown with the Disco theme):
 | Volume | Volume arc colour: Disco or Accent. |
 | Progress Bar | The progress on Music: Disco (rainbow), Accent or Off. |
 | Progress Shape | Linear (a line under the title) or Arc (around the rim, from just below the menu, clockwise, to just above it). |
+| Track Number | "3. Northern Lights": the track number from the song's tags before the title on Music. Off by default. |
 | Title Position | Centred or Left. |
 | Title Hold | What holding the title does: Immersive, Favourite or Nothing. |
 | Immersive | The full-screen cover: Vinyl (grooves and a dark label) or CD (a clear hub, a still rainbow sheen and faint spokes). |
@@ -444,7 +477,7 @@ half an hour on battery. Without a set clock the 24-hour figures show "-".
 
 ### Updates and safety
 
-- **Updates from the SD card.** Settings > System > Update from SD Card installs a signed update from the
+- **Updates from the SD card or a flash.** There are no online updates. Settings > System > Update from SD Card installs a signed update from the
   card's `diskos-update` folder. Every update is checked twice (when it is copied in and again at start-up),
   then runs as a **trial**: it becomes permanent only after music has actually played or you tap **Keep** on
   the one-time question. A trial that never proves itself, or keeps crashing, is rolled back to the previous
@@ -452,7 +485,7 @@ half an hour on battery. Without a set clock the 24-hour figures show "-".
 - **The stock interface is always there.** If the Disco! interface ever stops, the Disc falls back to FiiO's
   own interface until the next restart; your music and settings are untouched. Settings > System > Default UI
   can make stock the normal choice, and holding Volume Up from power-on boots the other interface once.
-- **Settings > System > About** shows the version (e.g. "Disco! 1.0.3") with the exact build ID, and the diskOS
+- **Settings > System > About** shows the version (e.g. "Disco! 1.1") with the exact build ID, and the diskOS
   version underneath.
 - **The rescan dot.** While the library is being rescanned, a small dot runs around the rim of the screen.
 

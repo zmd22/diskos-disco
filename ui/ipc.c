@@ -2,6 +2,7 @@
 /* Copyright (C) 2026 diskOS contributors */
 #include "ipc.h"
 #include <stdio.h>
+#include <time.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
@@ -403,8 +404,40 @@ unsigned ipc_generation(void){
     pthread_mutex_lock(&g_recov_mu); unsigned r=g_generation; pthread_mutex_unlock(&g_recov_mu);
     return r;
 }
+/* MA Sendspin: while Music Assistant plays through the Disc, its track replaces the player's (which only sees an
+ * anonymous AirPlay stream). Position runs on from the last report at the reported speed. */
+static struct { int on; char title[160], artist[160], album[160], path[256]; long dur, pos; long long at_ms; int speed; unsigned bump, path_seq; } g_ext;
+static long long mono_ms(void){ struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t); return t.tv_sec * 1000LL + t.tv_nsec / 1000000; }
+void ipc_set_external(const char *title, const char *artist, const char *album, const char *path,
+                      long dur_ms, long pos_ms, long long pos_at_ms, int speed){
+    pthread_mutex_lock(&g_mu);
+    int changed = !g_ext.on || strcmp(g_ext.title, title) || strcmp(g_ext.artist, artist) || strcmp(g_ext.album, album)
+                  || strcmp(g_ext.path, path) || g_ext.dur != dur_ms || g_ext.speed != speed;
+    int newpath = !g_ext.on || strcmp(g_ext.path, path) || strcmp(g_ext.title, title);
+    snprintf(g_ext.title, sizeof g_ext.title, "%s", title); snprintf(g_ext.artist, sizeof g_ext.artist, "%s", artist);
+    snprintf(g_ext.album, sizeof g_ext.album, "%s", album); snprintf(g_ext.path, sizeof g_ext.path, "%s", path);
+    g_ext.dur = dur_ms; g_ext.pos = pos_ms; g_ext.at_ms = pos_at_ms; g_ext.speed = speed; g_ext.on = 1;
+    if(changed) g_ext.bump++;
+    if(newpath) g_ext.path_seq = g_state.seq + g_ext.bump;
+    pthread_mutex_unlock(&g_mu);
+}
+void ipc_clear_external(void){
+    pthread_mutex_lock(&g_mu); if(g_ext.on){ g_ext.on = 0; g_ext.bump++; } pthread_mutex_unlock(&g_mu);
+}
+int ipc_external_active(void){ return g_ext.on; }
 void ipc_get_state(track_state_t*out){
-    pthread_mutex_lock(&g_mu); *out=g_state; pthread_mutex_unlock(&g_mu);
+    pthread_mutex_lock(&g_mu); *out=g_state;
+    out->seq += g_ext.bump;
+    if(g_ext.on){
+        snprintf(out->title, sizeof out->title, "%s", g_ext.title); snprintf(out->artist, sizeof out->artist, "%s", g_ext.artist);
+        snprintf(out->album, sizeof out->album, "%s", g_ext.album); snprintf(out->path, sizeof out->path, "%s", g_ext.path);
+        long long p = g_ext.pos + (g_ext.speed > 0 ? (mono_ms() - g_ext.at_ms) * g_ext.speed / 1000 : 0);
+        if(p < 0) p = 0;
+        if(g_ext.dur > 0 && p > g_ext.dur) p = g_ext.dur;
+        out->duration_ms = g_ext.dur; out->position_ms = (long)p; out->have_track = g_ext.title[0] != 0;
+        out->path_seq = g_ext.path_seq; out->pos_seq = out->seq; out->pos_id = 0; out->is_favorite = 0; out->state = g_ext.speed > 0 ? 2 : 1;
+    }
+    pthread_mutex_unlock(&g_mu);
 }
 /* Seed the track fields at startup (from the DB resume state) so the UI shows
  * the current song before the player sends its first a2 frame.  Guarded: a real

@@ -2,6 +2,7 @@
 /* Copyright (C) 2026 diskOS contributors */
 #include "lvgl/src/indev/lv_indev_private.h"   /* long_pr_sent: was the press that sent this click a long press? */
 #include "screens.h"
+#include "ma.h"
 #include "theme_kit.h"
 #include "theme.h"
 #include "folderbrowser.h"
@@ -134,6 +135,7 @@ static void transition_core(int from, int to, int dir)
     else if (to == SCR_USAGE) usage_refresh();              /* battery & usage dial */
     else if (to == SCR_QUEUE) queue_refresh();              /* the up-next queue */
     else if (to == SCR_MODEINFO) modeinfo_refresh();         /* the active working mode */
+    else if (to == SCR_MA) ma_refresh();                     /* Music Assistant */
     else if (to == SCR_SCCONFIG) shortcuts_config_refresh();   /* Settings > Display > Shortcuts */
     else if (to == SCR_NPMENU) npmenu_refresh_art();        /* the cover in the menu's hub */
     else if (to == SCR_TUNE)  tune_refresh();
@@ -340,6 +342,7 @@ void screens_init(void)
     s_roots[SCR_QUEUE]     = screen_make_root(parent);
     s_roots[SCR_SCCONFIG]  = screen_make_root(parent);
     s_roots[SCR_MODEINFO]  = screen_make_root(parent);
+    s_roots[SCR_MA]        = screen_make_root(parent);
     s_roots[SCR_UPNEXT] = screen_make_root(parent);
     s_roots[SCR_DATETIME] = screen_make_root(parent);
 
@@ -370,6 +373,7 @@ void screens_init(void)
     queue_create(s_roots[SCR_QUEUE]);
     shortcuts_config_create(s_roots[SCR_SCCONFIG]);
     modeinfo_create(s_roots[SCR_MODEINFO]);
+    ma_create(s_roots[SCR_MA]);
     search_create(s_roots[SCR_SEARCH]);
     saver_create(s_roots[SCR_SAVER]);
     quicksettings_create(s_roots[SCR_QUICK]);

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright (C) 2026 diskOS contributors */
 #include "screens.h"
+#include "ma.h"
 #include "fork_build.h"
 #include "braun.h"
 #include "theme.h"
@@ -315,6 +316,12 @@ static void apply_import_m3u(int v){ (void)v;
 }
 static void apply_wifi(int v){ (void)v; wifi_open(); }   /* opens SCR_WIFI */
 static void apply_bt(int v){ (void)v; bt_open(); }       /* opens SCR_BT */
+static void apply_volkeys_group(int v);                   /* Settings > System > Volume Keys */
+static void apply_ma_group(int v);                        /* Settings > Network > Music Assistant */
+static void apply_ma_on(int v){ ma_set_on(v); }
+static void apply_ma_server(int v){ (void)v; ma_edit_server(); }
+static void apply_ma_name(int v){ (void)v; ma_edit_name(); }
+
 static void apply_workmode(int v){ (void)v; modes_open(); }  /* opens SCR_WORKMODE (source-mode picker) */
 static void apply_eq_custom(int v){ (void)v; screen_show(SCR_EQ); }  /* opens Custom EQ */
 static void apply_disco_menu(int v){ (void)v; disco_menu_open(); }     /* fork: Disco theme only */
@@ -721,6 +728,8 @@ static const setting_t TABLE[] = {
       "The progress on Music (line or arc, see Progress Shape): Disco is the rainbow, Accent follows the cover colour (or your picked accent), Off hides it.", NULL },
     { "Disco Options", "Progress Shape", ST_CYCLER, "disco_prog_shape", 0,0,0, OPT_DSHAPE, 2, NULL, apply_disco_progress, 0,
       "Linear is the line under the title. Arc runs the progress round the edge of Music instead, from just below the menu, clockwise, to just above it. Drag or tap either to seek.", NULL },
+    { "Disco Options", "Track Number", ST_TOGGLE, "disco_trackno", 0,1,1, NULL,0, NULL, NULL, 0,
+      "Show the song's track number before its title on Music, as in \"3. Northern Lights\" (from the song's tags).", NULL },
     { "Disco Options", "Title Position", ST_CYCLER, "disco_title_al", 0,0,0, OPT_DTAL, 2, NULL, apply_disco_title, 0,
       "Where the title and artist sit on Music: centred, or from the left.", NULL },
     { "Disco Options", "Title Hold", ST_CYCLER, "disco_title_hold", 0,0,0, OPT_DHOLD, 3, NULL, apply_disco_hold, 0,
@@ -755,9 +764,19 @@ static const setting_t TABLE[] = {
       "Swipe distance needed to go back. Lower is more sensitive.", NULL },
     { "Network",  "Wi-Fi",       ST_ACTION, NULL, 0,0,0, NULL,0, LV_SYMBOL_RIGHT, apply_wifi, 0,
       "Scan for and connect to Wi-Fi networks.", NULL },
+    { "Network",  "MA Sendspin", ST_ACTION, NULL, 0,0,0, NULL,0, LV_SYMBOL_RIGHT, apply_ma_group, 0,
+      "A Sendspin player for Music Assistant: the Disc shows up there as a speaker. Needs Wi-Fi; uses AirPlay while it is on.", NULL },
+    { "MA Sendspin", "Sendspin", ST_TOGGLE, "ma_on", 0,1,1, NULL,0, NULL, apply_ma_on, 0,
+      "A Sendspin player for Music Assistant. On: the Disc connects and waits for music, using AirPlay while it is on. Off goes back to Playback.", NULL },
+    { "MA Sendspin", "Server", ST_ACTION, NULL, 0,0,0, NULL,0, g_ma_server_lbl, apply_ma_server, 0,
+      "Auto finds Music Assistant on your network. Tap to type its address instead, for example 192.168.1.20 (port 8927 is added for you). Clear it for Auto.", NULL },
+    { "MA Sendspin", "Player Name", ST_ACTION, NULL, 0,0,0, NULL,0, g_ma_name_lbl, apply_ma_name, 0,
+      "How the Disc is called in Music Assistant.", NULL },
+    { "MA Sendspin", "Sync Delay", ST_SLIDER, "ma_delay_ms", -2000,2000,10, NULL,0, NULL, NULL, 0,
+      "Moves the Disc's sound later (+) or earlier (-), in milliseconds, to line it up with other speakers playing the same music.", NULL },
     { "Network",  "Bluetooth", ST_ACTION, NULL, 0,0,0, NULL,0, LV_SYMBOL_RIGHT, apply_bt, 0,
       "Pair Bluetooth devices. Audio routes to connected headphones or speakers (SBC, beta).", NULL },
-    { "Network",  "Bluetooth Codec", ST_CYCLER, "bt_codec", 0,0,0, BT_CODEC_LABEL, BT_CODEC_N, NULL, NULL, 0,
+    { "Network",  "Bluetooth Codec", ST_CHOICE, "bt_codec", 0,0,0, BT_CODEC_LABEL, BT_CODEC_N, NULL, NULL, 0,
       "Codec for Bluetooth headphones, as in the stock player. Applies the next time the headphones connect. If they lack the codec, SBC is used. AAC and LDAC are heavier for this player and may stutter.", NULL },
     { "System",   "Language",    ST_CHOICE, "language", 0,0,0, i18n_lang_names, LANG_COUNT, NULL, apply_language, LANG_EN,
       "Interface language. Song, artist and album names are always shown as they are tagged.", NULL },
@@ -769,11 +788,13 @@ static const setting_t TABLE[] = {
       "Power the device off after this long with nothing playing and no touch or key press. Closes the card safely first.", NULL },
     { "System",   "Charging Limit", ST_TOGGLE, "charge_protect", 0,1,1, NULL, 0, NULL, apply_charge_protect, 0,
       "The player's Charging optimization: stops charging at about 80% to slow battery wear.", NULL },
-    { "System",   "Vol Keys: Press", ST_CYCLER, "key_single", 0,0,0, OPT_VOLKEY, 2, NULL, apply_key_single, CTL_ACT_VOLUME,
+    { "System",   "Volume Keys", ST_ACTION, NULL, 0,0,0, NULL,0, LV_SYMBOL_RIGHT, apply_volkeys_group, 0,
+      "What the volume keys do on a press, a double press and when held: adjust the volume or switch track.", NULL },
+    { "Volume Keys", "Press", ST_CYCLER, "key_single", 0,0,0, OPT_VOLKEY, 2, NULL, apply_key_single, CTL_ACT_VOLUME,
       "What the volume keys do on a single press: adjust the volume or switch track. Stored by the player, as in the stock menu.", NULL },
-    { "System",   "Vol Keys: Double Press", ST_CYCLER, "key_double", 0,0,0, OPT_VOLKEY, 2, NULL, apply_key_double, CTL_ACT_VOLUME,
+    { "Volume Keys", "Double Press", ST_CYCLER, "key_double", 0,0,0, OPT_VOLKEY, 2, NULL, apply_key_double, CTL_ACT_VOLUME,
       "What the volume keys do on a double press: adjust the volume or switch track.", NULL },
-    { "System",   "Vol Keys: Long Press", ST_CYCLER, "key_long", 0,0,0, OPT_VOLKEY, 2, NULL, apply_key_long, CTL_ACT_VOLUME,
+    { "Volume Keys", "Long Press", ST_CYCLER, "key_long", 0,0,0, OPT_VOLKEY, 2, NULL, apply_key_long, CTL_ACT_VOLUME,
       "What the volume keys do when held: adjust the volume or switch track.", NULL },
     { "System",   "Rescan Library", ST_ACTION, NULL, 0,0,0, NULL,0, "Scan", apply_rescan, 0,
       "Re-scan the SD card for new or removed music.", NULL },
@@ -793,15 +814,7 @@ static const setting_t TABLE[] = {
       "Model, stock firmware, diskOS build, MAC addresses, storage and battery.", NULL },
     { "System",   "Update from SD Card", ST_ACTION, NULL, 0,0,0, NULL,0, LV_SYMBOL_RIGHT, system_update_sd_open, 0,
       "Install a signed diskOS update from the SD card folder diskos-update (made with your signing script). Otherwise shows how a stock update file is used.", NULL },
-#if DISKOS_FORK_OTA_ENABLED
-    { "System",   "Allow diskOS Updates", ST_TOGGLE, "ota_allow", 0,1,1, NULL, 0, NULL, system_ota_allow_changed, 1,
-      "diskOS only updates when you tap Update diskOS, and only with signed releases.", NULL },
-#else
-    { "System", "Automatic Updates", ST_READONLY, NULL, 0,0,0, NULL,0, "Unavailable", NULL,0,
-      "Automatic updates for this version are not available yet.", NULL },
-#endif
-    { "System",   "Update diskOS", ST_ACTION, NULL, 0,0,0, NULL,0, "Check", system_check_update_open, 0,
-      "Look up the newest diskOS release on GitHub (needs Wi-Fi). If it carries a signed update, download and verify it, then restart to finish. Nothing changes until you confirm.", NULL },
+    /* Disco: no online updates (Update diskOS / Automatic Updates are gone); updates come from the SD card or a flash */
     { "System",   "Reset diskOS Settings", ST_ACTION, NULL, 0,0,0, NULL,0, "Reset", system_reset_open, 0,
       "Put diskOS's look and behaviour settings back to defaults. Music, Wi-Fi, Bluetooth, Last.fm, EQ and audio settings are kept.", NULL },
     { "System",   "Debug Mode",  ST_ACTION, NULL, 0,0,0, NULL,0, LV_SYMBOL_RIGHT, apply_debug_mode, 0,
@@ -863,6 +876,7 @@ static void read_batt_temp(char *buf, int n){
 static void fmt_slider(const setting_t *s, int v, char *buf, int n){
     if(s->cfg_key && !strcmp(s->cfg_key, "swipe_thresh"))    snprintf(buf,n, "%d px", v);
     else if(s->cfg_key && !strcmp(s->cfg_key, "brightness")) snprintf(buf,n, "%d%%", v*100/40);  /* 4..40 -> 10..100% */
+    else if(s->cfg_key && !strcmp(s->cfg_key, "ma_delay_ms")) snprintf(buf,n, v ? "%+d ms" : "0 ms", v);
     else                                                    snprintf(buf,n, "%d", v);
 }
 /* A setting the running firmware cannot apply (only Gain today: its player command is mapped per verified
@@ -880,6 +894,7 @@ static int setting_unavailable(const setting_t *s){
                             || !strcmp(s->cfg_key, "key_double") || !strcmp(s->cfg_key, "key_long")) && !ctl_supported()));
 }
 static const char *val_text_value(const setting_t *s, char *buf, int n){
+    if(s->cfg_key && !strcmp(s->cfg_key, "bt_codec")) return LV_SYMBOL_RIGHT;   /* the codec's name doesn't fit beside the label: shown inside */
     if(setting_unavailable(s)) return tr(s->cfg_key && !strcmp(s->cfg_key, "ota_allow") ? "Not supported on this install" : "Not on this firmware");
     /* Outdoor Mode overrides these two while it is on: show what is really in effect, not the saved choice (which
      * stays untouched and comes back when Outdoor Mode is turned off) */
@@ -942,10 +957,18 @@ static lv_obj_t *g_detail_root;
 static lv_obj_t *g_setlist_root;            /* SCR_SETLIST root: one category's rows, rebuilt per entry */
 static const char *g_active_group;          /* which category SCR_SETLIST is currently showing */
 static void apply_disco_options(int v){ (void)v; g_active_group = "Disco Options"; setlist_refresh(); }
-/* screen_back() on SCR_SETLIST: Disco Options steps back to Display on the same screen */
+static void apply_volkeys_group(int v){ (void)v; g_active_group = "Volume Keys"; setlist_refresh(); }
+static void apply_ma_group(int v){ (void)v; ma_settings_load(); g_active_group = "MA Sendspin"; setlist_refresh(); }
+void settings_open_ma(void){ apply_ma_group(0); }      /* host renders */
+void settings_open_volkeys(void){ apply_volkeys_group(0); }   /* host renders */
+void settings_open_ma_delay(void){ for(int i = 0; i < (int)(sizeof TABLE / sizeof TABLE[0]); i++) if(TABLE[i].cfg_key && !strcmp(TABLE[i].cfg_key, "ma_delay_ms")){ settings_open_detail(i); return; } }
+/* screen_back() on SCR_SETLIST: a sub-group (Disco Options, Music Assistant) steps back to its parent on the same screen */
 int settings_back_consumed(void){
-    if(!g_active_group || strcmp(g_active_group, "Disco Options")) return 0;
-    g_active_group = "Display"; setlist_refresh(); return 1;
+    if(!g_active_group) return 0;
+    if(!strcmp(g_active_group, "Disco Options")){ g_active_group = "Display"; setlist_refresh(); return 1; }
+    if(!strcmp(g_active_group, "MA Sendspin")){ g_active_group = "Network"; setlist_refresh(); return 1; }
+    if(!strcmp(g_active_group, "Volume Keys")){ g_active_group = "System"; setlist_refresh(); return 1; }
+    return 0;
 }
 /* Category order for the top-level Settings screen (must match the group strings used in TABLE). */
 static const char *const GROUPS[] = { "Playback", "Audio", "Display", "Network", "System" };
@@ -970,6 +993,7 @@ static void detail_slider_release_cb(lv_event_t *e){
     lv_obj_t *sl = lv_event_get_target(e);
     if(outdoor_holds(g_active)) return;                 /* Outdoor keeps the user's own level untouched */
     if(g_active->cfg_key) cfg_set_int(g_active->cfg_key, lv_slider_get_value(sl));
+    if(g_active->cfg_key && !strcmp(g_active->cfg_key, "ma_delay_ms")) ma_delay_changed();   /* restart with the saved value */
 }
 static void detail_cycle_cb(lv_event_t *e){
     if(theme_outdoor() && g_active->cfg_key && !strcmp(g_active->cfg_key, "theme_variant")){

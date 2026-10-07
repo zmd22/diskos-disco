@@ -5,6 +5,35 @@ All notable changes to diskOS Disco! (and the diskOS releases underneath) are do
 Entries follow the Keep a Changelog format, with Added, Changed, and Fixed categories where applicable.
 diskOS remains beta software; version numbers do not imply broad hardware or feature validation.
 
+## [Disco! 1.1] - 2026-10-07
+
+Settings > About shows "Disco! 1.1".
+
+### Added
+- **MA Sendspin (experimental).** The Disc as a Sendspin player for [Music Assistant](https://www.music-assistant.io/):
+  it shows up there as a speaker, and Music shows what Music Assistant plays (title, artist, cover, progress,
+  Immersive); play/pause, next, previous and seeking on the screen control Music Assistant, and the Disc stays awake
+  while it plays. The player can't own the Disc's audio, so the sound goes through the Disc's own AirPlay receiver;
+  turning Sendspin on switches to AirPlay, another working mode turns it off. Settings > Network > MA Sendspin: on/off,
+  Server (Auto finds Music Assistant on the network, or type its address), Player Name, Sync Delay (-2000 to +2000 ms,
+  to line it up with other speakers). Add **Sendspin** to the navigation circle under Disco Options > Disco Menu.
+  Experimental: works with Music Assistant 2.10 (its "legacy" Sendspin connection); a later Music Assistant that drops
+  it will need a Disco update. The Disc's physical buttons still control the built-in player.
+- **Track Number** (Disco Options): "3. Northern Lights" on Music, from the song's tags.
+
+### Changed
+- **Quick Settings (Disco):** five rows of taller pills with bigger text. Wi-Fi and Bluetooth share the top row as
+  icons with a round On/Off badge (filled with the accent when on).
+- **Typing** (Wi-Fi password, Sendspin server and name, playlist names) uses a big keyboard like Search's, with capitals
+  (Aa) and two symbol pages, so every character a password may need is there.
+- **Volume Keys:** the three press options are in their own submenu, Settings > System > Volume Keys.
+- **Online updates removed:** Update diskOS and Automatic Updates are gone. Update from the SD card or by flashing.
+- **Bluetooth Codec** shows an arrow and opens a list; the codec's name ran into the label.
+
+### Fixed
+- **Quick Settings showed Wi-Fi as on** while the radio was off (it showed the saved setting); the tile and its tap now
+  check the real radio.
+
 ## [Disco! 1.0.3] - 2026-10-07
 
 Settings > About shows "Disco! 1.0.3".

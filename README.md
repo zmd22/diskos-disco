@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="Disco! 1.0.3" src="https://img.shields.io/badge/Disco!-1.0.3-B36BFF?style=flat-square">
+  <img alt="Disco! 1.1" src="https://img.shields.io/badge/Disco!-1.1-B36BFF?style=flat-square">
   <img alt="Based on diskOS 1.2.4" src="https://img.shields.io/badge/based%20on-diskOS%201.2.4-3D424B?style=flat-square">
   <img alt="Firmware V2.57" src="https://img.shields.io/badge/firmware-V2.57-4AD8FF?style=flat-square">
   <img alt="Status: testing" src="https://img.shields.io/badge/status-testing-FFB45A?style=flat-square">
@@ -81,7 +81,9 @@ replaces only what you see and touch.
 - **Readable on any cover.** Text and fades adapt to each album, and the accent colour follows the cover (or your
   own pick).
 - **Disco Options** let you choose the menu sections, clock, track times, rim sheen, EQ / volume / progress
-  colours, progress shape, title position and title hold.
+  colours, progress shape, title position, track number and title hold.
+- **MA Sendspin** *(experimental)*: the Disc as a [Music Assistant](https://www.music-assistant.io/) speaker, with
+  the track, cover and controls on Music. See the [tour](docs/DISCO_TOUR.md#ma-sendspin-experimental).
 - **Safe updates.** Signed builds from the SD card install as a trial and roll back by themselves if they don't
   work out. FiiO's own interface is always one setting (or one held key) away.
 
@@ -110,7 +112,7 @@ cable and about 20 quiet minutes. The installer is upstream diskOS's (`./diskos-
 
 **0. Get it.** Download the **[latest release](https://github.com/zmd22/diskos-disco/releases/latest)** (Source
 code, tar.gz) and unpack it, or `git clone https://github.com/zmd22/diskos-disco`. The ready-built interface is
-already in it as `payload/mq_ui` (Disco! 1.0.3); the release also has `mq_ui` on its own, with checksums, for SD-card
+already in it as `payload/mq_ui` (Disco! 1.1); the release also has `mq_ui` on its own, with checksums, for SD-card
 updates.
 
 **1. Make your update keys (once, optional but recommended).** They let you install new builds from the SD card
@@ -145,7 +147,7 @@ Download `mq_ui` from a [release](https://github.com/zmd22/diskos-disco/releases
 your keys:
 
 ```sh
-sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 1.0.3      # -> ./diskos-update/
+sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 1.1      # -> ./diskos-update/
 ```
 
 Copy the `diskos-update` **folder** to the root of the SD card. On the Disc, go to

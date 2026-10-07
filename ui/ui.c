@@ -13,6 +13,7 @@
 #include "artcache.h"   /* persistent decoded-cover cache on SD */
 #include "config.h"
 #include "screens.h"
+#include "ma.h"
 #include "modes.h"
 #include <sys/stat.h>
 #include "theme_kit.h"
@@ -362,6 +363,7 @@ int ui_transport_command(const char *cmd)
     int is_prev = !strcmp(cmd, "0201000C0002");
     int is_toggle = !strcmp(cmd, "0201000C0000");
     if(!is_next && !is_prev && !is_toggle) return -1;
+    if(ma_controls()){ ma_send(is_toggle ? "toggle" : is_next ? "next" : "previous"); return 0; }   /* MA Sendspin */
     if(modes_output_busy()){ ui_toast("Switching output - try again"); return -1; }
     if(!ui_local_playback_allowed()){
         ui_toast("Return to local playback first"); return -1;

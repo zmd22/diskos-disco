@@ -27,6 +27,7 @@
 #include "fb_pan.h"
 #include "controls.h"
 #include "screens.h"
+#include "ma.h"
 #include "modes.h"
 #include "anim.h"
 #include "ipc.h"
@@ -223,6 +224,7 @@ static void hwclock_save_tick(lv_timer_t *t);   /* defined below: starts the RTC
  * RESCAN   : 0622000C0001 (NAS-family; unverified) */
 int ui_local_playback_allowed(void);   /* defined with the launch verdict, below */
 int ui_seek_to(long ms){
+    if(ma_controls()) return ma_seek(ms);               /* MA Sendspin: Music Assistant owns the track */
     /* A seek drives the player's current (card-backed) track, so it is card access like any other: never
      * before this boot's launch verdict qualified the player, and never while SD access is held. */
     if(!ui_local_playback_allowed()) return -1;
@@ -526,6 +528,7 @@ static void storage_unknown(const char *why){
 int ui_set_source_mode(int mode){
     if(modes_output_busy()){ ui_toast("Switching output - try again"); return -1; }
     if(mode < 0 || mode > 5) return -1;                 /* 0 Playback, 1 USB DAC, 2 BT DAC, 3 USB storage, 4 BT streaming, 5 AirPlay */
+    if(mode != 5) ma_mode_leaving();                    /* MA Sendspin rides on AirPlay: another mode turns it off */
     if(ui_source_switch_pending()){ ui_toast("Storage is switching"); return -1; }
     if(g_sd_phase == SD_UNKNOWN || g_sd_hold || !sd_io_healthy()){ ui_toast("SD access is held this boot"); return -1; }
     /* Every source change drives the player (and USB/card ownership with it), so none may happen before this
@@ -2675,6 +2678,9 @@ int main(int argc, char **argv){
     /* fork: fiio_init starts us with stdin/stdout closed. Fill 0..2 with /dev/null first, so no descriptor opened later
      * can land there and be overwritten when a helper child dup2()s its stdio (that broke every SD-card update). */
     for(int fd = 0; fd < 3; fd++) if(fcntl(fd, F_GETFD) < 0){ int n = open("/dev/null", O_RDWR); if(n > 2) close(n); }
+    /* MA Sendspin: this same binary runs the Music Assistant player as a child (ma.c starts it as
+     * "ma-sendspin --sendspin ...": a different argv[0], so fiio_init's `pgrep -x mq_ui` never mistakes it for the UI) */
+    if(argc > 1 && !strcmp(argv[1], "--sendspin")){ int sendspin_main(int, char **); return sendspin_main(argc - 1, argv + 1); }
     /* Arm the boot watchdog BEFORE anything else - in particular before the argv dispatch and the
      * stock-UI selection below. Those read /usr/data and /dev/mem, so they can block; until now they
      * ran with no deadline at all, and a hang there took away the user's route to the stock firmware
@@ -2814,7 +2820,7 @@ int main(int argc, char **argv){
     swipe_thresh_load();
     settings_apply_startup();   /* restore saved brightness */
     wifi_init_intent();         /* seed wifi_on intent from stock WIFI_STATUS (first run only) */
-    fprintf(stderr,"step:screens_init\n");fflush(stderr); screens_init();
+    fprintf(stderr,"step:screens_init\n");fflush(stderr); screens_init(); ma_boot();   /* MA Sendspin comes back if it was on */
     home_set_settings_click_cb(go_settings);
     library_set_song_click_cb(on_song_play);   /* tap a song -> play it */
     search_set_song_click_cb(on_search_play);   /* search result -> play in all-songs scope (no stale drill ctx) */
@@ -3055,7 +3061,19 @@ int main(int argc, char **argv){
         if(bl_state != 2 && (st.seq != last || playing != last_playing || ui_take_art_force())){
             last = st.seq; last_playing = playing;
             ui_update(&st);
-            home_set_now_playing(st.have_track?st.title:NULL,
+            /* Disco Options > Track Number: "3. Title" (the number from the tags, looked up once per track) */
+            const char *np_title = st.have_track ? st.title : NULL; static char np_numbered[200];
+            if(np_title && th_disco() && cfg_get_int("disco_trackno", 0)){
+                static char tn_path[256]; static int tn_posid = -1, tn_no;
+                if(strcmp(tn_path, st.path) || tn_posid != st.pos_id){
+                    snprintf(tn_path, sizeof tn_path, "%s", st.path); tn_posid = st.pos_id; tn_no = 0;
+                    int sub = 0, cue = 0, iso = 0;
+                    if(st.pos_id > 0 && mdb_song_subtrack(st.path, st.pos_id, &sub, &cue, &iso) == 1) tn_no = sub;   /* a CUE/ISO track */
+                    else if(!ipc_external_active()) tn_no = mdb_track_no_by_path(st.path);
+                }
+                if(tn_no > 0){ snprintf(np_numbered, sizeof np_numbered, "%d. %s", tn_no, np_title); np_title = np_numbered; }
+            }
+            home_set_now_playing(np_title,
                                  st.have_track?st.artist:NULL,
                                  ui_current_accent(), playing);
             /* The art + backdrop surfaces only change on a TRACK change (or when a decode completes -
@@ -3391,7 +3409,7 @@ int main(int argc, char **argv){
             }
         }
         if(kbinput_active()) last_activity = lv_tick_get();
-        power_tick(last_activity, playing);   /* AFTER all input is consumed (a pending touch must win the race): SD-safe shutdown, diskOS idle power-off, temperature notice */
+        power_tick(last_activity, playing || ma_playing());   /* Sendspin: AirPlay playback the player may not report */   /* AFTER all input is consumed (a pending touch must win the race): SD-safe shutdown, diskOS idle power-off, temperature notice */
         int in_saver = (screen_current()==SCR_SAVER);
         /* a manual Sleep request ends the moment the panel is woken (we leave SCR_SAVER) */
         if(g_manual_sleep && !in_saver) g_manual_sleep = 0;

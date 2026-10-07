@@ -33,6 +33,10 @@ typedef struct {
 int  ipc_start(void);                  /* open queues + start thread; 0=ok */
 void ipc_get_state(track_state_t *out);
 void ipc_seed_state(const track_state_t *s);  /* startup resume-state seed */
+void ipc_set_external(const char *title, const char *artist, const char *album, const char *path,
+                      long dur_ms, long pos_ms, long long pos_at_ms, int speed);   /* MA Sendspin's track (pos at CLOCK_MONOTONIC ms) */
+void ipc_clear_external(void);
+int  ipc_external_active(void);
 int  ipc_send_cmd(const char *frame);  /* e.g. "0201000C0000" play/pause; 0=queued, -1=failed */
 int  ipc_send_probe(const char *frame);/* background send (state-sync/health): silent, no toast */
 int  ipc_send_quiet(const char *frame);/* background command that retries itself: waits in line, never toasts */

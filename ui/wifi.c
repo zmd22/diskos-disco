@@ -15,6 +15,7 @@
 #include "fwcaps.h"
 #include "ipc.h"
 #include <stdio.h>
+#include <dirent.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -183,6 +184,25 @@ static int wifi_radio_on(void){
     char buf[256];
     run_cap("pidof wpa_supplicant 2>/dev/null", buf, sizeof buf);
     return buf[0] ? 1 : 0;
+}
+
+/* The radio as it really is (wpa_supplicant running), not the saved "wifi_on" intent: a /proc walk, no shell, cheap
+ * enough for the Quick Settings tile's once-a-second paint. Both the tile and its tap use this. */
+static int g_live_cached = -1; static uint32_t g_live_at;   /* the tile repaints every second: walk /proc at most every 1.5 s */
+int wifi_radio_live(void){
+    if(g_live_cached >= 0 && lv_tick_elaps(g_live_at) < 1500) return g_live_cached;
+    DIR *d = opendir("/proc"); if(!d) return cfg_get_int("wifi_on", 1);
+    struct dirent *e; int found = 0;
+    while(!found && (e = readdir(d))){
+        if(e->d_name[0] < '1' || e->d_name[0] > '9') continue;
+        char p[64], comm[32] = ""; snprintf(p, sizeof p, "/proc/%.20s/comm", e->d_name);
+        FILE *f = fopen(p, "r"); if(!f) continue;
+        if(fgets(comm, sizeof comm, f) && !strncmp(comm, "wpa_supplicant", 14)) found = 1;
+        fclose(f);
+    }
+    closedir(d);
+    g_live_cached = found; g_live_at = lv_tick_get();
+    return found;
 }
 
 /* ---- persistence / auto-reconnect hardening ----------------------------- */
@@ -1024,7 +1044,8 @@ static void sw_cb(lv_event_t *e){
  * Mirrors sw_cb's radio actions (keepalive enforces the intent). Returns the new state. */
 int wifi_toggle(void){
     g_intent_epoch++;                        /* an explicit choice: ends any radio reconciliation hold */
-    int on = !cfg_get_int("wifi_on", 1);
+    int on = !wifi_radio_on();               /* flip what the radio IS (checked now), not what was last asked for */
+    g_live_cached = -1;                      /* the tile reads the radio afresh after a flip */
     cfg_set_int("wifi_on", on);
     if(on){
         system("/usr/bin/wifi_up.sh >/dev/null 2>&1 &");

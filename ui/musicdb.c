@@ -414,6 +414,24 @@ int mdb_tag_title_by_path(const char *path, char *out, int cap){
     return found;
 }
 
+/* SONG.TRACK of a plain-file row (0 = none). Read-only, 50 ms busy wait: called once per track change. */
+int mdb_track_no_by_path(const char *path){
+    if(!path || !path[0]) return 0;
+    sqlite3 *c = NULL; int no = 0;
+    if(sqlite3_open_v2(DB_PATH, &c, SQLITE_OPEN_READONLY, NULL) == SQLITE_OK){
+        sqlite3_busy_timeout(c, 50);
+        sqlite3_stmt *st;
+        if(sqlite3_prepare_v2(c, "SELECT IFNULL(TRACK,0) FROM SONG WHERE PATH=? AND IFNULL(IS_CUE,0)=0 AND IFNULL(IS_ISO,0)=0 LIMIT 1;",
+                              -1, &st, NULL) == SQLITE_OK){
+            sqlite3_bind_text(st, 1, path, -1, SQLITE_STATIC);
+            if(sqlite3_step(st) == SQLITE_ROW) no = sqlite3_column_int(st, 0);
+            sqlite3_finalize(st);
+        }
+    }
+    if(c) sqlite3_close(c);
+    return no > 0 ? no : 0;
+}
+
 /* The current/last "memory play" track (MEMORY_PLAY in song.db) + resume info,
  * so the UI can show what's playing on startup before any a2 frame arrives.
  * MEMORY_PLAY.MUSIC_ID maps to SONG.ID.  Returns 1 if a track was found. */
