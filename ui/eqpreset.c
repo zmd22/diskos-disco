@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 #include "screens.h"
+#include "braun.h"
 #include "theme.h"
 #include "theme_kit.h"
 #include "config.h"
@@ -26,7 +27,8 @@ void eqpreset_refresh(void){
  if(user){lv_obj_remove_state(edit_button,LV_STATE_DISABLED);lv_obj_remove_state(rename_button,LV_STATE_DISABLED);}
  else {lv_obj_add_state(edit_button,LV_STATE_DISABLED);lv_obj_add_state(rename_button,LV_STATE_DISABLED);}
  lv_label_set_text(switch_label,p?"On":"Off");
- if(switch_pointer)lv_obj_set_style_bg_color(switch_pointer,p?theme_on_color(ui_current_accent()):TC(TEXT_MUTED),0);
+ if(switch_pointer&&th_braun())br_pointer_set(switch_pointer,58,p);   /* Braun: OFF straight up, ON turned 45 deg, like every switch */
+ if(switch_pointer)lv_obj_set_style_bg_color(switch_pointer,p?theme_on_color(ui_current_accent()):TC(TEXT_MUTED),0);   /* readable on the lit switch */
  lv_obj_set_style_bg_color(switch_button,p?ui_current_accent():TC(SURFACE),0);
  lv_obj_set_style_text_color(switch_label,p?theme_on_color(ui_current_accent()):TC(TEXT_PRIMARY),0);
  lv_label_set_text(note_label,read<0?"Profile unavailable":p<11?"Built-in preset":!graphic?"Parametric profile":!fw_custom_peq_curve_writable(hz,10)?"Custom editing unavailable":"Editable profile");

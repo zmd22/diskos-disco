@@ -347,6 +347,8 @@ int main(int argc, char **argv){
         if(getenv("DISCO_SHEEN"))cfg_set_int_deferred("disco_sheen",atoi(getenv("DISCO_SHEEN")));
         if(getenv("FONTSZ"))cfg_set_int_deferred("font_size",atoi(getenv("FONTSZ")));
         if(getenv("DISCO_MNU"))cfg_set_str_deferred("disco_mnu",getenv("DISCO_MNU"));
+        cfg_set_int_deferred("disco_nav_hint",getenv("NAV_HINT")?0:1);   /* the first-time hint only when asked for */
+        if(getenv("TRACKNO"))cfg_set_int_deferred("disco_trackno",1);
         screen_set_anim(0);screens_init();ui_set_accent_config(getenv("ACCENT")?1:0,getenv("ACCENT")?(int)strtol(getenv("ACCENT"),NULL,16):0);ui_set_np_style(theme_preset()==THEME_PRESET_RING?3:1);
         track_state_t st={0};snprintf(st.path,sizeof st.path,"%s",argv[5]);
         char *dot=strrchr(st.path,'.');assert(dot);strcpy(dot,".png");
@@ -445,6 +447,10 @@ int main(int argc, char **argv){
         }
         if(getenv("MODES_PENDING")){ void modes_test_pending(int); modes_test_pending(atoi(getenv("MODES_PENDING"))); for(int i=0;i<25;i++){lv_tick_inc(10);lv_timer_handler();} }
         if(getenv("KB")){ int pg=atoi(getenv("KB")); kbinput_open("Password for Home", pg==9?"Sn0wsky!":"", NULL); for(int i=0;i<pg && pg<9;i++){ extern void kbinput_test_page(void); kbinput_test_page(); } for(int i=0;i<30;i++){lv_tick_inc(10);lv_timer_handler();} }
+        if(getenv("FB_AZ")){ sd_io_init(media_local); sd_io_resume(); void folderbrowser_open(void); folderbrowser_open(); scr=SCR_FOLDER;
+                             for(int i=0;i<60;i++){lv_tick_inc(10);lv_timer_handler();usleep(2000);}
+                             if(getenv("FB_AZ")[0]>='A'){ void folderbrowser_test_jump(char); folderbrowser_test_jump(getenv("FB_AZ")[0]); }
+                             for(int i=0;i<30;i++){lv_tick_inc(10);lv_timer_handler();} }
         if(getenv("MA_STATE")){ void ma_test_state(int); scr=SCR_MA; screen_show(scr); ma_test_state(atoi(getenv("MA_STATE"))); for(int i=0;i<30;i++){lv_tick_inc(10);lv_timer_handler();} }
         if(getenv("MA_DELAY")){ void settings_open_ma_delay(void); cfg_set_int("ma_delay_ms",atoi(getenv("MA_DELAY"))); setlist_open("Network"); settings_open_ma_delay(); scr=SCR_SETTING_DETAIL; for(int i=0;i<40;i++){lv_tick_inc(10);lv_timer_handler();} }
         if(getenv("VK_SET")){ void settings_open_volkeys(void); setlist_open("System"); scr=SCR_SETLIST; screen_show(scr); settings_open_volkeys(); for(int i=0;i<40;i++){lv_tick_inc(10);lv_timer_handler();} }

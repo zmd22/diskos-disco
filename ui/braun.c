@@ -162,6 +162,7 @@ lv_obj_t *br_knob(lv_obj_t *parent, int cx, int cy, int r, const char *icon, con
     lv_obj_set_style_radius(p, 1, 0); lv_obj_align(p, LV_ALIGN_TOP_MID, r / 3, 3);
     lv_obj_set_style_transform_rotation(p, 300, 0);
     lv_obj_clear_flag(p, LV_OBJ_FLAG_CLICKABLE);
+    br_pointer_set(p, 2 * r, 0);                                 /* straight up in the icon colour, as on the switches */
     lv_obj_t *lamp = lv_obj_create(parent);                      /* the lamp above the knob */
     lv_obj_remove_style_all(lamp); lv_obj_set_size(lamp, 6, 6); lv_obj_set_pos(lamp, cx - 3, cy - r - 11);
     lv_obj_set_style_radius(lamp, LV_RADIUS_CIRCLE, 0);

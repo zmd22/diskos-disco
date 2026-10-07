@@ -2096,10 +2096,46 @@ long mdb_book_scope_set(const char *path){
  * user text). Skips duplicates (INSERT OR IGNORE against UNIQUE(PLAYLIST_ID,PATH,TRACK)). Returns the
  * number of rows actually added. */
 /* fork: every distinct file of an ALBUM/ARTIST/GENRE (col, whitelisted) equal to val, in album + track order. */
+/* An Artists-view key's songs, as the view shows them: under "Album Artist" the album artist, otherwise every credited
+ * artist ("A feat. B" belongs to both) - not a plain ARTIST= match, which missed both. Album + track order. */
+static int artist_ids_cmp(const void *a, const void *b){
+    const mdb_song_t *x = *(const mdb_song_t *const *)a, *y = *(const mdb_song_t *const *)b;
+    int c = strcasecmp(x->album, y->album); if(c) return c;
+    return x->track != y->track ? x->track - y->track : x->id - y->id;
+}
+static int artist_ids(const char *artist, int **ids_out){
+    *ids_out = NULL;
+    if(g_n <= 0) return 0;
+    const mdb_song_t **v = malloc((size_t)g_n * sizeof *v); if(!v) return 0;
+    int n = mdb_artist_songs(artist, v, g_n);
+    if(n > 1) qsort(v, (size_t)n, sizeof *v, artist_ids_cmp);
+    int *ids = n > 0 ? malloc((size_t)n * sizeof *ids) : NULL;
+    if(!ids){ free(v); return 0; }
+    for(int i = 0; i < n; i++) ids[i] = v[i]->id;
+    free(v); *ids_out = ids; return n;
+}
 int mdb_group_paths(const char *col, const char *val, void (*cb)(void *ud, const char *path), void *ud){
     if(!col || !val || !val[0] || !cb) return 0;
     if(strcmp(col,"ALBUM") && strcmp(col,"ARTIST") && strcmp(col,"GENRE")) return 0;
     sqlite3 *d = db(); if(!d) return 0;
+    if(!strcmp(col, "ARTIST")){                                 /* the artist as the Artists list shows it */
+        int *ids; int k = artist_ids(val, &ids), n = 0;
+        sqlite3_stmt *st;
+        if(k > 0 && sqlite3_prepare_v2(d, "SELECT PATH FROM SONG WHERE ID=?1;", -1, &st, NULL) == SQLITE_OK){
+            char last[600] = "";
+            for(int i = 0; i < k; i++){
+                sqlite3_bind_int(st, 1, ids[i]);
+                if(sqlite3_step(st) == SQLITE_ROW){
+                    const char *p = (const char *)sqlite3_column_text(st, 0);
+                    if(p && p[0] && strcmp(p, last)){ cb(ud, p); n++; snprintf(last, sizeof last, "%s", p); }   /* a CUE file once */
+                }
+                sqlite3_reset(st);
+            }
+            sqlite3_finalize(st);
+        }
+        free(ids);
+        return n;
+    }
     char sql[300];
     snprintf(sql, sizeof sql, "SELECT PATH FROM SONG WHERE %s=?1 GROUP BY PATH ORDER BY MIN(ALBUM), MIN(IFNULL(TRACK,0)), PATH;", col);
     sqlite3_stmt *st; int n = 0;
@@ -2112,6 +2148,12 @@ int mdb_group_paths(const char *col, const char *val, void (*cb)(void *ud, const
 int mdb_playlist_add_group(long pid, const char *col, const char *val){
     if(pid<=0 || !col || !val || !val[0]) return 0;
     if(strcmp(col,"ALBUM") && strcmp(col,"ARTIST") && strcmp(col,"GENRE")) return 0;   /* whitelist */
+    if(!strcmp(col, "ARTIST")){                                 /* the artist as the Artists list shows it */
+        int *ids; int k = artist_ids(val, &ids);
+        int r = k > 0 ? mdb_playlist_add_ids(pid, ids, k) : 0;
+        free(ids);
+        return r < 0 ? 0 : r;
+    }
     sqlite3 *d = db(); if(!d) return 0;
     char sql[1600];
     snprintf(sql, sizeof sql,

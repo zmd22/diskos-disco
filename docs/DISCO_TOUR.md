@@ -27,7 +27,8 @@ Two more themes, **Ring** and **Braun**, have the same features and settings, la
 Disco has no Home screen with buttons. You move between sections with the **navigation circle** on the right
 edge of the screen.
 
-- **Closed**, it is a small dark shard cut into the right rim, showing the icon of the section you are in.
+- **Closed**, it is a small dark shard cut into the right rim, showing the icon of the section you are in. Until
+  you've opened it once, a small **Menu** pill points at it for a few seconds after start-up.
 - **Tap the shard** and the circle slides out of the edge, showing the section's icon and name, with dots for
   every section (Music is always the top dot).
 - **Tap the top third** of the circle (or swipe down on it) for the previous section, the **bottom third** (or
@@ -256,7 +257,10 @@ while it plays.
   address instead), **Player Name** (how the Disc is called there), **Sync Delay** (-2000 to +2000 ms, moves the
   Disc's sound later or earlier to line it up with other speakers).
 - The Sendspin screen shows the connection: Off, Looking for Music Assistant, Ready, Playing or Paused with the
-  track, or Can't reach Music Assistant (it keeps trying).
+  track, Can't reach Music Assistant (it keeps trying), or Wi-Fi is off (it connects once Wi-Fi is on).
+- **Renamed the player** (or played with an older test version)? Music Assistant can keep the old entry as a second
+  player with the same name. Play to the one that responds, and remove the stale one in Music Assistant's player
+  settings.
 
 *Experimental.* Made for Music Assistant 2.10, which still accepts the older ("legacy") Sendspin connection this
 uses; a later Music Assistant that drops it will need a Disco update. The Disc's physical buttons still control the
@@ -274,9 +278,10 @@ built-in player, and streaming over Wi-Fi uses more battery than playing from th
 ### Library
 
 Library opens Songs, Albums, Artists, Genres, Playlists, Favourites, Folders, Books and History. Lists follow
-the curve of the screen, with scroll dots on the left; an **A-Z** pill at the bottom jumps to a letter. Albums
-can be a list or a cover flow (Display > Album View). Tap a song to play it; song lists have Play and Shuffle at
-the top. Artists and Genres open their albums plus "All Songs".
+the curve of the screen, with scroll dots on the left; an **A - Z** pill at the bottom jumps to a letter (in
+Folders too, once a folder holds more than a dozen entries). Albums can be a list or a cover flow (Display > Album
+View). Tap a song to play it; song lists have Play and Shuffle at the top. Artists and Genres open their albums plus
+"All Songs"; going back from an artist lands on that artist in the list.
 
 **Books** keeps .m4b audiobooks apart from music, resumes where you stopped, and has chapters. **Folders**
 browses the card itself.
@@ -464,10 +469,12 @@ turns it off.
 ### Battery
 
 Settings > Battery (or a shortcut) shows the charge on a ring around the screen (green while charging, red at
-15% or less), the percentage, the time left at your recent pace, and two figures for the last 24 hours: time
-spent playing and time with the screen on. The estimate uses only your latest unbroken stretch of
+15% or less), the percentage, the time left at your recent pace, and two figures **since the last full charge**
+(and how long ago that was): time spent playing and time with the screen on. A full charge is 100%, or 80% with
+Charging Limit on, counted when you unplug (or start the Disc up full after charging it switched off). Until a full
+charge has been seen, the figures cover the last 24 hours. The estimate uses only your latest unbroken stretch of
 discharge (a charge, a level that went up or the Disc being off starts a new one), so it settles after about
-half an hour on battery. Without a set clock the 24-hour figures show "-".
+half an hour on battery. Without a set clock the figures show "-".
 
 <table>
 <tr>
@@ -485,7 +492,7 @@ half an hour on battery. Without a set clock the 24-hour figures show "-".
 - **The stock interface is always there.** If the Disco! interface ever stops, the Disc falls back to FiiO's
   own interface until the next restart; your music and settings are untouched. Settings > System > Default UI
   can make stock the normal choice, and holding Volume Up from power-on boots the other interface once.
-- **Settings > System > About** shows the version (e.g. "Disco! 1.1") with the exact build ID, and the diskOS
+- **Settings > System > About** shows the version (e.g. "Disco! 1.1.1") with the exact build ID, and the diskOS
   version underneath.
 - **The rescan dot.** While the library is being rescanned, a small dot runs around the rim of the screen.
 

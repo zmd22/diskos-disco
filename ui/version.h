@@ -5,5 +5,5 @@
 /* The diskOS release this UI belongs to (shown in Settings > About). Bump when a release is cut. */
 #define DISKOS_VERSION "1.2.4"            /* the upstream diskOS release underneath (update checks compare this) */
 #define DISCO_NAME     "diskOS Disco!"
-#define DISCO_VERSION  "1.1"               /* this fork's own release, shown in Settings > About */
+#define DISCO_VERSION  "1.1.1"             /* this fork's own release, shown in Settings > About */
 #endif

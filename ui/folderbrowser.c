@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright (C) 2026 diskOS contributors */
 #include "screens.h"
+#include "azjump.h"
+#include <ctype.h>
 #include "vlist.h"
 #include "curvelist.h"
 #include "theme.h"
@@ -189,6 +191,26 @@ static curvelist_t g_fcl;                   /* curved rows + position dots, like
 static void fb_row_cb(lv_event_t *e);
 static void fb_long_cb(lv_event_t *e);
 static vlist_t g_fbv;                       /* long folders: only the rows near the view exist */
+static azjump_t g_faz;                      /* the "A - Z" pill, as in the Library */
+static void fb_add_row(int i);
+static char fb_letter(const char *n){ char c = (char)toupper((unsigned char)n[0]); return (c >= 'A' && c <= 'Z') ? c : '#'; }
+/* A..Z / #: the first folder with that letter, else the first file; else the nearest after it (folders, then files) */
+static void fb_jump(char L){
+    if(g_nent <= 0 || !g_list) return;
+    int idx = -1;
+    for(int pass = 0; pass < 2 && idx < 0; pass++)             /* exact: folders first, then files */
+        for(int i = 0; i < g_nent; i++) if(g_ent[i].is_dir == !pass && fb_letter(g_ent[i].name) == L){ idx = i; break; }
+    for(int pass = 0; pass < 2 && idx < 0; pass++)             /* nearest after */
+        for(int i = 0; i < g_nent; i++) if(g_ent[i].is_dir == !pass && fb_letter(g_ent[i].name) >= L){ idx = i; break; }
+    if(idx < 0) idx = g_nent - 1;
+    if(g_nent >= VLIST_MIN) vlist_show(&g_fbv, idx);
+    else {
+        fb_fill_stop(); for(; g_fb_i < g_nent; g_fb_i++) fb_add_row(g_fb_i);   /* short folder: make sure the row exists */
+        lv_obj_update_layout(g_list);
+        lv_obj_scroll_to_y(g_list, idx * (FB_ROW_H + 4), LV_ANIM_OFF);
+    }
+    lv_obj_update_layout(g_list); curvelist_update(&g_fcl);
+}
 
 /* Rows in the Library's style: 54 px, curved with the circle, the name at 18 px and a detail line at 16 px -
  * folders with an accent folder icon and a chevron, songs with a note and their format. */
@@ -254,6 +276,7 @@ static void fb_rebuild(void){
     if(!g_list) return;
     vlist_end(&g_fbv);
     lv_obj_clean(g_list);
+    azjump_show(&g_faz, g_nent > 12);                    /* worth it only once the folder is longer than a screen or two */
 
     /* opendir failed at scan time -> either no SD or an unreadable dir. */
     if(g_nent == 0){
@@ -374,6 +397,7 @@ static void fb_header_back_cb(lv_event_t *e){
     if(lv_event_get_code(e) == LV_EVENT_CLICKED) fb_ascend();
 }
 
+void folderbrowser_test_jump(char L){ fb_jump(L); }   /* host renders */
 void folderbrowser_create(lv_obj_t *root){
     lv_obj_set_style_bg_color(root, TC(CANVAS), 0);
     lv_obj_set_style_bg_opa(root, LV_OPA_COVER, 0);
@@ -394,6 +418,7 @@ void folderbrowser_create(lv_obj_t *root){
     lv_obj_add_flag(g_list, LV_OBJ_FLAG_SCROLL_MOMENTUM);
     lv_obj_add_event_cb(g_list, fb_scroll_cb, LV_EVENT_SCROLL, NULL);   /* the window first, then the curve */
     curvelist_attach(&g_fcl, g_list, root, FB_ROW_W);
+    azjump_create(&g_faz, root, fb_jump, "folders");
 
     snprintf(g_dir, sizeof g_dir, "%s", FB_ROOT);   /* first content built on open() */
 }

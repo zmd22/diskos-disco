@@ -5,6 +5,33 @@ All notable changes to diskOS Disco! (and the diskOS releases underneath) are do
 Entries follow the Keep a Changelog format, with Added, Changed, and Fixed categories where applicable.
 diskOS remains beta software; version numbers do not imply broad hardware or feature validation.
 
+## [Disco! 1.1.1] - 2026-10-07
+
+Settings > About shows "Disco! 1.1.1".
+
+### Added
+- **A - Z in Folders**, as in the Library lists (folders with more than a dozen entries). The pill is bigger
+  everywhere and easier to hit.
+- **First-time hint:** a small "Menu" pill points at the navigation circle's sliver until the circle has been opened
+  once (a few seconds after each start-up; a tap on it opens the circle).
+
+### Changed
+- **Battery** shows playing and screen-on time **since the last full charge** (100%, or 80% with Charging Limit on;
+  charging while switched off counts too), with how long ago that was. Until a full charge has been seen, the last
+  24 hours as before.
+- **Back to Artists** (from an artist's albums or songs) lands on that artist, focused, instead of the top of the list.
+- **Bluetooth Codec** list: "Best effort: SBC if the headphones lack it."
+- **MA Sendspin** says "Wi-Fi is off" (a toast when you turn it on, and on its screen) instead of only looking for
+  Music Assistant.
+- **Ring:** button rings follow the Accent colour you picked (red / lime only with the album accent).
+- **Braun:** every knob's pointer stands straight up in the icon colour, like an OFF switch (switches still turn it
+  to 45 degrees when on); the equalizer's switch too.
+
+### Fixed
+- **Add to queue / Playlist on an artist** missed songs: under Artists by Album Artist it matched the track artist,
+  and under Artists it missed songs credited to several artists ("A, B"). Both now take exactly the songs the
+  artist's page shows.
+
 ## [Disco! 1.1] - 2026-10-07
 
 Settings > About shows "Disco! 1.1".

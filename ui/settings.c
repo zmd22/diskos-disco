@@ -1143,7 +1143,8 @@ void setting_detail_refresh(void){
     /* description at the bottom - per-option for cyclers (refreshes on change) */
     const char *desc = s->desc;
     if(s->type==ST_CYCLER && s->opt_descs && v>=0 && v<s->nopts) desc = s->opt_descs[v];
-    if(s->type == ST_CHOICE) desc = (s->opts == i18n_lang_names) ? "Screen redraws after selection." : NULL;
+    if(s->type == ST_CHOICE) desc = (s->opts == i18n_lang_names) ? "Screen redraws after selection."
+                                  : (s->cfg_key && !strcmp(s->cfg_key, "bt_codec")) ? "Best effort: SBC if the headphones lack it." : NULL;
     if(desc && desc[0]){
         lv_obj_t *d = lv_label_create(g_detail_root);
         lv_label_set_text(d, tr(desc));

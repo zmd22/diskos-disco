@@ -10,6 +10,8 @@
 #include "musicdb.h"
 #include "fwcaps.h"
 #include "artcache.h"
+#include "azjump.h"
+#include "ipc.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <math.h>
@@ -29,8 +31,7 @@ enum { VIEW_MENU, VIEW_SONGS, VIEW_ALBUMS, VIEW_ARTISTS, VIEW_PLAYLISTS, VIEW_FA
 
 static lv_obj_t *g_list;
 static lv_obj_t *g_title;
-static lv_obj_t *g_az_btn;    /* "A-Z" button -> opens the letter grid */
-static lv_obj_t *g_grid;      /* full alphabet grid overlay */
+static azjump_t g_az;         /* the "A - Z" pill + letter grid (azjump.c) */
 static lv_obj_t *g_lhint = NULL, *g_lhint_lbl = NULL;  /* rim-scroll A-Z position hint */
 static uint32_t  g_lhint_tick = 0;
 static char      g_lhint_ch = 0;
@@ -48,6 +49,7 @@ static int g_has_header = 0;   /* a Play All / Shuffle row is the first list chi
 static int g_hdr_extra_px = 0; /* extra leading height above the rows (the album cover header), for scroll math */
 static char g_drill[MDB_STR];
 static char g_artist[MDB_STR];   /* artist whose albums VIEW_ARTIST_ALBUMS lists (Artist > Album > Track) */
+static char g_focus_artist[MDB_STR];  /* one-shot: highlight this artist when going back to Artists */
 static int  g_from_artist = 0;   /* the current VIEW_GROUP drill was opened from that artist's album list */
 static library_song_click_cb_t g_song_cb;
 
@@ -412,6 +414,17 @@ static void menu_cb(lv_event_t *e){
     g_view=v;
     g_drill_kind=0; library_reload();
 }
+/* Back to Artists lands on the artist you came from (else the one playing), focused - not the top of the list */
+static void back_to_artists(void){
+    g_view = VIEW_ARTISTS;
+    snprintf(g_focus_artist, sizeof g_focus_artist, "%s", g_artist);
+    if(!g_focus_artist[0]){
+        track_state_t st; ipc_get_state(&st); mdb_song_t sg;
+        if(st.have_track && mdb_song_by_path(st.path, &sg) == 1)
+            snprintf(g_focus_artist, sizeof g_focus_artist, "%s", mdb_artist_mode() ? sg.artist_group : sg.artist);
+    }
+    library_reload();
+}
 /* Step one level back WITHIN the library (drill-in -> its category list -> the
  * category menu). Returns 1 if it handled an internal step, 0 if already at the
  * top menu (so the caller should leave the Library screen). */
@@ -427,12 +440,13 @@ int library_back(void){                    /* the back SWIPE (and any caller tha
         if(g_deeplink){  /* opened from the hub -> leave Library entirely (back to hub) */
             g_deeplink=0; g_view=VIEW_MENU; g_drill_kind=0; library_reload(); return 0;
         }
-        g_view=(g_drill_kind==1)?VIEW_ALBUMS:(g_drill_kind==3)?VIEW_GENRES:VIEW_ARTISTS;
+        if(g_drill_kind!=1 && g_drill_kind!=3){ g_drill_kind=0; back_to_artists(); return 1; }
+        g_view=(g_drill_kind==1)?VIEW_ALBUMS:VIEW_GENRES;
         g_drill_kind=0; library_reload(); return 1;
     }
     if(g_view==VIEW_ARTIST_ALBUMS){
         if(g_deeplink){ g_deeplink=0; g_view=VIEW_MENU; library_reload(); return 0; }   /* opened from the hub */
-        g_view=VIEW_ARTISTS; library_reload(); return 1;
+        back_to_artists(); return 1;
     }
     if(g_view==VIEW_MOSTPLAYED || g_view==VIEW_RECENT){ g_view=VIEW_HISTORY; library_reload(); return 1; }  /* stats -> History */
     if(g_view==VIEW_FAVS && g_deeplink){ g_deeplink=0; g_view=VIEW_MENU; library_reload(); return 0; }
@@ -444,10 +458,12 @@ static int library_up(void){
     focus_clear();
     if(g_view==VIEW_GROUP){
         if(g_from_artist){ g_from_artist=0; g_deeplink=0; g_view=VIEW_ARTIST_ALBUMS; g_drill_kind=0; library_reload(); return 1; }
-        g_deeplink=0; g_view=(g_drill_kind==1)?VIEW_ALBUMS:(g_drill_kind==3)?VIEW_GENRES:VIEW_ARTISTS;
+        g_deeplink=0;
+        if(g_drill_kind!=1 && g_drill_kind!=3){ g_drill_kind=0; back_to_artists(); return 1; }
+        g_view=(g_drill_kind==1)?VIEW_ALBUMS:VIEW_GENRES;
         g_drill_kind=0; library_reload(); return 1;
     }
-    if(g_view==VIEW_ARTIST_ALBUMS){ g_deeplink=0; g_view=VIEW_ARTISTS; library_reload(); return 1; }
+    if(g_view==VIEW_ARTIST_ALBUMS){ g_deeplink=0; back_to_artists(); return 1; }
     return library_back();                      /* elsewhere: the usual step back (Artists -> Library, ...) */
 }
 static void back_cb(lv_event_t *e){
@@ -509,6 +525,10 @@ static lv_obj_t *g_focus_row;
 static char g_focus_album[MDB_STR];   /* one-shot: highlight this album in an artist's album list */
 static void focus_resolve(int n){      /* find the focused song among this list's rows */
     g_focus_idx = -1; g_focus_row = NULL;
+    if(g_focus_artist[0] && g_view == VIEW_ARTISTS){
+        for(int i = 0; i < n; i++) if(!strcasecmp(g_gnames[i], g_focus_artist)){ g_focus_idx = i; break; }
+        return;
+    }
     if(g_focus_album[0] && g_view == VIEW_ARTIST_ALBUMS){
         for(int i = 1; i < n; i++) if(!strcasecmp(g_gnames[i], g_focus_album)){ g_focus_idx = i; break; }
         return;
@@ -520,7 +540,7 @@ static void focus_resolve(int n){      /* find the focused song among this list'
     /* NOT cleared here: showing the Library rebuilds the list once more (library_refresh on show), and
      * the focus has to survive that. It is dropped on the user's next move - focus_clear() below. */
 }
-static void focus_clear(void){ g_focus_album[0] = 0; g_focus_path[0] = 0; g_focus_idx = -1; g_focus_row = NULL; g_np_jump = 0; }
+static void focus_clear(void){ g_focus_album[0] = 0; g_focus_artist[0] = 0; g_focus_path[0] = 0; g_focus_idx = -1; g_focus_row = NULL; g_np_jump = 0; }
 static void focus_mark(lv_obj_t *r){   /* lifted row + accent title: "you are here" */
     lv_obj_set_style_bg_color(r, TC(SURFACE_SELECTED), 0);
     lv_obj_set_style_bg_opa(r, LV_OPA_COVER, 0);
@@ -717,20 +737,8 @@ static void jump_to_letter(char L){
     lv_obj_scroll_to_y(g_list, g_hdr_extra_px + (idx + g_has_header)*(ROW_H+4), LV_ANIM_OFF);
     curve_rows(); pdots_update();
 }
-static void letter_cb(lv_event_t *e){
-    if(lv_event_get_code(e)!=LV_EVENT_CLICKED) return;
-    jump_to_letter((char)(intptr_t)lv_event_get_user_data(e));
-    lv_obj_add_flag(g_grid, LV_OBJ_FLAG_HIDDEN);
-}
-static void grid_bg_cb(lv_event_t *e){    /* tap outside closes */
-    if(lv_event_get_code(e)==LV_EVENT_CLICKED) lv_obj_add_flag(g_grid, LV_OBJ_FLAG_HIDDEN);
-}
-static void az_btn_cb(lv_event_t *e){
-    if(lv_event_get_code(e)==LV_EVENT_CLICKED) lv_obj_clear_flag(g_grid, LV_OBJ_FLAG_HIDDEN);
-}
 static void az_show(int on){
-    if(on) lv_obj_clear_flag(g_az_btn, LV_OBJ_FLAG_HIDDEN);
-    else { lv_obj_add_flag(g_az_btn, LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(g_grid, LV_OBJ_FLAG_HIDDEN); }
+    azjump_show(&g_az, on);
     /* fork: the list always sits on the centre line, rows centred, so the curve narrows them evenly on both sides
      * (as History and the folder browser do); the A-Z button sits just outside the widest row on the right rim */
     if(g_list){
@@ -1242,62 +1250,8 @@ void library_create(lv_obj_t *root){
     lv_obj_set_scrollbar_mode(g_list, LV_SCROLLBAR_MODE_OFF);
     lv_obj_add_flag(g_list, LV_OBJ_FLAG_SCROLL_MOMENTUM);
 
-    /* "A-Z" button (bottom-right) opens the alphabet grid */
-    g_az_btn = lv_button_create(root);
-    lv_obj_remove_style_all(g_az_btn);
-    lv_obj_set_pos(g_az_btn, 308, 158); lv_obj_set_size(g_az_btn, 44, 44);
-    lv_obj_set_style_radius(g_az_btn, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(g_az_btn, TC(SURFACE_RAISED), 0);
-    lv_obj_set_style_bg_opa(g_az_btn, LV_OPA_90, 0);
-    ui_on(g_az_btn, az_btn_cb, LV_EVENT_CLICKED, NULL, "library.az_btn", UI_CORE);
-    lv_obj_t *azl=lv_label_create(g_az_btn); lv_label_set_text(azl,"A-Z");
-    if(th_disco()){ lv_obj_set_pos(g_az_btn, 146, 320); lv_obj_set_size(g_az_btn, 68, 30); lv_label_set_text(azl, "A - Z"); }   /* Disco: a pill at the bottom (the rim's middle is the navigation circle's) */
-    lv_obj_set_style_text_font(azl,TF(UI_14),0);
-    lv_obj_set_style_text_color(azl,TC(TEXT_PRIMARY),0); lv_obj_center(azl);
-    lv_obj_add_flag(g_az_btn, LV_OBJ_FLAG_HIDDEN);
-
-    /* alphabet grid overlay */
-    g_grid = lv_obj_create(root);
-    lv_obj_remove_style_all(g_grid);
-    lv_obj_set_size(g_grid, 360, 360); lv_obj_set_pos(g_grid, 0, 0);
-    lv_obj_set_style_bg_color(g_grid, TC(CANVAS), 0);
-    lv_obj_set_style_bg_opa(g_grid, LV_OPA_80, 0);
-    lv_obj_add_flag(g_grid, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_clear_flag(g_grid, LV_OBJ_FLAG_SCROLLABLE);
-    ui_on(g_grid, grid_bg_cb, LV_EVENT_CLICKED, NULL, "library.grid_bg", UI_CORE);
-    lv_obj_add_flag(g_grid, LV_OBJ_FLAG_HIDDEN);
-    {   /* "Jump to" title disambiguates the grid as navigation, not a sort control (grid starts y0=48) */
-        lv_obj_t *gt = lv_label_create(g_grid);
-        lv_label_set_text(gt, tr("Jump to"));
-        lv_obj_align(gt, LV_ALIGN_TOP_MID, 0, 20);
-        lv_obj_set_style_text_font(gt, TF(UI_14), 0);
-        lv_obj_set_style_text_color(gt, TC(TEXT_MUTED), 0);
-    }
-    {
-        static const char *AZ="ABCDEFGHIJKLMNOPQRSTUVWXYZ#";
-        int cols=5, cw=52, ch=48, n=27;      /* taller cells (48x44); last partial row centered */
-        int gw=cols*cw, x0=(360-gw)/2;
-        int rows=(n+cols-1)/cols;
-        int y0=48;   /* anchor top at the original grid top; taller cells grow downward (centering would clip the top row's outer corners) */
-        for(int i=0;i<n;i++){
-            int r=i/cols, c=i%cols;
-            int cells_in_row = (r==rows-1) ? (n - r*cols) : cols;  /* last row may be partial */
-            int row_x0 = x0 + ((cols - cells_in_row)*cw)/2;        /* centre it so Z/# avoid the clipped bottom-left corner */
-            lv_obj_t *cell=lv_button_create(g_grid);
-            lv_obj_remove_style_all(cell);
-            lv_obj_set_pos(cell, row_x0+c*cw, y0+r*ch); lv_obj_set_size(cell, cw-4, ch-4);
-            lv_obj_set_style_radius(cell, 8, 0);
-            lv_obj_set_style_bg_color(cell, TC(ACCENT_PRIMARY), LV_STATE_PRESSED);
-            lv_obj_set_style_bg_opa(cell, LV_OPA_COVER, LV_STATE_PRESSED);
-            lv_obj_set_style_text_color(cell, TC(TEXT_PRIMARY), 0);           /* the letter inherits these */
-            lv_obj_set_style_text_color(cell, TC(ON_ACCENT), LV_STATE_PRESSED);
-            ui_on(cell, letter_cb, LV_EVENT_CLICKED, (void*)(intptr_t)AZ[i], "library.letter", UI_CORE);
-            lv_obj_t *l=lv_label_create(cell);
-            char b[2]={AZ[i],0}; lv_label_set_text(l,b);
-            lv_obj_set_style_text_font(l,TF(UI_20),0);
-            lv_obj_set_style_text_color(l,TC(TEXT_PRIMARY),0); lv_obj_center(l);
-        }
-    }
+    /* the "A - Z" pill and its letter grid (azjump.c, shared with Folders) */
+    azjump_create(&g_az, root, jump_to_letter, "library");
 
     /* alphabet hint overlay (rim-scroll position indicator) - centred, hidden */
     g_lhint = lv_obj_create(root);

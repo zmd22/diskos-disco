@@ -170,6 +170,7 @@ static void status_read(void){
 }
 void ma_set_on(int on){
     cfg_set_int("ma_on", on ? 1 : 0);
+    if(on && !wifi_radio_live()) ui_toast("Wi-Fi is off - turn it on for Sendspin");   /* it waits, and connects once Wi-Fi is up */
     if(on){ helper_kill_stale(); if(ui_get_source_mode() != 5) ui_set_source_mode(5); if(g_dying > 0) g_restart_at = lv_tick_get() + 300; else helper_start(); }   /* AirPlay carries the audio into mq_player */
     else { helper_stop(); if(ui_get_source_mode() == 5){ g_leaving = 1; ui_set_source_mode(0); g_leaving = 0; } }
     status_read();
@@ -246,6 +247,12 @@ void ma_refresh(void){
             snprintf(d2, sizeof d2, "Music Assistant");
             break;
         case MA_CONNECTING:
+            if(!wifi_radio_live()){                          /* say why it can't connect, not just that it's trying */
+                snprintf(st, sizeof st, "Wi-Fi is off");
+                snprintf(d1, sizeof d1, "Turn on Wi-Fi to reach");
+                snprintf(d2, sizeof d2, "Music Assistant");
+                break;
+            }
             snprintf(st, sizeof st, "Looking for Music Assistant");
             snprintf(d1, sizeof d1, "%s", srv[0] ? srv : "On your network");
             break;
@@ -260,6 +267,8 @@ void ma_refresh(void){
             }
             break;
         case MA_ERROR:
+            if(!wifi_radio_live()){ snprintf(st, sizeof st, "Wi-Fi is off"); snprintf(d1, sizeof d1, "Turn on Wi-Fi to reach");
+                                    snprintf(d2, sizeof d2, "Music Assistant"); break; }
             snprintf(st, sizeof st, "Can't reach Music Assistant");
             snprintf(d1, sizeof d1, "%s", g_msg[0] ? g_msg : (srv[0] ? srv : "Check the server in Settings"));
             snprintf(d2, sizeof d2, "Trying again");

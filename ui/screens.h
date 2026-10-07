@@ -314,6 +314,7 @@ void ui_start_art_prewarm(void);          /* spawn the background cover/accent p
 int  ui_prewarm_enqueue(const char *path); /* MAIN thread: queue a track path for background cover decode; 1=queued/dup, 0=full */
 void ui_set_accent_config(int mode, int rgb);  /* 0=dynamic / 1=static(rgb); applies immediately */
 int  ui_accent_is_static(void);
+lv_color_t ring_border_color(void);   /* Ring button rings: the theme accent, or the picked Accent colour */
 void ui_set_prewarm_mode(int m);          /* 0=covers only 1=+per-track sweep when idle 2=+sweep when idle & charging */
 int  ui_run_cap_bounded(const char *cmd, char *out, int cap, int timeout_ms);   /* bt.c: popen-like capture, killed at timeout */
 int  bt_radio_on(void);              /* current mode; 0 = Album Art Cache off */

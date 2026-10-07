@@ -7,8 +7,12 @@
  * The recorder runs inside the UI: one sample a minute (battery %, charging, screen on at any point in that
  * minute, playing at any point), kept in RAM for a little over a day (all the screen uses) and saved to
  * /usr/data/usage.bin every 10 minutes
- * (and before an auto power-off). Nothing is recorded while the clock isn't set. */
+ * (and before an auto power-off). Nothing is recorded while the clock isn't set.
+ * Since the last full charge: two running totals (minutes playing, minutes with the screen on) and the time of that
+ * charge, reset when the Disc is unplugged after reaching full (100%, or 80% with Charging Limit on). A few bytes in
+ * /usr/data/usage_charge.bin, saved with the rest. */
 #include "screens.h"
+#include "config.h"
 #include "theme.h"
 #include "braun.h"
 #include <math.h>
@@ -34,6 +38,9 @@ static int g_batt = -1, g_chg;
 static uint32_t g_cur_min;                 /* minute being accumulated */
 static uint8_t g_acc;                      /* flags seen during it */
 static int g_unsaved;
+#define USAGE_CHG_FILE USAGE_FILE "_charge"
+typedef struct { uint32_t magic, full_at, play_min, scr_min, full_seen; } uschg_t;   /* "USC1" */
+static uschg_t g_cy = { 0x31435355u, 0, 0, 0, 0 };
 
 static usmp_t *at(int i){ return &g_s[(g_head + i) % US_CAP]; }   /* i = 0 oldest .. g_n-1 newest */
 static void push(uint32_t t, int pct, uint8_t fl){
@@ -52,8 +59,17 @@ void usage_save(void){
     if(fclose(f) != 0) ok = 0;
     if(ok) rename(tmp, USAGE_FILE); else unlink(tmp);
     g_unsaved = 0;
+    snprintf(tmp, sizeof tmp, "%s.tmp", USAGE_CHG_FILE);       /* the since-full-charge totals */
+    f = fopen(tmp, "wb"); if(!f) return;
+    ok = fwrite(&g_cy, sizeof g_cy, 1, f) == 1;
+    if(fflush(f) != 0) ok = 0;
+    fsync(fileno(f));
+    if(fclose(f) != 0) ok = 0;
+    if(ok) rename(tmp, USAGE_CHG_FILE); else unlink(tmp);
 }
 static void load(void){
+    FILE *c = fopen(USAGE_CHG_FILE, "rb");
+    if(c){ uschg_t t; if(fread(&t, sizeof t, 1, c) == 1 && t.magic == 0x31435355u) g_cy = t; fclose(c); }
     FILE *f = fopen(USAGE_FILE, "rb"); if(!f) return;
     uint32_t hdr[2];
     if(fread(hdr, sizeof hdr, 1, f) == 1 && hdr[0] == 0x31475355u){
@@ -75,7 +91,21 @@ void usage_tick(int screen_on, int playing){
     if(now < 1600000000) return;                           /* the clock isn't set yet: record nothing */
     uint32_t m = (uint32_t)(now / 60);
     if(!g_cur_min) g_cur_min = m;
+    /* a full charge: reached full while charging, then unplugged -> the totals start again from here */
+    if(g_batt >= 0){
+        int target = cfg_get_int("charge_protect", 0) ? 80 : 100;
+        static int boot_checked;                             /* charged while switched off: starts up full, was lower */
+        if(!boot_checked){ boot_checked = 1;
+            if(!g_chg && g_n > 0 && g_batt >= target - 1 && g_batt > at(g_n - 1)->pct + 5){
+                g_cy.full_seen = 0; g_cy.full_at = (uint32_t)now; g_cy.play_min = g_cy.scr_min = 0; usage_save(); } }
+        if(g_chg && g_batt >= target - 1) g_cy.full_seen = 1;
+        else if(!g_chg && g_cy.full_seen){
+            g_cy.full_seen = 0; g_cy.full_at = (uint32_t)now; g_cy.play_min = g_cy.scr_min = 0; usage_save();
+        }
+    }
     if(m != g_cur_min){
+        if(g_acc & FL_PLAY) g_cy.play_min++;
+        if(g_acc & FL_SCR)  g_cy.scr_min++;
         if(g_batt >= 0) push(g_cur_min * 60u, g_batt, g_acc);
         g_cur_min = m; g_acc = 0;
         if(++g_unsaved >= 10) usage_save();
@@ -86,7 +116,7 @@ void usage_tick(int screen_on, int playing){
 /* ================================ the screen ================================
  * One clear page in every theme: the charge on a ring around the rim, the percentage big in the middle, the time
  * left at the recent pace (or "Charging"), and two figures for the last 24 hours: playing and screen on. */
-static lv_obj_t *g_ring, *g_pct, *g_chg_ic, *g_sub, *g_play_v, *g_scr_v;
+static lv_obj_t *g_ring, *g_pct, *g_chg_ic, *g_sub, *g_play_v, *g_scr_v, *g_cap;
 static lv_timer_t *g_tmr;
 
 static void fmt_dur(char *b, size_t n, int mins){
@@ -149,6 +179,17 @@ static void draw(void){
     lv_label_set_text(g_sub, b);
     time_t nowt = time(NULL);
     if(nowt < 1600000000){ lv_label_set_text(g_play_v, "-"); lv_label_set_text(g_scr_v, "-"); return; }   /* clock not set: no "last 24 h" */
+    if(g_cy.full_at && g_cy.full_at <= (uint32_t)nowt){         /* since the last full charge */
+        uint32_t ago = (uint32_t)nowt - g_cy.full_at;
+        if(ago < 3600) snprintf(b, sizeof b, "Since full charge, just now");
+        else if(ago < 48 * 3600) snprintf(b, sizeof b, "Since full charge, %u h ago", ago / 3600);
+        else snprintf(b, sizeof b, "Since full charge, %u days ago", ago / 86400);
+        lv_label_set_text(g_cap, b);
+        fmt_dur(b, sizeof b, (int)g_cy.play_min); lv_label_set_text(g_play_v, b);
+        fmt_dur(b, sizeof b, (int)g_cy.scr_min);  lv_label_set_text(g_scr_v, b);
+        return;
+    }
+    lv_label_set_text(g_cap, "Last 24 hours");                   /* no full charge seen yet */
     uint32_t to = (uint32_t)nowt, from = to > 86400 ? to - 86400 : 0;   /* the last 24 hours */
     int scr = 0, play = 0;
     for(int i = 0; i < g_n; i++){ const usmp_t *s = at(i); if(s->t < from || s->t > to) continue; if(s->fl & FL_SCR) scr++; if(s->fl & FL_PLAY) play++; }
@@ -185,7 +226,7 @@ void usage_create(lv_obj_t *root){
     lv_obj_set_style_text_align(g_sub, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_font(g_sub, br ? br_font(16, 0) : TF(UI_16), 0); lv_obj_set_style_text_color(g_sub, TC(TEXT_PRIMARY), 0);
     lv_obj_align(g_sub, LV_ALIGN_TOP_MID, dx, 162);
-    lv_obj_t *cap = lv_label_create(root); lv_label_set_text(cap, "Last 24 hours");
+    lv_obj_t *cap = g_cap = lv_label_create(root); lv_label_set_text(cap, "Last 24 hours");
     lv_obj_set_style_text_font(cap, br ? br_font(12, 0) : TF(UI_12), 0); lv_obj_set_style_text_color(cap, TC(TEXT_SECONDARY), 0);
     lv_obj_align(cap, LV_ALIGN_TOP_MID, dx, 222);
     stat_block(root, dx - 58, LV_SYMBOL_PLAY, "Playing", &g_play_v);
@@ -201,5 +242,7 @@ void usage_demo(int charging){
         uint8_t fl = (m % 90 < 50 ? FL_PLAY : 0) | (m % 120 < 12 ? FL_SCR : 0);
         push(now - (uint32_t)m * 60u, 82 - (360 - m) / 24, fl);
     }
-    g_batt = 67; g_chg = charging; draw();
+    g_batt = 67; g_chg = charging;
+    if(getenv("USAGE_CYCLE")){ g_cy.full_at = now - 26u * 3600u; g_cy.play_min = 412; g_cy.scr_min = 75; }   /* since a full charge, 26 h ago */
+    draw();
 }

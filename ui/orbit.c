@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 #include "orbit.h"
+#include "screens.h"
 #include <string.h>
 #include "fork_theme.h"
 #include "braun.h"
@@ -62,6 +63,7 @@ void orbit_create(orbit_t *o, lv_obj_t *root, const orbit_item_t *it, int n, int
             lv_obj_set_style_bg_color(p, TC(ORBIT_POINTER), 0); lv_obj_set_style_bg_opa(p, LV_OPA_COVER, 0);
             lv_obj_align(p, LV_ALIGN_TOP_MID, ORBIT_BTN / 6, 4); lv_obj_set_style_transform_rotation(p, 300, 0);
             lv_obj_clear_flag(p, LV_OBJ_FLAG_CLICKABLE);
+            br_pointer_set(p, ORBIT_BTN, 0);                     /* straight up in the icon colour, like an OFF switch (toggles turn it) */
             lv_obj_t *lamp = lv_obj_create(root); lv_obj_remove_style_all(lamp);        /* the lamp above the knob */
             lv_obj_set_size(lamp, 6, 6); lv_obj_set_pos(lamp, 180 + cx - 3, 180 + cy - ORBIT_BTN / 2 - 11);
             lv_obj_set_style_radius(lamp, LV_RADIUS_CIRCLE, 0); lv_obj_set_style_bg_color(lamp, TC(ACCENT_PRIMARY), 0); lv_obj_set_style_bg_opa(lamp, LV_OPA_COVER, 0);
@@ -117,7 +119,7 @@ void orbit_set_pending(orbit_t *o, int p, lv_color_t accent){
         if(th_braun()){ lv_obj_set_style_border_color(o->btn[i], on ? TC(ACCENT_PRIMARY) : TC(CONTROL_FILL), 0); lv_obj_set_style_border_width(o->btn[i], on ? 3 : 2, 0); continue; }
         lv_obj_set_style_border_width(o->btn[i], on ? 3 : 0, 0);
         lv_obj_set_style_border_color(o->btn[i], accent, 0);
-        if(!on && th_ringlike()){ lv_obj_set_style_border_width(o->btn[i], 2, 0); lv_obj_set_style_border_color(o->btn[i], TC(ACCENT_PRIMARY), 0); }   /* fork */
+        if(!on && th_ringlike()){ lv_obj_set_style_border_width(o->btn[i], 2, 0); lv_obj_set_style_border_color(o->btn[i], ring_border_color(), 0); }   /* fork */
         if(on){ lv_obj_set_style_bg_color(o->btn[i], TC(SURFACE_RAISED), 0);
                 lv_obj_set_style_text_color(o->icon[i], accent, 0); }
     }
