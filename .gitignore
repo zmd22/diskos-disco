@@ -6,7 +6,8 @@
 # --- SECRETS - never publish (private ECC update-signing key lives here) ---
 signing/
 *.pem
-!payload/diskos-root.pub.pem
+# payload/diskos-root.pub.pem is each owner's OWN public key (copied there to flash): never publish it, or other
+# people's Discs flashed with it would accept updates signed by that owner
 *.key
 
 # --- FiiO-derived images (contain FiiO rootfs - never redistribute) ---
