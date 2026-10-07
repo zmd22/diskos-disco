@@ -183,6 +183,7 @@ Stock is never far:
 | [Tour](docs/DISCO_TOUR.md) | Every screen, gesture and setting, with screenshots |
 | [How-to](docs/HOWTO.md) | Short answers for everyday tasks |
 | [Updating](docs/UPDATING.md) | Keys, signing, flashing once, troubleshooting |
+| [Windows (WSL)](docs/WINDOWS.md) | Flashing from Windows: highly experimental, untested and unsupported |
 | [UI choices](docs/UI_CHOICES.md) | Why things look and work the way they do |
 | [Changelog](CHANGELOG.md) | Disco! releases first, upstream diskOS below |
 | [All docs](docs/README.md) | Hardware notes, command map, developer workflow, legal |
