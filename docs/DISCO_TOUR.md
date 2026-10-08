@@ -514,13 +514,49 @@ half an hour on battery. Without a set clock the figures show "-".
 
 ## Album Roulette
 
-Install Album Roulette separately at `/usr/data/apps/album-roulette/app`. In **Settings > Display > Disco Menu**,
-add **Album Roulette** to the menu. It has a vinyl icon and can be reordered or removed like other optional entries.
-You can also reach it through **Apps** or an app shortcut. Each firmware entry point shows the same landing page;
-**I feel lucky!** then starts the app normally. If it is missing, the button explains that it is not installed.
+**A little record-shop serendipity, using the music you already own.** Album Roulette picks an album from your
+local library and turns the choice into a roulette spin. Circular covers race across the screen like discs in a
+CD changer, slow down, and settle on one winner. You decide whether to play it.
 
-The landing page follows the selected theme and accent. Its vinyl is static, with no animation timer or idle
-redraw loop. The app's own browsing, roulette spin and playback remain the responsibility of the installed app.
+It is especially fun when your collection is bigger than your memory: the album you forgot you loved gets the
+same chance to catch your attention as the record you played yesterday. There is no search to phrase or artist
+to remember. Press a button, watch the covers fly, and see where you land.
+
+### How a spin works
+
+1. Open **Album Roulette** from the Disco main menu, Apps or an app shortcut. The firmware shows the vinyl
+   landing page. Tap **I feel lucky!** to launch the installed app.
+2. The app prepares its album selection from your local library. Its roulette-themed start screen has
+   **Surprise me** and **Exit**, with a small ball around the wheel while preparation is underway.
+3. Tap **Surprise me**. Round album covers fly from right to left, fast at first, then progressively slower
+   until the winning cover comes to rest. The album title and artist tell you what chance has picked.
+4. Tap the white **Play!** ball **or the winning cover**. The cover zooms and fades into the Music screen,
+   and the selected album starts in sequential order. You get the album experience, in track order.
+5. Fancy another go? **Long-press the winning cover** to return to the start screen for a fresh spin. It is
+   an intentionally unlabelled shortcut. **Exit** leaves the app without choosing an album to play.
+
+The current app only considers albums with **more than three tracks**. That keeps one-, two- and three-track
+entries out of the draw and helps avoid some incomplete imports, though it cannot prove that an album is complete.
+It works with your indexed local collection; it does not fetch new music for you.
+
+### Why it belongs on the Disc
+
+The spinning discs suit the round screen, but the useful part is the decision it takes off your hands.
+Album Roulette gives you a starting point when you have plenty of music and no idea what to put on. Because
+playback waits for your tap, you can enjoy the reveal without immediately replacing what is playing. Once you
+accept the winner, the album plays sequentially: a chance to hear the quieter tracks between the favourites,
+not just revisit the songs you already reach for.
+
+### Add it to your menu
+
+Install Album Roulette separately at `/usr/data/apps/album-roulette/app`. In **Settings > Display > Disco Menu**,
+add **Album Roulette**. Its vinyl entry can be reordered or removed like other optional menu entries.
+Apps and app shortcuts reach the same landing page. If the app is missing, **I feel lucky!** explains that it
+is not installed.
+
+The firmware landing page follows the selected theme and accent. Its vinyl is static, with no animation timer
+or idle redraw loop. The app supplies the roulette spin and album-selection behavior described above; this
+firmware release adds the menu integration and consistent landing page, and does not include the app itself.
 
 ![Album Roulette landing page, dark and light](disco/album-roulette-landing.png)
 

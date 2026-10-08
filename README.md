@@ -69,9 +69,11 @@ replaces only what you see and touch.
 
 ## Highlights
 
-- **New in 1.2.0: Album Roulette.** A vinyl-marked menu entry and a dedicated landing page: tap
-  **I feel lucky!** to launch the installed Album Roulette app. The same welcome screen appears from Apps
-  and shortcuts. [Setup and details](docs/DISCO_TOUR.md#album-roulette).
+- **New in 1.2.0: Album Roulette.** Too much music, nothing to play? Spin your local collection: circular covers
+  fly past, slow down and reveal a winning album. Tap **Play!** or its cover to listen in track order; long-press
+  the cover to try again. A fun way to rediscover records you forgot you owned. The new vinyl menu entry, Apps
+  and shortcuts all lead to an **I feel lucky!** landing page. Requires the separately installed Album Roulette
+  app. [How it works and setup](docs/DISCO_TOUR.md#album-roulette).
 - **Smoother scrolling.** Lighter touch response and continuously curved rows in Library, Settings and shared
   lists, while retaining the existing low-memory handling of long lists. The navigation drawer also reverses
   smoothly when interrupted. [1.2.0 release notes](docs/releases/v1.2.0.md).

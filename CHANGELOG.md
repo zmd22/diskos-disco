@@ -10,6 +10,9 @@ diskOS remains beta software; version numbers do not imply broad hardware or fea
 Settings > System > About shows "Disco! 1.2.0". Based on diskOS 1.2.4.
 
 ### Added
+- **Rediscover your collection with Album Roulette:** watch round covers spin past, accept a winning album
+  with Play! or a cover tap, and listen in sequential order. Long-press the winner to return for another spin.
+  The separately installed app supplies the roulette experience; 1.2.0 makes it a consistent part of the UI.
 - **Album Roulette in the main menu**, with a vinyl icon. Add it through Settings > Display > Disco Menu.
 - **Album Roulette landing screen** with a theme-aware vinyl, a short introduction and an **I feel lucky!**
   button. The main menu, Apps and app shortcuts all open this screen before launching the installed app.
