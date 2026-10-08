@@ -166,3 +166,9 @@ rebuild and relink `usbboot` against a modified libusb using the included source
 - Upstream versions and corresponding source are shipped in-tree for the GPL/LGPL native
   binaries: Linux squashfs-tools 4.6.1 and libusb 1.0.27; macOS arm64 squashfs-tools 4.7.5 and libusb 1.0.30; liblzo2 2.10, the SPL, and usbboot. Source is in [`corresponding-source/`](corresponding-source/) and [`spl-src/`](spl-src/).
   The SPL includes the unresolved DDR parameter block described in [`SPL_SOURCE.md`](SPL_SOURCE.md).
+
+## Bundled Album Roulette
+
+Album Roulette 1.3.0 is included in the UI payload under GPL-3.0-or-later. Corresponding source,
+vendored dependencies and individual licenses are in `corresponding-source/album-roulette-1.3.0-source.tar.gz`.
+See `ui/bundled/ALBUM-ROULETTE-NOTICE.md` and `ui/bundled/README.md` for notices and reproduction.

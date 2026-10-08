@@ -5,6 +5,20 @@ All notable changes to diskOS Disco! (and the diskOS releases underneath) are do
 Entries follow the Keep a Changelog format, with Added, Changed, and Fixed categories where applicable.
 diskOS remains beta software; version numbers do not imply broad hardware or feature validation.
 
+## [Disco! 1.2.1] - 2026-10-09
+
+### Added
+- **Album Roulette 1.3.0 is now bundled inside mq_ui**, including UI-only updates. Missing app files are installed
+  automatically before Apps is populated. Existing executable/config files are preserved; nothing auto-launches.
+- App corresponding source, dependency licenses and rebuild instructions are included in the repository.
+
+### Fixed
+- A fresh installation can now use the Roulette landing screen without a separate app download.
+
+### Validation
+- App and UI cross-builds and the production theme gate passed. A host extraction check verified exact bytes,
+  executable permissions and preservation of an existing app/config. Final device testing is still pending.
+
 ## [Disco! 1.2.0] - 2026-10-09
 
 Settings > System > About shows "Disco! 1.2.0". Based on diskOS 1.2.4.

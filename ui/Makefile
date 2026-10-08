@@ -33,7 +33,7 @@ APP_SRCS  := $(APP)/battery.c $(APP)/eqpreset.c $(APP)/main.c $(APP)/sdio.c $(AP
 # bundled SQLite amalgamation (compiled in-process; replaces popen sqlite3 CLI)
 SQLITE_FLAGS := -Os -pipe -static -ffunction-sections -fdata-sections -DSQLITE_THREADSAFE=1 -DSQLITE_OMIT_LOAD_EXTENSION \
   -DSQLITE_DEFAULT_MEMSTATUS=0 -DSQLITE_DQS=0 -DSQLITE_OMIT_DEPRECATED $(REPRO_FLAGS) $(FP_FLAGS)
-OBJS := $(LVGL_SRCS:.c=.o) $(APP_SRCS:.c=.o) $(APP)/sqlite3.o
+OBJS := $(LVGL_SRCS:.c=.o) $(APP_SRCS:.c=.o) $(APP)/sqlite3.o $(APP)/bundled_album.o
 
 # Every on-screen colour is a theme role (theme.h); theme.c is the only place RGB becomes a colour. The link fails if
 # any other app source (.c, or any header in the tree) builds a colour itself: an LVGL colour constructor, palette,
@@ -119,3 +119,7 @@ host-render: $(HOST_OBJS)
 	$(CC) $(LDFLAGS) -o $(HOST_DIR)/host-render $(HOST_OBJS) $(LDLIBS) -lcrypt -Wl,--wrap=ipc_send_cmd,--wrap=fw_custom_peq_writable,--wrap=fw_custom_peq_curve_writable,--wrap=mdb_get_peq_ex,--wrap=mdb_song_accent,--wrap=art_make_all_ex_gen
 .PHONY: host-render
 -include $(HOST_DIR)/*.d
+
+# The built-in app travels inside mq_ui, including signed UI-only updates.
+$(APP)/bundled_album.o: $(APP)/bundled_album.S $(APP)/bundled/album-roulette
+	$(CC) -Wa,-I$(APP) -c $< -o $@
