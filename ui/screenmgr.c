@@ -343,6 +343,7 @@ void screens_init(void)
     s_roots[SCR_SCCONFIG]  = screen_make_root(parent);
     s_roots[SCR_MODEINFO]  = screen_make_root(parent);
     s_roots[SCR_MA]        = screen_make_root(parent);
+    s_roots[SCR_ROULETTE]  = screen_make_root(parent);
     s_roots[SCR_UPNEXT] = screen_make_root(parent);
     s_roots[SCR_DATETIME] = screen_make_root(parent);
 
@@ -374,6 +375,7 @@ void screens_init(void)
     shortcuts_config_create(s_roots[SCR_SCCONFIG]);
     modeinfo_create(s_roots[SCR_MODEINFO]);
     ma_create(s_roots[SCR_MA]);
+    roulette_create(s_roots[SCR_ROULETTE]);
     search_create(s_roots[SCR_SEARCH]);
     saver_create(s_roots[SCR_SAVER]);
     quicksettings_create(s_roots[SCR_QUICK]);

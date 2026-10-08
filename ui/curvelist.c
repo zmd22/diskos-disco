@@ -114,13 +114,14 @@ static void curve(curvelist_t *c){
         if(a.y2 < -40 || a.y1 > 400) continue;                      /* off-screen: nothing to do */
         int dy = abs((a.y1 + a.y2) / 2 - 180) + lv_area_get_height(&a) / 2;
         int half = dy < 176 ? (int)sqrtf((float)(180 * 180 - dy * dy)) - 10 : 0;
-        int band = NB - 1;
-        for(int b = 0; b < NB; b++) if(c->full_w - b * 20 <= 2 * half){ band = b; break; }
-        int w = c->full_w - band * 20, shift = 0, L = disco_clear_left(a.y1, a.y2);
+        int w = 2 * half;
+        if(w > c->full_w) w = c->full_w;
+        if(w < c->full_w - (NB - 1) * 20) w = c->full_w - (NB - 1) * 20;
+        int shift = 0, L = disco_clear_left(a.y1, a.y2);
         { int R = disco_clear_right(a.y1, a.y2);                              /* Disco: clear of the closed sliver */
           if(R && 180 + w / 2 > R){ int lft = 180 - w / 2; w = R - lft; shift = (lft + R) / 2 - 180; } }
         if(L && 180 - w / 2 < L){ int right = 180 + w / 2; int nw = right - L; if(nw < 120) nw = 120; shift = L + nw / 2 - 180; w = nw; }   /* Disco: start right of the picker (never narrower than 120) */   /* Disco: clear of the picker */
-        intptr_t key = ((intptr_t)w << 1 | (shift != 0)) + 1;
+        intptr_t key = ((intptr_t)w << 16 | (unsigned)(shift + 32768)) + 1;
         if((intptr_t)lv_obj_get_user_data(r) == key) continue;      /* unchanged: no work */
         lv_obj_set_user_data(r, (void *)key);
         int d = c->full_w - w;

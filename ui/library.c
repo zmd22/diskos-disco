@@ -107,13 +107,9 @@ static void fmt_dur(char *b, size_t n, int ms){
 
 /* ---- rows --------------------------------------------------------------- */
 /* ---- curved list: rows follow the circle ------------------------------------------------------------
- * Each visible row takes the width the round panel allows at its height, snapped to a few bands so labels
- * only re-measure when a row crosses a band (not every frame). Off-screen rows are skipped, and a row
- * is only touched when its band changes, so scrolling costs roughly one width assignment per band cross.
- * Measured on the host: ~10% over a flat list, dominated by the redraw that scrolling does anyway. */
+ * Visible rows resize continuously while scrolling. Keep the existing width limits, panel clearance,
+ * theme treatment and virtual row window; unchanged pixel geometry does no extra label/layout work. */
 #define ROW_W_FULL 268
-static const int CURVE_BANDS[] = { 268, 248, 228, 206, 186 };
-#define N_BANDS ((int)(sizeof CURVE_BANDS / sizeof CURVE_BANDS[0]))
 static void curve_apply(lv_obj_t *r, int w, int shift){
     int d = ROW_W_FULL - w;
     lv_obj_set_width(r, w);
@@ -149,13 +145,14 @@ static void curve_rows(void){
         if(a.y2 < -40 || a.y1 > 400) continue;                     /* off-screen: nothing to do */
         int dy = abs((a.y1 + a.y2) / 2 - 180) + ROW_H / 2;          /* the row's far edge sets the limit */
         int half = dy < 176 ? (int)sqrtf((float)(180 * 180 - dy * dy)) - 8 : 0;
-        int band = N_BANDS - 1;
-        for(int b = 0; b < N_BANDS; b++) if(CURVE_BANDS[b] <= 2 * half){ band = b; break; }
-        int w = CURVE_BANDS[band], shift = 0, L = disco_clear_left(a.y1, a.y2);
+        int w = 2 * half;
+        if(w > ROW_W_FULL) w = ROW_W_FULL;
+        if(w < 186) w = 186;
+        int shift = 0, L = disco_clear_left(a.y1, a.y2);
         { int R = disco_clear_right(a.y1, a.y2);                              /* Disco: clear of the closed sliver */
           if(R && 180 + w / 2 > R){ int lft = 180 - w / 2; w = R - lft; shift = (lft + R) / 2 - 180; } }
         if(L && 180 - w / 2 < L){ int right = 180 + w / 2; int nw = right - L; if(nw < 120) nw = 120; shift = L + nw / 2 - 180; w = nw; }   /* Disco: start right of the picker (never narrower than 120) */
-        intptr_t key = ((intptr_t)w << 1 | (shift != 0)) + 1;       /* width (+ shifted), 0 = never applied */
+        intptr_t key = ((intptr_t)w << 16 | (unsigned)(shift + 32768)) + 1; /* exact width and translation */
         if((intptr_t)lv_obj_get_user_data(r) == key) continue;
         lv_obj_set_user_data(r, (void *)key);
         curve_apply(r, w, shift);

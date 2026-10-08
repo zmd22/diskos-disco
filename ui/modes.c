@@ -355,7 +355,9 @@ void modes_create(lv_obj_t *root){
         memset(g_drow, 0, sizeof g_drow);
         for(int k = 0; k < N_DISCO; k++){
             int i = DISCO_ORD[k];
-            g_drow[i] = disco_row(root, 62 + k * 54, 48, MODES[i].glyph, NULL, NM[i], disco_row_cb, (void *)(intptr_t)i);
+            g_drow[i] = disco_row(root, 58 + k * 54, 52, MODES[i].glyph, TF(UI_22), NM[i], disco_row_cb, (void *)(intptr_t)i);
+            lv_obj_set_style_text_font(lv_obj_get_child(g_drow[i], 1), TF(UI_20), 0);
+            lv_obj_set_style_text_font(lv_obj_get_child(g_drow[i], 2), TF(UI_18), 0);
         }
         mark_selected();
         return;

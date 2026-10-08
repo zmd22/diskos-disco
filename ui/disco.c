@@ -23,6 +23,7 @@ int search_landing_active(void);
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <unistd.h>
 
 extern const lv_font_t font_theme_20;
 
@@ -34,6 +35,28 @@ static void open_folders(void){ folderbrowser_open(); }
 static void open_artists(void){ library_open_artists(); screen_section(SCR_LIBRARY, +1); }
 static void open_songs(void){ library_open_songs(); screen_section(SCR_LIBRARY, +1); }
 static void open_queue(void){ queue_open(); }
+#define IC_ROULETTE "@vinyl"
+/* Theme-coloured vinyl: vector rings avoid requiring a new font glyph. */
+static void roulette_icon(lv_obj_t *label, const char *icon, int size){
+    if(strcmp(icon, IC_ROULETTE)){
+        if(lv_obj_get_child_count(label)) lv_obj_clean(label);
+        lv_obj_set_size(label, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+        return;
+    }
+    lv_label_set_text(label, "");
+    lv_obj_set_size(label, size, size);
+    lv_color_t color = lv_obj_get_style_text_color(label, 0);
+    for(int i = 0; i < 3; i++){
+        lv_obj_t *ring = lv_obj_get_child(label, i);
+        if(!ring){ ring = lv_obj_create(label); lv_obj_remove_style_all(ring);
+            lv_obj_clear_flag(ring, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE); }
+        int d = i == 0 ? size : i == 1 ? size * 3 / 4 : size / 4;
+        lv_obj_set_size(ring, d, d); lv_obj_center(ring);
+        lv_obj_set_style_radius(ring, LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_style_border_width(ring, i == 0 && size >= 24 ? 2 : 1, 0);
+        lv_obj_set_style_border_color(ring, color, 0);
+    }
+}
 static const dsec_t SEC[] = {
     { "music",     "Music",     LV_SYMBOL_AUDIO,     SCR_HOME,      NULL,              1 },
     { "library",   "Library",   LV_SYMBOL_LIST,      SCR_LIBRARY,   NULL,              0 },
@@ -51,6 +74,7 @@ static const dsec_t SEC[] = {
     { "myqueue",   "Queue",     LV_SYMBOL_PASTE,     SCR_QUEUE,     open_queue,        0 },
     { "weather",   "Weather",   LV_SYMBOL_IMAGE,     SCR_WEATHER,   weather_app_open,  0 },
     { "ma",        "Sendspin",  "MA",               SCR_MA,       NULL,              0 },
+    { "roulette",  "Album Roulette", IC_ROULETTE,    SCR_ROULETTE, NULL,              0 },
 };
 #define NSEC ((int)(sizeof SEC / sizeof SEC[0]))
 #define MAXM 10                                    /* the picker holds at most ten (the dots must fit) */
@@ -61,7 +85,7 @@ static int menu_has_screen(int scr);
 static int in_menu(int s){ for(int i = 0; i < g_nmenu; i++) if(g_menu[i] == s) return i; return -1; }
 static int menu_has_screen(int scr){ for(int i = 0; i < g_nmenu; i++) if(SEC[g_menu[i]].screen == scr) return 1; return 0; }
 /* parse cfg "disco_menu": unknown and duplicate ids are skipped, missing protected ones come back (never locked out) */
-static const char CODE[] = "mlsoceFaudbwrgqM";                 /* one letter per SEC[] entry, same order */
+static const char CODE[] = "mlsoceFaudbwrgqMR";                 /* one letter per SEC[] entry, same order */
 static void menu_load(void){
     char buf[256]; snprintf(buf, sizeof buf, "%s", cfg_get_str("disco_menu", "music,library,settings,modes,shortcuts,eq"));
     g_nmenu = 0;
@@ -239,7 +263,7 @@ static int picker_wanted(int which){
     switch(which){
         case SCR_HOME: case SCR_LIBRARY: case SCR_SETTINGS: case SCR_SETLIST: case SCR_WORKMODE: case SCR_APPS:
         case SCR_PLVIEW: case SCR_FOLDER: case SCR_BOOKS: case SCR_ALBUMWALL: case SCR_UPNEXT: case SCR_WIFI:
-        case SCR_BT: case SCR_WEATHER: case SCR_MODEINFO: case SCR_USAGE: case SCR_EQ: case SCR_MA: return 1;
+        case SCR_ROULETTE: case SCR_BT: case SCR_WEATHER: case SCR_MODEINFO: case SCR_USAGE: case SCR_EQ: case SCR_MA: return 1;
         case SCR_SEARCH: return search_landing_active();             /* the landing page has the menu; the keyboard doesn't */
         default: return 0;
     }
@@ -250,11 +274,13 @@ static void picker_paint(void){
     lv_color_t acc = ui_current_accent();
     lv_label_set_text(g_pk_icon, s->icon);
     lv_obj_set_style_text_font(g_pk_icon, (!strcmp(s->icon, "EQ") || !strcmp(s->icon, "MA")) ? TF(UI_28) : !strcmp(s->icon, IC_MIC) ? TF(ICON_28) : (!strcmp(s->icon, TH_IC_SEARCH) ? &font_theme_24 : TF(UI_36)), 0);
+    roulette_icon(g_pk_icon, s->icon, 32);
     lv_obj_set_style_outline_color(g_pk_glow, acc, 0); lv_obj_set_style_border_color(g_pk_glow, acc, 0);   /* the glow follows the accent */
     lv_obj_set_style_bg_color(g_pk_glow, acc, 0);
     lv_label_set_text(g_pk_name, s->name);
     if(g_tab_icon){ lv_label_set_text(g_tab_icon, s->icon);
                     lv_obj_set_style_text_font(g_tab_icon, (!strcmp(s->icon, "EQ") || !strcmp(s->icon, "MA")) ? TF(UI_12) : !strcmp(s->icon, IC_MIC) ? TF(ICON_20) : (!strcmp(s->icon, TH_IC_SEARCH) ? &font_theme_20 : TF(UI_18)), 0);
+                    roulette_icon(g_tab_icon, s->icon, 18);
                     lv_obj_set_style_border_color(g_tab, acc, 0); }
     for(int i = 0; i < MAXM; i++){
         if(!g_pk_dot[i]) continue;
@@ -308,19 +334,25 @@ static void nav_show(void){                                             /* show 
                 else lv_obj_add_flag(g_hint, LV_OBJ_FLAG_HIDDEN); }
 }
 /* open / close: the oval slides out of the right edge and back in (a plain move, no scaling: cheap to draw) */
-#define PK_SLIDE_MS 150
+#define PK_OPEN_MS 180
+#define PK_CLOSE_MS 140
 static void slide_cb(void *o, int32_t v){ lv_obj_set_x((lv_obj_t *)o, v); }
 static void slide_in_done(lv_anim_t *a){ (void)a; if(!g_open) nav_show(); }   /* closed: hide the oval, show the shard */
 void disco_nav_set_open(int open){
-    if(!g_pk) return;
+    if(!g_pk || g_open == !!open) return;
+    int visible = !lv_obj_has_flag(g_pk, LV_OBJ_FLAG_HIDDEN);
+    int start = visible ? lv_obj_get_x(g_pk) : 360;
     lv_anim_delete(g_pk, slide_cb);
     int was = g_open; g_open = open ? 1 : 0;
     if(g_open && g_hint){ hint_drop(); cfg_set_int("disco_nav_hint", 1); }   /* found it: no more hints */
     lv_anim_t a; lv_anim_init(&a); lv_anim_set_var(&a, g_pk); lv_anim_set_exec_cb(&a, slide_cb);
-    lv_anim_set_duration(&a, PK_SLIDE_MS);
+    int end = g_open ? PK_X : 360;
+    int duration = (g_open ? PK_OPEN_MS : PK_CLOSE_MS) * abs(end - start) / (360 - PK_X);
+    if(duration < 60) duration = 60;
+    lv_anim_set_duration(&a, duration);
     if(g_open){
         nav_show();
-        lv_anim_set_values(&a, was ? lv_obj_get_x(g_pk) : 360, PK_X); lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
+        lv_anim_set_values(&a, start, PK_X); lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
         lv_anim_start(&a);
     } else {
         lv_obj_add_flag(g_catch, LV_OBJ_FLAG_HIDDEN);                    /* the screen answers touches again at once */
@@ -531,6 +563,7 @@ static void ed_row(int s, int pos){
     lv_obj_t *ic = lv_label_create(r); lv_label_set_text(ic, SEC[s].icon);
     lv_obj_set_style_text_font(ic, !strcmp(SEC[s].icon, TH_IC_SEARCH) ? &font_theme_20 : !strcmp(SEC[s].icon, IC_MIC) ? TF(ICON_20) : ((!strcmp(SEC[s].icon, "EQ") || !strcmp(SEC[s].icon, "MA")) ? TF(UI_14) : TF(UI_18)), 0);
     lv_obj_set_style_text_color(ic, pos >= 0 ? ui_current_accent() : TC(TEXT_MUTED), 0); lv_obj_align(ic, LV_ALIGN_LEFT_MID, 12, 0);
+    roulette_icon(ic, SEC[s].icon, 20);
     lv_obj_t *nm = lv_label_create(r); lv_label_set_text(nm, SEC[s].name);
     lv_obj_set_style_text_font(nm, TF(UI_16), 0);
     lv_obj_set_style_text_color(nm, pos >= 0 ? TC(TEXT_PRIMARY) : TC(TEXT_SECONDARY), 0); lv_obj_align(nm, LV_ALIGN_LEFT_MID, 44, 0);

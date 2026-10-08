@@ -1495,7 +1495,14 @@ int ui_sleep_state(int *secs_left){
  * redraw. mq_player keeps playing throughout. */
 static char g_app_exec[256];
 static int  g_app_pending = 0;
-void app_launch(const char *exec){ snprintf(g_app_exec, sizeof g_app_exec, "%s", exec); g_app_pending = 1; }
+void app_launch_direct(const char *exec){ snprintf(g_app_exec, sizeof g_app_exec, "%s", exec); g_app_pending = 1; }
+void app_launch(const char *exec){
+    if(!strcmp(exec, "/usr/data/apps/album-roulette/app")){
+        screen_show(SCR_ROULETTE);
+        return;
+    }
+    app_launch_direct(exec);
+}
 /* Live Vol-Up pin level; 1 = held. Same register map as the boot override (x2000 pinctrl, GPB PxPIN,
  * bit 13, active low) - the input layer is unusable here because the stock player grabs event0. */
 /* Mapped ONCE and kept: re-opening and re-mapping /dev/mem five times a second is pure waste. NULL if
@@ -2881,11 +2888,9 @@ int main(int argc, char **argv){
         if(g_touch){
             /* panel mounted 180deg, fb does reverse-copy -> invert both axes (or the stored Screen rotation's inverse) */
             fbpan_bind_touch(g_touch);
-            /* cst816t is noisy on a small round panel: require more travel before a
-             * press becomes a scroll, so deliberate taps aren't eaten as scrolls
-             * (default scroll_limit=10). NB: scroll_throw is a slowdown-%, left at its
-             * default - coast feel is a user-testing call, not safe to guess blind. */
-            lv_indev_set_scroll_limit(g_touch, 18);
+            /* Match Disc Shelf's LVGL drag threshold on every scrollable screen.
+             * Keep the existing momentum/throw defaults and gesture routing. */
+            lv_indev_set_scroll_limit(g_touch, 10);
             g_dbg = (access("/usr/data/touch_dbg", 0)==0);
             if(g_dbg) dbgdot_init();
             fprintf(stderr,"touch ENABLED indev=%p dbg=%d thresh=%d\n",(void*)g_touch,g_dbg,g_swipe_thresh);

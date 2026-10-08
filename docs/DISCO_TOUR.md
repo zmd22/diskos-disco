@@ -15,7 +15,7 @@ Two more themes, **Ring** and **Braun**, have the same features and settings, la
 ## On this page
 
 - **Getting around:** [The navigation circle](#the-navigation-circle), [Gestures](#gestures), [Quick Settings](#quick-settings), [Volume](#volume), [Standby](#standby).
-- **Listening:** [Music](#music), [The title menu](#the-title-menu), [Queue and Up Next](#queue-and-up-next), [Equalizer](#equalizer), [Working mode](#working-mode), [MA Sendspin](#ma-sendspin-experimental).
+- **Listening:** [Music](#music), [The title menu](#the-title-menu), [Queue and Up Next](#queue-and-up-next), [Equalizer](#equalizer), [Working mode](#working-mode), [MA Sendspin](#ma-sendspin-experimental), [Album Roulette](#album-roulette).
 - **Your library:** [Library](#library), [Hold menus](#hold-menus), [Search](#search), [Shortcuts](#shortcuts).
 - **Make it yours:** [Settings](#settings), [Disco Options](#disco-options), [Themes](#themes).
 - **More:** [Weather](#weather), [Battery](#battery), [Updates and safety](#updates-and-safety), [Limits](#limits).
@@ -492,7 +492,7 @@ half an hour on battery. Without a set clock the figures show "-".
 - **The stock interface is always there.** If the Disco! interface ever stops, the Disc falls back to FiiO's
   own interface until the next restart; your music and settings are untouched. Settings > System > Default UI
   can make stock the normal choice, and holding Volume Up from power-on boots the other interface once.
-- **Settings > System > About** shows the version (e.g. "Disco! 1.1.1") with the exact build ID, and the diskOS
+- **Settings > System > About** shows the version (e.g. "Disco! 1.2.0") with the exact build ID, and the diskOS
   version underneath.
 - **The rescan dot.** While the library is being rescanned, a small dot runs around the rim of the screen.
 
@@ -511,3 +511,23 @@ half an hour on battery. Without a set clock the figures show "-".
 - Search shows up to 80 songs (and up to 4 artists); type more to narrow it down.
 - Bluetooth output, Last.fm and AirPlay are still experimental.
 - This is a hobby project, provided as-is, for testing. Not affiliated with FiiO or Snowsky.
+
+## Album Roulette
+
+Install Album Roulette separately at `/usr/data/apps/album-roulette/app`. In **Settings > Display > Disco Menu**,
+add **Album Roulette** to the menu. It has a vinyl icon and can be reordered or removed like other optional entries.
+You can also reach it through **Apps** or an app shortcut. Each firmware entry point shows the same landing page;
+**I feel lucky!** then starts the app normally. If it is missing, the button explains that it is not installed.
+
+The landing page follows the selected theme and accent. Its vinyl is static, with no animation timer or idle
+redraw loop. The app's own browsing, roulette spin and playback remain the responsibility of the installed app.
+
+![Album Roulette landing page, dark and light](disco/album-roulette-landing.png)
+
+### Scrolling in 1.2.0
+
+Scrollable screens use a lighter drag threshold. Library and the shared curved lists resize rows continuously
+instead of stepping between width bands. Settings categories and submenus use that same shared treatment.
+Long virtual lists keep their existing small window of live rows, A-Z navigation and rim scrolling. Straight-row
+themes retain their layout. Quick Settings moves the Wi-Fi/Bluetooth pills 4 px upward; Working mode has larger
+rows and text while keeping all five choices on screen.

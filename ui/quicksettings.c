@@ -181,7 +181,7 @@ static void disco_layout(lv_obj_t *root){
      * the pill), then Mode, Library, Rescan beside the field, Settings centred in the battery arc */
     #define DQ_H 50
     static const struct { int i, x, y, w; } RP[T_N] = {
-        { T_WIFI,  80, 46, 98 }, { T_BT, 184, 46, 98 },
+        { T_WIFI,  80, 42, 98 }, { T_BT, 184, 42, 98 },
         { T_MODE,   0, 102, 0 }, { T_LIB, 0, 158, 0 }, { T_RESCAN, 0, 214, 0 },
         { T_SET,   86, 270, 188 } };
     for(int k = 0; k < T_N; k++){

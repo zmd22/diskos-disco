@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="Disco! 1.1.1" src="https://img.shields.io/badge/Disco!-1.1.1-B36BFF?style=flat-square">
+  <img alt="Disco! 1.2.0" src="https://img.shields.io/badge/Disco!-1.2.0-B36BFF?style=flat-square">
   <img alt="Based on diskOS 1.2.4" src="https://img.shields.io/badge/based%20on-diskOS%201.2.4-3D424B?style=flat-square">
   <img alt="Firmware V2.57" src="https://img.shields.io/badge/firmware-V2.57-4AD8FF?style=flat-square">
   <img alt="Status: testing" src="https://img.shields.io/badge/status-testing-FFB45A?style=flat-square">
@@ -69,6 +69,13 @@ replaces only what you see and touch.
 
 ## Highlights
 
+- **New in 1.2.0: Album Roulette.** A vinyl-marked menu entry and a dedicated landing page: tap
+  **I feel lucky!** to launch the installed Album Roulette app. The same welcome screen appears from Apps
+  and shortcuts. [Setup and details](docs/DISCO_TOUR.md#album-roulette).
+- **Smoother scrolling.** Lighter touch response and continuously curved rows in Library, Settings and shared
+  lists, while retaining the existing low-memory handling of long lists. The navigation drawer also reverses
+  smoothly when interrupted. [1.2.0 release notes](docs/releases/v1.2.0.md).
+
 - **Music is home.** Big title and artist (centred or from the left), the play mode one tap away, transport on an
   arc. Progress as a rainbow **line** under the title or an **arc** around the rim. Drag either to seek.
 - **Tap the title** for Favourite, Album, Artist, Queue, Lyrics and Immersive. **Hold it** to go straight to the
@@ -112,7 +119,7 @@ cable and about 20 quiet minutes. The installer is upstream diskOS's (`./diskos-
 
 **0. Get it.** Download the **[latest release](https://github.com/zmd22/diskos-disco/releases/latest)** (Source
 code, tar.gz) and unpack it, or `git clone https://github.com/zmd22/diskos-disco`. The ready-built interface is
-already in it as `payload/mq_ui` (Disco! 1.1.1); the release also has `mq_ui` on its own, with checksums, for SD-card
+already in it as `payload/mq_ui` (Disco! 1.2.0); the release also has `mq_ui` on its own, with checksums, for SD-card
 updates.
 
 **1. Make your update keys (once, optional but recommended).** They let you install new builds from the SD card
@@ -147,7 +154,7 @@ Download `mq_ui` from a [release](https://github.com/zmd22/diskos-disco/releases
 your keys:
 
 ```sh
-sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 1.1.1      # -> ./diskos-update/
+sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 1.2.0      # -> ./diskos-update/
 ```
 
 Copy the `diskos-update` **folder** to the root of the SD card. On the Disc, go to

@@ -5,6 +5,31 @@ All notable changes to diskOS Disco! (and the diskOS releases underneath) are do
 Entries follow the Keep a Changelog format, with Added, Changed, and Fixed categories where applicable.
 diskOS remains beta software; version numbers do not imply broad hardware or feature validation.
 
+## [Disco! 1.2.0] - 2026-10-09
+
+Settings > System > About shows "Disco! 1.2.0". Based on diskOS 1.2.4.
+
+### Added
+- **Album Roulette in the main menu**, with a vinyl icon. Add it through Settings > Display > Disco Menu.
+- **Album Roulette landing screen** with a theme-aware vinyl, a short introduction and an **I feel lucky!**
+  button. The main menu, Apps and app shortcuts all open this screen before launching the installed app.
+  Album Roulette remains a separate installation at `/usr/data/apps/album-roulette/app`; a missing app
+  produces a clear message. This release does not bundle the app itself.
+
+### Changed
+- **Smoother scrolling throughout the UI:** a lighter 10 px touch threshold and continuous curved-row
+  sizing in Library and shared lists, including Settings. Existing momentum, theme rules and windowed
+  large-list handling remain in place; only rows around the viewport need live UI objects in long lists.
+- **Navigation drawer:** a 180 ms opening and 140 ms closing motion, shortened when reversing partway.
+  Reopening during a close continues from the current position. It remains a position-only animation.
+- **Quick Settings:** the Wi-Fi/Bluetooth row moves 4 px upward to improve clearance.
+- **Working mode:** 52 px rows, 20 px names, 22 px icons and 18 px status glyphs; all five modes remain visible.
+
+### Validation
+- Static MIPS32r2 FP64 NaN2008 build and the production theme check passed.
+- Landing-page previews were rendered with LVGL. Physical-device verification of this final release build
+  is still pending; no new hardware or firmware compatibility is claimed.
+
 ## [Disco! 1.1.1] - 2026-10-07
 
 Settings > About shows "Disco! 1.1.1".
