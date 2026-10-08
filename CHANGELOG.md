@@ -5,6 +5,13 @@ All notable changes to diskOS Disco! (and the diskOS releases underneath) are do
 Entries follow the Keep a Changelog format, with Added, Changed, and Fixed categories where applicable.
 diskOS remains beta software; version numbers do not imply broad hardware or feature validation.
 
+## [Disco! 1.2.2] - 2026-10-09
+
+- Ship Album Roulette separately under `apps/album-roulette`, removing its executable and installation routine from mq_ui.
+- Retain the vinyl menu entry, themed landing screen and all 1.2.0 scrolling/navigation changes.
+- Include Album Roulette 1.3.1 with a shared fallback image and bounded uncached artwork heap; decoder safeguards remain.
+- Publish a complete release ZIP, separate user-app archive and updated installation instructions. UI-only updates no longer carry the app.
+
 ## [Disco! 1.2.1] - 2026-10-09
 
 ### Added

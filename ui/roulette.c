@@ -2,60 +2,10 @@
 #include "screens.h"
 #include "theme.h"
 #include <unistd.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <sys/stat.h>
-
-extern const unsigned char album_roulette_blob_start[], album_roulette_blob_end[];
-static int app_write(int fd, const unsigned char *p, size_t n){
-    while(n){ ssize_t w = write(fd, p, n > 32768 ? 32768 : n);
-        if(w < 0 && errno == EINTR) continue;
-        if(w <= 0) return 0;
-        p += w; n -= (size_t)w;
-    }
-    return 1;
-}
-static int app_dir(const char *path){
-    if(mkdir(path, 0755) && errno != EEXIST) return 0;
-    struct stat st; return !lstat(path, &st) && S_ISDIR(st.st_mode);
-}
-int roulette_install_bundled(void){
-    const char *app = "/usr/data/apps/album-roulette/app";
-    if(!app_dir("/usr/data/apps") || !app_dir("/usr/data/apps/album-roulette")) return 0;
-    struct stat st;
-    if(lstat(app, &st) == 0){
-        /* An existing user installation wins; never downgrade or overwrite it. */
-        if(!S_ISREG(st.st_mode) || access(app, X_OK)) return 0;
-    } else {
-        if(errno != ENOENT) return 0;
-        char tmp[] = "/usr/data/apps/album-roulette/.app-bundled-XXXXXX";
-        int fd = mkstemp(tmp); if(fd < 0) return 0;
-        size_t size = (uintptr_t)album_roulette_blob_end - (uintptr_t)album_roulette_blob_start;
-        int ok = app_write(fd, album_roulette_blob_start, size) && !fchmod(fd, 0755) && !fsync(fd);
-        if(close(fd)) ok = 0;
-        if(ok && link(tmp, app)) ok = errno == EEXIST && !access(app, X_OK);
-        unlink(tmp);
-        if(!ok) return 0;
-    }
-    /* Only install missing metadata; preserve custom names and settings. */
-    const char *conf = "/usr/data/apps/album-roulette/app.conf";
-    int fd = open(conf, O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0644);
-    if(fd >= 0){
-        static const unsigned char text[] = "name=Album Roulette\nexec=/usr/data/apps/album-roulette/app\n";
-        int ok = app_write(fd, text, sizeof text - 1) && !fsync(fd);
-        if(close(fd)) ok = 0;
-        if(!ok){ unlink(conf); return 0; }
-    } else if(errno != EEXIST) return 0;
-    return 1;
-}
-
 static void launch_cb(lv_event_t *e){
     (void)e;
     const char *app = "/usr/data/apps/album-roulette/app";
-    if(!roulette_install_bundled()){ ui_toast("Cannot install Album Roulette. Check free storage."); return; }
+    if(access(app, X_OK)){ ui_toast("Install Album Roulette from the release app package."); return; }
     app_launch_direct(app);
 }
 static lv_obj_t *text(lv_obj_t *root, const char *s, int y, int width, const lv_font_t *font, lv_color_t color){

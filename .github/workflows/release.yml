@@ -1,5 +1,5 @@
 # Publishes a GitHub Release for every version tag (v1.0, v1.1, ...): the ready-built interface (payload/mq_ui)
-# and its checksums as downloads, with the notes from docs/releases/<tag>.md. Push a tag and the release appears.
+# plus the standalone apps, complete ZIP and checksums as downloads, with the notes from docs/releases/<tag>.md. Push a tag and the release appears.
 name: Release
 
 on:
@@ -18,12 +18,8 @@ jobs:
       - name: Collect the release files
         run: |
           set -e
-          mkdir -p dist
-          cp payload/mq_ui dist/mq_ui
-          cd dist
-          sha256sum mq_ui > SHA256SUMS
-          md5sum mq_ui > MD5SUMS
-          cat SHA256SUMS MD5SUMS
+          python3 tools/package-release.py
+          cat dist/SHA256SUMS dist/MD5SUMS
 
       - name: Create or update the release
         env:
@@ -34,8 +30,8 @@ jobs:
           NOTES="docs/releases/${TAG}.md"
           [ -f "$NOTES" ] || NOTES="CHANGELOG.md"
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" dist/mq_ui dist/SHA256SUMS dist/MD5SUMS --clobber
+            gh release upload "$TAG" dist/* --clobber
           else
-            gh release create "$TAG" dist/mq_ui dist/SHA256SUMS dist/MD5SUMS \
+            gh release create "$TAG" dist/* \
               --title "diskOS Disco! ${TAG#v}" --notes-file "$NOTES" --latest
           fi

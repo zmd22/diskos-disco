@@ -424,5 +424,3 @@ void library_open_artists(void); void library_open_songs(void);   /* Library at 
 #endif
 
 void roulette_create(lv_obj_t *root);
-
-int roulette_install_bundled(void);

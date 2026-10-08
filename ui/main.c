@@ -2827,7 +2827,6 @@ int main(int argc, char **argv){
     swipe_thresh_load();
     settings_apply_startup();   /* restore saved brightness */
     wifi_init_intent();         /* seed wifi_on intent from stock WIFI_STATUS (first run only) */
-    if(!roulette_install_bundled()) fprintf(stderr,"Bundled Album Roulette installation unavailable; retry from its landing page.\n");
     fprintf(stderr,"step:screens_init\n");fflush(stderr); screens_init(); ma_boot();   /* MA Sendspin comes back if it was on */
     home_set_settings_click_cb(go_settings);
     library_set_song_click_cb(on_song_play);   /* tap a song -> play it */

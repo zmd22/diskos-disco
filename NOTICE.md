@@ -169,6 +169,6 @@ rebuild and relink `usbboot` against a modified libusb using the included source
 
 ## Bundled Album Roulette
 
-Album Roulette 1.3.0 is included in the UI payload under GPL-3.0-or-later. Corresponding source,
-vendored dependencies and individual licenses are in `corresponding-source/album-roulette-1.3.0-source.tar.gz`.
-See `ui/bundled/ALBUM-ROULETTE-NOTICE.md` and `ui/bundled/README.md` for notices and reproduction.
+Album Roulette 1.3.1 is included as a separate user app under GPL-3.0-or-later. Corresponding source,
+vendored dependencies and individual licenses are in `corresponding-source/album-roulette-1.3.1-source.tar.gz`.
+See `apps/album-roulette/NOTICE.md` and `apps/album-roulette/README.md` for notices and reproduction.

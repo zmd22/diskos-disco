@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="Disco! 1.2.1" src="https://img.shields.io/badge/Disco!-1.2.1-B36BFF?style=flat-square">
+  <img alt="Disco! 1.2.2" src="https://img.shields.io/badge/Disco!-1.2.2-B36BFF?style=flat-square">
   <img alt="Based on diskOS 1.2.4" src="https://img.shields.io/badge/based%20on-diskOS%201.2.4-3D424B?style=flat-square">
   <img alt="Firmware V2.57" src="https://img.shields.io/badge/firmware-V2.57-4AD8FF?style=flat-square">
   <img alt="Status: testing" src="https://img.shields.io/badge/status-testing-FFB45A?style=flat-square">
@@ -69,13 +69,13 @@ replaces only what you see and touch.
 
 ## Highlights
 
-- **New in 1.2.1: Album Roulette.** Too much music, nothing to play? Spin your local collection: circular covers
+- **New in 1.2.2: Album Roulette.** Too much music, nothing to play? Spin your local collection: circular covers
   fly past, slow down and reveal a winning album. Tap **Play!** or its cover to listen in track order; long-press
   the cover to try again. A fun way to rediscover records you forgot you owned. The new vinyl menu entry, Apps
-  and shortcuts all lead to an **I feel lucky!** landing page. Album Roulette is now bundled and installs automatically if missing. [How it works and setup](docs/DISCO_TOUR.md#album-roulette).
+  and shortcuts all lead to an **I feel lucky!** landing page. Album Roulette is included as a separate user app in the complete release package. [Install/update the app](docs/ALBUM_ROULETTE_INSTALL.md). [How it works and setup](docs/DISCO_TOUR.md#album-roulette).
 - **Smoother scrolling.** Lighter touch response and continuously curved rows in Library, Settings and shared
   lists, while retaining the existing low-memory handling of long lists. The navigation drawer also reverses
-  smoothly when interrupted. [1.2.1 release notes](docs/releases/v1.2.1.md).
+  smoothly when interrupted. [1.2.2 release notes](docs/releases/v1.2.2.md).
 
 - **Music is home.** Big title and artist (centred or from the left), the play mode one tap away, transport on an
   arc. Progress as a rainbow **line** under the title or an **arc** around the rim. Drag either to seek.
@@ -120,7 +120,7 @@ cable and about 20 quiet minutes. The installer is upstream diskOS's (`./diskos-
 
 **0. Get it.** Download the **[latest release](https://github.com/zmd22/diskos-disco/releases/latest)** (Source
 code, tar.gz) and unpack it, or `git clone https://github.com/zmd22/diskos-disco`. The ready-built interface is
-already in it as `payload/mq_ui` (Disco! 1.2.1); the release also has `mq_ui` on its own, with checksums, for SD-card
+already in it as `payload/mq_ui` (Disco! 1.2.2); the release also has `mq_ui` on its own, with checksums, for SD-card
 updates.
 
 **1. Make your update keys (once, optional but recommended).** They let you install new builds from the SD card
@@ -155,7 +155,7 @@ Download `mq_ui` from a [release](https://github.com/zmd22/diskos-disco/releases
 your keys:
 
 ```sh
-sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 1.2.1      # -> ./diskos-update/
+sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 1.2.2      # -> ./diskos-update/
 ```
 
 Copy the `diskos-update` **folder** to the root of the SD card. On the Disc, go to

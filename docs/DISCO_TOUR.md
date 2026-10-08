@@ -549,16 +549,19 @@ not just revisit the songs you already reach for.
 
 ### Add it to your menu
 
-From Disco! 1.2.1, Album Roulette is bundled inside `mq_ui` and installed automatically at
-`/usr/data/apps/album-roulette/app` if missing. Existing installations and app settings are preserved.
-This works with fresh firmware installs and UI-only updates. In **Settings > Display > Disco Menu**,
-add **Album Roulette**. Its vinyl entry can be reordered or removed like other optional menu entries.
-Apps and app shortcuts reach the same landing page. **I feel lucky!** retries installation if needed
-and reports a storage problem if it cannot install the app.
+From Disco! 1.2.2, Album Roulette ships as a separate user app in the release package.
+Install or update it under `/usr/data/apps/album-roulette/app` using the
+[app installation instructions](ALBUM_ROULETTE_INSTALL.md). UI-only updates do not
+install the app. Existing configuration is preserved by the documented install commands.
 
-The firmware landing page follows the selected theme and accent. Its vinyl is static, with no animation timer
-or idle redraw loop. The app supplies the roulette spin and album-selection behavior described above; this
-firmware now includes the app executable, menu integration and consistent landing page.
+In **Settings > Display > Disco Menu**, add **Album Roulette**. Its vinyl entry
+can be reordered or removed like other optional entries. Apps and app shortcuts
+reach the same landing page. **I feel lucky!** launches the installed app, or
+shows an installation reminder when it is absent.
+
+The firmware landing page follows the selected theme and accent. Its vinyl is
+static, with no animation timer or idle redraw loop. The separate app supplies
+the roulette spin and album selection.
 
 ![Album Roulette landing page, dark and light](disco/album-roulette-landing.png)
 

@@ -1,4 +1,4 @@
-Album Roulette 1.3.0 — GPL-3.0-or-later.
+Album Roulette 1.3.1 — GPL-3.0-or-later.
 
 Uses diskOS / diskOS Disco! code by diskOS contributors, from
 https://github.com/zmd22/diskos-disco commit d9a3be3a140bfd8d790222fd9bec4f226db2feb7.
