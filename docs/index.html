@@ -79,6 +79,11 @@ h2{font-size:clamp(30px,4.4vw,46px);line-height:1.08;letter-spacing:-.03em;margi
 .sub{color:var(--muted);max-width:640px;font-size:18px;margin:0}
 .center{text-align:center}.center .sub{margin:0 auto}
 
+/* Album Roulette keeps both circular previews inside narrow screens. */
+#roulette .shots .dev{width:min(240px,43vw);height:auto;aspect-ratio:1}
+#roulette .shots .dev + .dev{margin-left:-30px}
+#roulette .cta{justify-content:flex-start;margin:22px 0 16px}
+
 /* feature rows */
 .feature{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;padding:46px 0}
 .feature.flip .shots{order:-1}
@@ -159,7 +164,7 @@ footer a:hover{color:var(--text)}
   <div class="wrap">
     <a class="logo" href="#top"><span class="disc" aria-hidden="true"></span>diskOS Disco!</a>
     <nav aria-label="Sections">
-      <a href="#music">Music</a><a href="#tour">Screens</a><a href="#options">Options</a><a href="#themes">Themes</a><a href="#install">Install</a>
+      <a href="#music">Music</a><a href="#roulette">Roulette</a><a href="#tour">Screens</a><a href="#options">Options</a><a href="#themes">Themes</a><a href="#install">Install</a>
     </nav>
     <a class="gh" href="https://github.com/zmd22/diskos-disco">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.2.06 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
@@ -177,13 +182,8 @@ footer a:hover{color:var(--text)}
       <p class="lede"><strong>The album cover is the interface.</strong> A touch UI made for the Disc's round
         360&nbsp;px screen, built on b0hemia's diskOS: the playing album fills the screen, a faint CD rainbow runs
         around the rim, and everything else sits on glass around it.</p>
-      <p class="small"><strong>New in 1.2.0: let chance choose.</strong> Album Roulette sends your album covers
-        spinning, slows to a winner, and lets you tap to hear the album in track order. Rediscover a forgotten
-        favourite, or hold the winning cover to spin again. A vinyl menu icon and an “I feel lucky!” landing page
-        welcome you from the main menu, Apps and shortcuts. Requires the separately installed Album Roulette app.
-        Scrolling also feels lighter, with smoothly curved rows and a drawer that reverses without jumping.
-        <a href="https://github.com/zmd22/diskos-disco/blob/main/docs/DISCO_TOUR.md#album-roulette">Meet Album Roulette</a>
-        · <a href="https://github.com/zmd22/diskos-disco/blob/main/docs/releases/v1.2.0.md">Release notes</a></p>
+      <p class="small"><strong>New in 1.2.0:</strong> rediscover your collection with
+        <a href="#roulette">Album Roulette</a>, plus smoother scrolling and a more fluid navigation drawer.</p>
       <div class="cta">
         <a class="btn primary" href="https://github.com/zmd22/diskos-disco/releases/latest">Download 1.2.0</a>
         <a class="btn ghost" href="#install">Install</a>
@@ -200,6 +200,40 @@ footer a:hover{color:var(--text)}
       </div>
     </div>
   </div>
+
+  <!-- Album Roulette -->
+  <section id="roulette" style="background:linear-gradient(180deg,var(--bg),var(--bg2),var(--bg))">
+    <div class="wrap">
+      <div class="feature reveal">
+        <div>
+          <span class="kicker">New in 1.2.0 · Album Roulette</span>
+          <h2>So much music.<br>Let chance choose.</h2>
+          <p>That album you loved and somehow forgot about? Give it another chance.
+            Album Roulette turns your own collection into a little moment of discovery.</p>
+          <ul>
+            <li><b>Watch the discs fly.</b> Tap Surprise me. Round covers race across the screen,
+              then slow down and settle on a winning album.</li>
+            <li><b>Make a night of it.</b> Tap Play! or the winning cover. Music opens and the album
+              plays in track order, from the familiar favourites to the tracks between them.</li>
+            <li><b>Try your luck again.</b> Long-press the winning cover to return for another spin.
+              Playback only starts when you accept your pick.</li>
+          </ul>
+          <div class="cta">
+            <a class="btn primary" href="https://github.com/zmd22/diskos-disco/blob/main/docs/DISCO_TOUR.md#album-roulette">How to get spinning</a>
+          </div>
+          <p class="small">Install Album Roulette separately, then add it under Settings → Display → Disco Menu.
+            The menu, Apps and shortcuts all open the same vinyl landing screen. Tap <b>I feel lucky!</b> to begin.</p>
+        </div>
+        <div>
+          <div class="shots">
+            <div class="dev"><img src="disco/roulette-dark.png" alt="Album Roulette's dark landing screen with a vinyl and I feel lucky button" width="360" height="360" loading="lazy"></div>
+            <div class="dev"><img src="disco/roulette-light.png" alt="Album Roulette landing screen in the light theme" width="360" height="360" loading="lazy"></div>
+          </div>
+          <p class="small center" style="margin-top:24px">Your music. A little suspense. A forgotten favourite.</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- music -->
   <section id="music">
