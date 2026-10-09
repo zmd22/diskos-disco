@@ -245,7 +245,7 @@ static void show_delete_confirm(void){
 
 /* ---- rename ------------------------------------------------------------- */
 static void rename_done(const char *name){
-    if(!name) return;
+    if(!name || !name[0]) return;
     if(mdb_playlist_rename(g_pid, name)){
         snprintf(g_name, sizeof g_name, "%s", name);
         theme_title_text(g_title_lbl, g_name);

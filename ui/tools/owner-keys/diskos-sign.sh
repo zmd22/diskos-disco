@@ -6,8 +6,8 @@
 #      keys-folder  default ./diskos-keys
 #      out-folder   default ./diskos-update  -> copy this FOLDER to the root of the SD card
 #
-# On the Disc: Settings > System > Update from SD Card > Update, then restart. Each run gets a newer epoch
-# (minutes since 2026), so the Disc never re-installs an older or the same update.
+# On the Disc: Settings > System > Update from SD Card > Update, then restart. The epoch is UTC minutes
+# since 2026: runs within the same minute share an epoch. An accepted update requires a later epoch.
 set -eu
 UI=${1:?usage: diskos-sign.sh path/to/mq_ui [version] [keys-folder] [out-folder]}
 KEYS=${3:-./diskos-keys}; OUT=${4:-./diskos-update}

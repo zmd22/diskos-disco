@@ -328,6 +328,7 @@ void ma_create(lv_obj_t *root){
 
 /* ---------------------------------------------------------------- Settings > Network > Music Assistant: text rows */
 static void server_done(const char *t){
+    if(!t) return; /* cancel is distinct from saving an empty field (Auto) */
     cfg_set_str("ma_server", (t && t[0] && strcasecmp(t, "auto")) ? t : "");
     labels_load(); setlist_refresh(); ma_restart();
 }

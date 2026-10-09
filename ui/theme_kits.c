@@ -1750,7 +1750,7 @@ static void some_saver(const saver_parts_t *p){
 const theme_kit_t theme_kit_something = { .id = "something", .style = some_style, .nowplaying = some_np,
                                           .saver = some_saver, .saver_clock = some_saver_clock };
 
-/* A’s builders participate in upstream’s registry while retaining their original geometry. */
+/* A's builders participate in upstream's registry while retaining their original geometry. */
 void bhome_create(lv_obj_t *root);
 void kit_fork_np_braun(void);
 /* Ring buttons (fork): every "real" button - a small tappable button or glyph button that isn't floating over a

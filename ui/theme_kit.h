@@ -92,7 +92,7 @@ typedef struct theme_kit {
     /* the styler: called once per widget by the styling pass (NULL = leave Default's look) */
     void (*style)(lv_obj_t *obj, kit_role_t role);
     void (*home_build)(lv_obj_t *root); /* complete fork Home builder, before shared shortcuts */
-    void (*fork_np_layout)(void); /* A’s retained Now Playing layout over its renderer */
+    void (*fork_np_layout)(void); /* A's retained Now Playing layout over its renderer */
     void (*home)(const home_parts_t *p);      /* Home layout (after home.c built the default one) */
     void (*home_clock)(const char *time);     /* each Home clock update (after the clock label is set) */
     void (*nowplaying)(const np_parts_t *p);  /* Now Playing layout (after ui.c built the default one) */

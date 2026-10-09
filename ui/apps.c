@@ -11,6 +11,7 @@
 #include "curvelist.h"
 #include "folderbrowser.h"
 #include "books.h"
+#include "md5.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -27,7 +28,7 @@ LV_FONT_DECLARE(font_icons_28)          /* FontAwesome 28px: play-mode + app-til
 #define LFM_ICON "\xEF\x88\x82"         /* f202 lastfm    -> Last.fm */
 /* Settings/File reuse LV_SYMBOL_SETTINGS (f013) / LV_SYMBOL_FILE (f15b), now in this font */
 
-typedef struct { char name[64]; char exec[256]; } app_t;
+typedef struct { char name[64]; char exec[256]; char id[33]; } app_t;
 static app_t g_apps[MAX_APPS];
 static int g_napps;
 
@@ -39,6 +40,9 @@ static void scan_apps(void){
     while((de = readdir(d)) && g_napps < MAX_APPS){
         if(de->d_name[0] == '.') continue;
         app_t *a = &g_apps[g_napps];
+        /* Stable identity is the installation directory, never the display name.
+         * A compact digest also fits the 47-byte configuration value limit. */
+        md5_hex(de->d_name, strlen(de->d_name), a->id);
         snprintf(a->name, sizeof a->name, "%.60s", de->d_name);
         snprintf(a->exec, sizeof a->exec, APPS_DIR "/%.200s/app", de->d_name);
         char conf[320]; snprintf(conf, sizeof conf, APPS_DIR "/%.200s/app.conf", de->d_name);
@@ -93,10 +97,29 @@ static const char *sc_key(int slot){                                         /* 
     const char *v = cfg_get_str(k, NULL);
     return v ? v : SC_DEFAULT[slot];
 }
-static int app_index(const char *name){ for(int i = 0; i < g_napps; i++) if(!strcmp(g_apps[i].name, name)) return i; return -1; }
+static int app_index(const char *name){
+    int found = -1;
+    for(int i = 0; i < g_napps; i++) if(!strcmp(g_apps[i].name, name)){
+        if(found >= 0) return -2; /* legacy name shortcut is ambiguous: ask to reassign */
+        found = i;
+    }
+    return found;
+}
+static int app_for_key(const char *key){
+    if(!strncmp(key, "appid:", 6)){
+        for(int i = 0; i < g_napps; i++) if(!strcmp(g_apps[i].id, key + 6)) return i;
+        return -1;
+    }
+    return !strncmp(key, "app:", 4) ? app_index(key + 4) : -1;
+}
 void shortcut_run(const char *key){
     if(!key || !key[0]) return;
-    if(!strncmp(key, "app:", 4)){ int i = app_index(key + 4); if(i >= 0) app_launch(g_apps[i].exec); else ui_toast("That app isn't installed"); return; }
+    if(!strncmp(key, "app:", 4) || !strncmp(key, "appid:", 6)){
+        int i = app_for_key(key);
+        if(i >= 0) app_launch(g_apps[i].exec);
+        else ui_toast(i == -2 ? "Reassign this app shortcut" : "That app isn't installed");
+        return;
+    }
     if(!strcmp(key, "weather")) weather_app_open();
     else if(!strcmp(key, "immersive")){ if(th_disco()) disco_open_np_immersive(); else { screen_show(SCR_NOWPLAYING); ui_np_fsart_open(); } }   /* Disco: Now Playing redirects to Music unless asked for */
     else if(!strcmp(key, "eq")) screen_show(SCR_EQ);
@@ -112,7 +135,12 @@ void shortcut_run(const char *key){
 }
 /* label + glyph for a key (built-in or app) */
 static int sc_describe(const char *key, const char **glyph, char *name, size_t n, int *font){
-    if(!strncmp(key, "app:", 4)){ *glyph = LV_SYMBOL_FILE; *font = 1; snprintf(name, n, "%.60s", key + 4); return 1; }
+    if(!strncmp(key, "app:", 4) || !strncmp(key, "appid:", 6)){
+        int i = app_for_key(key);
+        *glyph = LV_SYMBOL_FILE; *font = 1;
+        snprintf(name, n, "%s", i >= 0 ? g_apps[i].name : !strncmp(key, "app:", 4) ? key + 4 : "App unavailable");
+        return 1;
+    }
     for(int i = 0; i < NSCDEF; i++) if(!strcmp(SC[i].key, key)){ *glyph = SC[i].glyph; *font = SC[i].big; snprintf(name, n, "%s", SC[i].name); return 1; }
     return 0;
 }
@@ -257,7 +285,7 @@ static void slot_cb(lv_event_t *e){ g_cfg_slot = (int)(intptr_t)lv_event_get_use
 static void opt_cb(lv_event_t *e){
     int i = (int)(intptr_t)lv_event_get_user_data(e);
     char k[8]; snprintf(k, sizeof k, "sc%d", g_cfg_slot + 1);
-    cfg_set_str(k, i < 0 ? "" : g_opt_keys[i]);
+    if(cfg_set_str(k, i < 0 ? "" : g_opt_keys[i]) != 0){ ui_toast("Couldn't save shortcut"); return; }
     g_cfg_slot = -1; cfg_build();
     if(g_box){ g_all = 0; apps_reload(); }
 }
@@ -282,8 +310,8 @@ static void cfg_build(void){
     int n = 0;
     for(int i = 0; i < NSCDEF; i++){ snprintf(g_opt_keys[n], sizeof g_opt_keys[0], "%s", SC[i].key); cfg_row(SC[i].name, NULL, opt_cb, n, !strcmp(cur, SC[i].key)); n++; }
     for(int i = 0; i < g_napps && n < (int)(sizeof g_opt_keys / sizeof g_opt_keys[0]); i++){
-        snprintf(g_opt_keys[n], sizeof g_opt_keys[0], "app:%.60s", g_apps[i].name);
-        cfg_row(g_apps[i].name, "App", opt_cb, n, !strcmp(cur, g_opt_keys[n])); n++;
+        snprintf(g_opt_keys[n], sizeof g_opt_keys[0], "appid:%s", g_apps[i].id);
+        cfg_row(g_apps[i].name, "App", opt_cb, n, app_for_key(cur) == i); n++;
     }
     lv_obj_scroll_to_y(g_cfg_list, 0, LV_ANIM_OFF);
 }

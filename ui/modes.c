@@ -15,6 +15,7 @@
 #include "config.h"
 #include <unistd.h>
 #include <glob.h>
+#include <math.h>
 
 /* Working Mode (audio source) picker - mirrors stock's "Working mode" list. Tapping a mode replays
  * the captured V2.28 switch sequence via ui_set_source_mode() and marks it selected.
@@ -355,9 +356,25 @@ void modes_create(lv_obj_t *root){
         memset(g_drow, 0, sizeof g_drow);
         for(int k = 0; k < N_DISCO; k++){
             int i = DISCO_ORD[k];
-            g_drow[i] = disco_row(root, 58 + k * 54, 52, MODES[i].glyph, TF(UI_22), NM[i], disco_row_cb, (void *)(intptr_t)i);
-            lv_obj_set_style_text_font(lv_obj_get_child(g_drow[i], 1), TF(UI_20), 0);
-            lv_obj_set_style_text_font(lv_obj_get_child(g_drow[i], 2), TF(UI_18), 0);
+            int y = 54 + k * 58, h = 56;
+            g_drow[i] = disco_row(root, y, h, MODES[i].glyph,
+                                 i == 1 ? TF(UI_20) : TF(UI_24), NM[i], disco_row_cb, (void *)(intptr_t)i);
+            /* Rounded caps fit the rim more closely than a rectangular bounding box.
+             * Keep the final row readable while using the panel down to y=342. */
+            int dy = y + h / 2 - 180, radius = h / 2;
+            int half = (int)sqrtf((176 - radius) * (176 - radius) - dy * dy) + radius;
+            int right = 180 + half;
+            if(k > 0 && k < 4){
+                lv_obj_update_layout(g_drow[i]);
+                int clear_right = lv_obj_get_x(g_drow[i]) + lv_obj_get_width(g_drow[i]);
+                if(right > clear_right) right = clear_right; /* leave the section picker clear */
+            }
+            int width = right - (180 - half);
+            lv_obj_set_x(g_drow[i], 180 - half);
+            lv_obj_set_width(g_drow[i], width);
+            lv_obj_set_width(lv_obj_get_child(g_drow[i], 1), width - 96);
+            lv_obj_set_style_text_font(lv_obj_get_child(g_drow[i], 1), TF(UI_22), 0);
+            lv_obj_set_style_text_font(lv_obj_get_child(g_drow[i], 2), TF(UI_20), 0);
         }
         mark_selected();
         return;

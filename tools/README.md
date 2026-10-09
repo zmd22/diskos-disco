@@ -1,8 +1,8 @@
 # diskOS device tools
 
-Host-side helper scripts for working on a diskOS device over SSH: deploy a locally built UI and
-hot-reload it, and capture screenshots. These are the scripts we use for day-to-day iteration. The
-full workflow (including building the binary) is in [`../docs/DEV_WORKFLOW.md`](../docs/DEV_WORKFLOW.md).
+Host-side helper scripts for capturing screenshots and driving touch diagnostics over SSH.
+Install UI builds through [signed SD-card updates](../docs/UPDATING.md). The full build, preview
+and update workflow is in [DEV_WORKFLOW.md](../docs/DEV_WORKFLOW.md).
 
 If you are an agent or a new contributor picking this up cold, read the **Device rules** section
 first. A couple of the device's behaviors are non-obvious and easy to get wrong.
@@ -10,13 +10,12 @@ first. A couple of the device's behaviors are non-obvious and easy to get wrong.
 ## Contents
 | Script | What it does |
 |---|---|
-| `diskos-deploy.sh` | Push a built `mq_ui` to the device, verify it, and hot-reload it safely |
 | `diskos-shot.sh` | Capture the device screen to a PNG |
 | `diskos-touch.sh` | Drive the touchscreen over SSH (tap / swipe) via the on-device injector |
 | `tinj.c` | The on-device touch injector, built once and pushed (used by `diskos-touch.sh`) |
 
 ## Requirements
-- `sshpass`, `ssh`, `scp` (OpenSSH), and `md5sum`
+- `sshpass` and `ssh` (OpenSSH)
 - For screenshots: `python3` with Pillow (`pip install Pillow`)
 
 ## Getting access
@@ -29,15 +28,11 @@ export DISKOS_IP=192.168.x.x       # from Debug Mode
 export DISKOS_PW=xxxxxxxxxx         # from Debug Mode
 ```
 
-## Deploy + hot-reload
-```sh
-# from the ui/ build directory, after producing mq_ui:
-DISKOS_IP=... DISKOS_PW=... ./diskos-deploy.sh ./mq_ui
-```
-It streams the binary to a staging path, verifies the md5, moves it into place, and relaunches it
-detached. A hand-deployed binary reverts to the flashed build on the next reboot (that is intentional;
-it means you can always get back to a known-good state by rebooting). To make a build permanent, flash
-it with the installer (`--ui path/to/mq_ui`).
+## Install a UI build
+
+Use the [signed SD-card update instructions](../docs/UPDATING.md): sign on the computer with your
+existing keys, copy the complete `diskos-update` folder to the card root, install from Settings,
+restart and accept the trial. Updating `mq_ui` alone does not install separate user apps.
 
 ## Screenshot
 ```sh
@@ -56,8 +51,7 @@ Build the injector once (any host with the Docker builder), then push it to the 
 # from ui/ where the Docker image lives, with tinj.c copied in:
 docker run --rm -v "$PWD:/src" -w /src diskos-ui-builder sh -c '${CROSS}gcc -O2 -static -o tinj tinj.c'
 export SSHPASS="$DISKOS_PW"    # sshpass -e reads the password from the environment, not the argv
-sshpass -e scp tinj root@"$DISKOS_IP":/usr/data/tinj
-sshpass -e ssh  root@"$DISKOS_IP" chmod 755 /usr/data/tinj
+sshpass -e ssh root@"$DISKOS_IP" 'cat > /usr/data/tinj && chmod 755 /usr/data/tinj' < tinj
 ```
 
 Then drive it:
@@ -87,13 +81,10 @@ Notes and limits:
 
 - **Never kill `mq_player`.** It is the stock audio engine and it owns the SD card. Killing it frees
   the card, and the hardware MCU reboots the whole device (about 10 seconds). Only ever touch `mq_ui`.
-- **The UI watchdog respawns stock if you kill `mq_ui` without relaunching.** `fiio_init.sh` runs a
-  loop that does `pgrep -x mq_ui`, and busybox `pgrep -x` matches the full `argv[0]`. If you kill
-  `mq_ui` and do not immediately relaunch a **detached** replacement, it respawns the stock
-  `/usr/bin/mq_ui`. `diskos-deploy.sh` handles this (relaunch with `setsid </dev/null`, then prune any
-  stock instance). To return to stock on purpose, just `killall mq_ui` and let the watchdog respawn it.
-- **Hand-deploys are not persistent.** The S97 boot hook verifies `/usr/data/mq_ui` against a
-  read-only manifest and restores the flashed build on reboot. Iterate freely; reboot to reset.
+- **Deploy the UI through signed SD-card updates.** Do not replace `/usr/data/mq_ui` over SSH or
+  alter the boot manifest. Boot verifies the selected UI and falls back if verification fails.
+- **Use the normal restart/shutdown controls.** These diagnostic tools do not need to stop the UI
+  or player services.
 
 ## Debugging playback / IPC
 - Player log: `/usr/data/fiio/log/fiio_player.log`

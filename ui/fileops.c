@@ -84,8 +84,9 @@ static int rm_tree(const char *p, int depth){             /* 0 = removed */
 }
 static int copy_file(const char *s, const char *d){
     int in = open(s, O_RDONLY | O_CLOEXEC); if(in < 0) return -1;
-    char tmp[FO_PATH + 16]; snprintf(tmp, sizeof tmp, "%s.part", d);
-    int out = open(tmp, O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644); if(out < 0){ close(in); return -1; }
+    char tmp[FO_PATH + 16]; snprintf(tmp, sizeof tmp, "%s.part.XXXXXX", d);
+    int out = mkstemp(tmp); if(out < 0){ close(in); return -1; }
+    if(fcntl(out, F_SETFD, FD_CLOEXEC) != 0 || fchmod(out, 0644) != 0){ close(in); close(out); unlink(tmp); return -1; }
     static char buf[64 * 1024]; ssize_t r; int ok = 1;
     while((r = read(in, buf, sizeof buf)) > 0){
         for(ssize_t o = 0; o < r; ){ ssize_t w = write(out, buf + o, (size_t)(r - o)); if(w <= 0){ ok = 0; break; } o += w; }
@@ -112,15 +113,50 @@ static int copy_tree(const char *s, const char *d, int depth){
     closedir(dd); return r;
 }
 
+/* Prepare the complete replacement alongside the destination. Only then move
+ * the original into the private backup and install the new tree. Failed copies
+ * leave the original untouched; failed installs restore it. Never erase a
+ * backup if restoring it fails (e.g. the card disappears between renames). */
+static int replace_tree(const char *src, const char *dst, int move){
+    char stage[FO_PATH], fresh[FO_PATH], backup[FO_PATH]; struct stat st;
+    int n = snprintf(stage, sizeof stage, "%s.diskos-replace-XXXXXX", dst);
+    if(n < 0 || (size_t)n >= sizeof stage || !mkdtemp(stage)) return -1;
+    if(!path_join(fresh, sizeof fresh, stage, "new") || !path_join(backup, sizeof backup, stage, "original")){
+        rmdir(stage); return -1;
+    }
+    if(copy_tree(src, fresh, 0) != 0){ rm_tree(stage, 0); return -1; }
+    int have_old = lstat(dst, &st) == 0;
+    if((!have_old && errno != ENOENT) ||
+       (have_old && is_playing_inside(dst, S_ISDIR(st.st_mode))) ||
+       (move && is_playing_inside(src, 1)) || (move && is_playing_inside(src, 0))){
+        rm_tree(stage, 0); return -1;
+    }
+    if(have_old && rename(dst, backup) != 0){ rm_tree(stage, 0); return -1; }
+    if(rename(fresh, dst) != 0){
+        if(have_old && rename(backup, dst) != 0){
+            fprintf(stderr, "fileops: original preserved at %s\n", backup);
+            return -1;
+        }
+        rm_tree(stage, 0); return -1;
+    }
+    if(rm_tree(stage, 0) != 0) fprintf(stderr, "fileops: replacement backup retained at %s\n", stage);
+    return !move || rm_tree(src, 0) == 0 ? 0 : -1;
+}
+
 /* ---------------------------------------------------------------- the worker (copy / move / delete) */
 enum { OP_DELETE, OP_COPY, OP_MOVE, OP_BOTH };
-static struct { int op, busy, finished, ok; char src[FO_PATH], dst[FO_PATH]; } W;
+static struct { int op, replace, busy, finished, ok; char src[FO_PATH], dst[FO_PATH]; } W;
 static pthread_mutex_t g_mu = PTHREAD_MUTEX_INITIALIZER;
 static lv_timer_t *g_poll;
 static void *worker(void *arg){
     (void)arg; int ok = 0;
     if(sd_write_begin()){
-        if(W.op == OP_DELETE) ok = rm_tree(W.src, 0) == 0;
+        struct stat st;
+        int source_playing = W.op != OP_COPY && lstat(W.src, &st) == 0 && is_playing_inside(W.src, S_ISDIR(st.st_mode));
+        int dest_playing = W.op != OP_DELETE && lstat(W.dst, &st) == 0 && is_playing_inside(W.dst, S_ISDIR(st.st_mode));
+        if(source_playing || dest_playing) ok = 0;
+        else if(W.replace) ok = replace_tree(W.src, W.dst, W.op == OP_MOVE) == 0;
+        else if(W.op == OP_DELETE) ok = rm_tree(W.src, 0) == 0;
         else if(W.op == OP_MOVE){
             if(rename(W.src, W.dst) == 0) ok = 1;
             else if(errno == EXDEV) ok = copy_tree(W.src, W.dst, 0) == 0 && rm_tree(W.src, 0) == 0;
@@ -144,9 +180,9 @@ static void poll_cb(lv_timer_t *t){
     if(g_done) g_done();                                    /* the folder view refreshes */
     ui_rescan_library();                                    /* and the Library follows the card */
 }
-static void run(int op, const char *src, const char *dst){
+static void run(int op, const char *src, const char *dst, int replace){
     if(W.busy){ ui_toast("Still working on the last one"); return; }
-    memset(&W, 0, sizeof W); W.op = op; W.busy = 1;
+    memset(&W, 0, sizeof W); W.op = op; W.replace = replace; W.busy = 1;
     snprintf(W.src, sizeof W.src, "%s", src); if(dst) snprintf(W.dst, sizeof W.dst, "%s", dst);
     pthread_t th; pthread_attr_t at; pthread_attr_init(&at); pthread_attr_setstacksize(&at, 256 * 1024);
     if(pthread_create(&th, &at, worker, NULL) != 0){ W.busy = 0; pthread_attr_destroy(&at); ui_toast("Couldn't start"); return; }
@@ -197,7 +233,7 @@ static void confirm(const char *title, const char *detail, const char *yes, void
 void fileops_confirm(const char *title, const char *detail, const char *yes, void (*on_yes)(void)){ confirm(title, detail, yes, on_yes); }   /* generic themed yes/no, used outside file ops */
 
 /* ---------------------------------------------------------------- delete */
-static void do_delete(void){ char p[FO_PATH]; if(path_join(p, sizeof p, g_dir, g_name)) run(OP_DELETE, p, NULL); }
+static void do_delete(void){ char p[FO_PATH]; if(path_join(p, sizeof p, g_dir, g_name)) run(OP_DELETE, p, NULL, 0); }
 static void ask_delete(void){
     char p[FO_PATH], t[320], d[64];
     if(!path_join(p, sizeof p, g_dir, g_name)) return;
@@ -240,13 +276,12 @@ static void pick_cancel_cb(lv_event_t *e){ (void)e; free(g_sub); g_sub = NULL; c
 static void do_copy_move(void){
     char src[FO_PATH], dst[FO_PATH];
     if(!path_join(src, sizeof src, g_dir, g_name) || !path_join(dst, sizeof dst, g_pick, g_name)){ ui_toast("Path too long"); return; }
-    run(g_pick_op, src, dst);
+    run(g_pick_op, src, dst, 0);
 }
-static void do_replace_then(void){                          /* confirmed: remove what's there, then go */
-    char dst[FO_PATH]; if(!path_join(dst, sizeof dst, g_pick, g_name)) return;
-    int ok = 0; if(sd_write_begin()){ ok = rm_tree(dst, 0) == 0; sd_write_end(); }
-    if(!ok){ ui_toast("Couldn't replace it"); return; }
-    do_copy_move();
+static void do_replace_then(void){
+    char src[FO_PATH], dst[FO_PATH];
+    if(!path_join(src, sizeof src, g_dir, g_name) || !path_join(dst, sizeof dst, g_pick, g_name)) return;
+    run(g_pick_op, src, dst, 1);
 }
 static void pick_here_cb(lv_event_t *e){
     (void)e;
@@ -257,6 +292,7 @@ static void pick_here_cb(lv_event_t *e){
     size_t sl = strlen(src);
     if(g_is_dir && !strncmp(g_pick, src, sl) && (g_pick[sl] == '/' || g_pick[sl] == 0)){ close_ov(); ui_toast("Can't put a folder inside itself"); return; }
     if(lstat(dst, &st) == 0){
+        if(is_playing_inside(dst, S_ISDIR(st.st_mode))){ close_ov(); ui_toast("The destination contains the playing track"); return; }
         char t[320]; snprintf(t, sizeof t, "Replace \"%s\"?", g_name);
         confirm(t, "Something with this name is already there", "Replace", do_replace_then);
         return;

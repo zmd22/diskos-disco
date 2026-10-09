@@ -115,7 +115,7 @@ static void do_save(void){
     snprintf(buf, sizeof buf, "%s", g_ta ? lv_textarea_get_text(g_ta) : "");
     int n = (int)strlen(buf);
     while(!g_keep_spaces && n > 0 && buf[n-1]==' ') buf[--n] = 0;
-    finish(buf[0] ? buf : NULL);
+    finish(buf); /* saved empty string is distinct from NULL (cancel) */
 }
 static void save_btn(lv_event_t *e){ if(lv_event_get_code(e)==LV_EVENT_CLICKED) do_save(); }
 static void cancel_btn(lv_event_t *e){ if(lv_event_get_code(e)==LV_EVENT_CLICKED) finish(NULL); }

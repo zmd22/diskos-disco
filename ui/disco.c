@@ -466,7 +466,13 @@ int disco_nav_right(void){ return PK_X + PK_D; }                       /* the ci
 /* ---- the screen manager's hooks --------------------------------------------------------------------- */
 static int g_np_want;
 int disco_np_wanted(void){ return g_np_want; }
-void disco_open_np_immersive(void){ g_np_want = 1; screen_show(SCR_NOWPLAYING); g_np_want = 0; ui_np_fsart_open(); }
+void disco_open_np_immersive(void){
+    /* Ask the overlay itself before navigating: it can refuse when the UI
+     * has no track, even if IPC still carries the previous track. */
+    ui_np_fsart_open();
+    if(!ui_np_fsart_active()){ ui_toast("Play a track first"); return; }
+    g_np_want = 1; screen_show(SCR_NOWPLAYING); g_np_want = 0;
+}
 
 void disco_init(lv_obj_t *parent){
     g_parent = parent;

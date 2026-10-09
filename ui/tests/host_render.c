@@ -427,6 +427,88 @@ int main(int argc, char **argv){
             for(int i=0;i<60;i++){lv_tick_inc(10);lv_timer_handler();}
         }
         if(getenv("DISCO_IMM")){ void ui_imm_style_apply(void); ui_imm_style_apply(); disco_open_np_immersive(); for(int i=0;i<60;i++){lv_tick_inc(10);lv_timer_handler();} assert(ui_np_fsart_active()); }
+        if(getenv("REVIEW_MA")){
+            assert(!cfg_set_int("ma_on", 0));
+            assert(!cfg_set_str("ma_server", "192.168.1.25"));
+            void ma_edit_server(void); ma_edit_server();
+            lv_obj_t *cancel = find_text(lv_layer_top(), LV_SYMBOL_CLOSE); assert(cancel);
+            lv_obj_send_event(lv_obj_get_parent(cancel), LV_EVENT_CLICKED, NULL);
+            assert(!strcmp(cfg_get_str("ma_server", ""), "192.168.1.25"));
+            for(int i=0;i<5;i++){lv_tick_inc(10);lv_timer_handler();}
+            ma_edit_server();
+            lv_obj_t *modal = lv_obj_get_child(lv_layer_top(), -1);
+            lv_obj_t *ta = lv_obj_get_child(modal, 0); assert(lv_obj_check_type(ta, &lv_textarea_class));
+            lv_textarea_set_text(ta, "");
+            lv_obj_t *save = find_text(modal, LV_SYMBOL_OK); assert(save);
+            lv_obj_send_event(lv_obj_get_parent(save), LV_EVENT_CLICKED, NULL);
+            assert(!strcmp(cfg_get_str("ma_server", "missing"), ""));
+            puts("PASS: MA keyboard cancel preserves server; saved empty field selects Auto");
+        }
+        if(getenv("REVIEW_NO_TRACK")){
+            track_state_t empty={0}; ipc_seed_state(&empty); ui_update(&empty);
+            int before = screen_current();
+            disco_open_np_immersive();
+            assert(screen_current() == before && !ui_np_fsart_active());
+            void shortcut_run(const char *); shortcut_run("immersive");
+            assert(screen_current() == before && !ui_np_fsart_active());
+            puts("PASS: no-track Immersive stays on the current Disco screen");
+        }
+        if(getenv("REVIEW_IMM_EXIT")){
+            int ms = atoi(getenv("REVIEW_IMM_EXIT"));
+            void ui_imm_style_apply(void); ui_imm_style_apply();
+            screen_set_anim(getenv("REVIEW_ANIM_OFF") ? 0 : 1); disco_open_np_immersive();
+            for(int i=0;i<60;i++){lv_tick_inc(10);lv_timer_handler();}
+            lv_obj_t *np=screen_get_root(SCR_NOWPLAYING);
+            lv_obj_t *hint=find_text(np, "No synced lyrics for this track"); assert(hint);
+            lv_obj_t *cover=lv_obj_get_parent(hint);
+            ui_np_fsart_close();
+            assert(screen_current()==SCR_HOME && !ui_np_fsart_active());
+            for(int i=0;i<ms/5;i++){
+                lv_tick_inc(5);lv_timer_handler();
+                if(!lv_obj_has_flag(np,LV_OBJ_FLAG_HIDDEN)){
+                    assert(!lv_obj_has_flag(cover,LV_OBJ_FLAG_HIDDEN));
+                    assert(lv_obj_get_style_opa(cover,0)==LV_OPA_COVER);
+                }
+            }
+            if(ms>=260) assert(lv_obj_has_flag(np,LV_OBJ_FLAG_HIDDEN));
+            printf("PASS: Disco exit %dms keeps Ring covered until NP is hidden\n",ms);
+        }
+        if(getenv("REVIEW_MODES")){
+            static const char *names[]={"Playback","USB storage","Bluetooth DAC","USB DAC","AirPlay"};
+            lv_obj_t *root=screen_get_root(SCR_WORKMODE); lv_obj_update_layout(root);
+            for(int i=0;i<5;i++){
+                lv_obj_t *label=find_text(root,names[i]); assert(label);
+                lv_obj_t *row=lv_obj_get_parent(label); assert(lv_obj_get_height(row)==56);
+                lv_point_t size; lv_text_get_size(&size,names[i],lv_obj_get_style_text_font(label,0),0,0,LV_COORD_MAX,LV_TEXT_FLAG_NONE);
+                assert(size.x<=lv_obj_get_width(label));
+                assert(lv_obj_get_width(row)>130);
+            }
+            lv_obj_t *last=lv_obj_get_parent(find_text(root,"AirPlay"));
+            assert(lv_obj_get_y(last)+lv_obj_get_height(last)==342);
+            puts("PASS: Modes rows are 56px, all labels fit, bottom row ends at y=342");
+        }
+        if(getenv("REVIEW_IMM_REOPEN")){
+            screen_set_anim(1);
+            for(int j=0;j<8;j++){
+                disco_open_np_immersive(); assert(ui_np_fsart_active());
+                for(int i=0;i<5;i++){lv_tick_inc(10);lv_timer_handler();}
+                ui_np_fsart_close();
+                for(int i=0;i<3;i++){lv_tick_inc(10);lv_timer_handler();}
+            }
+            disco_open_np_immersive();
+            for(int i=0;i<50;i++){lv_tick_inc(10);lv_timer_handler();}
+            lv_obj_t *hint=find_text(screen_get_root(SCR_NOWPLAYING),"No synced lyrics for this track"); assert(hint);
+            assert(ui_np_fsart_active() && !lv_obj_has_flag(lv_obj_get_parent(hint),LV_OBJ_FLAG_HIDDEN));
+            puts("PASS: rapid Immersive close/reopen cancels stale hide callbacks");
+        }
+        if(getenv("REVIEW_STANDARD_EXIT")){
+            screen_show(SCR_NOWPLAYING); ui_np_fsart_open(); assert(ui_np_fsart_active());
+            for(int i=0;i<30;i++){lv_tick_inc(10);lv_timer_handler();}
+            ui_np_fsart_close();
+            for(int i=0;i<30;i++){lv_tick_inc(10);lv_timer_handler();}
+            assert(screen_current()==SCR_NOWPLAYING && !ui_np_fsart_active());
+            puts("PASS: Ring/Braun Immersive still returns to its own Now Playing screen");
+        }
         if(getenv("DISCO_NAV")){                 /* DISCO_NAV=1 open; =o<ms> opening after ms; =c<ms> closing after ms */
             const char *nv=getenv("DISCO_NAV"); int ms=atoi(nv+1);
             disco_nav_set_open(1);

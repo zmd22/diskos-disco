@@ -1,131 +1,152 @@
-# diskOS UI dev workflow
+# diskOS UI development workflow
 
-How to build, deploy, and iterate on the diskOS UI (`mq_ui`) on real hardware. For iterating on
-UI changes you do **not** need the installer or a reflash. Build, push over SSH, hot-reload. A reboot
-simply reverts to the flashed build, which is what you want while experimenting.
+Build and preview the UI on your computer, then install it through a **signed SD-card update**.
+A normal UI update does not require another flash. SSH is for diagnostics, screenshots and
+separate user-app installation; it is not the UI deployment route.
 
-## 1. Build the binary
+## 1. Build or download the UI
 
-Use the pinned Docker builder (works on Linux and macOS, Intel or Apple Silicon):
+For a published version, download `mq_ui` and `SHA256SUMS` from the
+[releases](https://github.com/zmd22/diskos-disco/releases). Keep them in one folder and verify
+just the UI entry (the checksums file also lists optional release packages):
+
+```sh
+awk '$2 == "mq_ui" { print }' SHA256SUMS | sha256sum -c -
+```
+
+For a source build, use the MIPS toolchain described in [ui/README.md](../ui/README.md):
+
+```sh
+make -C ui CROSS=/opt/mipsel-n2008-musl-cross/bin/mipsel-linux-musl- mq_ui
+make -C ui check-theme checkpunct
+```
+
+The result is `ui/mq_ui`. The pinned Docker builder is another build route:
 
 ```sh
 cd ui
 docker build -t diskos-ui-builder .
 docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/src" diskos-ui-builder
+cd ..
 ```
 
-This produces a static `mq_ui` for `mipsel-linux-musl`. LVGL is vendored, so nothing else is needed.
-See [`ui/README.md`](../ui/README.md) for the toolchain details and a from-scratch (non-Docker) build.
+## 2. Preview on the host
 
-## 2. Get a shell on the device
-
-Enable **Debug Mode** on the device (Settings -> System). It shows the device IP and a one-time SSH
-password. The password is regenerated on every enable and SSH access does **not** survive a reboot.
+Build the desktop renderer separately from the MIPS build. It shares object paths with the
+production target: use a separate checkout for host rendering, or clean before changing toolchains.
+The renderer does not run the hardware main loop and does not certify device performance.
 
 ```sh
-ssh root@<device-ip>      # password from Debug Mode
+make -C ui clean
+make -C ui CROSS= host-render
 ```
 
-## 3. Push the binary
+Existing render fixtures and tests are under `ui/tests/`. Use them to inspect layout, readability
+and navigation before producing a device build. After rendering in the same checkout, clean
+again before compiling for MIPS.
 
-Stream the freshly built `mq_ui` to a staging path, verify it, then move it into place:
+Focused regression checks for Modes, Immersive transitions, editor cancellation, app shortcuts
+and safe file replacement:
 
 ```sh
-scp mq_ui root@<device-ip>:/usr/data/mq_ui.new
-ssh root@<device-ip> 'chmod 755 /usr/data/mq_ui.new && md5sum /usr/data/mq_ui.new'
-# confirm the md5 matches your local build, then:
-ssh root@<device-ip> 'mv /usr/data/mq_ui.new /usr/data/mq_ui'
+make -C ui/tests run review
+python3 ui/tests/review_ui_test.py
 ```
 
-You do **not** need to touch the boot manifest for a hot-reload. The manifest and the S97 check only
-run at boot; for a live reload they are irrelevant.
+The C tests use AddressSanitizer and UndefinedBehaviorSanitizer. If a restricted host blocks
+LeakSanitizer's process inspection, run the C tests with `ASAN_OPTIONS=detect_leaks=0`; the
+address and undefined-behavior checks remain enabled.
 
-## 4. Hot-reload (the important part)
+## 3. Enable signed updates once
 
-This is where most people get bitten. `fiio_init.sh` runs a watchdog that does `pgrep -x mq_ui`, and
-busybox `pgrep -x` matches the full `argv[0]`, not the process `comm`. If you kill `mq_ui` and do not
-immediately relaunch a **detached** replacement, the watchdog respawns the **stock**
-`/usr/bin/mq_ui`. That is the "it fell back to the stock FiiO UI" you may have seen.
+If this Disc was already flashed with your public update key, **reuse the existing keys** and
+skip this step. A new set cannot sign updates accepted by the old installed root key.
 
-Two rules:
-
-### Never kill `mq_player`
-
-`mq_player` is the stock audio engine. Killing it frees the SD card, and the hardware MCU reboots the
-whole device (about 10 seconds). Only ever touch `mq_ui`. If a restart caused a full reboot rather than
-just the stock UI appearing, an errant `mq_player` kill is the usual cause.
-
-### Relaunch detached, from `/usr/data`, in one step
+For a first install, generate keys on the computer, back them up, then flash the public variant:
 
 ```sh
-killall -9 mq_ui; setsid /usr/data/mq_ui </dev/null >/usr/data/diskos_boot.log 2>&1 &
+sh ui/tools/owner-keys/diskos-keys.sh
+cp diskos-keys/diskos-root.pub.pem payload/
+sha256sum diskos-keys/diskos-root.pub.pem
+./diskos-installer install \
+  --firmware SNOWSKY_DISC_update_20260909_v257.zip \
+  --variant public \
+  --ui payload/mq_ui \
+  --ota-key payload/diskos-root.pub.pem
 ```
 
-The `setsid </dev/null` is what matters. Without it the new process is a child of your SSH session and
-dies when the session closes, so the watchdog wins the race and respawns stock. Then confirm your build
-(not stock) is the one running:
+Before confirming, check that `ota: ON` names the same public-key hash. Private keys stay on
+your computer. First-install details and recovery are in the [README](../README.md#install).
+
+## 4. Sign the build
+
+Run from the repository root. Replace the binary and keys paths with your actual paths:
 
 ```sh
-for p in $(pidof mq_ui); do
-  [ "$(readlink /proc/$p/exe)" = /usr/bin/mq_ui ] && kill -9 $p    # prune only a stock instance
-done
-for p in $(pidof mq_ui); do readlink /proc/$p/exe; done    # should print /usr/data/mq_ui
+sh ui/tools/owner-keys/diskos-sign.sh \
+  ui/mq_ui 1.2.3-test \
+  /absolute/path/to/your/diskos-keys ./diskos-update
 ```
 
-The binary built from this source already normalizes its own `argv[0]` to bare `mq_ui`, so once it is
-relaunched from `/usr/data/mq_ui` the watchdog is satisfied and leaves it alone.
+For a downloaded release, use its `mq_ui` path in place of `ui/mq_ui`. The version argument is a
+package label; it does not change the version compiled into Settings > About.
+The signing script replaces its output folder, so reserve that folder for generated updates.
 
-The snippet above is the quick manual form; it prunes stock right away and relies on the watchdog to
-recover if your build does not start. For scripted use prefer [`../tools/diskos-deploy.sh`](../tools/diskos-deploy.sh),
-which does the same thing but polls until your build is confirmed running before pruning stock, and
-fails safely (leaving the stock UI as a fallback) if your build never comes up.
-
-To go back to stock without a reboot, just `killall mq_ui` and let the watchdog respawn the stock UI.
-
-## 5. Make it permanent (optional)
-
-Hand-deployed binaries revert to the flashed build on reboot (S97 verifies `/usr/data/mq_ui` against
-the read-only manifest). To bake a build in permanently, flash it with the installer:
+Verify the generated signatures and payload before copying:
 
 ```sh
-./diskos-installer install --firmware SNOWSKY_DISC_update_*.zip --ui path/to/mq_ui --variant public
+sh payload/diskos-verify.sh \
+  /absolute/path/to/your/diskos-keys/diskos-root.pub.pem \
+  1 1 ./diskos-update ./diskos-update/mq_ui
 ```
 
-`--ui` overrides the bundled UI binary, so you can flash your own build. This is a mask-ROM write and
-takes about 20 minutes. The installer prompts for confirmation before it writes; add `-y` only when you
-deliberately want to skip that prompt (for example in a script), since it rewrites the root filesystem.
+Expect `OK component=mq_ui ...`. The `1 1` values are the initial key/UI epoch floors; this
+host check does not replace the Disc's verification against its installed and accepted floors.
 
-### macOS note
+## 5. Copy, install and accept
 
-The installer looks for host-native tools under `vendor/<host-tag>/` (for example
-`vendor/macos-arm64/`), not on your `PATH`. An Apple Silicon release package includes prebuilt flash tools; for a source checkout or an Intel Mac, build the native tools once:
+1. Copy the **whole** `diskos-update` folder to the SD card root. The path must be
+   `<SD>/diskos-update/mq_ui`, with the five signature/authorization files alongside it.
+2. Finish the copy and safely eject/unmount the card or USB storage connection. Return the
+   Disc to normal Playback mode if you used USB storage.
+3. Open **Settings > System > Update from SD Card > Update**.
+4. Wait for successful staging, then restart when prompted. Do not replace files in the
+   update folder while installation is reading it.
+5. Check **Settings > System > About** for the expected compiled version and build ID.
+6. Leave the new build running for at least three minutes. Start a track and check playback,
+   navigation and the changed screens. Confirmed playback can automatically mark the trial
+   healthy; otherwise choose **Keep** when asked, or **Go back** and restart.
+7. Restart once more after acceptance and confirm the expected build still runs. Boot performs
+   the promotion of the healthy trial. An unproven trial has a limited boot allowance and rolls back.
+
+The full folder contents, epoch rules and troubleshooting are in [UPDATING.md](UPDATING.md).
+UI-only SD updates do **not** install Album Roulette; see
+[ALBUM_ROULETTE_INSTALL.md](ALBUM_ROULETTE_INSTALL.md) for that separate user app.
+
+## 6. Diagnose an update without replacing the UI
+
+Enable **Settings > System > Debug Mode** and use the displayed address/credentials.
+SSH is optional; it is not required to install an update. These commands only read state:
 
 ```sh
-./vendor/setup-macos.sh
+DISKOS_IP=192.168.1.50  # replace with the address shown in Debug Mode
+ssh "root@$DISKOS_IP" 'cat /usr/data/updates/last_result'
+ssh "root@$DISKOS_IP" 'cat /usr/data/updates/run; cat /usr/data/updates/accepted'
+ssh "root@$DISKOS_IP" 'sha256sum /etc/diskos-ota/root.pub.pem'
+ssh "root@$DISKOS_IP" 'md5sum /usr/data/mq_ui'
 ```
 
-It builds `usbboot`, `mksquashfs`, and `unsquashfs` (with load paths rewritten) into
-`vendor/macos-arm64/` from `src/usbboot` plus Homebrew deps (`libusb squashfs lzo dylibbundler`) and the
-Xcode command line tools. After that the installer finds them and the `[E102]` error goes away. Apple Silicon release users need Python 3 and the setup dependencies, but do not need to build these flash tools.
+Some files will be absent before a first update. `last_result` can be absent or reflect an older
+attempt if the new attempt failed before staging could open its state directory. Compare the
+installed public-key hash with your signing folder's `diskos-root.pub.pem`.
+Do not overwrite `/usr/data/mq_ui`, change the boot manifest, or kill `mq_player`.
 
-## Notes
+For screenshots and touch tools, see [tools/README.md](../tools/README.md). Player logs are at
+`/usr/data/fiio/log/fiio_player.log`; PCM status is under `/proc/asound/card*/pcm*p/sub*/status`.
 
-- **Screenshots:** the device ships `fbshot`, which writes the framebuffer to `/usr/data/fb.raw`
-  (360x360, 32bpp BGRA, panel rotated 180 degrees). Pull it and convert to view.
-- **Player logs:** `/usr/data/fiio/log/fiio_player.log`. **PCM state:**
-  `/proc/asound/card*/pcm*p/sub*/status` (`RUNNING` = playing).
-- **Raw player frames** (for debugging IPC): `/usr/data/psend <FRAME>` sends a raw `/player` command.
+## When reflashing is needed
 
-## Preview a UI build without reflashing
-
-A live preview is temporary. Build `mq_ui` as above, keep the Disc and computer on the same Wi-Fi network, and enable Debug Mode under Settings > System. The screen shows the Disc IP and a fresh SSH password. You may enter it interactively; `sshpass` is optional.
-
-From the folder holding `mq_ui`, stream it to a staging path and compare the two MD5 hashes before replacing the running UI:
-
-```sh
-ssh root@<device-ip> 'cat > /usr/data/mq_ui.new && chmod 755 /usr/data/mq_ui.new && md5sum /usr/data/mq_ui.new' < mq_ui
-md5sum mq_ui
-ssh root@<device-ip> 'mv /usr/data/mq_ui.new /usr/data/mq_ui'
-```
-
-Run the detached reload command in section 4, then check `/proc/<pid>/exe` as shown there. The startup animation runs again. Restarting the Disc restores the flashed build because the boot script checks the UI against its read-only manifest. To keep a build across restarts, flash it with the installer as in section 5.
+Reflash for the initial install, a different root update key, or installer/boot-chain changes
+that a UI-only update cannot carry. Use `--ui` explicitly and check the chosen binary's hash.
+Normal `mq_ui` iterations use the SD workflow above. Windows/WSL remains experimental and
+unsupported; see [WINDOWS.md](WINDOWS.md).

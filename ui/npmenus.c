@@ -404,7 +404,7 @@ static void pick_add_cb(lv_event_t *e){
     pick_added_toast(n, "Added to playlist", "Couldn't add");
 }
 static void pick_newname_done(const char *name){
-    if(!name) return;
+    if(!name || !name[0]) return;
     if(pick_refuse_unsure()) return;   /* before creating a playlist that would stay empty */
     long pid = mdb_playlist_create(name);
     plpick_reload();

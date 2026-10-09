@@ -411,6 +411,7 @@ void wx_test_refresh(void){ weather_app_refresh(); }
 
 static void loc_done(const char *text)
 {
+    if(!text) return;
     cfg_set_str("weather_loc", text ? text : "");
     g_wgen++;                   /* invalidate any in-flight fetch for the old location */
     g_have = 0;                 /* force a fresh fetch + show "Fetching" */

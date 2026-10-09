@@ -80,8 +80,8 @@ diskos-artdec: $(APP)/tools/diskos_artdec.c $(APP)/tools/stb_image.h
 	@md5sum $@
 
 .PHONY: checkpunct
-checkpunct:   # AI-tell / device-tofu scrub of app sources (em/en dash, ellipsis, curly quotes)
-	@if grep -rnP '[\x{2013}\x{2014}\x{2018}\x{2019}\x{201C}\x{201D}\x{2026}]' $(APP_SRCS) $(APP)/*.h; then \
+checkpunct:   # app text only; generated font sources intentionally describe Unicode glyphs
+	@if grep -rnP '[\x{2013}\x{2014}\x{2018}\x{2019}\x{201C}\x{201D}\x{2026}]' $(filter-out $(APP)/font_%,$(APP_SRCS)) $(APP)/*.h; then \
 	  echo "checkpunct: FAIL (AI-tell/tofu punctuation above)"; exit 1; else echo "checkpunct: clean"; fi
 
 $(APP)/sqlite3.o: $(APP)/sqlite3.c

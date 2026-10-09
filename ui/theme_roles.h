@@ -107,7 +107,7 @@ typedef enum {
     THEME_CLR_FIXED_SPLASH_PINK_HI,
     THEME_CLR_FIXED_SPLASH_PINK_LO,
     THEME_CLR_FIXED_SPLASH_3,
-    /* A’s immersive record and lyrics keep their original appearance in every theme. */
+    /* A's immersive record and lyrics keep their original appearance in every theme. */
     THEME_CLR_FIXED_MEDIA_BLACK,
     THEME_CLR_FIXED_MEDIA_WHITE,
     THEME_CLR_FIXED_MEDIA_TRACK,

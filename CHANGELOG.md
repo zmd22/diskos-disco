@@ -5,6 +5,26 @@ All notable changes to diskOS Disco! (and the diskOS releases underneath) are do
 Entries follow the Keep a Changelog format, with Added, Changed, and Fixed categories where applicable.
 diskOS remains beta software; version numbers do not imply broad hardware or feature validation.
 
+## [Disco! 1.2.3] - 2026-10-09
+
+### Changed
+- Enlarge Disco Modes rows to 56px and labels to 22px, fitting the rounded bottom row closer to the rim.
+- Expand signed SD-card update instructions, including key reuse, verification, trial acceptance and rollback.
+- Exclude generated Unicode font descriptions from the punctuation check while retaining application-source and header checks.
+
+### Fixed
+- Keep the Immersive cover opaque throughout Disco's return to Music, preventing the shared Ring layout from flashing through. Cancel stale close callbacks when reopening.
+- Refuse Disco Immersive navigation when there is no track to display.
+- Preserve Music Assistant server and weather location settings when cancelling their editors; distinguish cancellation from saving an empty field.
+- Identify app shortcuts by their installation directory instead of display names, supporting duplicate and long names while retaining unambiguous legacy shortcuts.
+- Use exclusive temporary files for copying and stage complete replacements before removing the old destination. Restore the original on failed installation and retain its backup if rollback fails.
+- Protect currently playing replacement destinations, including folders, and recheck playback in the file-operation worker.
+
+### Validation
+- Production MIPS build, MIPS32r2/FP64/NaN2008 ABI, embedded 1.2.3 version, theme and punctuation gates verified.
+- 44 focused LVGL scenarios, filesystem/shortcut regressions and existing config/playback-state tests passed. Signed-update verification passed and binary tampering was rejected with disposable test keys.
+- Physical-device verification remains pending. No tag or release has been published from this local build.
+
 ## [Disco! 1.2.2] - 2026-10-09
 
 - Ship Album Roulette separately under `apps/album-roulette`, removing its executable and installation routine from mq_ui.

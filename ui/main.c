@@ -3474,7 +3474,7 @@ int main(int argc, char **argv){
          * bl_state each iteration so every wake path is covered. */
         polls_set_paused(bl_state == 2);
         g_screen_off = (bl_state == 2);   /* publish for the slow polls (skip the hcitool spawn while off) */
-        /* A’s day/night appearance switches at an idle boundary, preserving the user’s manual variant. */
+        /* A's day/night appearance switches at an idle boundary, preserving the user's manual variant. */
         if(bl_state==2 && theme_auto_supported() && cfg_get_int("theme_auto",0) && !theme_outdoor()){
             static uint32_t checked; uint32_t tick=lv_tick_get();
             if(!checked || lv_tick_elaps(checked)>=60000){

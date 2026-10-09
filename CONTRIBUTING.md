@@ -42,6 +42,7 @@ See [`agents/AGENTS.md`](agents/AGENTS.md) for a project brief (the hardware fac
 get wrong, the repo layout, and the device-safety rules) - useful whether you work by hand or with
 an AI coding agent. Build the installer with `bash build/build.sh`.
 
-For iterating on the on-device UI, see [`docs/DEV_WORKFLOW.md`](docs/DEV_WORKFLOW.md) (build, deploy over
-SSH, hot-reload, and the watchdog trap to avoid) and the helper scripts in [`tools/`](tools/) for
-deploying a build, capturing screenshots, and driving the touchscreen.
+For iterating on the on-device UI, see [`docs/DEV_WORKFLOW.md`](docs/DEV_WORKFLOW.md) for builds,
+host previews and signed SD-card updates, and [`docs/UPDATING.md`](docs/UPDATING.md) for key setup,
+trial acceptance and rollback. The helper scripts in [`tools/`](tools/) support screenshots and
+touch diagnostics; UI deployment follows the signed SD-card workflow.

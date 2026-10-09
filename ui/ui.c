@@ -820,6 +820,7 @@ static void imm_tick(lv_timer_t *t){
 }
 void ui_np_fsart_open(void){
     if(!fsart || fsart_on || !g_np_have) return;       /* nothing to show if no track */
+    lv_anim_delete(fsart, NULL); /* reopening must cancel the previous close callback */
     imm_fast = 0;imm_frame_period=41;imm_record_set_smoothing(1);imm_overlay_mode(0);
     if(imm_scrim) lv_obj_remove_flag(imm_scrim,LV_OBJ_FLAG_HIDDEN);
     fsart_path[0] = '\0';
@@ -828,7 +829,8 @@ void ui_np_fsart_open(void){
     lv_obj_set_style_opa(fsart, LV_OPA_TRANSP, 0);
     lv_obj_remove_flag(fsart, LV_OBJ_FLAG_HIDDEN);
     lv_obj_move_foreground(fsart);
-    anim_fade(fsart, LV_OPA_TRANSP, LV_OPA_COVER, 240, NULL);
+    if(th_disco()) lv_obj_set_style_opa(fsart, LV_OPA_COVER, 0);
+    else anim_fade(fsart, LV_OPA_TRANSP, LV_OPA_COVER, 240, NULL);
     fsart_on = 1;
     if(g_np_poster || g_np_ring){                       /* Ring and Braun share this immersive path */
         if(g_poster_stale) poster_reload();               /* decode the sharp cover now, not on every track */
@@ -859,13 +861,18 @@ void ui_np_fsart_open(void){
         if(!imm_timer) imm_timer = lv_timer_create(imm_tick, imm_frame_period, NULL);   /* initial render already measured its cost */
     }
 }
-static void fsart_hidden_cb(lv_anim_t *a){ (void)a; if(fsart) lv_obj_add_flag(fsart, LV_OBJ_FLAG_HIDDEN);
-    if(th_disco() && screen_current() == SCR_NOWPLAYING) screen_home(); }   /* Disco: immersive was opened from Music */
+static void fsart_hidden_cb(lv_anim_t *a){ (void)a; if(fsart) lv_obj_add_flag(fsart, LV_OBJ_FLAG_HIDDEN); }
 void ui_np_fsart_close(void){
     if(!fsart || !fsart_on) return;
     fsart_on = 0;
     if(imm_timer){ lv_timer_delete(imm_timer); imm_timer = NULL; }
-    anim_fade(fsart, LV_OPA_COVER, LV_OPA_TRANSP, 200, fsart_hidden_cb);
+    if(th_disco() && screen_current() == SCR_NOWPLAYING){
+        /* The shared NP root uses Ring's layout. Keep it covered throughout
+         * the 240ms return slide; hiding/fading first exposes that layout. */
+        lv_obj_set_style_opa(fsart, LV_OPA_COVER, 0);
+        screen_home();
+        anim_fade(fsart, LV_OPA_COVER, LV_OPA_COVER, 300, fsart_hidden_cb);
+    } else anim_fade(fsart, LV_OPA_COVER, LV_OPA_TRANSP, 200, fsart_hidden_cb);
 }
 int ui_np_fsart_active(void){ return fsart_on; }
 static void fsart_click_cb(lv_event_t *e){

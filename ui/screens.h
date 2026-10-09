@@ -267,7 +267,7 @@ void eqcustom_refresh(void);   /* re-resolve the edited USER slot on SCR_EQ_EDIT
 void settings_open_detail(int idx);
 void settings_open_key(const char *key);   /* open a setting detail by cfg key (drawer tiles) */
 /* reusable on-screen keyboard modal (kbinput.c) */
-typedef void (*kbinput_done_cb_t)(const char *text);  /* text=NULL if cancelled/empty */
+typedef void (*kbinput_done_cb_t)(const char *text);  /* NULL if cancelled; "" if saved empty */
 void kbinput_open(const char *title, const char *initial, kbinput_done_cb_t cb);
 /* same modal, but the text field is masked (dots) - for secrets like Wi-Fi passwords. */
 void kbinput_open_password(const char *title, const char *initial, kbinput_done_cb_t cb);
