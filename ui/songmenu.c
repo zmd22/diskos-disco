@@ -4,7 +4,7 @@
  *   Library song:   Add to queue, Playlist, Favourite, Album, Artist, Info, Tags
  *   folder song:    Add to queue, Playlist, Favourite, Info, Tags, Rename, Copy / Move, Delete
  *   folder:         Add to queue, Playlist, Tags, Rename, Copy / Move, Delete
- *   album / artist / genre (Library, fork): Play, Shuffle, Add to queue, Playlist
+ *   album (Library, fork): Play, Shuffle, Add to queue, Playlist, Tags; artist / genre: Play, Shuffle, Add to queue, Playlist
  * The name sits at the top; the hub in the middle cancels. Favourite is filled red when it already is one. */
 #include "screens.h"
 #include "theme.h"
@@ -60,6 +60,7 @@ static void pick(int i){
             songinfo_show_song(&st);
         } break;
         case A_TAGS:
+            if(g_gcol[0]){ if(!strcmp(g_gcol, "ALBUM")) tagfix_album(g_gval); break; }   /* an album: every track of it */
             if(g_is_dir) tagfix_folder(g_path);
             else tagfix_song(g_path, g_have_song ? g_song.title : g_name, g_have_song ? g_song.artist : "", g_have_song ? g_song.album : "", g_have_song ? g_song.dur_ms : 0);
             break;
@@ -101,6 +102,7 @@ static void open_menu(const char *title, const int *acts, int n){
     lv_obj_set_height(t, lv_font_get_line_height(ui_font_cjk(16)));     /* fork: one line + "...", never wraps into the orbit */
     lv_obj_set_style_text_color(t, TC(TEXT_PRIMARY), 0);
     lv_obj_align(t, LV_ALIGN_TOP_MID, 0, 18);
+    disco_menu_glass(&g_orb, g_ov);                                   /* Disco: glass over the cover backdrop */
 }
 static void load_song(const char *path){
     snprintf(g_path, sizeof g_path, "%s", path);
@@ -133,6 +135,6 @@ void songmenu_open_group(const char *col, const char *val, const char *title, vo
     if(!col || !val || !val[0]) return;
     snprintf(g_gcol, sizeof g_gcol, "%s", col); snprintf(g_gval, sizeof g_gval, "%s", val);
     g_gplay = play; g_is_dir = 0; g_done = NULL; g_have_song = 0; g_fav = 0; g_path[0] = 0;
-    static const int A[4] = { A_PLAY, A_SHUFFLE, A_QUEUE, A_PLAYLIST };
-    open_menu(title && title[0] ? title : val, A, 4);
+    static const int A[5] = { A_PLAY, A_SHUFFLE, A_QUEUE, A_PLAYLIST, A_TAGS };   /* Tags: albums only */
+    open_menu(title && title[0] ? title : val, A, strcmp(col, "ALBUM") ? 4 : 5);
 }

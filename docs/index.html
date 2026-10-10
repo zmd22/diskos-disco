@@ -96,6 +96,8 @@ h2{font-size:clamp(30px,4.4vw,46px);line-height:1.08;letter-spacing:-.03em;margi
 .shots{display:flex;justify-content:center;align-items:center}
 .shots .dev{width:270px;height:270px}
 .shots .dev + .dev{margin-left:-50px;width:230px;height:230px;opacity:.9}
+#updates .shots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;justify-items:center}
+#updates .shots .dev,#updates .shots .dev + .dev{width:min(230px,40vw);height:auto;aspect-ratio:1;margin:0;opacity:1}
 @media (max-width:860px){.feature{grid-template-columns:1fr;gap:28px}.feature.flip .shots{order:0}}
 @media (max-width:520px){.shots .dev{width:220px;height:220px}.shots .dev + .dev{width:180px;height:180px;margin-left:-60px}}
 
@@ -164,7 +166,7 @@ footer a:hover{color:var(--text)}
   <div class="wrap">
     <a class="logo" href="#top"><span class="disc" aria-hidden="true"></span>diskOS Disco!</a>
     <nav aria-label="Sections">
-      <a href="#updates">1.2.3</a><a href="#music">Music</a><a href="#roulette">Roulette</a><a href="#tour">Screens</a><a href="#options">Options</a><a href="#themes">Themes</a><a href="#install">Install</a>
+      <a href="#updates">What's new</a><a href="#music">Music</a><a href="#roulette">Roulette</a><a href="#tour">Screens</a><a href="#options">Options</a><a href="#themes">Themes</a><a href="#install">Install</a>
     </nav>
     <a class="gh" href="https://github.com/zmd22/diskos-disco">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.2.26 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
@@ -177,15 +179,15 @@ footer a:hover{color:var(--text)}
   <!-- hero -->
   <div class="hero">
     <div class="wrap">
-      <span class="eyebrow"><b>1.2.3</b> · for the FiiO Snowsky Disc · firmware V2.57</span>
+      <span class="eyebrow"><b>1.3.0</b> · for the FiiO Snowsky Disc · firmware V2.57</span>
       <h1>diskOS Disco<span class="bang">!</span></h1>
       <p class="lede"><strong>The album cover is the interface.</strong> A touch UI made for the Disc's round
         360&nbsp;px screen, built on b0hemia's diskOS: the playing album fills the screen, a faint CD rainbow runs
         around the rim, and everything else sits on glass around it.</p>
-      <p class="small"><strong>New in 1.2.3:</strong> larger Modes controls, a clean return from Immersive,
-        reliable app shortcuts and safer file replacement. <a href="#updates">See what's changed</a>.</p>
+      <p class="small"><strong>New in 1.3.0:</strong> a left-handed mode, three scroll styles, tidier Settings and
+        a welcome screen when nothing is playing. <a href="#updates">See what's new</a>.</p>
       <div class="cta">
-        <a class="btn primary" href="https://github.com/zmd22/diskos-disco/releases/latest">Download releases</a>
+        <a class="btn primary" href="https://github.com/zmd22/diskos-disco/releases/latest">Download the latest release</a>
         <a class="btn ghost" href="#install">Install</a>
         <a class="btn ghost" href="https://github.com/zmd22/diskos-disco/blob/main/docs/DISCO_TOUR.md">Take the tour</a>
       </div>
@@ -201,27 +203,29 @@ footer a:hover{color:var(--text)}
     </div>
   </div>
 
-  <!-- 1.2.3 update -->
+  <!-- what's new -->
   <section id="updates">
     <div class="wrap">
       <div class="feature reveal" style="padding-top:0">
         <div>
-          <span class="kicker">Version 1.2.3</span>
-          <h2>Bigger controls.<br>Smoother transitions.</h2>
-          <p>The Modes screen uses taller buttons and larger labels, filling more of the round screen.
-            Closing Immersive returns to Disco Music without briefly exposing the shared Now Playing layout.</p>
+          <span class="kicker">New in 1.3.0</span>
+          <h2>Left or right.<br>Your hand, your Disc.</h2>
+          <p>Choose <b>Side › Left</b> and the navigation circle moves to the left rim, with everything arranged
+            around it: Quick Settings, Weather, Working mode, the Equalizer and the edges of every list. The back
+            swipe moves to the right edge. Words still read left to right, and progress still runs clockwise.</p>
           <ul>
-            <li><b>Shortcuts:</b> apps with long or identical display names open the right installed app.</li>
-            <li><b>Editors:</b> cancelling a server or weather-location edit keeps the existing setting.</li>
-            <li><b>Files:</b> replacement copies finish staging before changing the original; playing destinations are protected.</li>
+            <li><b>Three scroll styles:</b> Classic, Straight, or Disco, where rows swing round the circle like light on a CD.</li>
+            <li><b>Nothing playing?</b> Music shows a CD and <i>Go to Library</i> instead of an empty screen.</li>
+            <li><b>Tidier Settings:</b> Display and System in short pages, so there's little scrolling.</li>
+            <li><b>Small things:</b> hold the clock to hide it, tag a whole album from its hold menu, see the bitrate in Song Info, glass hold menus, and battery stats that start at 95%.</li>
           </ul>
-          <p class="small" style="margin-top:18px">The 1.2.3 device binary is built. Host checks passed;
-            testing on the Disc is still pending. Album Roulette remains a separate app at 1.3.1.</p>
-          <a class="btn ghost" href="https://github.com/zmd22/diskos-disco/blob/main/docs/releases/v1.2.3.md">1.2.3 build notes</a>
+          <a class="btn ghost" href="https://github.com/zmd22/diskos-disco/blob/main/docs/releases/v1.3.0.md">Release notes</a>
         </div>
         <div class="shots">
-          <div class="dev"><img src="disco/modes.png" alt="Larger Modes buttons in 1.2.3, dark appearance" width="360" height="360" loading="lazy"></div>
-          <div class="dev"><img src="disco/modes-light.png" alt="Larger Modes buttons in 1.2.3, light appearance" width="360" height="360" loading="lazy"></div>
+          <div class="dev"><img src="disco/left-nav.png" alt="The navigation circle open on the left in left-handed mode" width="360" height="360" loading="lazy"></div>
+          <div class="dev"><img src="disco/scroll-disco.png" alt="A song list in the Disco scroll style" width="360" height="360" loading="lazy"></div>
+          <div class="dev"><img src="disco/idle.png" alt="Music with nothing playing: a CD and Go to Library" width="360" height="360" loading="lazy"></div>
+          <div class="dev"><img src="disco/settings-display.png" alt="The shorter Display settings page" width="360" height="360" loading="lazy"></div>
         </div>
       </div>
     </div>
@@ -247,7 +251,7 @@ footer a:hover{color:var(--text)}
           <div class="cta">
             <a class="btn primary" href="https://github.com/zmd22/diskos-disco/blob/main/docs/DISCO_TOUR.md#album-roulette">How to get spinning</a>
           </div>
-          <p class="small">Album Roulette ships as a separate user app in the complete release package. <a href="https://github.com/zmd22/diskos-disco/blob/main/docs/ALBUM_ROULETTE_INSTALL.md">Install/update the app</a>. Add it under Settings → Display → Disco Menu.
+          <p class="small">Album Roulette ships as a separate user app in the complete release package. <a href="https://github.com/zmd22/diskos-disco/blob/main/docs/ALBUM_ROULETTE_INSTALL.md">Install/update the app</a>. Add it under Settings › Display › Disco Options › Disco Menu.
             The menu, Apps and shortcuts all open the same vinyl landing screen. Tap <b>I feel lucky!</b> to begin.</p>
         </div>
         <div>
@@ -336,13 +340,13 @@ footer a:hover{color:var(--text)}
       <div class="gallery" id="gallery">
         <div class="tile"><div class="dev"><img data-dark="disco/quick.png" data-light="disco/quick-light.png" src="disco/quick.png" alt="Quick Settings" width="360" height="360" loading="lazy"></div><p><b>Quick Settings</b>Pull down from the top</p></div>
         <div class="tile"><div class="dev"><img data-dark="disco/weather.png" data-light="disco/weather-light.png" src="disco/weather.png" alt="Weather" width="360" height="360" loading="lazy"></div><p><b>Weather</b>Now and the next 12 hours</p></div>
-        <div class="tile"><div class="dev"><img data-dark="disco/settings.png" data-light="disco/settings-light.png" src="disco/settings.png" alt="Settings" width="360" height="360" loading="lazy"></div><p><b>Settings</b>Curved lists, four in view</p></div>
+        <div class="tile"><div class="dev"><img data-dark="disco/settings.png" data-light="disco/settings-light.png" src="disco/settings.png" alt="Settings" width="360" height="360" loading="lazy"></div><p><b>Settings</b>Short pages, little scrolling</p></div>
         <div class="tile"><div class="dev"><img data-dark="disco/eq.png" data-light="disco/eq-light.png" src="disco/eq.png" alt="Equalizer editor" width="360" height="360" loading="lazy"></div><p><b>Equalizer</b>Rainbow or accent faders</p></div>
         <div class="tile"><div class="dev"><img data-dark="disco/search-landing.png" data-light="disco/search-landing-light.png" src="disco/search-landing.png" alt="Search" width="360" height="360" loading="lazy"></div><p><b>Search</b>Recent searches one tap away</p></div>
         <div class="tile"><div class="dev"><img data-dark="disco/search-results.png" data-light="disco/search-results-light.png" src="disco/search-results.png" alt="Search results" width="360" height="360" loading="lazy"></div><p><b>Results</b>Artists first, then songs</p></div>
         <div class="tile"><div class="dev"><img data-dark="disco/library.png" data-light="disco/library-light.png" src="disco/library.png" alt="Library" width="360" height="360" loading="lazy"></div><p><b>Library</b>Songs, albums, books, folders</p></div>
         <div class="tile"><div class="dev"><img src="disco/queue.png" alt="Queue" width="360" height="360" loading="lazy"></div><p><b>Queue</b>Drag to reorder</p></div>
-        <div class="tile"><div class="dev"><img data-dark="disco/modes.png" data-light="disco/modes-light.png" src="disco/modes.png" alt="Working mode" width="360" height="360" loading="lazy"></div><p><b>Working mode</b>Larger buttons and labels in 1.2.3</p></div>
+        <div class="tile"><div class="dev"><img data-dark="disco/modes.png" data-light="disco/modes-light.png" src="disco/modes.png" alt="Working mode" width="360" height="360" loading="lazy"></div><p><b>Working mode</b>Playback, USB, Bluetooth, AirPlay</p></div>
         <div class="tile"><div class="dev"><img data-dark="disco/battery.png" data-light="disco/battery-light.png" src="disco/battery.png" alt="Battery" width="360" height="360" loading="lazy"></div><p><b>Battery</b>Time left at your pace</p></div>
         <div class="tile"><div class="dev"><img src="disco/standby.png" alt="Standby" width="360" height="360" loading="lazy"></div><p><b>Standby</b>Always dark, redraws once a minute</p></div>
         <div class="tile"><div class="dev"><img data-dark="disco/shortcuts.png" data-light="disco/shortcuts-light.png" src="disco/shortcuts.png" alt="Shortcuts" width="360" height="360" loading="lazy"></div><p><b>Shortcuts</b>Five of your choice</p></div>
@@ -357,11 +361,12 @@ footer a:hover{color:var(--text)}
         <div>
           <span class="kicker">Disco Options</span>
           <h3>Make it yours.</h3>
-          <p>Settings › Display › Disco Options gathers everything that's only about the Disco look.</p>
+          <p>Settings › Display › Disco Options gathers everything that's only about the Disco look, in four
+            short pages: Music Screen, Colours, Layout and the Disco Menu.</p>
         </div>
         <div class="shots">
           <div class="dev"><img src="disco/disco-options.png" alt="Disco Options" width="360" height="360" loading="lazy"></div>
-          <div class="dev"><img src="disco/disco-options-2.png" alt="Disco Options, further down" width="360" height="360" loading="lazy"></div>
+          <div class="dev"><img src="disco/disco-options-2.png" alt="Disco Options, Music Screen page" width="360" height="360" loading="lazy"></div>
         </div>
       </div>
       <div class="opts reveal">
@@ -374,6 +379,8 @@ footer a:hover{color:var(--text)}
         <div class="opt"><b>Progress Shape</b><span>A line under the title, or an arc around the rim, from just below the menu, clockwise, to just above it.</span></div>
         <div class="opt"><b>Title Position</b><span>Centred, or from the left.</span></div>
         <div class="opt"><b>Title Hold</b><span>Hold the title for the full-screen cover, to favourite the song, or nothing.</span></div>
+        <div class="opt"><b>Side</b><span>Right or Left: the navigation circle and everything around it, for either hand.</span></div>
+        <div class="opt"><b>Scroll</b><span>Classic, Straight, or Disco: rows that swing round the circle like a CD.</span></div>
       </div>
 
       <div class="cards">
@@ -390,7 +397,7 @@ footer a:hover{color:var(--text)}
       <span class="kicker">Also included</span>
       <h2>Ring and Braun.</h2>
       <p class="sub">Two more complete themes with the same features and settings, one tap away under
-        Display › Theme. Upstream's Stone is kept too.</p>
+        Display › Theme › Theme. Upstream's Stone is kept too.</p>
       <div class="themes">
         <div class="tile reveal"><div class="dev"><img src="disco/ring-music.png" alt="Ring" width="360" height="360" loading="lazy"></div><p><b>Ring</b>The progress ring is the interface</p></div>
         <div class="tile reveal"><div class="dev"><img src="disco/ring-light-music.png" alt="Ring Light" width="360" height="360" loading="lazy"></div><p><b>Ring Light</b>Off-white with lime</p></div>
@@ -411,7 +418,7 @@ footer a:hover{color:var(--text)}
       <div class="steps">
         <div class="step">
           <h4>Download</h4>
-          <p>Get the <a href="https://github.com/zmd22/diskos-disco/releases">release files</a> or clone the repository
+          <p>Get the <a href="https://github.com/zmd22/diskos-disco/releases/latest">latest release</a> or clone the repository
             for the installer and signing tools. The repository includes the ready-built interface as
             <code>payload/mq_ui</code>. Already installed with an update key? Skip flashing and use the SD steps below.</p>
 <pre>git clone https://github.com/zmd22/diskos-disco.git
@@ -446,7 +453,7 @@ cp diskos-keys/diskos-root.pub.pem payload/</pre>
           <p style="margin-top:14px">Expect <code>mq_ui: OK</code>. From the repository root, sign with the keys
             matching the public root key already installed on your Disc:</p>
 <pre>sh ui/tools/owner-keys/diskos-sign.sh \
-  /path/to/mq_ui 1.2.3 \
+  /path/to/mq_ui 1.3.0 \
   /absolute/path/to/your/diskos-keys ./diskos-update</pre>
           <p style="margin-top:14px">The output contains six files: <code>mq_ui</code>, <code>update.manifest</code>,
             <code>update.manifest.sig</code>, <code>leafpub.pem</code>, <code>keyauthz</code> and <code>keyauthz.sig</code>.
@@ -458,13 +465,13 @@ cp diskos-keys/diskos-root.pub.pem payload/</pre>
           <p>Copy the whole <code>diskos-update</code> folder to the SD card's top level, keeping all six files
             from the same signing run together. The path must be <code>&lt;SD&gt;/diskos-update/mq_ui</code>.</p>
           <p>Safely eject the card or USB storage connection. Return to Playback if using the Disc's USB storage
-            mode, then select <b>Settings › System › Update from SD Card › Update</b>. Wait for successful staging
+            mode, then select <b>Settings › System › Maintenance › Update from SD Card › Update</b>. Wait for successful staging
             and restart when prompted. UI updates do not install the separate Album Roulette app.</p>
         </div>
         <div class="step">
           <h4>Test and keep the trial</h4>
-          <p>Check <b>Settings › System › About</b> for version 1.2.3. Keep the trial running for at least three
-            minutes and test playback, Modes and Immersive. A confirmed playback start with running audio can
+          <p>Check <b>Settings › System › About</b> for the new version (Disco! 1.3.0). Keep the trial running for
+            at least three minutes and test playback. A confirmed playback start with running audio can
             accept it automatically after the minimum time; otherwise choose <b>Keep</b> when asked.
             Choose <b>Go back</b> and restart to revert.</p>
           <p>Restart once after acceptance and confirm the version remains. An unproven trial rolls back after

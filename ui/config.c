@@ -26,7 +26,7 @@
  * = 110, plus the legacy flat eq_* keys (migrated once), plus ~30 general settings. 64 was far
  * too small - once g_cfg filled, put() silently dropped new keys AND rewrite() flushed only the
  * first 64 entries back to diskos.conf, permanently deleting the rest. */
-#define CFG_MAX      256
+#define CFG_MAX      512   /* 256 filled up on a well-used Disc (EQ slots, Disco options, MA, recents): new keys were refused */
 #define KLEN         28
 #define VLEN         48
 

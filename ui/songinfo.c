@@ -55,7 +55,7 @@ static void si_fmt_rate(char *o, size_t n, int hz){
 static void si_fmt_bits(char *o, size_t n, int bits){
     if(bits > 0) snprintf(o, n, "%d-bit", bits); else snprintf(o, n, "-");
 }
-static void si_fmt_kbps(char *o, size_t n, int kbps){
+__attribute__((unused)) static void si_fmt_kbps(char *o, size_t n, int kbps){
     if(kbps > 0) snprintf(o, n, "%d kbps", kbps); else snprintf(o, n, "-");
 }
 static void si_fmt_channels(char *o, size_t n, int ch){
@@ -386,25 +386,27 @@ void songinfo_set(const track_state_t *st)
     char rate[24];
     si_fmt_rate(rate, sizeof rate, (st->is_dsd && cur.dsd_hz > 0) ? cur.dsd_hz : st->sample_rate);
     lv_label_set_text(g_val[F_RATE], rate);
+    int avg_kbps = 0;
     {   /* bitrate: the scanner's value when it has one, else the file's average (size / length) */
         int br = 0, sr = 0; char b[32] = "-";
         mdb_song_rates(st->path, &br, &sr);
         if(br <= 0 && st->duration_ms > 0){ struct stat fs; if(stat(st->path, &fs) == 0) br = (int)((long long)fs.st_size * 8000 / st->duration_ms); }
-        if(br > 0) snprintf(b, sizeof b, "%d kbps", (br + 500) / 1000);
+        if(br > 0){ snprintf(b, sizeof b, "%d kbps", (br + 500) / 1000); avg_kbps = (br + 500) / 1000; }
         if(st->sample_rate <= 0 && sr > 0){ char r2[24]; snprintf(r2, sizeof r2, "%d.%d kHz", sr / 1000, (sr % 1000) / 100); lv_label_set_text(g_val[F_RATE], r2); }
         lv_label_set_text(g_val[F_BITRATE], b);
     }
 
-    char vb[24];
+    char vb[48];
     if(cur.genre[0]){ lv_label_set_text(g_val[F_GENRE], cur.genre); lv_obj_remove_flag(g_cell[F_GENRE], LV_OBJ_FLAG_HIDDEN); }
     else lv_obj_add_flag(g_cell[F_GENRE], LV_OBJ_FLAG_HIDDEN);
     si_fmt_bits(vb, sizeof vb, cur.bits);
     if(cur.bits > 0){ lv_label_set_text(g_val[F_DEPTH], vb); lv_obj_remove_flag(g_cell[F_DEPTH], LV_OBJ_FLAG_HIDDEN); } else lv_obj_add_flag(g_cell[F_DEPTH], LV_OBJ_FLAG_HIDDEN);
-    si_fmt_kbps(vb, sizeof vb, cur.kbps);
-    if(cur.kbps > 0){ lv_label_set_text(g_val[F_BITRATE], vb); lv_obj_remove_flag(g_cell[F_BITRATE], LV_OBJ_FLAG_HIDDEN); } else lv_obj_add_flag(g_cell[F_BITRATE], LV_OBJ_FLAG_HIDDEN);
+    int kbps = cur.kbps > 0 ? cur.kbps : avg_kbps;                   /* the stream's own rate, else the file's average */
+    lv_obj_add_flag(g_cell[F_BITRATE], LV_OBJ_FLAG_HIDDEN);           /* shown beside the file size instead */
     si_fmt_channels(vb, sizeof vb, cur.channels);
     if(cur.channels > 0){ lv_label_set_text(g_val[F_CHANNELS], vb); lv_obj_remove_flag(g_cell[F_CHANNELS], LV_OBJ_FLAG_HIDDEN); } else lv_obj_add_flag(g_cell[F_CHANNELS], LV_OBJ_FLAG_HIDDEN);
     si_fmt_size(vb, sizeof vb, cur.size);
+    if(cur.size > 0 && kbps > 0){ size_t l = strlen(vb); snprintf(vb + l, sizeof vb - l, " \xC2\xB7 %d kbps", kbps); }   /* "32.1 MB \xC2\xB7 1012 kbps" */
     if(cur.size > 0){ lv_label_set_text(g_val[F_SIZE], vb); lv_obj_remove_flag(g_cell[F_SIZE], LV_OBJ_FLAG_HIDDEN); } else lv_obj_add_flag(g_cell[F_SIZE], LV_OBJ_FLAG_HIDDEN);
     char folder[128]; si_fmt_folder(folder, sizeof folder, st->path);
     if(folder[0]){ lv_label_set_text(g_val[F_FOLDER], folder); lv_obj_remove_flag(g_cell[F_FOLDER], LV_OBJ_FLAG_HIDDEN); } else lv_obj_add_flag(g_cell[F_FOLDER], LV_OBJ_FLAG_HIDDEN);

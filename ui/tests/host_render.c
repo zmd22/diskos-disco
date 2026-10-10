@@ -242,6 +242,7 @@ int main(int argc, char **argv){
     }
     if(!strncmp(argv[3],"lib-",4)){                 /* Library: open a category (lib-Albums, lib-Songs...), scroll a bit */
         fixture=1;sd_io_init(media_local);assert(sd_io_resume());
+        if(getenv("DISCO_SCROLL"))cfg_set_int_deferred("disco_scroll",atoi(getenv("DISCO_SCROLL")));if(getenv("DISCO_SIDE"))cfg_set_int_deferred("disco_side",atoi(getenv("DISCO_SIDE")));
         screen_set_anim(0);screens_init();screen_show(SCR_LIBRARY);
         for(int i=0;i<20;i++){lv_tick_inc(10);lv_timer_handler();}
         lv_obj_t *root=screen_get_root(SCR_LIBRARY);
@@ -252,6 +253,10 @@ int main(int argc, char **argv){
         const char *sc=getenv("LIB_SCROLL"); if(sc){ lv_obj_t *lst=NULL;
             for(uint32_t k=0;k<lv_obj_get_child_count(root);k++){ lv_obj_t *c=lv_obj_get_child(root,k); if(lv_obj_get_child_count(c)>5 && lv_obj_get_scroll_bottom(c)>0) lst=c; }
             if(lst){ lv_obj_scroll_by(lst,0,-atoi(sc),LV_ANIM_OFF); lv_obj_send_event(lst,LV_EVENT_SCROLL,NULL); } }
+        if(getenv("LIB_GHOLD")){                     /* fork: hold an album / artist / genre row -> its action menu */
+            for(int i=0;i<60;i++){lv_tick_inc(10);lv_timer_handler();}
+            lv_obj_t *t=ui_action_find("library.group_play.long"); assert(t); lv_obj_send_event(t,LV_EVENT_LONG_PRESSED,NULL);
+        }
         if(getenv("LIB_HOLD")){                      /* fork: hold a track row -> its action menu, never playback */
             for(int i=0;i<60;i++){lv_tick_inc(10);lv_timer_handler();}
             lv_obj_t *t=ui_action_find("library.song.long"); if(!t) t=ui_action_find("library.scope_song"); assert(t);
@@ -342,6 +347,7 @@ int main(int argc, char **argv){
         if(getenv("DISCO_QS"))cfg_set_int_deferred("disco_qs",atoi(getenv("DISCO_QS")));
         if(getenv("DISCO_PROG"))cfg_set_int_deferred("disco_progress",atoi(getenv("DISCO_PROG")));
         if(getenv("DISCO_IMMSTYLE"))cfg_set_int_deferred("disco_imm",atoi(getenv("DISCO_IMMSTYLE")));
+        if(getenv("DISCO_SCROLL"))cfg_set_int_deferred("disco_scroll",atoi(getenv("DISCO_SCROLL")));if(getenv("DISCO_SIDE"))cfg_set_int_deferred("disco_side",atoi(getenv("DISCO_SIDE")));
         if(getenv("DISCO_SHAPE"))cfg_set_int_deferred("disco_prog_shape",atoi(getenv("DISCO_SHAPE")));
         if(getenv("DISCO_TAL"))cfg_set_int_deferred("disco_title_al",atoi(getenv("DISCO_TAL")));
         if(getenv("DISCO_SHEEN"))cfg_set_int_deferred("disco_sheen",atoi(getenv("DISCO_SHEEN")));
@@ -390,7 +396,7 @@ int main(int argc, char **argv){
         quicksettings_set_now_playing(st.title,st.artist,1);
         const char *page=argv[3]+(art_race?17:(long_names?13:8));int scr=SCR_HOME;
         if(!strcmp(page,"quick"))scr=SCR_QUICK;else if(!strcmp(page,"np") || !strncmp(page,"immersive",9))scr=SCR_NOWPLAYING;else if(!strcmp(page,"eq"))scr=SCR_EQ;
-        else if(!strcmp(page,"bands"))scr=SCR_EQ_EDITOR;else if(!strcmp(page,"display")){setlist_open("Display");scr=SCR_SETLIST;}else if(!strcmp(page,"network")){setlist_open("Network");scr=SCR_SETLIST;}else if(!strcmp(page,"system")){setlist_open("System");scr=SCR_SETLIST;}
+        else if(!strcmp(page,"bands"))scr=SCR_EQ_EDITOR;else if(!strcmp(page,"display")){setlist_open("Display");scr=SCR_SETLIST;}else if(!strcmp(page,"network")){setlist_open("Network");scr=SCR_SETLIST;}else if(!strcmp(page,"system")){setlist_open("System");scr=SCR_SETLIST;}else if(!strcmp(page,"info")){songinfo_unpin();songinfo_set(&st);scr=SCR_SONGINFO;}else if(!strcmp(page,"group")){void settings_open_group(const char*);setlist_open("Display");scr=SCR_SETLIST;screen_show(scr);settings_open_group(getenv("SETGROUP"));}
         else if(!strcmp(page,"library") || !strcmp(page,"albums"))scr=SCR_LIBRARY;else if(!strcmp(page,"settings"))scr=SCR_SETTINGS;
         else if(!strcmp(page,"upnext"))scr=SCR_UPNEXT;else if(!strcmp(page,"modes"))scr=SCR_WORKMODE;
         else if(!strcmp(page,"shortcuts")){apps_reload();scr=SCR_APPS;}
@@ -644,6 +650,10 @@ int main(int argc, char **argv){
         puts("PASS: real bounded decoder feeds 364px immersive image and async timed lyrics; close/reopen works");
     }
 render:
+    if(getenv("TOPHOLD")){ void dhome_test_top_hold(void); for(int k=0;k<atoi(getenv("TOPHOLD"));k++) dhome_test_top_hold(); for(int i=0;i<10;i++){lv_tick_inc(10);lv_timer_handler();} }
+    if(getenv("SETKEY")){ void settings_open_key(const char*); settings_open_key(getenv("SETKEY")); for(int i=0;i<20;i++){lv_tick_inc(10);lv_timer_handler();} }
+    if(getenv("IDLE")){ void dhome_set_now_playing(const char*,const char*,lv_color_t,bool); void disco_art_changed(void);   /* Disco Music with nothing playing */
+        dhome_set_now_playing(NULL,NULL,lv_color_hex(0x8080FF),false); for(int i=0;i<30;i++){lv_tick_inc(10);lv_timer_handler();} }
     lv_refr_now(d);
     FILE *f=fopen(argv[5],"wb"); if(!f) return 1;
     fprintf(f,"P6\n360 360\n255\n");

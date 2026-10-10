@@ -138,20 +138,24 @@ static void curve_rows(void){
         return;
     }
     uint32_t n = lv_obj_get_child_count(g_list);
+    int mode = curvelist_disco_scroll();
     for(uint32_t i = 0; i < n; i++){
         lv_obj_t *r = lv_obj_get_child(g_list, i);
         if(!lv_obj_has_flag(r, LV_OBJ_FLAG_USER_1)) continue;      /* only plain list rows curve */
         lv_area_t a; lv_obj_get_coords(r, &a);
         if(a.y2 < -40 || a.y1 > 400) continue;                     /* off-screen: nothing to do */
+        int w, shift;
+        if(!curvelist_disco_geom(mode, a.y1, a.y2, ROW_W_FULL, &w, &shift)){
         int dy = abs((a.y1 + a.y2) / 2 - 180) + ROW_H / 2;          /* the row's far edge sets the limit */
         int half = dy < 176 ? (int)sqrtf((float)(180 * 180 - dy * dy)) - 8 : 0;
-        int w = 2 * half;
+        w = 2 * half;
         if(w > ROW_W_FULL) w = ROW_W_FULL;
         if(w < 186) w = 186;
-        int shift = 0, L = disco_clear_left(a.y1, a.y2);
+        shift = 0; int L = disco_clear_left(a.y1, a.y2);
         { int R = disco_clear_right(a.y1, a.y2);                              /* Disco: clear of the closed sliver */
           if(R && 180 + w / 2 > R){ int lft = 180 - w / 2; w = R - lft; shift = (lft + R) / 2 - 180; } }
         if(L && 180 - w / 2 < L){ int right = 180 + w / 2; int nw = right - L; if(nw < 120) nw = 120; shift = L + nw / 2 - 180; w = nw; }   /* Disco: start right of the picker (never narrower than 120) */
+        }
         intptr_t key = ((intptr_t)w << 16 | (unsigned)(shift + 32768)) + 1; /* exact width and translation */
         if((intptr_t)lv_obj_get_user_data(r) == key) continue;
         lv_obj_set_user_data(r, (void *)key);
@@ -177,7 +181,8 @@ static void pdots_update(void){
         int on = (k == idx), sz = on ? 8 : 5;
         lv_obj_set_size(g_pdot[k], sz, sz);
         float a = (212.0f - 64.0f * k / (N_PDOTS - 1)) * 3.14159265f / 180.0f;     /* top to bottom */
-        lv_obj_set_pos(g_pdot[k], (int)(180 + 168 * cosf(a)) - sz / 2, (int)(180 + 168 * sinf(a)) - sz / 2);
+        int x = (int)(180 + 168 * cosf(a)) - sz / 2;                  /* Disco Left: the dots move to the right rim */
+        lv_obj_set_pos(g_pdot[k], disco_mx(x, sz), (int)(180 + 168 * sinf(a)) - sz / 2);
         lv_obj_set_style_bg_color(g_pdot[k], on ? TC(ACCENT_PRIMARY) : TC(PAGE_DOT_QUIET), 0);
     }
 }

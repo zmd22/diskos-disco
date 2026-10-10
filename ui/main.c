@@ -77,6 +77,10 @@ static int         g_dbg = 0;          /* show tap dot (only if /usr/data/touch_
 #define NP_NAV_DIST 95    /* min horizontal travel for a back/hub swipe on NP (eased from 110) */
 #define NP_NAV_STRAIGHT 3 /* require |dx| > this * |dy| (nearly horizontal) */
 static int g_swipe_thresh = SWIPE_THRESH_DEFAULT;   /* cached for the hot loop */
+/* Disco > Side = Left mirrors the side gestures: back starts at the RIGHT edge and travels left; Home's swipe to
+ * Shortcuts goes the other way too. BACK_EDGE(x): a press in the back-swipe strip; SIDE_DX(dx): dx as if on the right. */
+#define BACK_EDGE(x) (disco_mirror() ? (x) > 360 - BACK_START_MAX_X : (x) < BACK_START_MAX_X)
+#define SIDE_DX(dx)  (disco_mirror() ? -(dx) : (dx))
 
 int ui_get_swipe_thresh(void){ return g_swipe_thresh; }
 /* How far the current / last touch travelled from where it went down (px, the larger axis). LVGL still reports a
@@ -2637,13 +2641,15 @@ void ui_back_hint(int y, int dx){
         lv_obj_set_style_bg_opa(g_bh, 200, 0);
         lv_obj_clear_flag(g_bh, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
         g_bh_lbl = lv_label_create(g_bh); lv_label_set_text(g_bh_lbl, LV_SYMBOL_LEFT);
-        lv_obj_set_style_text_font(g_bh_lbl, TF(UI_20), 0); lv_obj_align(g_bh_lbl, LV_ALIGN_RIGHT_MID, -12, 0);
+        lv_obj_set_style_text_font(g_bh_lbl, TF(UI_20), 0);
+        lv_obj_align(g_bh_lbl, disco_mirror() ? LV_ALIGN_LEFT_MID : LV_ALIGN_RIGHT_MID, disco_mirror() ? 12 : -12, 0);
     }
     int armed = dx >= thresh && !g_hint_late;
     int reach = dx > thresh * 3 / 2 ? thresh * 3 / 2 : dx;              /* slides in with the finger, then stops */
     if(y < 70) y = 70;
     if(y > 290) y = 290;
-    lv_obj_set_pos(g_bh, -64 + 8 + reach * 40 / (thresh * 3 / 2), y - 32);
+    int bx = -64 + 8 + reach * 40 / (thresh * 3 / 2);
+    lv_obj_set_pos(g_bh, disco_mx(bx, 64), y - 32);                     /* Disco Left: in from the right edge */
     static int was = -1;                                     /* restyle only when it arms / disarms, not per touch sample */
     if(lv_obj_has_flag(g_bh, LV_OBJ_FLAG_HIDDEN)){ was = -1; lv_obj_remove_flag(g_bh, LV_OBJ_FLAG_HIDDEN); lv_obj_move_foreground(g_bh); }
     if(armed != was){
@@ -3183,7 +3189,7 @@ int main(int argc, char **argv){
                     }
                     else {
                         rim_press(sx, sy);    /* arm rim-scroll candidate (long lists AND the cover flow) */
-                        if(rim_state==RIM_IDLE && screen_current()==SCR_ALBUMWALL && sx >= BACK_START_MAX_X)
+                        if(rim_state==RIM_IDLE && screen_current()==SCR_ALBUMWALL && !BACK_EDGE(sx))
                             albumwall_drag_begin(sx);   /* CENTRE press -> linear drag. Rim-band press is rim-only, and */
                     }                                   /* the left edge is reserved for the back-swipe (not armed as a drag) */
                     fprintf(stderr,"TAP x=%d y=%d\n",sx,sy); fflush(stderr);
@@ -3196,8 +3202,8 @@ int main(int argc, char **argv){
                 last_activity = lv_tick_get();
                 lastx=p.x; lasty=p.y; g_press_lx=p.x; g_press_ly=p.y;
                 g_hint_late = lv_tick_elaps(sms) >= 700;   /* the bubble only fills while the swipe would still count */
-                if(!woke && !fsart_touch && sx < BACK_START_MAX_X && screen_current()!=SCR_NOWPLAYING && screen_current()!=SCR_SAVER && !sleep_touch && p.x - sx > 0
-                   && abs(p.x - sx) > 2 * abs(p.y - sy)) ui_back_hint(p.y, p.x - sx);   /* fork: back-swipe feedback */
+                if(!woke && !fsart_touch && BACK_EDGE(sx) && screen_current()!=SCR_NOWPLAYING && screen_current()!=SCR_SAVER && !sleep_touch && SIDE_DX(p.x - sx) > 0
+                   && abs(p.x - sx) > 2 * abs(p.y - sy)) ui_back_hint(p.y, SIDE_DX(p.x - sx));   /* fork: back-swipe feedback */
                 else ui_back_hint(0, 0);
                 if(!woke && !fsart_touch && sy > 320 && screen_current()!=SCR_HOME && screen_current()!=SCR_QUICK && screen_current()!=SCR_SAVER && screen_current()!=SCR_NOWPLAYING && !sleep_touch
                    && sy - p.y > 0 && abs(p.y - sy) > 2 * abs(p.x - sx)) ui_home_hint(p.x, sy - p.y);   /* fork: home-swipe feedback */
@@ -3263,13 +3269,13 @@ int main(int argc, char **argv){
                             if(dx < 0) screen_show(SCR_NPHUB);
                             else       screen_back();
                         }
-                    } else if(cur==SCR_HOME && horiz && dx<0 && adx>=g_swipe_thresh && dt<700 && !seek_touch){
+                    } else if(cur==SCR_HOME && horiz && SIDE_DX(dx)<0 && adx>=g_swipe_thresh && dt<700 && !seek_touch){
                         apps_reload();
                         screen_show(SCR_APPS);    /* slide in the Apps panel */
                     } else if(cur==SCR_ALBUMWALL && s_press_scr==SCR_ALBUMWALL){
                         /* gated on s_press_scr so the very tap that OPENED the cover flow (a click on the
                          * Library "Albums" row) is never re-read here as a cover tap that plays. */
-                        if(sx < BACK_START_MAX_X && horiz && dx>0 && adx>=g_swipe_thresh && dt<700){
+                        if(BACK_EDGE(sx) && horiz && SIDE_DX(dx)>0 && adx>=g_swipe_thresh && dt<700){
                             albumwall_drag_cancel();            /* left-edge right-swipe = back (drag wasn't armed here) */
                             screen_back();
                         } else if(adx<18 && ady<18 && sx>=100 && sx<=260 && sy>=76 && sy<=214 && dt<900){
@@ -3280,8 +3286,8 @@ int main(int argc, char **argv){
                             albumwall_drag(lastx);              /* apply the (fused) final finger position first */
                             albumwall_drag_end();               /* then finger drag -> inertial fling + snap */
                         }
-                    } else if(horiz && dx>0 && adx>=g_swipe_thresh && dt<700 &&
-                              sx < BACK_START_MAX_X){
+                    } else if(horiz && SIDE_DX(dx)>0 && adx>=g_swipe_thresh && dt<700 &&
+                              BACK_EDGE(sx)){
                         fprintf(stderr,"BACK swipe sx=%d dx=%d dy=%d dt=%u\n",sx,dx,dy,dt); fflush(stderr);
                         /* inside Library, step through its sub-views first */
                         if(!(cur==SCR_LIBRARY && library_back())) screen_back();

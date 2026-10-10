@@ -119,7 +119,6 @@ int sys_about_collect(const sys_paths_t *pp, const char *diskos_id, sys_about_ro
     if(rv > 0) add_row(rows, &n, max, "Firmware", "%s (recovery %d)", fw, rv);
     else       add_row(rows, &n, max, "Firmware", "%s", fw);
     add_row(rows, &n, max, "diskOS", "%s", diskos_id && *diskos_id ? diskos_id : "--");
-    add_row(rows, &n, max, "Based on", "diskOS %s", DISKOS_VERSION);
     add_row(rows, &n, max, "Wi-Fi MAC", "%s", read_small(p->wlan_mac, mac, sizeof mac) == 0 && mac[0] ? mac : "--");
     add_row(rows, &n, max, "Bluetooth MAC", "%s", read_small(p->bt_mac, mac, sizeof mac) == 0 && mac[0] ? mac : "unavailable");
     struct statvfs sv;

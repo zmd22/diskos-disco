@@ -492,12 +492,12 @@ void weather_app_create(lv_obj_t *root)
     if(th_disco()){        /* Disco: laid out like Quick Settings: now in the navigation hub's field, the next 12 h as rows */
         lv_obj_add_flag(ring, LV_OBJ_FLAG_HIDDEN);
         lv_obj_t *f = lv_obj_create(root); lv_obj_remove_style_all(f);          /* the hub's shape, its right end cut by the rim */
-        lv_obj_set_pos(f, 196, 90); lv_obj_set_size(f, 230, 180);
+        lv_obj_set_pos(f, disco_mx(196, 230), 90); lv_obj_set_size(f, 230, 180);   /* Disco Left: on the left */
         lv_obj_set_style_radius(f, LV_RADIUS_CIRCLE, 0);
         lv_obj_set_style_bg_color(f, TC(SURFACE), 0); lv_obj_set_style_bg_opa(f, 204, 0);
         lv_obj_clear_flag(f, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_move_to_index(f, 0);
-        const int FX = 256 - 180;                                    /* the field's free middle, clear of the closed sliver */
+        const int FX = disco_mirror() ? 180 - 256 : 256 - 180;      /* the field's free middle, clear of the closed sliver */
         lv_obj_align(g_wd_cicon, LV_ALIGN_CENTER, FX, -64);
         lv_obj_align(g_wd_ctemp, LV_ALIGN_CENTER, FX, -30);
         lv_obj_align(g_wd_cond, LV_ALIGN_CENTER, FX, 4);   lv_obj_set_width(g_wd_cond, 116);
@@ -509,7 +509,7 @@ void weather_app_create(lv_obj_t *root)
             int y = 60 + k * 62, mid = y + 27, dy = mid - 180; if(dy < 0) dy = -dy;   /* Settings-size rows */
             int left = 180 - (int)sqrtf((float)(176 * 176 - (dy + 27) * (dy + 27))) + 4; if(left < 14) left = 14;
             lv_obj_t *r = lv_obj_create(root); lv_obj_remove_style_all(r);   /* a pill row: hour, icon, temperature */
-            lv_obj_set_pos(r, left, y); lv_obj_set_size(r, 190 - left, TH_ROW_H);
+            lv_obj_set_pos(r, disco_mx(left, 190 - left), y); lv_obj_set_size(r, 190 - left, TH_ROW_H);
             lv_obj_set_style_radius(r, LV_RADIUS_CIRCLE, 0); lv_obj_set_style_bg_color(r, TC(SURFACE), 0); lv_obj_set_style_bg_opa(r, LV_OPA_70, 0);
             lv_obj_clear_flag(r, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
             lv_obj_set_parent(g_wd_hour[k], r); lv_obj_set_parent(g_wd_icon[k], r); lv_obj_set_parent(g_wd_temp[k], r);
@@ -518,7 +518,7 @@ void weather_app_create(lv_obj_t *root)
             lv_obj_align(g_wd_icon[k], LV_ALIGN_LEFT_MID, 70, 0);   /* right after the hour, even in the narrow rows */
             lv_obj_set_style_text_font(g_wd_temp[k], TH_F_LIST, 0); lv_obj_align(g_wd_temp[k], LV_ALIGN_RIGHT_MID, -12, 0);
         }
-        lv_obj_align(g_wd_hint, LV_ALIGN_TOP_LEFT, 70, 306);
+        lv_obj_align(g_wd_hint, LV_ALIGN_TOP_LEFT, disco_mirror() ? 180 : 70, 306);
     }
     if(th_braun()){                                               /* Braun: the grille, a panel under the dial, dark type */
         br_face(root); lv_obj_t *pd = br_disc(root, 180, 180, 104, BR_PANEL); lv_obj_move_to_index(pd, 1);

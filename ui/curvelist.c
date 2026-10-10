@@ -2,7 +2,8 @@
 #include "curvelist.h"
 #include "theme.h"
 #include "braun.h"
-int disco_clear_left(int y1, int y2); int disco_clear_right(int y1, int y2);   /* disco.c: rows clear of the Disco menu picker (0 = no limit) */
+#include "config.h"
+int disco_clear_left(int y1, int y2); int disco_clear_right(int y1, int y2); int disco_mirror(void);   /* disco.c: rows clear of the Disco menu picker (0 = no limit) */
 #include <string.h>
 #include <math.h>
 #include <stdint.h>
@@ -93,6 +94,29 @@ void curvelist_braun_watch(lv_obj_t *list){
     lv_obj_add_event_cb(list, watch_del_cb, LV_EVENT_DELETE, NULL);
     if(!g_watch_tmr) g_watch_tmr = lv_timer_create(watch_cb, 250, NULL);
 }
+/* Disco > Scroll: 0 Classic (the circle), 1 Straight (Braun-like, full width), 2 Disco (the rows' right ends
+ * start on a circle round the navigation hub's centre, so they swing round that fixed point like spokes). */
+int curvelist_disco_scroll(void){ return th_disco() ? cfg_get_int("disco_scroll", 0) : 0; }
+int curvelist_disco_geom(int mode, int y1, int y2, int full_w, int *w, int *shift){
+    if(mode != 1 && mode != 2) return 0;
+    int left = 180 - full_w / 2, right = 180 + full_w / 2;
+    if(mode == 2){                                                   /* a CD's rim round the hub's centre (286,180), radius 150: */
+        int cy = (y1 + y2) / 2, dy = abs(cy - 180), far = dy + (y2 - y1) / 2;   /* the middle row sits furthest out, */
+        int off = 150 - (dy < 150 ? (int)sqrtf((float)(150 * 150 - dy * dy)) : 150);   /* rows above and below swing in */
+        int edge = far < 172 ? (int)sqrtf((float)(172 * 172 - far * far)) : 0;    /* and stay inside the screen circle */
+        left = 180 - full_w / 2 + 2 + off; right = 180 + full_w / 2 - 10;   /* times stay in one straight column; the list clips left of its own edge */
+        if(left < 180 - edge + 8) left = 180 - edge + 8;
+    }
+    int R;                                                           /* clear of the closed sliver */
+    if(disco_mirror()){ int L = disco_clear_left(y1, y2); R = L ? 360 - L : 0; }   /* Left: work it out as if on the right, mirror below */
+    else R = disco_clear_right(y1, y2);
+    if(R && right > R) right = R;
+    int minw = full_w - 82;                                          /* as Classic: never narrower (a 120 px row reads as a button) */
+    if(right - left < minw){ int mid = (left + right) / 2; left = mid - minw / 2; right = left + minw; if(R && right > R){ right = R; left = R - minw; } }
+    if(disco_mirror()){ int l = 360 - right; right = 360 - left; left = l; }   /* Left: the CD rim and the sliver swap sides */
+    *w = right - left; *shift = (left + right) / 2 - 180;
+    return 1;
+}
 static void curve(curvelist_t *c){
     if(th_braun()){                                               /* Braun: straight rows, restyled */
         uint32_t n = lv_obj_get_child_count(c->list);
@@ -107,20 +131,24 @@ static void curve(curvelist_t *c){
         return;
     }
     uint32_t n = lv_obj_get_child_count(c->list);
+    int mode = curvelist_disco_scroll();
     for(uint32_t i = 0; i < n; i++){
         lv_obj_t *r = lv_obj_get_child(c->list, i);
         if(!lv_obj_has_flag(r, LV_OBJ_FLAG_USER_1)) continue;
         lv_area_t a; lv_obj_get_coords(r, &a);
         if(a.y2 < -40 || a.y1 > 400) continue;                      /* off-screen: nothing to do */
+        int w, shift;
+        if(!curvelist_disco_geom(mode, a.y1, a.y2, c->full_w, &w, &shift)){
         int dy = abs((a.y1 + a.y2) / 2 - 180) + lv_area_get_height(&a) / 2;
         int half = dy < 176 ? (int)sqrtf((float)(180 * 180 - dy * dy)) - 10 : 0;
-        int w = 2 * half;
+        w = 2 * half;
         if(w > c->full_w) w = c->full_w;
         if(w < c->full_w - (NB - 1) * 20) w = c->full_w - (NB - 1) * 20;
-        int shift = 0, L = disco_clear_left(a.y1, a.y2);
+        shift = 0; int L = disco_clear_left(a.y1, a.y2);
         { int R = disco_clear_right(a.y1, a.y2);                              /* Disco: clear of the closed sliver */
           if(R && 180 + w / 2 > R){ int lft = 180 - w / 2; w = R - lft; shift = (lft + R) / 2 - 180; } }
         if(L && 180 - w / 2 < L){ int right = 180 + w / 2; int nw = right - L; if(nw < 120) nw = 120; shift = L + nw / 2 - 180; w = nw; }   /* Disco: start right of the picker (never narrower than 120) */   /* Disco: clear of the picker */
+        }
         intptr_t key = ((intptr_t)w << 16 | (unsigned)(shift + 32768)) + 1;
         if((intptr_t)lv_obj_get_user_data(r) == key) continue;      /* unchanged: no work */
         lv_obj_set_user_data(r, (void *)key);
@@ -153,7 +181,8 @@ static void dots(curvelist_t *c){
         int on = (k == idx), sz = on ? 8 : 5;
         float a = (212.0f - 6.4f * k) * 3.14159265f / 180.0f;         /* top to bottom along the left rim */
         lv_obj_set_size(c->dot[k], sz, sz);
-        lv_obj_set_pos(c->dot[k], (int)(180 + 168 * cosf(a)) - sz / 2, (int)(180 + 168 * sinf(a)) - sz / 2);
+        int x = (int)(180 + 168 * cosf(a)) - sz / 2;                  /* Left: the dots move to the right rim */
+        lv_obj_set_pos(c->dot[k], disco_mirror() ? 360 - x - sz : x, (int)(180 + 168 * sinf(a)) - sz / 2);
         lv_obj_set_style_bg_color(c->dot[k], on ? TC(ACCENT_PRIMARY) : TC(PAGE_DOT_QUIET), 0);
     }
 }

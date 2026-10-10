@@ -22,6 +22,7 @@ typedef struct {
     int first_deg;                       /* where button 0 sits (LVGL degrees) */
     lv_obj_t *lamp[8], *ptr[8];   /* Braun knobs: the lamp above, the pointer */
 } orbit_t;
+void disco_menu_glass(orbit_t *o, lv_obj_t *ov);   /* disco.c: a long-press menu in Disco's glass look (no-op elsewhere) */
 /* buttons clockwise from first_deg (LVGL angles: 0 = 3 o'clock, clockwise), evenly spaced */
 void orbit_create(orbit_t *o, lv_obj_t *root, const orbit_item_t *it, int n, int first_deg, orbit_pick_cb pick);
 /* long captions (app / device names): a fixed width, centred, ending in "..." */

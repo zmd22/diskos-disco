@@ -11,8 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="Disco! 1.2.3" src="https://img.shields.io/badge/Disco!-1.2.3-B36BFF?style=flat-square">
-  <img alt="Based on diskOS 1.2.4" src="https://img.shields.io/badge/based%20on-diskOS%201.2.4-3D424B?style=flat-square">
+  <a href="https://github.com/zmd22/diskos-disco/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/zmd22/diskos-disco?label=Disco!&color=B36BFF&style=flat-square"></a>
   <img alt="Firmware V2.57" src="https://img.shields.io/badge/firmware-V2.57-4AD8FF?style=flat-square">
   <img alt="Status: testing" src="https://img.shields.io/badge/status-testing-FFB45A?style=flat-square">
   <a href="ui/COPYING"><img alt="UI GPL-3.0-or-later" src="https://img.shields.io/badge/UI-GPL--3.0--or--later-62F28C?style=flat-square"></a>
@@ -41,7 +40,7 @@
 The Snowsky Disc looks like a CD. Disco! leans into that. The playing album's cover fills the 360 px round
 screen, sharp on **Music** and softly blurred and tinted behind every other screen. A faint CD-rainbow sheen
 runs around the rim. Everything you touch sits on glass around a **navigation circle** that slides out of the
-right edge.
+right edge (or the left: there's a left-handed mode).
 
 Underneath it is all diskOS: b0hemia's installer, boot chain, signed updates, player and library. Disco!
 replaces only what you see and touch.
@@ -67,18 +66,30 @@ replaces only what you see and touch.
 </tr>
 </table>
 
+## New in 1.3.0
+
+<table>
+<tr>
+<td align="center" width="25%"><img src="docs/disco/left-nav.png" width="190" alt="Left-handed mode"><br><sub><b>Left-handed mode</b>: the circle and everything around it on the left</sub></td>
+<td align="center" width="25%"><img src="docs/disco/scroll-disco.png" width="190" alt="Disco scroll"><br><sub><b>Disco scroll</b>: rows swing round the circle like a CD</sub></td>
+<td align="center" width="25%"><img src="docs/disco/idle.png" width="190" alt="Idle Music"><br><sub><b>Nothing playing?</b> A CD and <i>Go to Library</i></sub></td>
+<td align="center" width="25%"><img src="docs/disco/settings-display.png" width="190" alt="Settings"><br><sub><b>Tidier Settings</b>: short pages, less scrolling</sub></td>
+</tr>
+</table>
+
+- **Left-handed mode**: Disco Options › Layout › Side › Left › Apply. The back swipe moves to the right edge.
+- **Scroll styles**: Classic, Straight or Disco.
+- **Hold the top of Music** to hide or show the clock and status icons.
+- **Hold an album › Tags** tags the whole album; **Song Info** shows the bitrate beside the file size.
+- **Glass hold menus**, a fixed "Couldn't save settings" bug, and "Since full charge" that starts at 95%.
+
+All the details: [1.3.0 release notes](docs/releases/v1.3.0.md).
+
 ## Highlights
 
-- **New in 1.2.2: Album Roulette.** Too much music, nothing to play? Spin your local collection: circular covers
-  fly past, slow down and reveal a winning album. Tap **Play!** or its cover to listen in track order; long-press
-  the cover to try again. A fun way to rediscover records you forgot you owned. The new vinyl menu entry, Apps
-  and shortcuts all lead to an **I feel lucky!** landing page. Album Roulette is included as a separate user app in the complete release package. [Install/update the app](docs/ALBUM_ROULETTE_INSTALL.md). [How it works and setup](docs/DISCO_TOUR.md#album-roulette).
-- **Smoother scrolling.** Lighter touch response and continuously curved rows in Library, Settings and shared
-  lists, while retaining the existing low-memory handling of long lists. The navigation drawer also reverses
-  smoothly when interrupted. [1.2.2 release notes](docs/releases/v1.2.2.md).
-- **New in 1.2.3:** larger Modes controls, corrected Immersive return transitions, safer file replacement,
-  reliable app shortcuts and editor cancellation. [1.2.3 release notes](docs/releases/v1.2.3.md).
-
+- **Album Roulette.** Too much music, nothing to play? Spin your collection: covers fly past, slow down and
+  land on an album. Tap **Play!** to listen, long-press to spin again. It's a separate user app in the complete
+  release package: [install it](docs/ALBUM_ROULETTE_INSTALL.md), [how it works](docs/DISCO_TOUR.md#album-roulette).
 - **Music is home.** Big title and artist (centred or from the left), the play mode one tap away, transport on an
   arc. Progress as a rainbow **line** under the title or an **arc** around the rim. Drag either to seek.
 - **Tap the title** for Favourite, Album, Artist, Queue, Lyrics and Immersive. **Hold it** to go straight to the
@@ -86,12 +97,13 @@ replaces only what you see and touch.
 - **A queue that behaves.** *Add to queue* from any hold menu. Queued songs play next, in order, then your music
   carries on where it was.
 - **Hold anything** in the library (song, album, artist, genre, file, folder) for its actions. A tap still plays.
-- **Gestures with feedback.** Swipe from the left edge to go back, swipe up from the bottom for Music, pull down
-  for Quick Settings. A bubble fills with the accent colour once the swipe will count.
+- **Gestures with feedback.** Swipe from the edge to go back (left edge, or right in left-handed mode), swipe up
+  from the bottom for Music, pull down for Quick Settings. A bubble fills with the accent colour once the swipe
+  will count.
 - **Readable on any cover.** Text and fades adapt to each album, and the accent colour follows the cover (or your
   own pick).
-- **Disco Options** let you choose the menu sections, clock, track times, rim sheen, EQ / volume / progress
-  colours, progress shape, title position, track number and title hold.
+- **Disco Options** let you choose the menu sections, clock, track times, track number, title position and hold,
+  rim sheen, EQ / volume / progress colours, progress shape, the side and the scroll style.
 - **MA Sendspin** *(experimental)*: the Disc as a [Music Assistant](https://www.music-assistant.io/) speaker, with
   the track, cover and controls on Music. See the [tour](docs/DISCO_TOUR.md#ma-sendspin-experimental).
 - **Safe updates.** Signed builds from the SD card install as a trial and roll back by themselves if they don't
@@ -102,7 +114,7 @@ Every screen, gesture and setting is in the **[tour](docs/DISCO_TOUR.md)**. Quic
 
 ## Also included: Ring and Braun
 
-Two more complete themes, with the same features and settings, are in **Settings › Display › Theme**:
+Two more complete themes, with the same features and settings, are in **Settings › Display › Theme › Theme**:
 
 <table>
 <tr>
@@ -122,7 +134,7 @@ cable and about 20 quiet minutes. The installer is upstream diskOS's (`./diskos-
 
 **0. Get it.** Download the **[latest release](https://github.com/zmd22/diskos-disco/releases/latest)** (Source
 code, tar.gz) and unpack it, or `git clone https://github.com/zmd22/diskos-disco`. The ready-built interface is
-already in it as `payload/mq_ui` (Disco! 1.2.3); the release also has `mq_ui` on its own, with checksums, for SD-card
+already in it as `payload/mq_ui` (Disco! 1.3.0); the release also has `mq_ui` on its own, with checksums, for SD-card
 updates.
 
 **1. Make your update keys (once, optional but recommended).** They let you install new builds from the SD card
@@ -149,20 +161,20 @@ summary line `ota: ON … key sha256 xxxx` before you answer `y`. It must match 
 
 > [!TIP]
 > Use **public**, not dev. The dev variant's USB serial console takes the Disc's only USB device port, which
-> blocks USB storage mode. Settings › System › Debug Mode still gives you SSH when you need it.
+> blocks USB storage mode. Settings › System › Maintenance › Debug Mode still gives you SSH when you need it.
 
 ## Updates from the SD card
 
-Download `mq_ui` from a [release](https://github.com/zmd22/diskos-disco/releases) (or build it), then sign it with
+Download `mq_ui` from the [latest release](https://github.com/zmd22/diskos-disco/releases/latest) (or build it), then sign it with
 your keys:
 
 ```sh
-sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 1.2.3      # -> ./diskos-update/
+sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 1.3.0      # -> ./diskos-update/
 ```
 
 Reuse the signing keys whose root public key was installed on this Disc. Copy the complete
 `diskos-update` **folder** to the SD card root and safely eject the storage connection. On the Disc,
-go to **Settings › System › Update from SD Card › Update**, wait for staging, then restart.
+go to **Settings › System › Maintenance › Update from SD Card › Update**, wait for staging, then restart.
 
 The new interface runs as a **trial**. Check Settings › System › About and leave it running for at
 least three minutes. Confirmed playback can accept it automatically; otherwise choose **Keep**
@@ -188,7 +200,7 @@ FP64, NaN2008, GCC 11.2). It reproduces upstream's binaries byte for byte. More 
 
 Stock is never far:
 
-- **Settings › System › Default UI › Stock** makes FiiO's interface the normal choice.
+- **Settings › System › Controls › Default UI › Stock** makes FiiO's interface the normal choice.
 - Hold **Volume Up** from power-on to boot the other interface once.
 - `./diskos-installer restore-stock` removes diskOS completely.
 
@@ -201,7 +213,7 @@ Stock is never far:
 | [Updating](docs/UPDATING.md) | Keys, signing, flashing once, troubleshooting |
 | [Windows (WSL)](docs/WINDOWS.md) | Flashing from Windows: highly experimental, untested and unsupported |
 | [UI choices](docs/UI_CHOICES.md) | Why things look and work the way they do |
-| [Changelog](CHANGELOG.md) | Disco! releases first, upstream diskOS below |
+| [Changelog](CHANGELOG.md) | Every Disco! release, newest first |
 | [All docs](docs/README.md) | Hardware notes, command map, developer workflow, legal |
 
 ## Thanks

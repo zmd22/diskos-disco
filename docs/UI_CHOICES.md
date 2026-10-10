@@ -58,6 +58,21 @@ The lists carry a small hint: "Hold an item for more".
 History list. Rows near the top and bottom step inwards so text never runs under the bezel. The A–Z
 button sits on the right edge so it doesn't push the list off-centre.
 
+**Left-handed mode mirrors places, not reading.** Side = Left moves the navigation circle and every screen
+arranged around it to the left, and the back swipe to the right edge, so the hand that holds the Disc can reach
+the circle. Text keeps reading left to right and arcs keep their direction: progress is clockwise for
+everyone. The change restarts the interface (Apply), so every screen is rebuilt in its new place.
+
+**Three scroll styles.** Classic narrows rows symmetrically with the round screen. Straight keeps them flat
+for people who find curves busy. Disco curves only the edge opposite the circle, as if the rows were spokes of
+a CD turning round its hub, and keeps the times in one straight column so they stay easy to compare.
+
+**Settings in short pages.** Display and System had about twenty rows each, with four in view. They are now
+split into five or six topic pages each, so the most scrolling you ever do is a little.
+
+**A welcome when nothing plays.** An empty Music screen gave no hint what to do. It now shows a generated CD
+and "Go to Library", which is where you'd go next anyway.
+
 **The EQ dial owns its touches.** While your finger is on the dial, page swipes are ignored — no more
 leaving the equalizer by accident while turning a band.
 

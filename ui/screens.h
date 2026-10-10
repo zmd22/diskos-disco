@@ -63,6 +63,7 @@ int  th_night_now(void);                       /* re-exec the UI (theme change) 
 void fileops_confirm(const char *title, const char *detail, const char *yes, void (*on_yes)(void));   /* themed Cancel / <yes> dialog on the top layer */
 void fileops_open(const char *dir, const char *name, int is_dir, void (*done)(void));  /* folder browser long-press */
 void tagfix_current_track(void);      /* NP menu: add synced lyrics + artwork the current track is missing */
+void tagfix_album(const char *album);  /* Library album hold menu: tag every track of that album */
 void tagfix_current_album(void);      /* NP menu: the same for every track of its album */
 void tagfix_auto_tick(const track_state_t *st, int playing);   /* Auto-tag (Settings > Playback) */
 void ui_np_tags_changed(void);        /* tags were rewritten: lyrics views reload */
@@ -398,6 +399,10 @@ void dhome_art_changed(void);
 void dhome_set_accent(lv_color_t accent);
 void dhome_show_clock(int on);
 void disco_open_np_immersive(void);
+int  disco_mirror(void);
+const void *disco_idle_art(void);         /* disco_home.c: the generated CD shown while nothing plays */
+int  dhome_idle(void);                    /* Music is idle (nothing playing): "Go to Library" + the CD */                   /* Disco > Side = Left: the hub and everything around it on the left (read once; OK restarts the UI) */
+static inline int disco_mx(int x, int w){ return disco_mirror() ? 360 - x - w : x; }   /* an x laid out for the right-hand side, mirrored when Left */
 int  disco_clear_left(int y1, int y2);
 int  disco_clear_right(int y1, int y2);     /* lists: the x a row must end at to clear the closed sliver (0 = none) */
 void disco_nav_set_open(int open);

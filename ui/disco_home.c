@@ -72,6 +72,7 @@ static lv_timer_t *g_tick;
 static lv_color_t g_acc;
 static lv_font_t g_wfont;                                           /* small UI face + the weather icons as fallback */
 static int g_have;
+static int g_idle;                                                  /* nothing playing: see idle_eval() */
 
 static lv_obj_t *glass_circle(lv_obj_t *root, int cx, int cy, int d, const char *glyph){
     lv_obj_t *b = lv_button_create(root); lv_obj_remove_style_all(b);
@@ -121,7 +122,7 @@ static void times_paint(long pos, long dur){
 }
 void dhome_times_apply(void){
     if(!L_EL.fg) return;
-    int on = cfg_get_int("disco_times", 1) && cfg_get_int("disco_progress", 0) != 2;   /* no line, no times */
+    int on = !g_idle && cfg_get_int("disco_times", 1) && cfg_get_int("disco_progress", 0) != 2;   /* no line, no times (idle: neither) */
     lv_obj_t *o[4] = { L_EL.sh, L_EL.fg, L_RM.sh, L_RM.fg };
     for(int i = 0; i < 4; i++){ if(on) lv_obj_remove_flag(o[i], LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(o[i], LV_OBJ_FLAG_HIDDEN); }
     int arc = cfg_get_int("disco_prog_shape", 0) == 1;                 /* Arc: no line, the two times side by side */
@@ -198,7 +199,8 @@ static void underline_create(lv_obj_t *root){
  * bottom and the left, over the top to just above it (320 degrees). Same colours as the line (Disco / Accent / Off),
  * the same bright head, and the same drag or tap to seek. Its touch ring sits under everything else on Music, so the
  * buttons, the clock and the title keep their taps; a press in the top 40 px is left to the Quick Settings pull-down. */
-#define PA_A0 40
+#define PA_A0 (disco_mirror() ? 220 : 40)                            /* Disco Left: from just above the shard (upper left), still clockwise */
+#define PA_WRAP(d) ((d) % 360)                                          /* Left: the arc runs past 360 degrees */
 #define PA_SPAN 280
 #define PA_N 6
 #define PA_D 344                                                       /* the drawn ring: r 172 */
@@ -229,11 +231,11 @@ static void pa_set(int f){                                           /* f: 0..10
     int e = PA_A0 + PA_SPAN * f / 1000;
     if(e == g_pa_deg) return;                                         /* same degree: nothing to redraw */
     g_pa_deg = e;
-    lv_arc_set_angles(g_pa_tr, e, PA_A0 + PA_SPAN);                     /* the track only where there's no fill: drawn once, not twice */
+    lv_arc_set_angles(g_pa_tr, PA_WRAP(e), PA_WRAP(PA_A0 + PA_SPAN));                     /* the track only where there's no fill: drawn once, not twice */
     for(int i = 0; i < PA_N; i++){
         int s0 = PA_A0 + PA_SPAN * i / PA_N, s1 = PA_A0 + PA_SPAN * (i + 1) / PA_N;
         if(e <= s0){ lv_obj_add_flag(g_pa_seg[i], LV_OBJ_FLAG_HIDDEN); continue; }
-        lv_arc_set_angles(g_pa_seg[i], s0, e < s1 ? e : s1 + (i < PA_N - 1));   /* +1: no hairline between segments */
+        lv_arc_set_angles(g_pa_seg[i], PA_WRAP(s0), PA_WRAP(e < s1 ? e : s1 + (i < PA_N - 1)));   /* +1: no hairline between segments */
         lv_obj_remove_flag(g_pa_seg[i], LV_OBJ_FLAG_HIDDEN);
     }
     if(e > PA_A0) lv_obj_remove_flag(g_pa_cap, LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(g_pa_cap, LV_OBJ_FLAG_HIDDEN);
@@ -270,7 +272,7 @@ static void disco_progress_arc_create(lv_obj_t *root){
     g_pa_hit = lv_arc_create(root);                                   /* the touch ring, under everything else */
     lv_obj_remove_style(g_pa_hit, NULL, LV_PART_KNOB);
     lv_obj_set_size(g_pa_hit, 360, 360); lv_obj_center(g_pa_hit);
-    lv_arc_set_rotation(g_pa_hit, 0); lv_arc_set_bg_angles(g_pa_hit, PA_A0, PA_A0 + PA_SPAN);
+    lv_arc_set_rotation(g_pa_hit, 0); lv_arc_set_bg_angles(g_pa_hit, PA_A0, PA_WRAP(PA_A0 + PA_SPAN));
     lv_obj_set_style_arc_width(g_pa_hit, 36, LV_PART_MAIN); lv_obj_set_style_arc_opa(g_pa_hit, 0, LV_PART_MAIN);
     lv_obj_set_style_arc_opa(g_pa_hit, 0, LV_PART_INDICATOR);
     lv_obj_add_flag(g_pa_hit, LV_OBJ_FLAG_ADV_HITTEST);
@@ -278,7 +280,7 @@ static void disco_progress_arc_create(lv_obj_t *root){
     lv_obj_add_event_cb(g_pa_hit, pa_cb, LV_EVENT_ALL, NULL);
     lv_obj_move_to_index(g_pa_hit, 0);
     g_pa_tr = pa_arc(root, PA_D, PA_W);                                /* the unfilled ring */
-    lv_arc_set_angles(g_pa_tr, PA_A0, PA_A0 + PA_SPAN);
+    lv_arc_set_angles(g_pa_tr, PA_A0, PA_WRAP(PA_A0 + PA_SPAN));
     lv_obj_set_style_arc_color(g_pa_tr, TC(TEXT_PRIMARY), LV_PART_INDICATOR); lv_obj_set_style_arc_opa(g_pa_tr, 55, LV_PART_INDICATOR);
     lv_obj_set_style_arc_rounded(g_pa_tr, true, LV_PART_INDICATOR);
     for(int i = 0; i < PA_N; i++){
@@ -389,8 +391,61 @@ static void ov_open(void){
     ov_paint();
 }
 /* a tap opens the overlay; a hold does Settings > Disco Options > Title Hold: 0 Immersive, 1 Favourite, 2 nothing */
+/* ---- idle: nothing playing (10 s after start, or at once with Resume Playback off) ------------------------------
+ * Music shows a generated CD instead of a cover - a disc seen close up, iridescent bands that turn with the angle,
+ * fine grooves, a clear hub, a soft glint - and "Go to Library" instead of the title (a tap opens the Library).
+ * Drawn once into its own picture; the other Disco screens tint it into their backdrop as they do a cover. */
+static lv_image_dsc_t g_idle_dsc;
+static uint8_t *g_idle_px;
+const void *disco_idle_art(void){
+    if(g_idle_px) return &g_idle_dsc;
+    g_idle_px = malloc(360 * 360 * 4);
+    if(!g_idle_px) return NULL;
+    for(int y = 0; y < 360; y++) for(int x = 0; x < 360; x++){
+        float dx = x - 180.0f, dy = y - 180.0f, r = sqrtf(dx * dx + dy * dy), a = atan2f(dy, dx);
+        float R, G, B;
+        float bg = 0.10f + 0.10f * (1.0f - (float)y / 360.0f);           /* night-blue field behind the disc */
+        R = bg * 0.55f; G = bg * 0.45f; B = bg * 1.40f;
+        if(r < 176.0f && r > 46.0f){                                    /* the data side: rainbow bands that turn with the angle */
+            float t = 2.0f * a + r * 0.018f;
+            float k = 0.35f + 0.30f * (0.5f + 0.5f * cosf(4.0f * a));    /* brighter in four soft spokes, like light on a CD */
+            R = 0.18f + k * (0.5f + 0.5f * cosf(t));
+            G = 0.18f + k * (0.5f + 0.5f * cosf(t - 2.094f));
+            B = 0.24f + k * (0.5f + 0.5f * cosf(t + 2.094f));
+            float g = 0.92f + 0.08f * sinf(r * 1.7f);                     /* fine grooves */
+            R *= g; G *= g; B *= g;
+            float glint = expf(-((dx + dy + 60.0f) * (dx + dy + 60.0f)) / 900.0f) * 0.35f;   /* a diagonal glint */
+            R += glint; G += glint; B += glint;
+            if(r > 172.0f){ R = R * 0.6f + 0.25f; G = G * 0.6f + 0.25f; B = B * 0.6f + 0.28f; }   /* the rim */
+        } else if(r <= 46.0f && r > 16.0f){                             /* the clear hub */
+            float c = r > 40.0f ? 0.55f : 0.30f + 0.10f * (r - 16.0f) / 24.0f;
+            R = c * 0.9f; G = c * 0.95f; B = c;
+        } else if(r <= 16.0f){ R = bg * 0.4f; G = bg * 0.35f; B = bg; }  /* the hole */
+        if(R > 1) R = 1;
+        if(G > 1) G = 1;
+        if(B > 1) B = 1;
+        uint8_t *p = g_idle_px + ((size_t)y * 360 + x) * 4;
+        p[0] = (uint8_t)(B * 255); p[1] = (uint8_t)(G * 255); p[2] = (uint8_t)(R * 255); p[3] = 255;
+    }
+    memset(&g_idle_dsc, 0, sizeof g_idle_dsc);
+    g_idle_dsc.header.magic = LV_IMAGE_HEADER_MAGIC; g_idle_dsc.header.cf = LV_COLOR_FORMAT_XRGB8888;
+    g_idle_dsc.header.w = 360; g_idle_dsc.header.h = 360; g_idle_dsc.header.stride = 360 * 4;
+    g_idle_dsc.data = g_idle_px; g_idle_dsc.data_size = 360 * 360 * 4;
+    return &g_idle_dsc;
+}
+int dhome_idle(void){ return g_idle; }
+static void idle_eval(void){                                            /* switch idle on / off as the track state says */
+    int want = !g_have && (lv_tick_get() >= 10000 || cfg_get_int("memory_play", 0) == 0);
+    if(want == g_idle) return;
+    g_idle = want;
+    if(g_idle){ dl_text(&L_TITLE, "Go to Library"); dl_text(&L_ARTIST, ""); }
+    disco_art_changed();                                                /* the cover, the backdrops and the ink follow */
+    disco_progress_apply();
+}
+static void idle_timer_cb(lv_timer_t *t){ (void)t; idle_eval(); }
 static void title_cb(lv_event_t *e){
     lv_event_code_t c = lv_event_get_code(e);
+    if(c == LV_EVENT_SHORT_CLICKED && g_idle){ screen_show(SCR_LIBRARY); return; }   /* idle: "Go to Library" */
     if(c == LV_EVENT_SHORT_CLICKED) ov_open();                         /* not CLICKED: that also follows a hold */
     else if(c == LV_EVENT_LONG_PRESSED && g_have && !g_ov){
         int h = cfg_get_int("disco_title_hold", 0);
@@ -409,7 +464,17 @@ void dhome_title_apply(void){
         if(left) lv_obj_align(l, LV_ALIGN_TOP_LEFT, 14 + d, Y[i] + d); else lv_obj_align(l, LV_ALIGN_TOP_MID, d, Y[i] + d);
     }
 }
-static void wx_cb(lv_event_t *e){ if(lv_event_get_code(e) == LV_EVENT_CLICKED) weather_app_open(); }
+/* the top of Music: a tap on the clock opens Weather; a hold shows or hides the clock and the status icons
+ * (the same switch as Disco Options > Music Screen > Show Clock). When hidden, an empty strip keeps the hold. */
+static lv_obj_t *g_top_hit;
+static void wx_cb(lv_event_t *e){
+    lv_event_code_t c = lv_event_get_code(e);
+    if(c == LV_EVENT_SHORT_CLICKED && lv_event_get_target(e) == g_pill) weather_app_open();   /* not CLICKED: that follows a hold */
+    else if(c == LV_EVENT_LONG_PRESSED){
+        int on = g_pill && lv_obj_has_flag(g_pill, LV_OBJ_FLAG_HIDDEN);   /* what is on screen decides, not a save that may have failed */
+        cfg_set_int("disco_clock", on); dhome_show_clock(on);
+    }
+}
 
 static void mode_paint(void){
     int wm = cfg_get_int("work_mode", 0);
@@ -445,7 +510,13 @@ void dhome_create(lv_obj_t *root){
     dl_text(&L_TIME, "--:--");
     g_wfont = *theme_font_original(18); g_wfont.fallback = &font_weather16;
     g_wx = dl_make(g_pill, &L_WX, &g_wfont, -1, 0, LV_ALIGN_TOP_MID, 0, 78, 1);
-    lv_obj_add_flag(g_pill, LV_OBJ_FLAG_CLICKABLE); lv_obj_add_event_cb(g_pill, wx_cb, LV_EVENT_CLICKED, NULL);
+    g_top_hit = lv_obj_create(root); lv_obj_remove_style_all(g_top_hit);   /* under the clock: holds while it's hidden */
+    lv_obj_set_size(g_top_hit, 200, 110); lv_obj_align(g_top_hit, LV_ALIGN_TOP_MID, 0, 14);
+    lv_obj_add_flag(g_top_hit, LV_OBJ_FLAG_CLICKABLE); lv_obj_clear_flag(g_top_hit, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_event_cb(g_top_hit, wx_cb, LV_EVENT_LONG_PRESSED, NULL);
+    lv_obj_move_to_index(g_top_hit, lv_obj_get_index(g_pill));         /* just behind the clock */
+    lv_obj_add_flag(g_pill, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(g_pill, wx_cb, LV_EVENT_SHORT_CLICKED, NULL); lv_obj_add_event_cb(g_pill, wx_cb, LV_EVENT_LONG_PRESSED, NULL);
     if(!cfg_get_int("disco_clock", 1)) lv_obj_add_flag(g_pill, LV_OBJ_FLAG_HIDDEN);
     /* title + artist across the wide middle; a tap opens the track overlay */
     g_trk = lv_obj_create(root); lv_obj_remove_style_all(g_trk);
@@ -482,6 +553,7 @@ void dhome_create(lv_obj_t *root){
     kit_keep(g_mode); lv_obj_add_flag(g_mode, LV_OBJ_FLAG_USER_2);     /* no button styling: just the icon */
     mode_paint();
     g_tick = lv_timer_create(prog_tick, 1000, NULL);
+    { lv_timer_t *it = lv_timer_create(idle_timer_cb, 10200, NULL); if(it) lv_timer_set_repeat_count(it, 1); }   /* idle 10 s after start */
     dhome_art_changed();
 }
 
@@ -515,12 +587,12 @@ void dhome_set_status(int batt, int charging, int wifi, int bt){
 void dhome_set_now_playing(const char *title, const char *artist, lv_color_t accent, bool playing){
     g_have = title != NULL;
     g_acc = ui_disco_fit_accent(accent);
-    dl_text(&L_TITLE, title ? title : "Not Playing");
-    dl_text(&L_ARTIST, artist ? artist : "");
+    if(!(g_idle && !title)){ dl_text(&L_TITLE, title ? title : "Not Playing"); dl_text(&L_ARTIST, artist ? artist : ""); }
     if(g_mode) mode_paint();                                            /* changed elsewhere (Now Playing, Quick Settings) */
     static int last_play = -1;                                          /* this runs on every position frame: touch only what changed */
     if(g_btn_lbl[1] && last_play != (int)playing){ last_play = playing; lv_label_set_text(g_btn_lbl[1], playing ? LV_SYMBOL_PAUSE : LV_SYMBOL_PLAY); }
     if(!title && g_ul_fill){ ul_set(0); pa_set(0); }
+    idle_eval();
     static lv_color_t last_acc; static int acc_set;
     if(!acc_set || !lv_color_eq(last_acc, g_acc)){ acc_set = 1; last_acc = g_acc; acc_paint(); }
 }
@@ -532,6 +604,7 @@ void disco_progress_apply(void){
     if(!g_ul_fill) return;
     dhome_times_apply();
     int m = cfg_get_int("disco_progress", 0); if(m < 0 || m > 2) m = 0;
+    if(g_idle) m = 2;                                                  /* idle: no progress at all */
     int arc = pa_on();                                                 /* Progress Shape: Linear or Arc */
     lv_obj_t *all[4] = { g_ul_tr, g_ul_fill, g_ul_knob, g_ul_hit };
     for(int i = 0; i < 4; i++) if(all[i]){ if(m == 2 || arc) lv_obj_add_flag(all[i], LV_OBJ_FLAG_HIDDEN); else lv_obj_remove_flag(all[i], LV_OBJ_FLAG_HIDDEN); }
@@ -556,6 +629,7 @@ static void acc_paint(void){
     if(g_pa_tr) pa_paint(cfg_get_int("disco_progress", 0));
     if(g_ov) ov_paint();
 }
+void dhome_test_top_hold(void){ lv_obj_t *t = (g_pill && !lv_obj_has_flag(g_pill, LV_OBJ_FLAG_HIDDEN)) ? g_pill : g_top_hit; if(t) lv_obj_send_event(t, LV_EVENT_LONG_PRESSED, NULL); }   /* host tests */
 void dhome_show_clock(int on){ if(g_pill){ if(on) lv_obj_remove_flag(g_pill, LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(g_pill, LV_OBJ_FLAG_HIDDEN); } }
 /* how light the picture is behind a band of rows (0..255), the wash over it included */
 static int band_luma(const lv_image_dsc_t *d, int y0, int y1, int wash_opa, int wash_l){
@@ -596,6 +670,7 @@ static void ink_all(const lv_image_dsc_t *d){
 void dhome_art_changed(void){
     if(!g_cover) return;
     const void *src = ui_current_sharp_img();
+    if(g_idle) src = disco_idle_art();                                  /* nothing playing: the generated CD (not a stale cover) */
     ink_all((const lv_image_dsc_t *)src);
     lv_image_set_src(g_cover, NULL);                                   /* same buffer, new pixels: force a redraw */
     if(src){ lv_image_set_src(g_cover, src); lv_obj_remove_flag(g_cover, LV_OBJ_FLAG_HIDDEN); }

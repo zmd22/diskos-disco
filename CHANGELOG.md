@@ -5,6 +5,25 @@ All notable changes to diskOS Disco! (and the diskOS releases underneath) are do
 Entries follow the Keep a Changelog format, with Added, Changed, and Fixed categories where applicable.
 diskOS remains beta software; version numbers do not imply broad hardware or feature validation.
 
+## [Disco! 1.3.0] - 2026-10-10
+
+### Added
+- Left-handed mode: Disco Options > Layout > Side (Right / Left, Apply restarts the interface). Mirrors the navigation circle, its sliver and hint, Quick Settings, Weather, Working mode, Shortcuts, the Equalizer start page, Battery, list clearance and rim dots; the back swipe starts at the right edge. Arcs keep their direction; in Left the progress arc starts above the circle and still runs clockwise.
+- Scroll styles for Disco lists: Classic, Straight and Disco (a CD rim around the navigation circle, times in one straight column).
+- Idle Music: with nothing playing (10 s after start, or at once with Resume Playback off) a generated CD replaces the cover and backdrops, and "Go to Library" replaces the title.
+- Hold the top of Music to show or hide the clock, weather and status icons.
+- Album hold menu: Tags (tag every track of the album).
+- Song Info: bitrate beside the file size (stream rate, else the file's average).
+
+### Changed
+- Settings reorganised into short sub-pages: Display (Theme, Text & Layout, Standby, Online & Extras), Disco Options (Music Screen, Colours, Layout) and System (Power, Date & Time, Library, Controls, Maintenance, About). Back steps up one level.
+- Disco long-press menus use glass buttons, accent icons and a glass Cancel hub over the cover backdrop.
+- "Since full charge" counts from 95% (80% with Charging Limit).
+- About shows Disco! 1.3.0; the upstream version row is removed from About and Device Info.
+
+### Fixed
+- The settings store held 256 entries; a well-used Disc filled it and new settings failed with "Couldn't save settings". Raised to 512.
+
 ## [Disco! 1.2.3] - 2026-10-09
 
 ### Changed
@@ -48,7 +67,7 @@ diskOS remains beta software; version numbers do not imply broad hardware or fea
 
 ## [Disco! 1.2.0] - 2026-10-09
 
-Settings > System > About shows "Disco! 1.2.0". Based on diskOS 1.2.4.
+Settings > System > About shows "Disco! 1.2.0".
 
 ### Added
 - **Rediscover your collection with Album Roulette:** watch round covers spin past, accept a winning album

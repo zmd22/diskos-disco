@@ -9,7 +9,7 @@
  * /usr/data/usage.bin every 10 minutes
  * (and before an auto power-off). Nothing is recorded while the clock isn't set.
  * Since the last full charge: two running totals (minutes playing, minutes with the screen on) and the time of that
- * charge, reset when the Disc is unplugged after reaching full (100%, or 80% with Charging Limit on). A few bytes in
+ * charge, reset when the Disc is unplugged after reaching full (95% - the Disc rarely shows 100 - or 80% with Charging Limit on). A few bytes in
  * /usr/data/usage_charge.bin, saved with the rest. */
 #include "screens.h"
 #include "config.h"
@@ -93,7 +93,7 @@ void usage_tick(int screen_on, int playing){
     if(!g_cur_min) g_cur_min = m;
     /* a full charge: reached full while charging, then unplugged -> the totals start again from here */
     if(g_batt >= 0){
-        int target = cfg_get_int("charge_protect", 0) ? 80 : 100;
+        int target = cfg_get_int("charge_protect", 0) ? 80 : 96;   /* full = 95% or more (the gauge seldom reaches 100); 79+ with the limit */
         static int boot_checked;                             /* charged while switched off: starts up full, was lower */
         if(!boot_checked){ boot_checked = 1;
             if(!g_chg && g_n > 0 && g_batt >= target - 1 && g_batt > at(g_n - 1)->pct + 5){
@@ -199,7 +199,7 @@ static void draw(void){
 static void us_tick_cb(lv_timer_t *t){ (void)t; if(screen_current() == SCR_USAGE) draw(); }
 void usage_create(lv_obj_t *root){
     int disco = th_disco(), br = th_braun();
-    int dx = disco ? -12 : 0;                                /* Disco: clear of the navigation sliver */
+    int dx = disco ? (disco_mirror() ? 12 : -12) : 0;        /* Disco: clear of the navigation sliver (on either side) */
     lv_obj_set_style_bg_color(root, TC(CANVAS), 0);
     lv_obj_set_style_bg_opa(root, LV_OPA_COVER, 0);
     lv_obj_clear_flag(root, LV_OBJ_FLAG_SCROLLABLE);

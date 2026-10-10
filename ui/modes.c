@@ -366,11 +366,11 @@ void modes_create(lv_obj_t *root){
             int right = 180 + half;
             if(k > 0 && k < 4){
                 lv_obj_update_layout(g_drow[i]);
-                int clear_right = lv_obj_get_x(g_drow[i]) + lv_obj_get_width(g_drow[i]);
+                int clear_right = disco_mx(lv_obj_get_x(g_drow[i]), lv_obj_get_width(g_drow[i])) + lv_obj_get_width(g_drow[i]);   /* as if on the right */
                 if(right > clear_right) right = clear_right; /* leave the section picker clear */
             }
             int width = right - (180 - half);
-            lv_obj_set_x(g_drow[i], 180 - half);
+            lv_obj_set_x(g_drow[i], disco_mx(180 - half, width));   /* Disco Left: mirrored */
             lv_obj_set_width(g_drow[i], width);
             lv_obj_set_width(lv_obj_get_child(g_drow[i], 1), width - 96);
             lv_obj_set_style_text_font(lv_obj_get_child(g_drow[i], 1), TF(UI_22), 0);

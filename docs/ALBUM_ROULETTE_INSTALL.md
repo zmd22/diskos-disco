@@ -29,7 +29,7 @@ sh ui/tools/owner-keys/diskos-sign.sh /absolute/path/to/extracted-release/mq_ui 
 ```
 
 Copy the newly generated `diskos-update` folder to the SD card root. Choose
-Settings > System > Update from SD Card, install and restart. Tap Keep when
+Settings > System > Maintenance > Update from SD Card, install and restart. Tap Keep when
 prompted to accept the trial. For a full firmware installation, use the normal
 installer with `--ui payload/mq_ui`, then install the user app above.
 

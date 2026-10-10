@@ -84,7 +84,7 @@ Run from the repository root. Replace the binary and keys paths with your actual
 
 ```sh
 sh ui/tools/owner-keys/diskos-sign.sh \
-  ui/mq_ui 1.2.3-test \
+  ui/mq_ui 1.3.0-test \
   /absolute/path/to/your/diskos-keys ./diskos-update
 ```
 
@@ -109,7 +109,7 @@ host check does not replace the Disc's verification against its installed and ac
    `<SD>/diskos-update/mq_ui`, with the five signature/authorization files alongside it.
 2. Finish the copy and safely eject/unmount the card or USB storage connection. Return the
    Disc to normal Playback mode if you used USB storage.
-3. Open **Settings > System > Update from SD Card > Update**.
+3. Open **Settings > System > Maintenance > Update from SD Card > Update**.
 4. Wait for successful staging, then restart when prompted. Do not replace files in the
    update folder while installation is reading it.
 5. Check **Settings > System > About** for the expected compiled version and build ID.
@@ -125,7 +125,7 @@ UI-only SD updates do **not** install Album Roulette; see
 
 ## 6. Diagnose an update without replacing the UI
 
-Enable **Settings > System > Debug Mode** and use the displayed address/credentials.
+Enable **Settings > System > Maintenance > Debug Mode** and use the displayed address/credentials.
 SSH is optional; it is not required to install an update. These commands only read state:
 
 ```sh

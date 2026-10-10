@@ -116,6 +116,7 @@ static void rescan_show(int on){
  * Brightness stays on the top rim, the battery on the bottom rim. */
 #define DQ_CX 272                                                   /* the field's visible middle */
 #define DQ_CY 180
+#define DQ_OX (disco_mirror() ? 180 - DQ_CX : DQ_CX - 180)               /* the field's middle as an offset (Disco Left: on the left) */
 static int g_hub_d = ORBIT_HUB;                                    /* the cover disc (Disco: bigger) */
 static lv_obj_t *g_dq_row[T_N], *g_dq_ico[T_N], *g_dq_val[T_N], *g_dq_name[T_N], *g_dq_badge[T_N];
 static void set_text_if(lv_obj_t *l, const char *t){ if(l && strcmp(lv_label_get_text(l), t)) lv_label_set_text(l, t); }
@@ -146,25 +147,26 @@ static void disco_layout(lv_obj_t *root){
     int list = cfg_get_int("disco_qs", 1) == 1;                    /* the list (default); 0 = the two arcs */
     /* the field: the open navigation circle's shape, its right end cut by the rim */
     lv_obj_t *f = lv_obj_create(root); lv_obj_remove_style_all(f);
-    lv_obj_set_pos(f, 196, 90); lv_obj_set_size(f, 230, 180);
+    lv_obj_set_pos(f, disco_mx(196, 230), 90); lv_obj_set_size(f, 230, 180);
     lv_obj_set_style_radius(f, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_bg_color(f, TC(SCRIM), 0); lv_obj_set_style_bg_opa(f, 204, 0);
     lv_obj_clear_flag(f, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_move_to_index(f, lv_obj_get_index(g_dim) + 1);
     g_hub_d = 120;                                                   /* a bigger cover in its ring */
     lv_obj_set_size(g_cover_clip, g_hub_d, g_hub_d); lv_obj_set_size(g_prog, g_hub_d + 16, g_hub_d + 16);
-    lv_obj_align(g_prog, LV_ALIGN_CENTER, DQ_CX - 180, DQ_CY - 180);
-    lv_obj_align(g_cover_clip, LV_ALIGN_CENTER, DQ_CX - 180, DQ_CY - 180);
+    lv_obj_align(g_prog, LV_ALIGN_CENTER, DQ_OX, DQ_CY - 180);
+    lv_obj_align(g_cover_clip, LV_ALIGN_CENTER, DQ_OX, DQ_CY - 180);
     /* the album-colour glow: soft outline rings, not a 24 px blurred shadow (it sits inside the progress ring, which
      * redraws every second, and an uncached shadow was recomputed with it) */
     lv_obj_set_style_outline_width(g_cover_clip, 5, 0); lv_obj_set_style_outline_opa(g_cover_clip, 70, 0); lv_obj_set_style_outline_pad(g_cover_clip, 0, 0);
     lv_obj_set_style_outline_color(g_cover_clip, ui_media_accent(), 0);
-    lv_obj_align(g_pp, LV_ALIGN_CENTER, DQ_CX - 180, DQ_CY - 180);
+    lv_obj_align(g_pp, LV_ALIGN_CENTER, DQ_OX, DQ_CY - 180);
     if(!list){                                                       /* two arcs: radios outside, library things inside */
         static const struct { int a, r; } P[T_N] = { { 211, 210 }, { 180, 214 }, { 206, 140 }, { 180, 136 }, { 149, 210 }, { 154, 140 } };
         for(int i = 0; i < T_N; i++){
             float an = P[i].a * 0.0174533f;
             int x = DQ_CX + (int)lroundf(P[i].r * cosf(an)), y = DQ_CY + (int)lroundf(P[i].r * sinf(an));
+            if(disco_mirror()) x = 360 - x;
             lv_obj_align(g_orb.btn[i], LV_ALIGN_CENTER, x - 180, y - 180 - 6);
             if(g_orb.cap[i]){ lv_obj_set_style_text_font(g_orb.cap[i], TF(UI_10), 0); lv_obj_align(g_orb.cap[i], LV_ALIGN_CENTER, x - 180, y - 180 + 26); }
         }
@@ -175,8 +177,8 @@ static void disco_layout(lv_obj_t *root){
     static const char *const N[T_N] = { "Wi-Fi", "Bluetooth", "Library", "Rescan", "Mode", "Settings" };
     /* the sun and the battery glyph move to the right-hand ends of their arcs (clear of the rows), a little bigger */
     if(g_sun){ lv_obj_set_style_transform_scale(g_sun, 176, 0); lv_obj_set_style_transform_pivot_x(g_sun, lv_pct(50), 0); lv_obj_set_style_transform_pivot_y(g_sun, lv_pct(50), 0);
-               lv_obj_align(g_sun, LV_ALIGN_CENTER, 126, -100); }
-    if(g_batt_icon){ lv_obj_set_style_text_font(g_batt_icon, TF(UI_20), 0); lv_obj_align(g_batt_icon, LV_ALIGN_CENTER, 126, 102); }
+               lv_obj_align(g_sun, LV_ALIGN_CENTER, disco_mirror() ? -126 : 126, -100); }   /* Disco Left: the free (left) ends */
+    if(g_batt_icon){ lv_obj_set_style_text_font(g_batt_icon, TF(UI_20), 0); lv_obj_align(g_batt_icon, LV_ALIGN_CENTER, disco_mirror() ? -126 : 126, 102); }
     /* five rows of tall pills, 6 px apart: Wi-Fi and Bluetooth share the top one (icon + a round On/Off badge set into
      * the pill), then Mode, Library, Rescan beside the field, Settings centred in the battery arc */
     #define DQ_H 50
@@ -191,6 +193,7 @@ static void disco_layout(lv_obj_t *root){
             int dy = d1 > d2 ? d1 : d2;
             left = 180 - (int)sqrtf((float)(176 * 176 - dy * dy)) + 10; if(left < 16) left = 16;
             w = 190 - left;
+            left = disco_mx(left, w);                                 /* Disco Left: along the right rim (the centred rows stay) */
         }
         int radio = (i == T_WIFI || i == T_BT);
         lv_obj_t *r = lv_obj_create(root); lv_obj_remove_style_all(r); g_dq_row[i] = r;

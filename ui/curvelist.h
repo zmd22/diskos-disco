@@ -10,4 +10,6 @@ void curvelist_attach(curvelist_t *c, lv_obj_t *list, lv_obj_t *root, int full_w
 void curvelist_update(curvelist_t *c);
 void curvelist_braun_row(lv_obj_t *row);
 void curvelist_braun_watch(lv_obj_t *list);  /* Braun: keep a list's visible rows styled as it fills */  /* Braun: restyle one list row (straight, rule, dark type, focus dot) */    /* after (re)filling the rows */
+int curvelist_disco_scroll(void);   /* Disco > Scroll: 0 Classic, 1 Straight, 2 Disco (0 outside Disco) */
+int curvelist_disco_geom(int mode, int y1, int y2, int full_w, int *w, int *shift);   /* 1 = handled */
 #endif

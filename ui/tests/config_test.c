@@ -56,12 +56,12 @@ static void c_reject_too_long(void){
 }
 
 static void c_overflow(void){
-    /* CFG_MAX is 256; fill it with deferred sets (no per-key rewrite), then the next must be rejected. */
+    /* CFG_MAX is 512; fill it with deferred sets (no per-key rewrite), then the next must be rejected. */
     char k[16];
-    for(int i = 0; i < 256; i++){ snprintf(k, sizeof k, "k%d", i); CHECK(cfg_set_int_deferred(k, i) == 0, "fill within cap"); }
+    for(int i = 0; i < 512; i++){ snprintf(k, sizeof k, "k%d", i); CHECK(cfg_set_int_deferred(k, i) == 0, "fill within cap"); }
     CHECK(cfg_set_int_deferred("overflow", 1) == -1, "over-cap rejected");
     CHECK(cfg_take_save_error() == 1, "save error on overflow");
-    CHECK(cfg_flush() == 0, "flush the 256 filled keys");
+    CHECK(cfg_flush() == 0, "flush the 512 filled keys");
     CASE_DONE();
 }
 
@@ -107,10 +107,10 @@ static void c_new_empty_key_dirty(void){
  * partial set (the Last.fm credentials all-or-nothing guarantee). */
 static void c_txn_rollback(void){
     char k[16];
-    for(int i = 0; i < 255; i++){ snprintf(k, sizeof k, "f%d", i); CHECK(cfg_set_int_deferred(k, i) == 0, "fill to 255"); }
-    CHECK(cfg_flush() == 0, "persist the 255 fillers");
+    for(int i = 0; i < 511; i++){ snprintf(k, sizeof k, "f%d", i); CHECK(cfg_set_int_deferred(k, i) == 0, "fill to 511"); }
+    CHECK(cfg_flush() == 0, "persist the 511 fillers");
     cfg_begin();
-    CHECK(cfg_set_str_deferred("aa", "1") == 0, "first new key fits (slot 256)");
+    CHECK(cfg_set_str_deferred("aa", "1") == 0, "first new key fits (slot 512)");
     CHECK(cfg_set_str_deferred("bb", "2") == -1, "second new key overflows the store");
     CHECK(cfg_commit() == -1, "commit rolls back on a mid-batch failure");
     CHECK(cfg_take_save_error() == 1, "save error reported after rollback");

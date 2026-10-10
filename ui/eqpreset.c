@@ -63,10 +63,10 @@ void eqpreset_create(lv_obj_t *root){
  if(th_disco()){   /* fork: Disco keeps the navigation circle's sliver on the right rim - the controls step left of it */
   for(uint32_t k=0;k<lv_obj_get_child_count(root);k++){
    lv_obj_t *o=lv_obj_get_child(root,(int32_t)k);
-   if(o==name_label||o==edit_button||o==rename_button||o==note_label||o==switch_button) lv_obj_set_style_translate_x(o,-20,0);
+   if(o==name_label||o==edit_button||o==rename_button||o==note_label||o==switch_button) lv_obj_set_style_translate_x(o,disco_mirror()?20:-20,0);   /* Left: step right of it */
   }
   lv_obj_set_width(name_label,150);
-  lv_obj_set_style_translate_x(next_b,-36,0); lv_obj_set_style_translate_x(prev_b,-4,0);
+  lv_obj_set_style_translate_x(next_b,disco_mirror()?4:-36,0); lv_obj_set_style_translate_x(prev_b,disco_mirror()?36:-4,0);
   lv_obj_add_flag(switch_pointer,LV_OBJ_FLAG_HIDDEN);
  }
  /* Screen entry calls eqpreset_refresh; no hidden startup DB/proc probe. */

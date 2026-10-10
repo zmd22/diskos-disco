@@ -12,6 +12,7 @@
  *     Hidden on full-screen tools (EQ, Search, keyboard, Quick Settings, saver, Now Playing...).
  * Music itself (the sharp cover, clock, transport) is disco_home.c. */
 #include "screens.h"
+#include "orbit.h"
 #include "theme.h"
 #include "theme_kit.h"
 #include "config.h"
@@ -137,6 +138,7 @@ static void backdrop_apply(void){
 static void backdrop_bake(void){
     const lv_image_dsc_t *src = (const lv_image_dsc_t *)ui_current_backdrop_img();
     g_bd_ok = 0;
+    if(dhome_idle()) src = (const lv_image_dsc_t *)disco_idle_art();   /* nothing playing: the CD */
     if(!src || (uintptr_t)src < 4096 || src->header.magic != LV_IMAGE_HEADER_MAGIC) return;   /* a path, not a RAM picture */
     if(src->header.cf != LV_COLOR_FORMAT_XRGB8888 || src->header.w != BDW || src->header.h != BDW || !src->data) return;
     uint32_t c = theme_rgb(THEME_CLR_CANVAS);
@@ -158,6 +160,24 @@ static void backdrop_bake(void){
     g_bd_ok = 1;
 }
 
+/* ---- long-press menus (song / album / file / folder holds): Disco's own look - the tinted cover backdrop, glass
+ * buttons with a fine light ring (as on Music), icons in the accent, a glass Cancel hub. Called once a menu is built. */
+void disco_menu_glass(orbit_t *o, lv_obj_t *ov){
+    if(!th_disco() || !o || !ov) return;
+    if(g_bd_ok){ lv_obj_set_style_bg_image_src(ov, &g_bd_dsc, 0); lv_obj_set_style_bg_opa(ov, LV_OPA_COVER, 0); }
+    lv_color_t acc = ui_current_accent();
+    for(int i = 0; i < o->n; i++){
+        lv_obj_t *b = o->btn[i]; if(!b) continue;
+        if(lv_color_eq(lv_obj_get_style_bg_color(b, 0), acc)) continue;          /* an "on" button (Favourite) keeps its fill */
+        lv_obj_set_style_bg_color(b, TC(SURFACE), 0); lv_obj_set_style_bg_opa(b, theme_variant() ? 170 : 150, 0);
+        lv_obj_set_style_bg_color(b, TC(SURFACE_RAISED), LV_STATE_PRESSED);
+        if(o->icon[i]) lv_obj_set_style_text_color(o->icon[i], acc, 0);
+        if(o->cap[i]) lv_obj_set_style_text_color(o->cap[i], TC(TEXT_PRIMARY), 0);
+    }
+    if(o->hub){ lv_obj_set_style_bg_color(o->hub, TC(SURFACE), 0); lv_obj_set_style_bg_opa(o->hub, theme_variant() ? 190 : 170, 0);
+                lv_obj_set_style_border_width(o->hub, 1, 0); lv_obj_set_style_border_color(o->hub, TC(TEXT_PRIMARY), 0); lv_obj_set_style_border_opa(o->hub, 60, 0); }
+    if(o->ring) lv_obj_add_flag(o->ring, LV_OBJ_FLAG_HIDDEN);                    /* the hub's own ring says it */
+}
 /* ---- glass: opaque surface-coloured cards become translucent (once per screen entry) -------------- */
 static void glass_walk(lv_obj_t *o, uint32_t s1, uint32_t s2, lv_opa_t opa, int depth){
     uint32_t n = lv_obj_get_child_count(o);
@@ -240,6 +260,11 @@ static void sheen_create(void){
 static lv_timer_t *g_sh_tm;
 static void sheen_show_cb(lv_timer_t *t){ (void)t; g_sh_tm = NULL; disco_sheen_apply(); }
 
+int disco_mirror(void){
+    static int m = -1;
+    if(m < 0) m = th_disco() && cfg_get_int("disco_side", 0) == 1;
+    return m;
+}
 /* ---- the navigation circle ------------------------------------------------------------------------- */
 /* At 270 degrees (9 o'clock): its left edge just touches the screen's edge, radius ~25% of the screen width. */
 #define PK_D 180
@@ -290,7 +315,8 @@ static void picker_paint(void){
         float a = (180.0f + span / 2 - (g_nmenu > 1 ? span * i / (g_nmenu - 1) : 0)) * 0.0174533f;   /* first item (Music) at the top */
         int on = i == g_cur, sz = on ? 10 : 7, r = PK_D / 2 - 16;
         lv_obj_set_size(g_pk_dot[i], sz, sz);
-        lv_obj_set_pos(g_pk_dot[i], PK_D / 2 + (int)lroundf(r * cosf(a)) - sz / 2, PK_D / 2 + (int)lroundf(r * sinf(a)) - sz / 2);
+        int dx = PK_D / 2 + (int)lroundf(r * cosf(a)) - sz / 2;
+        lv_obj_set_pos(g_pk_dot[i], disco_mirror() ? PK_W - dx - sz : dx, PK_D / 2 + (int)lroundf(r * sinf(a)) - sz / 2);
         lv_obj_set_style_bg_color(g_pk_dot[i], on ? acc : TC(TEXT_MUTED), 0);
     }
 }
@@ -336,28 +362,30 @@ static void nav_show(void){                                             /* show 
 /* open / close: the oval slides out of the right edge and back in (a plain move, no scaling: cheap to draw) */
 #define PK_OPEN_MS 180
 #define PK_CLOSE_MS 140
+#define PK_OPEN_X disco_mx(PK_X, PK_W)                                  /* open / parked off-screen, on the hub's side */
+#define PK_OFF_X  (disco_mirror() ? -PK_W : 360)
 static void slide_cb(void *o, int32_t v){ lv_obj_set_x((lv_obj_t *)o, v); }
 static void slide_in_done(lv_anim_t *a){ (void)a; if(!g_open) nav_show(); }   /* closed: hide the oval, show the shard */
 void disco_nav_set_open(int open){
     if(!g_pk || g_open == !!open) return;
     int visible = !lv_obj_has_flag(g_pk, LV_OBJ_FLAG_HIDDEN);
-    int start = visible ? lv_obj_get_x(g_pk) : 360;
+    int start = visible ? lv_obj_get_x(g_pk) : PK_OFF_X;
     lv_anim_delete(g_pk, slide_cb);
     int was = g_open; g_open = open ? 1 : 0;
     if(g_open && g_hint){ hint_drop(); cfg_set_int("disco_nav_hint", 1); }   /* found it: no more hints */
     lv_anim_t a; lv_anim_init(&a); lv_anim_set_var(&a, g_pk); lv_anim_set_exec_cb(&a, slide_cb);
-    int end = g_open ? PK_X : 360;
+    int end = g_open ? PK_OPEN_X : PK_OFF_X;
     int duration = (g_open ? PK_OPEN_MS : PK_CLOSE_MS) * abs(end - start) / (360 - PK_X);
     if(duration < 60) duration = 60;
     lv_anim_set_duration(&a, duration);
     if(g_open){
         nav_show();
-        lv_anim_set_values(&a, start, PK_X); lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
+        lv_anim_set_values(&a, start, PK_OPEN_X); lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
         lv_anim_start(&a);
     } else {
         lv_obj_add_flag(g_catch, LV_OBJ_FLAG_HIDDEN);                    /* the screen answers touches again at once */
         if(!was || lv_obj_has_flag(g_pk, LV_OBJ_FLAG_HIDDEN)){ nav_show(); return; }
-        lv_anim_set_values(&a, lv_obj_get_x(g_pk), 360); lv_anim_set_path_cb(&a, lv_anim_path_ease_in);
+        lv_anim_set_values(&a, lv_obj_get_x(g_pk), PK_OFF_X); lv_anim_set_path_cb(&a, lv_anim_path_ease_in);
         lv_anim_set_completed_cb(&a, slide_in_done);
         lv_anim_start(&a);
     }
@@ -367,7 +395,8 @@ static void tab_cb(lv_event_t *e){ (void)e; disco_nav_set_open(1); }
 static void picker_create(void){
     g_pk = lv_obj_create(g_parent);
     lv_obj_remove_style_all(g_pk);
-    lv_obj_set_pos(g_pk, PK_X, PK_Y); lv_obj_set_size(g_pk, PK_W, PK_D);
+    int m = disco_mirror() ? -1 : 1;                                     /* Left: the circle's inner offsets point the other way */
+    lv_obj_set_pos(g_pk, PK_OPEN_X, PK_Y); lv_obj_set_size(g_pk, PK_W, PK_D);
     lv_obj_set_style_radius(g_pk, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_bg_color(g_pk, TC(SCRIM), 0);                     /* black in both variants */
     lv_obj_set_style_bg_opa(g_pk, 204, 0);                              /* 80% */
@@ -380,29 +409,29 @@ static void picker_create(void){
     g_pk_glow = lv_obj_create(g_pk); lv_obj_remove_style_all(g_pk_glow);   /* a soft accent glow behind the icon */
     /* a 40 px blurred shadow was redrawn (uncached) on every frame of the circle's slide: now two soft rings around a
      * faint disc - plain fills, the same feel */
-    lv_obj_set_size(g_pk_glow, 50, 50); lv_obj_align(g_pk_glow, LV_ALIGN_CENTER, -38, -16);
+    lv_obj_set_size(g_pk_glow, 50, 50); lv_obj_align(g_pk_glow, LV_ALIGN_CENTER, -38 * m, -16);
     lv_obj_set_style_radius(g_pk_glow, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_bg_opa(g_pk_glow, 55, 0);
     lv_obj_set_style_outline_width(g_pk_glow, 10, 0); lv_obj_set_style_outline_opa(g_pk_glow, 30, 0); lv_obj_set_style_outline_pad(g_pk_glow, 0, 0);
     lv_obj_set_style_border_width(g_pk_glow, 6, 0); lv_obj_set_style_border_opa(g_pk_glow, 25, 0);
     lv_obj_clear_flag(g_pk_glow, LV_OBJ_FLAG_CLICKABLE);
-    g_pk_icon = lv_label_create(g_pk); lv_obj_set_style_text_color(g_pk_icon, white, 0); lv_obj_align(g_pk_icon, LV_ALIGN_CENTER, -38, -16);
+    g_pk_icon = lv_label_create(g_pk); lv_obj_set_style_text_color(g_pk_icon, white, 0); lv_obj_align(g_pk_icon, LV_ALIGN_CENTER, -38 * m, -16);
     g_pk_name = lv_label_create(g_pk); lv_obj_set_style_text_color(g_pk_name, white, 0); lv_obj_set_style_text_font(g_pk_name, TF(UI_20), 0);
-    lv_obj_align(g_pk_name, LV_ALIGN_CENTER, -38, 26);
+    lv_obj_align(g_pk_name, LV_ALIGN_CENTER, -38 * m, 26);
     lv_obj_t *u = lv_label_create(g_pk); lv_label_set_text(u, LV_SYMBOL_UP); lv_obj_set_style_text_font(u, TF(UI_16), 0);
-    lv_obj_set_style_text_color(u, grey, 0); lv_obj_align(u, LV_ALIGN_TOP_MID, -38, 12);
+    lv_obj_set_style_text_color(u, grey, 0); lv_obj_align(u, LV_ALIGN_TOP_MID, -38 * m, 12);
     {   /* a collapse arrow at the far right, against the rim: tapping it closes the circle (as a tap outside does) */
         lv_obj_t *cb = lv_obj_create(g_pk); lv_obj_remove_style_all(cb);
-        lv_obj_set_size(cb, 26, 76); lv_obj_set_pos(cb, 360 - PK_X - 27, PK_D / 2 - 38);
+        lv_obj_set_size(cb, 26, 76); lv_obj_set_pos(cb, disco_mirror() ? PK_W - (360 - PK_X - 27) - 26 : 360 - PK_X - 27, PK_D / 2 - 38);
         lv_obj_set_style_radius(cb, 17, 0); lv_obj_set_style_bg_color(cb, white, 0); lv_obj_set_style_bg_opa(cb, 0, 0);
         lv_obj_set_style_bg_opa(cb, 40, LV_STATE_PRESSED);
         lv_obj_add_flag(cb, LV_OBJ_FLAG_CLICKABLE); lv_obj_clear_flag(cb, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_EVENT_BUBBLE);
         lv_obj_add_event_cb(cb, catch_cb, LV_EVENT_CLICKED, NULL);
-        lv_obj_t *cl = lv_label_create(cb); lv_label_set_text(cl, LV_SYMBOL_RIGHT); lv_obj_set_style_text_font(cl, TF(UI_16), 0);
-        lv_obj_set_style_text_color(cl, grey, 0); lv_obj_align(cl, LV_ALIGN_CENTER, 1, 0);
+        lv_obj_t *cl = lv_label_create(cb); lv_label_set_text(cl, disco_mirror() ? LV_SYMBOL_LEFT : LV_SYMBOL_RIGHT); lv_obj_set_style_text_font(cl, TF(UI_16), 0);
+        lv_obj_set_style_text_color(cl, grey, 0); lv_obj_align(cl, LV_ALIGN_CENTER, m, 0);
     }
     lv_obj_t *d = lv_label_create(g_pk); lv_label_set_text(d, LV_SYMBOL_DOWN); lv_obj_set_style_text_font(d, TF(UI_16), 0);
-    lv_obj_set_style_text_color(d, grey, 0); lv_obj_align(d, LV_ALIGN_BOTTOM_MID, -38, -12);
+    lv_obj_set_style_text_color(d, grey, 0); lv_obj_align(d, LV_ALIGN_BOTTOM_MID, -38 * m, -12);
     for(int i = 0; i < MAXM; i++){
         g_pk_dot[i] = lv_obj_create(g_pk); lv_obj_remove_style_all(g_pk_dot[i]);
         lv_obj_set_style_radius(g_pk_dot[i], LV_RADIUS_CIRCLE, 0); lv_obj_set_style_bg_opa(g_pk_dot[i], LV_OPA_COVER, 0);
@@ -416,7 +445,7 @@ static void picker_create(void){
     lv_obj_add_event_cb(g_catch, catch_cb, LV_EVENT_CLICKED, NULL);
     /* the closed tab: an oval shade on the right edge with the section's icon */
     g_tab = lv_obj_create(g_parent); lv_obj_remove_style_all(g_tab);
-    lv_obj_set_pos(g_tab, TAB_X, TAB_Y); lv_obj_set_size(g_tab, TAB_D, TAB_D);
+    lv_obj_set_pos(g_tab, disco_mx(TAB_X, TAB_D), TAB_Y); lv_obj_set_size(g_tab, TAB_D, TAB_D);
     lv_obj_set_style_radius(g_tab, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_bg_color(g_tab, TC(SCRIM), 0); lv_obj_set_style_bg_opa(g_tab, 190, 0);
     lv_obj_set_style_bg_opa(g_tab, 235, LV_STATE_PRESSED);
@@ -425,25 +454,27 @@ static void picker_create(void){
     lv_obj_clear_flag(g_tab, LV_OBJ_FLAG_SCROLLABLE); lv_obj_add_flag(g_tab, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_event_cb(g_tab, tab_cb, LV_EVENT_CLICKED, NULL);
     g_tab_icon = lv_label_create(g_tab); lv_obj_set_style_text_color(g_tab_icon, white, 0);
-    lv_obj_align(g_tab_icon, LV_ALIGN_LEFT_MID, 10, 0);                 /* in the visible sliver */
+    lv_obj_align(g_tab_icon, disco_mirror() ? LV_ALIGN_RIGHT_MID : LV_ALIGN_LEFT_MID, disco_mirror() ? -10 : 10, 0);   /* in the visible sliver */
     picker_paint();
     if(!cfg_get_int("disco_nav_hint", 0)){                             /* the first-time hint, left of the sliver */
         g_hint = lv_obj_create(g_parent); lv_obj_remove_style_all(g_hint);
-        lv_obj_set_size(g_hint, 92, 34); lv_obj_set_pos(g_hint, TAB_X - 100, TAB_Y + TAB_D / 2 - 17);
+        lv_obj_set_size(g_hint, 92, 34); lv_obj_set_pos(g_hint, disco_mx(TAB_X - 100, 92), TAB_Y + TAB_D / 2 - 17);
         lv_obj_set_style_radius(g_hint, LV_RADIUS_CIRCLE, 0);
         lv_obj_set_style_bg_color(g_hint, TC(SCRIM), 0); lv_obj_set_style_bg_opa(g_hint, 210, 0);
         lv_obj_set_style_border_width(g_hint, 1, 0); lv_obj_set_style_border_color(g_hint, white, 0); lv_obj_set_style_border_opa(g_hint, 90, 0);
         lv_obj_clear_flag(g_hint, LV_OBJ_FLAG_SCROLLABLE); lv_obj_add_flag(g_hint, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_event_cb(g_hint, tab_cb, LV_EVENT_CLICKED, NULL);      /* a tap on the hint opens the circle too */
-        lv_obj_t *l = lv_label_create(g_hint); lv_label_set_text(l, "Menu " LV_SYMBOL_RIGHT);
+        lv_obj_t *l = lv_label_create(g_hint); lv_label_set_text(l, disco_mirror() ? LV_SYMBOL_LEFT " Menu" : "Menu " LV_SYMBOL_RIGHT);
         lv_obj_set_style_text_font(l, TF(UI_16), 0); lv_obj_set_style_text_color(l, white, 0); lv_obj_center(l);
         g_hint_tmr = lv_timer_create(hint_timeout, 10000, NULL); lv_timer_set_repeat_count(g_hint_tmr, 1);
     }
 }
 
 /* lists keep their rows clear of the circle: a row whose height overlaps it starts right of the circle's edge there */
+static int sliver_edge(int y1, int y2);
 int disco_clear_left(int y1, int y2){
     if(!g_pk) return 0;
+    if(disco_mirror()){ int e = sliver_edge(y1, y2); return e ? 360 - e : 0; }   /* Left: rows start right of the sliver */
     return 0;                                                           /* the circle is now a pop-in overlay: lists keep their width */
     int cy = PK_Y + PK_D / 2, r = PK_D / 2;
     int dy = (y1 <= cy && y2 >= cy) ? 0 : (y2 < cy ? cy - y2 : y1 - cy);
@@ -452,6 +483,10 @@ int disco_clear_left(int y1, int y2){
 }
 /* lists keep their rows' right end clear of the closed sliver (the open circle is an overlay: it doesn't count) */
 int disco_clear_right(int y1, int y2){
+    if(disco_mirror()) return 0;                                         /* Left: nothing on the right to clear */
+    return sliver_edge(y1, y2);
+}
+static int sliver_edge(int y1, int y2){                                 /* the right-hand sliver's clearance (Left: mirrored by the caller) */
     if(!g_tab || lv_obj_has_flag(g_tab, LV_OBJ_FLAG_HIDDEN)) return 0;
     int cx = TAB_X + TAB_D / 2, cy = TAB_Y + TAB_D / 2, r = TAB_D / 2, best = 360;
     for(int y = y1; y <= y2; y += 4){                                    /* the sliver's left edge, nearest point in the row */
@@ -636,7 +671,7 @@ lv_obj_t *disco_row(lv_obj_t *root, int y, int h, const char *glyph, const lv_fo
     int left = 180 - half + 14, right = 180 + half - 14;
     int sl = sliver_left(y, y + h) - 8; if(right > sl) right = sl;
     lv_obj_t *r = lv_obj_create(root); lv_obj_remove_style_all(r);
-    lv_obj_set_pos(r, left, y); lv_obj_set_size(r, right - left, h);
+    lv_obj_set_pos(r, disco_mx(left, right - left), y); lv_obj_set_size(r, right - left, h);
     lv_obj_set_style_radius(r, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_bg_color(r, TC(SURFACE), 0); lv_obj_set_style_bg_opa(r, LV_OPA_70, 0);
     lv_obj_set_style_bg_color(r, TC(SURFACE_RAISED), LV_STATE_PRESSED);

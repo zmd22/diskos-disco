@@ -424,6 +424,7 @@ void fileops_open(const char *dir, const char *name, int is_dir, void (*done)(vo
     orbit_create(&g_orb, o, it, A_N, -90 + 45, pick_action);         /* four buttons on the diagonals */
     if(!th_braun()) lv_obj_set_style_text_color(g_orb.icon[A_DELETE], TC(ACCENT_PRIMARY), 0);
     orbit_hub_create(&g_orb, o, hub_cb, is_dir ? LV_SYMBOL_DIRECTORY : LV_SYMBOL_AUDIO, "Cancel");
+    disco_menu_glass(&g_orb, o);                                      /* Disco: glass over the cover backdrop */
     lv_obj_t *n = lv_label_create(o);                                 /* what it's about, at the top */
     lv_label_set_text(n, name);
     lv_label_set_long_mode(n, LV_LABEL_LONG_DOT); lv_obj_set_width(n, 220);

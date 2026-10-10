@@ -15,7 +15,7 @@ observed behaviour. It is a good-faith summary, not a guarantee - read the sourc
 
 ## The diskOS UI (`mq_ui`) on the device
 
-diskOS is a local music player. Weather on Home is **on by default**. While it is on, diskOS fetches the weather when the UI starts, retries after failures, and refreshes later. With Wi-Fi connected, this can contact `wttr.in` without opening the Weather app. Turning off Settings > Display > Weather on Home stops automatic startup, retry and refresh fetches and hides the glance. Changing or resetting the location in the Weather app explicitly requests weather even while that toggle is off. A request already in flight may still finish after you turn it off. Other online features act under the conditions below. Each request reveals the device's public IP to the service it contacts.
+diskOS is a local music player. Weather on Home is **on by default**. While it is on, diskOS fetches the weather when the UI starts, retries after failures, and refreshes later. With Wi-Fi connected, this can contact `wttr.in` without opening the Weather app. Turning off Settings > Display > Online & Extras > Weather on Home stops automatic startup, retry and refresh fetches and hides the glance. Changing or resetting the location in the Weather app explicitly requests weather even while that toggle is off. A request already in flight may still finish after you turn it off. Other online features act under the conditions below. Each request reveals the device's public IP to the service it contacts.
 
 | Feature | Endpoint | Protocol | What is sent |
 |---|---|---|---|

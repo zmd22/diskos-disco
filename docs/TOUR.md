@@ -73,7 +73,7 @@ After the Screensaver delay, the screen dims to a clock view; a later Screen Off
 
 Now Playing shows the current song, elapsed and remaining time, playback controls, play mode, and a Favourites heart; most themes also show cover art and album. Tap previous, play or pause, and next for transport; tap the heart to add or remove the current music track from Favourites, and tap the mode icon to cycle Sequential, Shuffle, Repeat One, Repeat All, and Single. Drag the progress control to seek, tap visible cover art for full-screen art, and tap the moon to choose a sleep timer; a book also offers End of chapter. Swipe left across the page to the Options hub, or open its context and tuning panels with the on-screen side controls; a deliberate right swipe returns, while a short drag on the seek control stays a seek.
 
-The Display > Now Playing choice sets Cover or a spinning Vinyl image. Default and something place art inside a round seek ring; hi-fi adds an LCD-like time readout, blueprint adds cover crop marks, and stone uses a thick ring and pill-shaped play key. Bauhaus splits the art and controls with a straight seek bar, zine tapes art above a highlighter-style bar, and terminal hides art for a text readout and straight bar. Vinyl freezes when paused and spins while the screen is showing a playing track; a missing cover uses a placeholder where art is shown.
+The Display > Text & Layout > Now Playing choice sets Cover or a spinning Vinyl image. Default and something place art inside a round seek ring; hi-fi adds an LCD-like time readout, blueprint adds cover crop marks, and stone uses a thick ring and pill-shaped play key. Bauhaus splits the art and controls with a straight seek bar, zine tapes art above a highlighter-style bar, and terminal hides art for a text readout and straight bar. Vinyl freezes when paused and spins while the screen is showing a playing track; a missing cover uses a placeholder where art is shown.
 
 <table>
 <tr>
@@ -183,7 +183,7 @@ Tap the heart on Now Playing, use the current-song context action, or enable the
 
 ### Playlists
 
-Library > Playlists lists saved playlists with song counts. Tap New Playlist and type a name, or use Add to Playlist from a playing song or a displayed album, artist, or genre group; choose a playlist in the picker. Tap a playlist to see its ordered songs, Play and Shuffle buttons, and its menu. Tap a song to play it, hold a song to remove that entry, or use the menu to Edit Name, Export to SD as M3U, or Delete Playlist after confirmation; deleting a playlist leaves music files alone. Settings > System > Import Playlists searches the card for .m3u and .m3u8 files and imports recognized library tracks, keeping a separately named copy when a same-name list differs.
+Library > Playlists lists saved playlists with song counts. Tap New Playlist and type a name, or use Add to Playlist from a playing song or a displayed album, artist, or genre group; choose a playlist in the picker. Tap a playlist to see its ordered songs, Play and Shuffle buttons, and its menu. Tap a song to play it, hold a song to remove that entry, or use the menu to Edit Name, Export to SD as M3U, or Delete Playlist after confirmation; deleting a playlist leaves music files alone. Settings > System > Library > Import Playlists searches the card for .m3u and .m3u8 files and imports recognized library tracks, keeping a separately named copy when a same-name list differs.
 
 <table>
 <tr>
@@ -388,7 +388,7 @@ diskOS Disco! has no updates over Wi-Fi: install a new version from the SD card 
 SD Card, a signed `diskos-update` folder) or by flashing. An SD-card update runs as a trial; choose Keep or Go back
 after restarting, and a broken update rolls back automatically.
 
-At startup, the Disc animation uses the body color selected under Display > Disc Colour. The stock player handles the physical power button: one press blanks the display and another restores it; the physical play/pause button controls playback through that player. The Volume Up and Volume Down keys adjust volume by default, or switch tracks according to the V2.57 Volume Keys settings. A tap wakes the idle saver, and the separate Screensaver, Screen Off, Sleep Timer, and Idle Power-off choices control later idle behavior. For USB Storage, eject the card safely on the computer before changing modes; diskOS can refuse the switch when card ownership is uncertain.
+At startup, the Disc animation uses the body color selected under Display > Text & Layout > Disc Colour. The stock player handles the physical power button: one press blanks the display and another restores it; the physical play/pause button controls playback through that player. The Volume Up and Volume Down keys adjust volume by default, or switch tracks according to the V2.57 Volume Keys settings. A tap wakes the idle saver, and the separate Screensaver, Screen Off, Sleep Timer, and Idle Power-off choices control later idle behavior. For USB Storage, eject the card safely on the computer before changing modes; diskOS can refuse the switch when card ownership is uncertain.
 
 <table>
 <tr>
@@ -411,4 +411,4 @@ Settings > Wi-Fi. A fix is planned for 1.2.1.
 
 ### Safety and stock UI
 
-Settings > System > Default UI > Stock makes the stock interface the normal boot choice. To use the other interface for one boot, hold Volume Up from power-on until it appears; keep holding long enough for the switch to register. Both choices leave the diskOS image installed. The installer's `restore-stock` command restores the saved stock root filesystem when you want to remove that image.
+Settings > System > Controls > Default UI > Stock makes the stock interface the normal boot choice. To use the other interface for one boot, hold Volume Up from power-on until it appears; keep holding long enough for the switch to register. Both choices leave the diskOS image installed. The installer's `restore-stock` command restores the saved stock root filesystem when you want to remove that image.

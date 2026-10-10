@@ -83,7 +83,7 @@ Run from the repository root. This example signs the release's bundled UI with k
 
 ```sh
 sh ui/tools/owner-keys/diskos-sign.sh \
-  payload/mq_ui 1.2.3-Disco \
+  payload/mq_ui 1.3.0-Disco \
   /absolute/path/to/your/diskos-keys ./diskos-update
 ```
 
@@ -91,7 +91,7 @@ Replace `payload/mq_ui` with `ui/mq_ui` for a new build, or the full path of a d
 If your keys are in `./diskos-keys`, the short form is:
 
 ```sh
-sh ui/tools/owner-keys/diskos-sign.sh payload/mq_ui 1.2.3-Disco
+sh ui/tools/owner-keys/diskos-sign.sh payload/mq_ui 1.3.0-Disco
 ```
 
 Arguments are `binary [version-label] [keys-folder] [output-folder]`. The label is at most 32
@@ -134,7 +134,7 @@ is reading it.
 
 ## 5. Install and check the trial
 
-1. Open **Settings > System > Update from SD Card > Update**.
+1. Open **Settings > System > Maintenance > Update from SD Card > Update**.
 2. Wait for successful staging and restart when prompted. The running UI is not replaced live.
 3. Open **Settings > System > About** and check the expected compiled Disco version and build ID.
 4. Keep the trial running for at least **three minutes**. Start a track and check playback,
@@ -163,7 +163,7 @@ flashed baseline when no kept SD build exists. Stock remains the verification-fa
 | Old build after flashing | Confirm the exact file passed with `--ui`; a newer flash's boot hook clears old SD builds when the flashed UI hash changes. |
 | Host verifier passes, Disc refuses | The installed root key or accepted epoch can differ from the host check's key and initial `1 1` floors. |
 
-Optional read-only diagnostics: enable **Settings > System > Debug Mode**, then use SSH with the
+Optional read-only diagnostics: enable **Settings > System > Maintenance > Debug Mode**, then use SSH with the
 address and credentials it displays. Use the current displayed address if it changes.
 
 ```sh
@@ -182,6 +182,6 @@ Do not overwrite the UI over SSH or alter the boot manifest to get an update acc
 
 ## Returning to stock or changing the boot chain
 
-**Settings > System > Default UI > Stock** makes FiiO's UI the default. Holding Volume Up from
+**Settings > System > Controls > Default UI > Stock** makes FiiO's UI the default. Holding Volume Up from
 power-on selects the other UI once. Use the installer when changing boot scripts or root update
 keys; these changes are outside a UI-only SD package. See the [README](../README.md#going-back).

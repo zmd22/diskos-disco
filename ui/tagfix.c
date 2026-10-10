@@ -627,8 +627,12 @@ void tagfix_current_track(void){
 void tagfix_current_album(void){
     track_state_t st; ipc_get_state(&st);
     if(!st.have_track || !st.album[0]){ ui_toast("This track has no album tag"); return; }
+    tagfix_album(st.album);
+}
+void tagfix_album(const char *album){                       /* every track of a Library album (album hold menu, NP menu) */
+    if(!album || !album[0]){ ui_toast("No album tag"); return; }
     static const mdb_song_t *songs[400];
-    int n = mdb_album_songs(st.album, songs, 400);
+    int n = mdb_album_songs(album, songs, 400);
     if(n <= 0){ ui_toast("Album not found in the library"); return; }
     tf_item_t *items = calloc((size_t)n, sizeof *items); if(!items) return;
     int k = 0;
