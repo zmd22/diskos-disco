@@ -7,6 +7,7 @@
 #include "theme.h"
 #include <math.h>
 #include <stdint.h>
+extern const lv_font_t font_theme_20, font_theme_24;
 static void btn_cb(lv_event_t *e){
     orbit_t *o = lv_event_get_user_data(e);
     lv_obj_t *b = lv_event_get_current_target(e);
@@ -81,6 +82,26 @@ void orbit_create(orbit_t *o, lv_obj_t *root, const orbit_item_t *it, int n, int
             if(th_braun()) lv_obj_set_style_text_font(o->cap[i], br_font(12, 0), 0);
             lv_obj_align(o->cap[i], LV_ALIGN_CENTER, cx, cy + ORBIT_BTN / 2 + 11);
             lv_obj_clear_flag(o->cap[i], LV_OBJ_FLAG_CLICKABLE);
+        }
+    }
+}
+/* Compact enough for eight actions, but with larger targets and readable captions.
+ * Keep this opt-in: screen orbits and their navigation clearance remain unchanged. */
+void orbit_popup_polish(orbit_t *o){
+    for(int i = 0; i < o->n; i++){
+        float a = orbit_deg(o, i) * 3.14159265f / 180.0f;
+        int cx = (int)lroundf(108 * cosf(a)), cy = (int)lroundf(108 * sinf(a));
+        lv_obj_set_size(o->btn[i], 56, 56);
+        lv_obj_align(o->btn[i], LV_ALIGN_CENTER, cx, cy - 8);
+        lv_obj_set_ext_click_area(o->btn[i], 2);
+        const lv_font_t *old=lv_obj_get_style_text_font(o->icon[i],0);
+        lv_obj_set_style_text_font(o->icon[i], old==&font_theme_20?&font_theme_24:TF(UI_24), 0);
+        if(o->cap[i]){
+            lv_obj_set_style_text_font(o->cap[i], TF(UI_16), 0);
+            lv_label_set_long_mode(o->cap[i], LV_LABEL_LONG_DOT);
+            lv_obj_set_size(o->cap[i], 96, lv_font_get_line_height(TF(UI_16)));
+            lv_obj_set_style_text_align(o->cap[i], LV_TEXT_ALIGN_CENTER, 0);
+            lv_obj_align(o->cap[i], LV_ALIGN_CENTER, cx, cy + 29);
         }
     }
 }

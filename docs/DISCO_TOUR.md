@@ -12,6 +12,9 @@ Two more themes, **Ring** and **Braun**, have the same features and settings, la
 
 [Home](../README.md) | [How-to](HOWTO.md) | [Docs](README.md)
 
+**1.3.1** adds the album back sleeve, clearer action menus, bigger Shortcuts, a cleaner Queue,
+optional heavier Music fonts and session scroll memory. [Release notes](releases/v1.3.1.md).
+
 ## On this page
 
 - **Getting around:** [The navigation circle](#the-navigation-circle), [Left-handed mode](#left-handed-mode), [Gestures](#gestures), [Quick Settings](#quick-settings), [Volume](#volume), [Standby](#standby).
@@ -196,7 +199,7 @@ Tap the title on Music. The cover dims and six buttons appear under the song's n
 | Artist | Open the artist's albums, with this album highlighted. |
 | Queue | Open your [Queue](#queue-and-up-next). |
 | Lyrics | Show the lyrics (from an .lrc file, the song's tags, or online if allowed). |
-| Immersive | Full-screen cover art. Tap to leave. |
+| Info | Open Song Info as a readable album back sleeve. |
 
 Tap the song's name at the top to close the menu. **Holding** the title on Music (instead of tapping it) goes
 straight to Immersive or toggles Favourite, whichever you chose under Disco Options > Music Screen > Title Hold.
@@ -208,6 +211,14 @@ straight to Immersive or toggles Favourite, whichever you chose under Disco Opti
 </tr>
 </table>
 
+### Song Info: the back sleeve
+
+Tap the title on Music and choose **Info**, or hold a library track and choose Info.
+The cover stamp, title and artist sit above a readable metadata card: the back of the record sleeve.
+Back returns to the screen you came from.
+
+<img src="disco/song-info.png" width="240" alt="Song Info album back sleeve">
+
 ### Queue and Up Next
 
 **Queue** is your own list of songs to play next. Add songs with **Add to queue** in any [hold menu](#hold-menus).
@@ -218,6 +229,9 @@ while they play; then playback returns to whatever you were listening to before.
 - drag a song by its handle (≡) to move it;
 - Play starts the queue, the shuffle button shuffles it, and Clear empties it (tap twice to confirm).
 
+The current track stays highlighted above a separation line; the queue follows beneath it.
+Play, icon-only Random and Clear have larger touch targets. Empty controls dim and disable;
+Random needs two queued tracks. Long queues briefly show position/count while scrolling.
 The queue is saved and survives a restart.
 
 **Up Next** shows the player's own order from the current song on, up to 100 songs. Tap a song to jump to it.
@@ -241,7 +255,9 @@ the accent: Disco Options > Colours > Equalizer):
 - **double-tap** a band to reset it to 0 dB;
 - under the faders, tap the **frequency** or the **gain** to choose what − and + change: gain moves 0.1 dB a
   tap, frequency 1/12 octave a tap; hold − or + to repeat; tap the active value again to type it;
-- the preset name at the top switches presets.
+- the larger preset pill at the top switches presets; the **<** beside it leaves edit mode.
+
+Disco spreads the ten bands across the screen, with larger labels and a **Choose a band** prompt.
 
 Gains run from −6 to +6 dB. Built-in presets are shown greyed out and can't be edited; only your own presets
 are written to the player, and only when you change something.
@@ -309,6 +325,11 @@ Folders too, once a folder holds more than a dozen entries). Albums can be a lis
 View). Tap a song to play it; song lists have Play and Shuffle at the top. Artists and Genres open their albums plus
 "All Songs"; going back from an artist lands on that artist in the list.
 
+Library remembers the last twelve view positions for this UI session, including album and artist drills.
+Going Back returns you to your place; explicit playing-track focus takes priority. A rescan clamps positions
+and restarting the UI clears the memory. Lists with at least twelve rows briefly show position/count;
+highlighted long titles reveal, then return to ellipsis. Browsing writes no scroll positions to flash.
+
 **Books** keeps .m4b audiobooks apart from music, resumes where you stopped, and has chapters. **Folders**
 browses the card itself.
 
@@ -321,7 +342,7 @@ browses the card itself.
 
 ### Hold menus
 
-Hold a row in the Library for its actions:
+Hold a row in the Library for its actions. Menus use larger targets, icons and captions; **Queue** is the compact caption for Add to queue:
 
 | Hold a… | Menu |
 |---|---|
@@ -367,7 +388,7 @@ straight to its results.
 
 Swipe left on Music (or pick Shortcuts in the navigation circle) for five shortcuts of your choice. Choose them
 under Display > Online & Extras > Shortcuts from: Weather, Immersive, Equalizer, Folders, Lyrics, Queue, Audiobooks, Search,
-Battery, Song Info, Last.fm, All apps, and any homebrew app installed on the Disc. **All apps** lists the apps
+Battery, Song Info, Last.fm, All apps, and any homebrew app installed on the Disc. Rows use larger pills and 20 px labels, with clear pressed feedback. **All apps** lists the apps
 five at a time; tap its title for the next page.
 
 <table>
@@ -415,7 +436,7 @@ Display > Disco Options (only shown with the Disco theme):
 | Page | Rows |
 |---|---|
 | Disco Menu | The sections of the navigation circle: reorder, add, remove. |
-| Music Screen | **Show Clock** (clock, status icons and weather; holding the clock does the same), **Track Times**, **Track Number** ("3. Northern Lights", from the tags), **Title Position** (Centred or Left), **Title Hold** (Immersive, Favourite or Nothing). |
+| Music Screen | **Track Font** (Original, Inter Semibold or Nunito Bold; larger alternatives with international/CJK fallbacks), **Show Clock** (clock, status icons and weather; holding the clock does the same), **Track Times**, **Track Number** ("3. Northern Lights", from the tags), **Title Position** (Centred or Left), **Title Hold** (Immersive, Favourite or Nothing). |
 | Colours | **Rim Sheen** (the faint CD rainbow round Music and playlists), **Equalizer** and **Volume** (Disco rainbow or Accent), **Progress Bar** (Disco, Accent or Off), **Progress Shape** (Linear under the title, or Arc round the rim). |
 | Layout | **Side** (Right or Left, then Apply: see [left-handed mode](#left-handed-mode)) and **Scroll**: Classic (rows follow the screen's edge), Straight (flat rows) or Disco (rows swing round the navigation circle like a CD, the times in one straight column). |
 | Immersive | The full-screen cover: Vinyl (grooves and a dark label) or CD (a clear hub, a still rainbow sheen and faint spokes). |
@@ -521,7 +542,7 @@ half an hour on battery. Without a set clock the figures show "-".
 - **The stock interface is always there.** If the Disco! interface ever stops, the Disc falls back to FiiO's
   own interface until the next restart; your music and settings are untouched. Settings > System > Controls > Default UI
   can make stock the normal choice, and holding Volume Up from power-on boots the other interface once.
-- **Settings > System > About** shows the version (e.g. "Disco! 1.3.0") with the exact build ID.
+- **Settings > System > About** shows the version (e.g. "Disco! 1.3.1") with the exact build ID.
 - **The rescan dot.** While the library is being rescanned, a small dot runs around the rim of the screen.
 
 <table>

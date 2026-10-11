@@ -100,6 +100,26 @@ static lv_obj_t *find_text(lv_obj_t *o,const char *text){
     }
     return NULL;
 }
+static lv_obj_t *find_visible_text(lv_obj_t *o,const char *text){
+    if(!lv_obj_is_visible(o)) return NULL;
+    if(lv_obj_check_type(o,&lv_label_class) && !strcmp(lv_label_get_text(o),text)) return o;
+    for(uint32_t i=0;i<lv_obj_get_child_count(o);i++){
+        lv_obj_t *found=find_visible_text(lv_obj_get_child(o,i),text); if(found) return found;
+    }
+    return NULL;
+}
+static void assert_visible_icon_glyphs(lv_obj_t *root){
+    if(lv_obj_has_flag(root,LV_OBJ_FLAG_HIDDEN))return;
+    if(lv_obj_check_type(root,&lv_label_class)){
+        const unsigned char *t=(const unsigned char *)lv_label_get_text(root);
+        if(t[0]==0xef && t[1] && t[2]){
+            unsigned cp=((t[0]&15)<<12)|((t[1]&63)<<6)|(t[2]&63);
+            lv_font_glyph_dsc_t d={0};assert(lv_font_get_glyph_dsc(lv_obj_get_style_text_font(root,0),&d,cp,0));
+            assert(!d.is_placeholder);
+        }
+    }
+    for(uint32_t i=0;i<lv_obj_get_child_count(root);i++)assert_visible_icon_glyphs(lv_obj_get_child(root,i));
+}
 int main(int argc, char **argv){
     if(argc != 6){ fprintf(stderr,"usage: host-render PRESET VARIANT home|np|actions UP_NEXT OUT.ppm\n"); return 2; }
     setenv("TZ","UTC",1); tzset();
@@ -253,6 +273,20 @@ int main(int argc, char **argv){
         const char *sc=getenv("LIB_SCROLL"); if(sc){ lv_obj_t *lst=NULL;
             for(uint32_t k=0;k<lv_obj_get_child_count(root);k++){ lv_obj_t *c=lv_obj_get_child(root,k); if(lv_obj_get_child_count(c)>5 && lv_obj_get_scroll_bottom(c)>0) lst=c; }
             if(lst){ lv_obj_scroll_by(lst,0,-atoi(sc),LV_ANIM_OFF); lv_obj_send_event(lst,LV_EVENT_SCROLL,NULL); } }
+        if(getenv("REVIEW_LIBRARY_POSITION")){
+            lv_obj_t *list=library_scroller();assert(list);
+            lv_obj_scroll_to_y(list,500,LV_ANIM_OFF);lv_obj_update_layout(list);
+            int before=lv_obj_get_scroll_y(list);assert(before>0);
+            library_refresh();lv_obj_update_layout(list);
+            assert(lv_obj_get_scroll_y(list)==before);
+            screen_show(SCR_HOME);screen_show(SCR_LIBRARY);lv_obj_update_layout(list);
+            assert(lv_obj_get_scroll_y(list)==before);
+            assert(library_back());for(int i=0;i<20;i++){lv_tick_inc(10);lv_timer_handler();}
+            lv_obj_t *catlabel=find_text(root,cat);assert(catlabel);
+            lv_obj_send_event(lv_obj_get_parent(catlabel),LV_EVENT_CLICKED,NULL);
+            lv_obj_update_layout(list);assert(lv_obj_get_scroll_y(list)==before);
+            puts("PASS: library position survives refresh, screen return and category return");
+        }
         if(getenv("LIB_GHOLD")){                     /* fork: hold an album / artist / genre row -> its action menu */
             for(int i=0;i<60;i++){lv_tick_inc(10);lv_timer_handler();}
             lv_obj_t *t=ui_action_find("library.group_play.long"); assert(t); lv_obj_send_event(t,LV_EVENT_LONG_PRESSED,NULL);
@@ -342,6 +376,14 @@ int main(int argc, char **argv){
     }
     if(!strncmp(argv[3],"preview-",8)){
         fixture=1;sd_io_init(media_local);assert(sd_io_resume());
+        if(strstr(argv[3],"queue")){
+            char qp[512]; snprintf(qp,sizeof qp,"%s",CFG_PATH);
+            char *slash=strrchr(qp,'/'); assert(slash); strcpy(slash+1,"queue.tsv");
+            FILE *qf=fopen(qp,"w"); assert(qf);
+            if(!getenv("QUEUE_EMPTY")) fputs("/preview/01.flac\tSunset Drive\tThe Midnight\t240000\t1\t1\t0\t0\t1\n/preview/02.flac\tNightfall\tKavinsky\t220000\t2\t2\t0\t0\t1\n/preview/03.flac\tA Long Way Home\tTimecop1983\t260000\t3\t3\t0\t0\t1\n",qf);
+            if(getenv("QUEUE_LONG"))for(int i=3;i<30;i++)fprintf(qf,"/preview/%02d.flac\tSong %02d\tThe Midnight\t240000\t%d\t%d\t0\t0\t1\n",i,i,i,i);
+            assert(!fclose(qf));
+        }
         cfg_set_int_deferred("online_lyrics",0);cfg_set_int_deferred("online_art",0);
         cfg_set_int_deferred("eq_preset",11);cfg_set_int_deferred("eq_last",11);cfg_set_str("eq_name11","Warm analogue");
         if(getenv("DISCO_QS"))cfg_set_int_deferred("disco_qs",atoi(getenv("DISCO_QS")));
@@ -351,6 +393,7 @@ int main(int argc, char **argv){
         if(getenv("DISCO_SHAPE"))cfg_set_int_deferred("disco_prog_shape",atoi(getenv("DISCO_SHAPE")));
         if(getenv("DISCO_TAL"))cfg_set_int_deferred("disco_title_al",atoi(getenv("DISCO_TAL")));
         if(getenv("DISCO_SHEEN"))cfg_set_int_deferred("disco_sheen",atoi(getenv("DISCO_SHEEN")));
+        if(getenv("NP_FONT"))cfg_set_int_deferred("np_font",atoi(getenv("NP_FONT")));
         if(getenv("FONTSZ"))cfg_set_int_deferred("font_size",atoi(getenv("FONTSZ")));
         if(getenv("DISCO_MNU"))cfg_set_str_deferred("disco_mnu",getenv("DISCO_MNU"));
         cfg_set_int_deferred("disco_nav_hint",getenv("NAV_HINT")?0:1);   /* the first-time hint only when asked for */
@@ -365,7 +408,7 @@ int main(int argc, char **argv){
             snprintf(st.title,sizeof st.title,"The Last Train Home Through Northern Lights");
             snprintf(st.artist,sizeof st.artist,"The Midnight & The Northern Lights Orchestra");
         }
-        st.have_track=1;st.state=2;st.duration_ms=240000;st.position_ms=92000;ipc_seed_state(&st);
+        st.have_track=1;st.state=2;st.duration_ms=240000;st.position_ms=92000;st.sample_rate=44100;ipc_seed_state(&st);
         if(getenv("MA_TRACK")){                      /* MA Sendspin: Music shows Music Assistant's track + its sidecar cover */
             struct timespec tn; clock_gettime(CLOCK_MONOTONIC,&tn);
             ipc_set_external("Midnight City","M83","Hurry Up, We're Dreaming",getenv("MA_TRACK"),243000,61000,tn.tv_sec*1000LL+tn.tv_nsec/1000000,1000);
@@ -399,6 +442,7 @@ int main(int argc, char **argv){
         else if(!strcmp(page,"bands"))scr=SCR_EQ_EDITOR;else if(!strcmp(page,"display")){setlist_open("Display");scr=SCR_SETLIST;}else if(!strcmp(page,"network")){setlist_open("Network");scr=SCR_SETLIST;}else if(!strcmp(page,"system")){setlist_open("System");scr=SCR_SETLIST;}else if(!strcmp(page,"info")){songinfo_unpin();songinfo_set(&st);scr=SCR_SONGINFO;}else if(!strcmp(page,"group")){void settings_open_group(const char*);setlist_open("Display");scr=SCR_SETLIST;screen_show(scr);settings_open_group(getenv("SETGROUP"));}
         else if(!strcmp(page,"library") || !strcmp(page,"albums"))scr=SCR_LIBRARY;else if(!strcmp(page,"settings"))scr=SCR_SETTINGS;
         else if(!strcmp(page,"upnext"))scr=SCR_UPNEXT;else if(!strcmp(page,"modes"))scr=SCR_WORKMODE;
+        else if(!strcmp(page,"queue"))scr=SCR_QUEUE;
         else if(!strcmp(page,"shortcuts")){apps_reload();scr=SCR_APPS;}
         else if(!strcmp(page,"search")){if(getenv("SEARCH_RECENT")){cfg_set_str("search_r1","boris");cfg_set_str("search_r2","alpha band");cfg_set_str("search_r3","northern");}scr=SCR_SEARCH;}
         else if(!strcmp(page,"battery")){void usage_demo(int);scr=SCR_USAGE;screen_show(scr);usage_demo(getenv("CHG")!=NULL);}
@@ -422,6 +466,18 @@ int main(int argc, char **argv){
         if(!strcmp(page,"albums")){                  /* Library > Albums */
             lv_obj_t *l=find_text(screen_get_root(SCR_LIBRARY),"Albums"); assert(l); lv_obj_send_event(lv_obj_get_parent(l),LV_EVENT_CLICKED,NULL);
             for(int i=0;i<60;i++){lv_tick_inc(10);lv_timer_handler();}
+        }
+        if(getenv("POPUP")){
+            const char *which=getenv("POPUP");
+            if(!strcmp(which,"track")){
+                songmenu_open_song(st.path);const char *base=strrchr(st.path,'/');
+                lv_obj_t *title=find_text(lv_layer_top(),base?base+1:st.path);if(title)lv_label_set_text(title,st.title);
+            }
+            else if(!strcmp(which,"artist"))songmenu_open_group("ARTIST","The Midnight","The Midnight",NULL);
+            else if(!strcmp(which,"album"))songmenu_open_group("ALBUM","Afterglow","Afterglow",NULL);
+            else if(!strcmp(which,"file"))songmenu_open_file("/preview","Northern Lights.flac",NULL);
+            else if(!strcmp(which,"confirm"))fileops_confirm("Remove this track?","The file will stay on your SD card","Remove",NULL);
+            for(int i=0;i<20;i++){lv_tick_inc(10);lv_timer_handler();}
         }
         if(getenv("DISCO_OV")){                      /* fork: Disco - tap the title on Music: the track overlay */
             lv_obj_t *t=find_text(screen_get_root(SCR_HOME),st.title); assert(t); lv_obj_send_event(lv_obj_get_parent(t),LV_EVENT_SHORT_CLICKED,NULL);
@@ -552,6 +608,82 @@ int main(int argc, char **argv){
         if(getenv("DISCO_EQ"))cfg_set_int_deferred("disco_eq",atoi(getenv("DISCO_EQ")));
         if(getenv("DISCO_VOL"))cfg_set_int_deferred("disco_vol",atoi(getenv("DISCO_VOL")));
         if(getenv("EQSEL")){ void eqcustom_test_select(int); eqcustom_test_select(atoi(getenv("EQSEL"))); for(int i=0;i<10;i++){lv_tick_inc(10);lv_timer_handler();} }
+        if(getenv("REVIEW_PRESS")){
+            lv_obj_t *label=find_visible_text(screen_get_root(scr),getenv("REVIEW_PRESS")); assert(label);
+            lv_obj_t *button=lv_obj_get_parent(label);
+            assert(button!=screen_get_root(scr));
+            lv_opa_t resting=lv_obj_get_style_bg_opa(button,0);
+            lv_obj_add_state(button,LV_STATE_PRESSED);
+            assert(lv_obj_get_style_bg_opa(button,0)==LV_OPA_COVER);
+            assert(lv_obj_get_style_border_width(button,0)>0);
+            lv_obj_remove_state(button,LV_STATE_PRESSED);
+            assert(lv_obj_get_style_bg_opa(button,0)==resting);
+            lv_obj_add_state(button,LV_STATE_PRESSED); /* leave held for the render */
+            puts("PASS: pressed feedback restores on release");
+        }
+        if(getenv("REVIEW_QUEUE_POSITION")){
+            assert(queue_count()==30);lv_obj_t *root=screen_get_root(SCR_QUEUE),*list=NULL,*summary=NULL;
+            for(uint32_t i=0;i<lv_obj_get_child_count(root);i++){
+                lv_obj_t *c=lv_obj_get_child(root,i);
+                if(lv_obj_get_child_count(c)>20)list=c;
+                if(lv_obj_check_type(c,&lv_label_class) && strstr(lv_label_get_text(c),"up next"))summary=c;
+            }
+            assert(list && summary);char original[64];snprintf(original,sizeof original,"%s",lv_label_get_text(summary));
+            lv_obj_scroll_to_y(list,700,LV_ANIM_OFF);lv_obj_send_event(list,LV_EVENT_SCROLL,NULL);
+            assert(strstr(lv_label_get_text(summary)," / 30 up next"));
+            lv_obj_send_event(list,LV_EVENT_SCROLL_END,NULL);
+            for(int i=0;i<110;i++){lv_tick_inc(10);lv_timer_handler();}
+            assert(!strcmp(original,lv_label_get_text(summary)));
+            puts("PASS: long queue position restores the summary after scrolling");
+        }
+        if(getenv("REVIEW_QUEUE_DISABLED")){
+            assert(queue_count()==0);
+            lv_obj_t *root=screen_get_root(SCR_QUEUE);int disabled=0;
+            for(uint32_t i=0;i<lv_obj_get_child_count(root);i++){
+                lv_obj_t *child=lv_obj_get_child(root,i);
+                if(lv_obj_has_state(child,LV_STATE_DISABLED)){assert(lv_obj_get_style_opa(child,0)<LV_OPA_COVER);disabled++;}
+            }
+            assert(disabled==3);
+            puts("PASS: empty queue disables and dims all three controls");
+        }
+        if(getenv("REVIEW_ICON_GLYPHS")){
+            assert_visible_icon_glyphs(lv_layer_top());
+            puts("PASS: enlarged popup icons resolve to real glyphs");
+        }
+        if(getenv("REVIEW_NP_FONT")){
+            const lv_font_t *titlefont=ui_np_font(28),*artistfont=ui_np_font(20);
+            for(int i=0;i<2;i++){
+                const lv_font_t *font=i?artistfont:titlefont;
+                unsigned points[]={0x4e16,0xe9,0x410,0x3a9,0x2019};
+                for(unsigned j=0;j<sizeof points/sizeof points[0];j++){
+                    lv_font_glyph_dsc_t d={0};assert(lv_font_get_glyph_dsc(font,&d,points[j],0));assert(!d.is_placeholder);
+                }
+            }
+            puts("PASS: alternate Now Playing fonts preserve international/CJK fallback");
+        }
+        if(getenv("REVIEW_QUEUE_CLEAR")){
+            int n=queue_count(); assert(n>0);
+            lv_obj_t *clear=find_visible_text(screen_get_root(SCR_QUEUE),"Clear"); assert(clear);
+            lv_obj_t *button=lv_obj_get_parent(clear);
+            lv_obj_send_event(button,LV_EVENT_CLICKED,NULL);
+            assert(queue_count()==n && !strcmp(lv_label_get_text(clear),"Sure?"));
+            lv_obj_send_event(button,LV_EVENT_CLICKED,NULL);
+            assert(!queue_count());
+            assert(find_visible_text(screen_get_root(SCR_QUEUE),st.title));
+            puts("PASS: Queue Clear requires confirmation and keeps the current track visible");
+        }
+        if(getenv("REVIEW_TRACK_INFO")){
+            lv_obj_t *info=ui_action_find("disco.track.info"); assert(info);
+            lv_obj_send_event(info,LV_EVENT_CLICKED,NULL);
+            for(int i=0;i<30;i++){lv_tick_inc(10);lv_timer_handler();}
+            assert(screen_current()==SCR_SONGINFO);
+            assert(find_visible_text(screen_get_root(SCR_SONGINFO),st.title));
+            assert(!ui_action_find("disco.track.info"));
+            lv_obj_send_event(lv_obj_get_parent(find_visible_text(screen_get_root(SCR_SONGINFO),"Song Info")),LV_EVENT_CLICKED,NULL);
+            for(int i=0;i<30;i++){lv_tick_inc(10);lv_timer_handler();}
+            assert(screen_current()==SCR_HOME);
+            puts("PASS: Disco popup Info opens current-track details and Back returns to Music");
+        }
         if(getenv("VOLSHOW")){ void ui_show_volume(int); ui_show_volume(atoi(getenv("VOLSHOW"))); for(int i=0;i<20;i++){lv_tick_inc(10);lv_timer_handler();} }
         if(getenv("TICKS")){ int ms=atoi(getenv("TICKS")); for(int i=0;i<ms/20;i++){lv_tick_inc(20);lv_timer_handler();} }
         if(!strncmp(page,"immersive",9)){

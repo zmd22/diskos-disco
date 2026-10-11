@@ -164,6 +164,7 @@ static void apply_theme_auto(int v){ (void)v; theme_reload_or_revert("theme_auto
 static void apply_outdoor(int v){ (void)v; theme_reload_or_revert("outdoor"); }
 static void apply_theme_preset(int v){ (void)v; theme_reload_or_revert("theme_preset"); }
 /* Font Size and Language change every screen's text: like a theme change, the UI re-launches and re-reads them */
+static void apply_np_font(int v){(void)v;theme_reload_or_revert("np_font");}
 static void apply_font_size(int v){ (void)v; theme_reload_or_revert("font_size"); }
 static void apply_language(int v){ (void)v; theme_reload_or_revert("language"); }
 
@@ -634,6 +635,7 @@ static const char *const OPT_IDLE_OFF[POWER_IDLE_N] = { "Off","5 min","10 min","
 static const char *const OPT_POWER[] = { "Off","30 sec","1 min","2 min","5 min" };  /* idx->TMAP secs in main.c */
 static const char *const OPT_NPSTYLE[] = { "Cover", "Vinyl", "Poster", "Ring" };
 static const char *const OPT_APPEARANCE[] = { "Dark", "Light" };
+static const char *const OPT_NPFONT[] = {"Original", "Inter Semibold", "Nunito Bold"};
 static const char *const OPT_FONTSIZE[] = { "Small", "Medium", "Large" };
 static const char *const OPT_ALBUMVIEW[] = { "List", "Cover Flow" };
 static const char *const OPT_SAVERSTYLE[] = { "Cover", "Analog", "Minimal", "Digital", "Vinyl", "Ring" };
@@ -786,6 +788,8 @@ static const setting_t TABLE[] = {
       "Small elapsed and remaining times under the ends of the progress line on Music.", NULL },
     { "Music Screen", "Track Number", ST_TOGGLE, "disco_trackno", 0,1,1, NULL,0, NULL, NULL, 0,
       "Show the song's track number before its title on Music, as in \"3. Northern Lights\" (from the song's tags).", NULL },
+    { "Music Screen", "Track Font", ST_CYCLER, "np_font", 0,0,0, OPT_NPFONT, 3, NULL, apply_np_font, 0,
+      "Original, Inter Semibold or Nunito Bold for title and artist. Alternatives use larger, heavier text. Applying redraws the interface.", NULL },
     { "Music Screen", "Title Position", ST_CYCLER, "disco_title_al", 0,0,0, OPT_DTAL, 2, NULL, apply_disco_title, 0,
       "Where the title and artist sit on Music: centred, or from the left.", NULL },
     { "Music Screen", "Title Hold", ST_CYCLER, "disco_title_hold", 0,0,0, OPT_DHOLD, 3, NULL, apply_disco_hold, 0,

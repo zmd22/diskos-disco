@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/disco/hero.png" width="900" alt="diskOS Disco! on the Snowsky Disc: Quick Settings, Music light, Music, Music with the progress arc, Equalizer">
+  <img src="docs/disco/hero.png" width="900" alt="diskOS Disco! on the Snowsky Disc: Album back sleeve, Music light, Inter Semibold, Queue, Equalizer">
 </p>
 
 <p align="center">
@@ -66,7 +66,26 @@ replaces only what you see and touch.
 </tr>
 </table>
 
-## New in 1.3.0
+## New in 1.3.1
+
+**A little bigger. A lot nicer to use.** Readable menus, confident buttons and more room for your music.
+
+<table><tr>
+<td align="center" width="25%"><img src="docs/disco/song-info.png" width="190" alt="Song Info album back sleeve"><br><sub><b>Back sleeve</b>: track details, beautifully readable</sub></td>
+<td align="center" width="25%"><img src="docs/disco/queue.png" width="190" alt="Cleaner Queue"><br><sub><b>Queue</b>: bigger controls, less clutter</sub></td>
+<td align="center" width="25%"><img src="docs/disco/music-inter.png" width="190" alt="Inter Semibold on Music"><br><sub><b>Track Font</b>: Original, Inter Semibold, Nunito Bold</sub></td>
+<td align="center" width="25%"><img src="docs/disco/eq.png" width="190" alt="Roomier equalizer"><br><sub><b>Equalizer</b>: ten bands with breathing room</sub></td>
+</tr></table>
+
+- Bigger track/group/file action menus, confirmation buttons and Shortcuts pills.
+- Clear pressed feedback in Quick Settings, Modes and Shortcuts.
+- Music's title menu now opens **Info**; hold the title for Immersive.
+- Library remembers your place during the session; long lists and queues briefly show position/count.
+- Pre-rendered fonts, RAM-only scroll memory and brief feedback keep the work modest.
+
+[1.3.1 release notes](docs/releases/v1.3.1.md) · [Update from SD](docs/UPDATING.md)
+
+## From 1.3.0
 
 <table>
 <tr>
@@ -92,7 +111,7 @@ All the details: [1.3.0 release notes](docs/releases/v1.3.0.md).
   release package: [install it](docs/ALBUM_ROULETTE_INSTALL.md), [how it works](docs/DISCO_TOUR.md#album-roulette).
 - **Music is home.** Big title and artist (centred or from the left), the play mode one tap away, transport on an
   arc. Progress as a rainbow **line** under the title or an **arc** around the rim. Drag either to seek.
-- **Tap the title** for Favourite, Album, Artist, Queue, Lyrics and Immersive. **Hold it** to go straight to the
+- **Tap the title** for Favourite, Album, Artist, Queue, Lyrics and Info. **Hold it** to go straight to the
   full-screen cover, or to favourite the song.
 - **A queue that behaves.** *Add to queue* from any hold menu. Queued songs play next, in order, then your music
   carries on where it was.
@@ -102,7 +121,7 @@ All the details: [1.3.0 release notes](docs/releases/v1.3.0.md).
   will count.
 - **Readable on any cover.** Text and fades adapt to each album, and the accent colour follows the cover (or your
   own pick).
-- **Disco Options** let you choose the menu sections, clock, track times, track number, title position and hold,
+- **Disco Options** let you choose the menu sections, clock, track times, track number, title position, font and hold,
   rim sheen, EQ / volume / progress colours, progress shape, the side and the scroll style.
 - **MA Sendspin** *(experimental)*: the Disc as a [Music Assistant](https://www.music-assistant.io/) speaker, with
   the track, cover and controls on Music. See the [tour](docs/DISCO_TOUR.md#ma-sendspin-experimental).
@@ -134,7 +153,7 @@ cable and about 20 quiet minutes. The installer is upstream diskOS's (`./diskos-
 
 **0. Get it.** Download the **[latest release](https://github.com/zmd22/diskos-disco/releases/latest)** (Source
 code, tar.gz) and unpack it, or `git clone https://github.com/zmd22/diskos-disco`. The ready-built interface is
-already in it as `payload/mq_ui` (Disco! 1.3.0); the release also has `mq_ui` on its own, with checksums, for SD-card
+already in it as `payload/mq_ui` (Disco! 1.3.1); the release also has `mq_ui` on its own, with checksums, for SD-card
 updates.
 
 **1. Make your update keys (once, optional but recommended).** They let you install new builds from the SD card
@@ -169,7 +188,7 @@ Download `mq_ui` from the [latest release](https://github.com/zmd22/diskos-disco
 your keys:
 
 ```sh
-sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 1.3.0      # -> ./diskos-update/
+sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 1.3.1      # -> ./diskos-update/
 ```
 
 Reuse the signing keys whose root public key was installed on this Disc. Copy the complete

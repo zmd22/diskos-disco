@@ -4,12 +4,12 @@
 
 ## diskOS Disco!
 
+- [Disco! 1.3.1 release notes](releases/v1.3.1.md) - larger controls, album back sleeve and optional heavier Music fonts.
 - [A tour of Disco!](DISCO_TOUR.md) - every screen, gesture and setting, with screenshots.
 - [How-to](HOWTO.md) - short answers for everyday tasks.
 - [Updating from the SD card](UPDATING.md) - keys, signing, flashing once, troubleshooting.
 - [Flashing from Windows with WSL](WINDOWS.md) - highly experimental, untested and unsupported.
-- [UI choices](UI_CHOICES.md) - themes, gestures, queue, performance, and why (written for Ring and Braun; Disco
-  follows the same rules).
+- [UI choices](UI_CHOICES.md) - themes, gestures, queue, performance, and why including Disco 1.3.1.
 - [Changelog](../CHANGELOG.md) - Disco! releases first, upstream history below.
 - [Project site](https://zmd22.github.io/diskos-disco/) - the landing page (this folder, served by GitHub Pages).
 

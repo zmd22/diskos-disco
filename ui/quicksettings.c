@@ -200,6 +200,10 @@ static void disco_layout(lv_obj_t *root){
         lv_obj_set_pos(r, left, y); lv_obj_set_size(r, w, DQ_H);
         lv_obj_set_style_radius(r, LV_RADIUS_CIRCLE, 0); lv_obj_set_style_bg_color(r, TC(SURFACE), 0); lv_obj_set_style_bg_opa(r, 150, 0);
         lv_obj_set_style_bg_color(r, TC(SURFACE_RAISED), LV_STATE_PRESSED);
+        lv_obj_set_style_bg_opa(r, LV_OPA_COVER, LV_STATE_PRESSED);
+        lv_obj_set_style_border_width(r, 1, LV_STATE_PRESSED);
+        lv_obj_set_style_border_color(r, ui_current_accent(), LV_STATE_PRESSED);
+        lv_obj_set_style_border_opa(r, LV_OPA_COVER, LV_STATE_PRESSED);
         lv_obj_add_flag(r, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_USER_2); lv_obj_clear_flag(r, LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_add_event_cb(r, dq_row_cb, LV_EVENT_SHORT_CLICKED, (void *)(intptr_t)i);
         lv_obj_add_event_cb(r, dq_row_cb, LV_EVENT_LONG_PRESSED, (void *)(intptr_t)i);
@@ -283,6 +287,13 @@ void quicksettings_create(lv_obj_t *root)
         { LV_SYMBOL_WIFI, "Wi-Fi" }, { LV_SYMBOL_BLUETOOTH, "Bluetooth" }, { LV_SYMBOL_DIRECTORY, "Library" },
         { LV_SYMBOL_REFRESH, "Rescan" }, { LV_SYMBOL_SD_CARD, "Mode" }, { LV_SYMBOL_SETTINGS, "Settings" } };
     orbit_create(&g_orb, root, it, T_N, -60, pick_cb);
+    if(th_disco()) for(int i = 0; i < T_N; i++){
+        /* Also cover the optional icon-arcs layout. No timer or animation. */
+        lv_obj_set_style_bg_opa(g_orb.btn[i], LV_OPA_COVER, LV_STATE_PRESSED);
+        lv_obj_set_style_border_width(g_orb.btn[i], 2, LV_STATE_PRESSED);
+        lv_obj_set_style_border_color(g_orb.btn[i], ui_current_accent(), LV_STATE_PRESSED);
+        lv_obj_set_style_border_opa(g_orb.btn[i], LV_OPA_COVER, LV_STATE_PRESSED);
+    }
     lv_obj_add_event_cb(g_orb.btn[T_WIFI], wifi_long_cb, LV_EVENT_LONG_PRESSED, NULL);
     lv_obj_add_event_cb(g_orb.btn[T_BT],   bt_long_cb,   LV_EVENT_LONG_PRESSED, NULL);
     orbit_set_glyph(&g_orb, T_MODE, mode_glyph());
@@ -327,6 +338,9 @@ void quicksettings_create(lv_obj_t *root)
     lv_obj_set_style_bg_color(g_pp, TC(CANVAS), 0);
     lv_obj_set_style_bg_opa(g_pp, 170, 0);
     lv_obj_set_style_bg_opa(g_pp, 230, LV_STATE_PRESSED);
+    lv_obj_set_style_bg_color(g_pp, TC(SURFACE_RAISED), LV_STATE_PRESSED);
+    lv_obj_set_style_border_width(g_pp, 1, LV_STATE_PRESSED);
+    lv_obj_set_style_border_color(g_pp, ui_current_accent(), LV_STATE_PRESSED);
     lv_obj_set_ext_click_area(g_pp, 4);
     lv_obj_add_event_cb(g_pp, pp_cb, LV_EVENT_CLICKED, NULL);
     g_pp_glyph = lv_label_create(g_pp);

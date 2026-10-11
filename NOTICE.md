@@ -112,7 +112,9 @@ rebuild and relink `usbboot` against a modified libusb using the included source
   domain), jsmn (MIT), md5 (public domain), and Montserrat / Source Han Sans / Font Awesome /
   IBM Plex Mono (as `diskos_mono`) / Doto (as `diskos_dot`) and the theme fonts Inter, DSEG7 Classic, JetBrains Mono,
   Space Grotesk, IBM Plex Sans, Nunito, Courier Prime and Rubik Glitch (as `diskos_<theme>_*`) (all OFL-1.1);
-  see `ui/README.md` and `ui/licenses/`.
+  see `ui/README.md` and `ui/licenses/`. The additional Now Playing Inter Semibold and
+  Nunito Bold faces are generated from the original OFL sources and license texts in
+  `ui/fonts/nowplaying/` using `ui/tools/gen_np_fonts.py`.
 
   **`diskos-artdec`** (`payload/diskos-artdec`, source `ui/tools/diskos_artdec.c`) is a separate small helper
   binary shipped in the diskOS image at `/opt/diskos/bin/diskos-artdec`. It extracts and decodes album

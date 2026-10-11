@@ -279,9 +279,14 @@ void queue_tick(const track_state_t *st, int playing){
 }
 /* ================================================================ the Queue screen */
 #define QW 288
-static lv_obj_t *g_root, *g_list, *g_sub, *g_clear_btn;
+static lv_obj_t *g_root, *g_list, *g_sub, *g_clear_btn, *g_play_btn, *g_shuffle_btn;
 static curvelist_t g_cl;
 static uint32_t g_clear_armed;
+static char g_summary[64];
+static void queue_hint_exec(void *obj,int32_t opa){lv_obj_set_style_text_opa(obj,(lv_opa_t)opa,0);}
+static void queue_hint_done(lv_anim_t *a){
+    lv_label_set_text(a->var,g_summary);lv_obj_set_style_text_opa(a->var,LV_OPA_COVER,0);
+}
 static int g_drag = -1, g_drag_row0;
 static void open_now(void){ screen_show(SCR_QUEUE); }
 void queue_open(void){ open_now(); }
@@ -324,9 +329,24 @@ static void handle_cb(lv_event_t *e){
 static lv_obj_t *section(const char *t){
     lv_obj_t *l = lv_label_create(g_list); lv_label_set_text(l, t);
     lv_obj_set_width(l, QW - 24);
-    lv_obj_set_style_text_font(l, TF(UI_10), 0);
-    if(!strncmp(t, "then back", 9)){ lv_obj_set_width(l, QW); lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, 0); lv_obj_set_style_text_font(l, ui_font_cjk(14), 0); } lv_obj_set_style_text_color(l, TC(TEXT_DISABLED), 0);
+    lv_obj_set_style_text_font(l, TF(UI_16), 0);
+    lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_color(l, TC(TEXT_SECONDARY), 0);
     return l;
+}
+static void row_size_cb(lv_event_t *e){
+    lv_obj_t *r = lv_event_get_target(e);
+    int now = (int)(intptr_t)lv_event_get_user_data(e), x = now ? 48 : 22;
+    int w = lv_obj_get_width(r) - x - (now ? 22 : 64);
+    if(w < 32) w = 32;
+    lv_obj_set_width(lv_obj_get_child(r, now ? 1 : 0), w);
+    lv_obj_set_width(lv_obj_get_child(r, now ? 2 : 1), w);
+}
+static void separator(void){
+    lv_obj_t *r = lv_obj_create(g_list); lv_obj_remove_style_all(r);
+    lv_obj_set_size(r, QW - 32, 1);
+    lv_obj_set_style_bg_color(r, TC(BORDER), 0); lv_obj_set_style_bg_opa(r, LV_OPA_COVER, 0);
+    lv_obj_clear_flag(r, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
 }
 static lv_obj_t *qrow(const char *t, const char *a, int now, int idx){
     lv_obj_t *r = lv_button_create(g_list);
@@ -337,15 +357,16 @@ static lv_obj_t *qrow(const char *t, const char *a, int now, int idx){
     lv_obj_set_style_bg_color(r, now ? TC(SURFACE_RAISED) : TC(SURFACE), 0);
     lv_obj_set_style_bg_opa(r, LV_OPA_COVER, 0);
     lv_obj_set_style_bg_color(r, TC(SURFACE_RAISED), LV_STATE_PRESSED);
+    if(now){ lv_obj_set_style_border_width(r, 1, 0); lv_obj_set_style_border_color(r, ui_current_accent(), 0); }
     lv_obj_clear_flag(r, LV_OBJ_FLAG_SCROLLABLE);
     int x = 22;
     if(now){ lv_obj_t *ic = lv_label_create(r); lv_label_set_text(ic, LV_SYMBOL_VOLUME_MAX);
              lv_obj_set_pos(ic, 20, 25); lv_obj_set_style_text_color(ic, ui_current_accent(), 0); x = 48; }
     else lv_obj_add_event_cb(r, row_cb, LV_EVENT_SHORT_CLICKED, (void *)(intptr_t)idx);   /* tap: jump to it */
-    lv_obj_t *tl = lv_label_create(r); lv_label_set_text(tl, t); lv_label_set_long_mode(tl, LV_LABEL_LONG_DOT);
+    lv_obj_t *tl = lv_label_create(r); lv_label_set_text(tl, t); lv_label_set_long_mode(tl,LV_LABEL_LONG_DOT);if(now)ui_reveal_title(tl);
     lv_obj_set_pos(tl, x, 10); lv_obj_set_size(tl, QW - x - (now ? 22 : 64), 28);
     lv_obj_set_style_text_font(tl, ui_font_user(20), 0); lv_obj_set_style_text_color(tl, now ? ui_current_accent() : TC(TEXT_PRIMARY), 0);
-    lv_obj_t *al = lv_label_create(r); lv_label_set_text(al, a); lv_label_set_long_mode(al, LV_LABEL_LONG_DOT);
+    lv_obj_t *al = lv_label_create(r); lv_label_set_text(al, a); lv_label_set_long_mode(al,LV_LABEL_LONG_DOT);if(now)ui_reveal_title(al);
     lv_obj_set_pos(al, x, 39); lv_obj_set_size(al, QW - x - (now ? 22 : 64), 22);
     lv_obj_set_style_text_font(al, ui_font_user(16), 0); lv_obj_set_style_text_color(al, TC(TEXT_SECONDARY), 0);
     if(!now){                                                 /* the drag handle */
@@ -356,7 +377,22 @@ static lv_obj_t *qrow(const char *t, const char *a, int now, int idx){
         lv_obj_t *g = lv_label_create(h); lv_label_set_text(g, LV_SYMBOL_BARS);
         lv_obj_set_style_text_color(g, TC(QUEUE_HANDLE), 0); lv_obj_center(g);
     }
+    lv_obj_add_event_cb(r, row_size_cb, LV_EVENT_SIZE_CHANGED, (void *)(intptr_t)now);
     return r;
+}
+static void queue_position_cb(lv_event_t *e){
+    if(g_qn<12 || !g_sub)return;
+    lv_anim_delete(g_sub,queue_hint_exec);lv_obj_set_style_text_opa(g_sub,LV_OPA_COVER,0);
+    if(lv_event_get_code(e)==LV_EVENT_SCROLL_END){
+        lv_anim_t a;lv_anim_init(&a);lv_anim_set_var(&a,g_sub);lv_anim_set_exec_cb(&a,queue_hint_exec);
+        lv_anim_set_values(&a,LV_OPA_COVER,0);lv_anim_set_delay(&a,650);lv_anim_set_duration(&a,120);
+        lv_anim_set_completed_cb(&a,queue_hint_done);lv_anim_start(&a);return;
+    }
+    if(row_child0 >= (int)lv_obj_get_child_count(g_list))return;
+    lv_obj_t *first=lv_obj_get_child(g_list,row_child0);
+    int idx=(lv_obj_get_scroll_y(g_list)-lv_obj_get_y(first))/78;
+    if(idx<0)idx=0;if(idx>=g_qn)idx=g_qn-1;
+    char b[48];snprintf(b,sizeof b,"%d / %d up next",idx+1,g_qn);lv_label_set_text(g_sub,b);
 }
 static void view_reload(void){
     if(!g_list) return;
@@ -366,35 +402,47 @@ static void view_reload(void){
     char b[64];
     if(g_qn) snprintf(b, sizeof b, "%d up next \xC2\xB7 %ld min", g_qn, (total / 60000) ? total / 60000 : 1);
     else snprintf(b, sizeof b, "Nothing queued");
+    snprintf(g_summary,sizeof g_summary,"%s",b);
+    lv_anim_delete(g_sub,queue_hint_exec);lv_obj_set_style_text_opa(g_sub,LV_OPA_COVER,0);
     lv_label_set_text(g_sub, b);
+    lv_obj_t *controls[] = {g_play_btn, g_shuffle_btn, g_clear_btn};
+    for(int i=0;i<3;i++) if(controls[i]){
+        if(g_qn > (i==1?1:0)) lv_obj_remove_state(controls[i], LV_STATE_DISABLED);
+        else lv_obj_add_state(controls[i], LV_STATE_DISABLED);
+    }
     track_state_t st; ipc_get_state(&st);
     if(st.have_track){
-        section("PLAYING NOW");
         mdb_song_t s; int have = mdb_song_by_path(st.path, &s);
         qrow(st.title[0] ? st.title : (have ? s.title : "-"), st.artist[0] ? st.artist : (have ? s.artist : ""), 1, -1);
     }
-    section(g_qn ? "UP NEXT" : "Hold a song in the Library or a folder and choose Add to queue");
+    if(st.have_track && g_qn) separator();
     row_child0 = (int)lv_obj_get_child_count(g_list);
     for(int i = 0; i < g_qn; i++) qrow(g_q[i].title[0] ? g_q[i].title : "-", g_q[i].artist, 0, i);
-    if(g_qn && g_active && g_ctx_label[0]){ snprintf(b, sizeof b, "then back to  %.44s", g_ctx_label); section(b); }
+    if(!g_qn && !st.have_track) section("Nothing queued");
     lv_obj_update_layout(g_list); curvelist_update(&g_cl);
 }
 void queue_refresh(void){ g_clear_armed = 0; if(g_clear_btn){ lv_obj_t *l = lv_obj_get_child(g_clear_btn, 1); if(l) lv_label_set_text(l, "Clear"); } view_reload(); }
 static lv_obj_t *pill(const char *icon, const char *t, int x, int w, lv_event_cb_t cb, int accent){
     lv_obj_t *b = lv_button_create(g_root);
     lv_obj_remove_style_all(b);
-    lv_obj_set_size(b, w, 28); lv_obj_set_pos(b, x, 64);
-    lv_obj_set_style_radius(b, 14, 0);
-    lv_obj_set_style_bg_color(b, th_braun() ? accent ? TC(ACCENT_PRIMARY) : TC(SURFACE) : accent ? ui_current_accent() : TC(SURFACE), 0);
+    lv_obj_set_size(b, w, 44); lv_obj_set_pos(b, x, 68);
+    lv_obj_set_style_radius(b, LV_RADIUS_CIRCLE, 0);
+    lv_color_t bg = accent ? (th_braun() ? TC(ACCENT_PRIMARY) : ui_current_accent()) : TC(SURFACE);
+    if(accent) lv_obj_add_flag(b, LV_OBJ_FLAG_USER_2); /* keep contrast ink on the filled Play button */
+    lv_obj_set_style_bg_color(b, bg, 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
-    lv_obj_set_style_bg_color(b, TC(SURFACE_RAISED), LV_STATE_PRESSED);
+    lv_obj_set_style_bg_color(b, accent ? bg : TC(SURFACE_RAISED), LV_STATE_PRESSED);
+    lv_obj_set_style_border_width(b, 2, LV_STATE_PRESSED);
+    lv_obj_set_style_border_color(b, TC(TEXT_PRIMARY), LV_STATE_PRESSED);
+    lv_obj_set_style_border_opa(b, LV_OPA_COVER, LV_STATE_PRESSED);
+    lv_obj_set_style_opa(b, LV_OPA_40, LV_STATE_DISABLED);
     lv_obj_set_ext_click_area(b, 4);
     lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t *i = lv_label_create(b); lv_label_set_text(i, icon); lv_obj_set_style_text_font(i, TF(UI_12), 0);
-    lv_obj_set_style_text_color(i, th_braun() && !accent ? TC(TEXT_PRIMARY) : TC(TEXT_PRIMARY), 0);
+    lv_obj_t *i = lv_label_create(b); lv_label_set_text(i, icon); lv_obj_set_style_text_font(i, TF(UI_18), 0);
+    lv_obj_set_style_text_color(i, accent ? theme_on_color(bg) : TC(TEXT_PRIMARY), 0);
     if(t){ lv_obj_align(i, LV_ALIGN_LEFT_MID, 12, 0);
-           lv_obj_t *l = lv_label_create(b); lv_label_set_text(l, t); lv_obj_set_style_text_font(l, TH_F_CAPTION, 0);
-           lv_obj_set_style_text_color(l, th_braun() && !accent ? TC(TEXT_PRIMARY) : TC(TEXT_PRIMARY), 0); lv_obj_align(l, LV_ALIGN_LEFT_MID, 28, 0); }
+           lv_obj_t *l = lv_label_create(b); lv_label_set_text(l, t); lv_obj_set_style_text_font(l, TF(UI_18), 0);
+           lv_obj_set_style_text_color(l, accent ? theme_on_color(bg) : TC(TEXT_PRIMARY), 0); lv_obj_align(l, LV_ALIGN_LEFT_MID, 36, 0); }
     else lv_obj_center(i);
     return b;
 }
@@ -413,14 +461,14 @@ void queue_create(lv_obj_t *root){
     lv_obj_t *tt = lv_label_create(hb); lv_label_set_text(tt, "Queue");
     if(th_braun()){ lv_obj_set_style_text_color(ar, TC(TEXT_SECONDARY), 0); }
     lv_obj_set_style_text_font(tt, th_braun() ? br_font(18, 1) : TH_F_TITLE, 0); lv_obj_set_style_text_color(tt, th_braun() ? TC(TEXT_PRIMARY) : TC(TEXT_PRIMARY), 0); lv_obj_align(tt, LV_ALIGN_LEFT_MID, 34, 0);
-    g_sub = lv_label_create(root); lv_obj_set_style_text_font(g_sub, th_braun() ? br_font(12, 0) : ui_font_cjk(14), 0);   /* has the middle dot */ lv_obj_set_style_text_color(g_sub, TC(TEXT_DISABLED), 0);
+    g_sub = lv_label_create(root); lv_obj_set_style_text_font(g_sub, th_braun() ? br_font(14, 0) : ui_font_cjk(16), 0);   /* has the middle dot */ lv_obj_set_style_text_color(g_sub, TC(TEXT_SECONDARY), 0);
     lv_obj_align(g_sub, LV_ALIGN_TOP_MID, 0, 44);
-    pill(LV_SYMBOL_PLAY, "Play", 92, 68, play_cb, 1);
-    pill(LV_SYMBOL_SHUFFLE, NULL, 166, 28, shuffle_cb, 0);        /* icon only */
-    g_clear_btn = pill(LV_SYMBOL_TRASH, "Clear", 200, 68, clear_cb, 0);
+    g_play_btn = pill(LV_SYMBOL_PLAY, "Play", 44, 104, play_cb, 1);
+    g_shuffle_btn = pill(LV_SYMBOL_SHUFFLE, NULL, 156, 48, shuffle_cb, 0);        /* Random: icon only */
+    g_clear_btn = pill(LV_SYMBOL_TRASH, "Clear", 212, 104, clear_cb, 0);
     g_list = lv_obj_create(root);
     lv_obj_remove_style_all(g_list);
-    lv_obj_set_pos(g_list, (360 - QW) / 2, 100); lv_obj_set_size(g_list, QW, 260);
+    lv_obj_set_pos(g_list, (360 - QW) / 2, 122); lv_obj_set_size(g_list, QW, 238);
     lv_obj_set_style_pad_bottom(g_list, 40, 0);
     lv_obj_set_style_pad_row(g_list, 8, 0);
     lv_obj_set_flex_flow(g_list, LV_FLEX_FLOW_COLUMN);
@@ -429,4 +477,6 @@ void queue_create(lv_obj_t *root){
     lv_obj_set_scrollbar_mode(g_list, LV_SCROLLBAR_MODE_OFF);
     lv_obj_add_flag(g_list, LV_OBJ_FLAG_SCROLL_MOMENTUM);
     curvelist_attach(&g_cl, g_list, root, QW);
+    lv_obj_add_event_cb(g_list,queue_position_cb,LV_EVENT_SCROLL,NULL);
+    lv_obj_add_event_cb(g_list,queue_position_cb,LV_EVENT_SCROLL_END,NULL);
 }

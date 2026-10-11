@@ -198,14 +198,14 @@ static void no_cb(lv_event_t *e){ (void)e; close_ov(); }
 static lv_obj_t *pill_btn(lv_obj_t *p, const char *txt, uint32_t bg, int x, lv_event_cb_t cb){
     lv_obj_t *b = lv_button_create(p);
     lv_obj_remove_style_all(b);
-    lv_obj_set_size(b, 108, 44);
+    lv_obj_set_size(b, 112, 50);
     lv_obj_align(b, LV_ALIGN_CENTER, x, 64);
     lv_obj_set_style_radius(b, TH_R_PILL, 0);
     lv_obj_set_style_bg_color(b, theme_color_from_rgb(bg), 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
     lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *l = lv_label_create(b); lv_label_set_text(l, txt);
-    lv_obj_set_style_text_font(l, TH_F_DETAIL, 0); lv_obj_set_style_text_color(l, bg == TH_ACCENT ? TC(ON_ACCENT) : TC(TEXT_PRIMARY), 0); lv_obj_center(l);   /* white on the accent in both themes (Braun's TXT1 is dark) */
+    lv_obj_set_style_text_font(l, TF(UI_18), 0); lv_obj_set_style_text_color(l, bg == TH_ACCENT ? TC(ON_ACCENT) : TC(TEXT_PRIMARY), 0); lv_obj_center(l);   /* white on the accent in both themes (Braun's TXT1 is dark) */
     return b;
 }
 static void confirm(const char *title, const char *detail, const char *yes, void (*on_yes)(void)){
@@ -213,16 +213,18 @@ static void confirm(const char *title, const char *detail, const char *yes, void
     g_yes = on_yes;
     lv_obj_t *t = lv_label_create(o);
     lv_label_set_text(t, title);
-    lv_label_set_long_mode(t, LV_LABEL_LONG_WRAP);
-    lv_obj_set_width(t, 250);
+    lv_label_set_long_mode(t, LV_LABEL_LONG_DOT);
+    lv_obj_set_size(t, 260, 54);
     lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_text_font(t, ui_font_cjk(18), 0);
+    lv_obj_set_style_text_font(t, ui_font_cjk(20), 0);
     lv_obj_set_style_text_color(t, TC(TEXT_PRIMARY), 0);
-    lv_obj_align(t, LV_ALIGN_CENTER, 0, -40);
+    lv_obj_align(t, LV_ALIGN_CENTER, 0, -50);
     if(detail && detail[0]){
         lv_obj_t *d = lv_label_create(o);
         lv_label_set_text(d, detail);
-        lv_obj_set_style_text_font(d, TH_F_DETAIL, 0);
+        lv_label_set_long_mode(d, LV_LABEL_LONG_DOT);lv_obj_set_size(d,260,24);
+        lv_obj_set_style_text_align(d,LV_TEXT_ALIGN_CENTER,0);
+        lv_obj_set_style_text_font(d, TF(UI_16), 0);
         lv_obj_set_style_text_color(d, TC(TEXT_SECONDARY), 0);
         lv_obj_align(d, LV_ALIGN_CENTER, 0, 10);
     }

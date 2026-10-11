@@ -83,7 +83,7 @@ Run from the repository root. This example signs the release's bundled UI with k
 
 ```sh
 sh ui/tools/owner-keys/diskos-sign.sh \
-  payload/mq_ui 1.3.0-Disco \
+  payload/mq_ui 1.3.1-Disco \
   /absolute/path/to/your/diskos-keys ./diskos-update
 ```
 
@@ -91,7 +91,7 @@ Replace `payload/mq_ui` with `ui/mq_ui` for a new build, or the full path of a d
 If your keys are in `./diskos-keys`, the short form is:
 
 ```sh
-sh ui/tools/owner-keys/diskos-sign.sh payload/mq_ui 1.3.0-Disco
+sh ui/tools/owner-keys/diskos-sign.sh payload/mq_ui 1.3.1-Disco
 ```
 
 Arguments are `binary [version-label] [keys-folder] [output-folder]`. The label is at most 32

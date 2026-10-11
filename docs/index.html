@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>diskOS Disco!</title>
-<meta name="description" content="diskOS Disco! - a touch interface for the round screen of the FiiO Snowsky Disc, where the album cover is the interface. Built on b0hemia's diskOS.">
-<meta property="og:title" content="diskOS Disco!">
+<meta name="description" content="diskOS Disco! 1.3.1 - bigger buttons, clearer type and an album back sleeve. A touch interface for the round screen of the FiiO Snowsky Disc, where the album cover is the interface. Built on b0hemia's diskOS.">
+<meta property="og:title" content="diskOS Disco! 1.3.1">
 <meta property="og:description" content="The album cover is the interface. A touch UI for the FiiO Snowsky Disc, built on diskOS.">
 <meta property="og:image" content="https://zmd22.github.io/diskos-disco/disco/hero.png">
 <link rel="icon" href="disco/music.png">
@@ -179,13 +179,12 @@ footer a:hover{color:var(--text)}
   <!-- hero -->
   <div class="hero">
     <div class="wrap">
-      <span class="eyebrow"><b>1.3.0</b> · for the FiiO Snowsky Disc · firmware V2.57</span>
+      <span class="eyebrow"><b>1.3.1</b> · for the FiiO Snowsky Disc · firmware V2.57</span>
       <h1>diskOS Disco<span class="bang">!</span></h1>
       <p class="lede"><strong>The album cover is the interface.</strong> A touch UI made for the Disc's round
         360&nbsp;px screen, built on b0hemia's diskOS: the playing album fills the screen, a faint CD rainbow runs
         around the rim, and everything else sits on glass around it.</p>
-      <p class="small"><strong>New in 1.3.0:</strong> a left-handed mode, three scroll styles, tidier Settings and
-        a welcome screen when nothing is playing. <a href="#updates">See what's new</a>.</p>
+      <p class="small"><strong>New in 1.3.1:</strong> bigger buttons, clearer type, an album back sleeve and a cleaner queue. <a href="#updates">See what's new</a>.</p>
       <div class="cta">
         <a class="btn primary" href="https://github.com/zmd22/diskos-disco/releases/latest">Download the latest release</a>
         <a class="btn ghost" href="#install">Install</a>
@@ -196,8 +195,8 @@ footer a:hover{color:var(--text)}
       <div class="stage" aria-label="Screenshots">
         <div class="dev sm"><img src="disco/quick.png" alt="Quick Settings" width="360" height="360"></div>
         <div class="dev md"><img src="disco/music-light.png" alt="Music, light appearance" width="360" height="360"></div>
-        <div class="dev lg"><img src="disco/music.png" alt="Music, dark appearance" width="360" height="360"></div>
-        <div class="dev md"><img src="disco/music-arc.png" alt="Music with the progress arc" width="360" height="360"></div>
+        <div class="dev lg"><img src="disco/music-inter.png" alt="Music, Inter Semibold" width="360" height="360"></div>
+        <div class="dev md"><img src="disco/queue.png" alt="Queue with larger controls" width="360" height="360"></div>
         <div class="dev sm"><img src="disco/eq.png" alt="Equalizer" width="360" height="360"></div>
       </div>
     </div>
@@ -208,25 +207,39 @@ footer a:hover{color:var(--text)}
     <div class="wrap">
       <div class="feature reveal" style="padding-top:0">
         <div>
-          <span class="kicker">New in 1.3.0</span>
-          <h2>Left or right.<br>Your hand, your Disc.</h2>
-          <p>Choose <b>Side › Left</b> and the navigation circle moves to the left rim, with everything arranged
-            around it: Quick Settings, Weather, Working mode, the Equalizer and the edges of every list. The back
-            swipe moves to the right edge. Words still read left to right, and progress still runs clockwise.</p>
+          <span class="kicker">New in 1.3.1</span>
+          <h2>More room.<br>More music.</h2>
+          <p>A little bigger. A lot nicer to use. Readable action menus, generous shortcut pills and crisp pressed
+            feedback make the Disc feel more confident. Song Info becomes an album back sleeve, and Queue
+            gives the space back to your music. All in your chosen side and appearance.</p>
           <ul>
-            <li><b>Three scroll styles:</b> Classic, Straight, or Disco, where rows swing round the circle like light on a CD.</li>
-            <li><b>Nothing playing?</b> Music shows a CD and <i>Go to Library</i> instead of an empty screen.</li>
-            <li><b>Tidier Settings:</b> Display and System in short pages, so there's little scrolling.</li>
-            <li><b>Small things:</b> hold the clock to hide it, tag a whole album from its hold menu, see the bitrate in Song Info, glass hold menus, and battery stats that start at 95%.</li>
+            <li><b>Turn the sleeve:</b> tap the title, then Info, for the cover, credits and track details.</li>
+            <li><b>Your kind of type:</b> Original, Inter Semibold or Nunito Bold on Music.</li>
+            <li><b>Room to touch:</b> bigger menus and Shortcuts; ten EQ bands spread across the screen.</li>
+            <li><b>Find your place:</b> session scroll memory and brief position hints. Bitmap fonts and RAM-only state keep the cost modest.</li>
           </ul>
-          <a class="btn ghost" href="https://github.com/zmd22/diskos-disco/blob/main/docs/releases/v1.3.0.md">Release notes</a>
+          <a class="btn ghost" href="https://github.com/zmd22/diskos-disco/blob/main/docs/releases/v1.3.1.md">Release notes</a>
         </div>
         <div class="shots">
-          <div class="dev"><img src="disco/left-nav.png" alt="The navigation circle open on the left in left-handed mode" width="360" height="360" loading="lazy"></div>
-          <div class="dev"><img src="disco/scroll-disco.png" alt="A song list in the Disco scroll style" width="360" height="360" loading="lazy"></div>
-          <div class="dev"><img src="disco/idle.png" alt="Music with nothing playing: a CD and Go to Library" width="360" height="360" loading="lazy"></div>
-          <div class="dev"><img src="disco/settings-display.png" alt="The shorter Display settings page" width="360" height="360" loading="lazy"></div>
+          <div class="dev"><img src="disco/song-info.png" alt="Song Info album back sleeve" width="360" height="360" loading="lazy"></div>
+          <div class="dev"><img src="disco/queue.png" alt="Queue with larger controls and highlighted current track" width="360" height="360" loading="lazy"></div>
+          <div class="dev"><img src="disco/music-inter.png" alt="Music with Inter Semibold" width="360" height="360" loading="lazy"></div>
+          <div class="dev"><img src="disco/shortcuts.png" alt="Larger Shortcuts pills" width="360" height="360" loading="lazy"></div>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="track-fonts" style="background:var(--bg2)">
+    <div class="wrap center">
+      <span class="kicker">Three voices. One record.</span>
+      <h2>Make the title sing.</h2>
+      <p class="sub">Keep the original feel, go crisp with Inter Semibold, or soften the edges with Nunito Bold.
+        Bigger strokes. Ready-made glyphs. Choose Track Font under Disco Options › Music Screen.</p>
+      <div class="gallery" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin-top:36px">
+        <div class="tile"><div class="dev"><img src="disco/music.png" alt="Original Music font" width="360" height="360" loading="lazy"></div><p><b>Original</b>The familiar Disco voice.</p></div>
+        <div class="tile"><div class="dev"><img src="disco/music-inter.png" alt="Inter Semibold Music font" width="360" height="360" loading="lazy"></div><p><b>Inter Semibold</b>Crisp, confident, easy to read.</p></div>
+        <div class="tile"><div class="dev"><img src="disco/music-nunito.png" alt="Nunito Bold Music font" width="360" height="360" loading="lazy"></div><p><b>Nunito Bold</b>Round, warm, a little playful.</p></div>
       </div>
     </div>
   </section>
@@ -275,7 +288,7 @@ footer a:hover{color:var(--text)}
           <p>The cover fills the screen, sharp. Over it: the time and the weather, the title and artist, a rainbow
             progress you can drag to seek, and play controls on an arc that follows the round edge.</p>
           <ul>
-            <li><b>Tap the title</b> for Favourite, Album, Artist, Queue, Lyrics and Immersive.</li>
+            <li><b>Tap the title</b> for Favourite, Album, Artist, Queue, Lyrics and Info.</li>
             <li><b>Hold the title</b> for the full-screen cover, or to favourite the song.</li>
             <li><b>Line or arc:</b> progress under the title, or all the way around the rim.</li>
             <li><b>Readable on any cover:</b> text and fades adapt to each album.</li>
@@ -345,11 +358,11 @@ footer a:hover{color:var(--text)}
         <div class="tile"><div class="dev"><img data-dark="disco/search-landing.png" data-light="disco/search-landing-light.png" src="disco/search-landing.png" alt="Search" width="360" height="360" loading="lazy"></div><p><b>Search</b>Recent searches one tap away</p></div>
         <div class="tile"><div class="dev"><img data-dark="disco/search-results.png" data-light="disco/search-results-light.png" src="disco/search-results.png" alt="Search results" width="360" height="360" loading="lazy"></div><p><b>Results</b>Artists first, then songs</p></div>
         <div class="tile"><div class="dev"><img data-dark="disco/library.png" data-light="disco/library-light.png" src="disco/library.png" alt="Library" width="360" height="360" loading="lazy"></div><p><b>Library</b>Songs, albums, books, folders</p></div>
-        <div class="tile"><div class="dev"><img src="disco/queue.png" alt="Queue" width="360" height="360" loading="lazy"></div><p><b>Queue</b>Drag to reorder</p></div>
+        <div class="tile"><div class="dev"><img src="disco/queue.png" alt="Queue" width="360" height="360" loading="lazy"></div><p><b>Queue</b>Bigger controls. Less clutter.</p></div>
         <div class="tile"><div class="dev"><img data-dark="disco/modes.png" data-light="disco/modes-light.png" src="disco/modes.png" alt="Working mode" width="360" height="360" loading="lazy"></div><p><b>Working mode</b>Playback, USB, Bluetooth, AirPlay</p></div>
         <div class="tile"><div class="dev"><img data-dark="disco/battery.png" data-light="disco/battery-light.png" src="disco/battery.png" alt="Battery" width="360" height="360" loading="lazy"></div><p><b>Battery</b>Time left at your pace</p></div>
         <div class="tile"><div class="dev"><img src="disco/standby.png" alt="Standby" width="360" height="360" loading="lazy"></div><p><b>Standby</b>Always dark, redraws once a minute</p></div>
-        <div class="tile"><div class="dev"><img data-dark="disco/shortcuts.png" data-light="disco/shortcuts-light.png" src="disco/shortcuts.png" alt="Shortcuts" width="360" height="360" loading="lazy"></div><p><b>Shortcuts</b>Five of your choice</p></div>
+        <div class="tile"><div class="dev"><img data-dark="disco/shortcuts.png" data-light="disco/shortcuts-light.png" src="disco/shortcuts.png" alt="Shortcuts" width="360" height="360" loading="lazy"></div><p><b>Shortcuts</b>Five generous, readable pills</p></div>
       </div>
     </div>
   </section>
@@ -377,6 +390,7 @@ footer a:hover{color:var(--text)}
         <div class="opt"><b>Equalizer · Volume</b><span>Rainbow colours, or your accent colour.</span></div>
         <div class="opt"><b>Progress Bar</b><span>Rainbow, accent, or off.</span></div>
         <div class="opt"><b>Progress Shape</b><span>A line under the title, or an arc around the rim, from just below the menu, clockwise, to just above it.</span></div>
+        <div class="opt"><b>Track Font</b><span>Original, Inter Semibold or Nunito Bold. Bigger, heavier Music type with international fallbacks.</span></div>
         <div class="opt"><b>Title Position</b><span>Centred, or from the left.</span></div>
         <div class="opt"><b>Title Hold</b><span>Hold the title for the full-screen cover, to favourite the song, or nothing.</span></div>
         <div class="opt"><b>Side</b><span>Right or Left: the navigation circle and everything around it, for either hand.</span></div>
@@ -453,7 +467,7 @@ cp diskos-keys/diskos-root.pub.pem payload/</pre>
           <p style="margin-top:14px">Expect <code>mq_ui: OK</code>. From the repository root, sign with the keys
             matching the public root key already installed on your Disc:</p>
 <pre>sh ui/tools/owner-keys/diskos-sign.sh \
-  /path/to/mq_ui 1.3.0 \
+  /path/to/mq_ui 1.3.1 \
   /absolute/path/to/your/diskos-keys ./diskos-update</pre>
           <p style="margin-top:14px">The output contains six files: <code>mq_ui</code>, <code>update.manifest</code>,
             <code>update.manifest.sig</code>, <code>leafpub.pem</code>, <code>keyauthz</code> and <code>keyauthz.sig</code>.
@@ -470,7 +484,7 @@ cp diskos-keys/diskos-root.pub.pem payload/</pre>
         </div>
         <div class="step">
           <h4>Test and keep the trial</h4>
-          <p>Check <b>Settings › System › About</b> for the new version (Disco! 1.3.0). Keep the trial running for
+          <p>Check <b>Settings › System › About</b> for the new version (Disco! 1.3.1). Keep the trial running for
             at least three minutes and test playback. A confirmed playback start with running audio can
             accept it automatically after the minimum time; otherwise choose <b>Keep</b> when asked.
             Choose <b>Go back</b> and restart to revert.</p>

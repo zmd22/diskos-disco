@@ -42,7 +42,7 @@ mode and a toast names it: Sequential, Shuffle, Repeat One, Repeat All, Single.
 **Jump to the playing song's album or artist.** Tap the title on Music, then Album or Artist. The song (or its
 album) is highlighted in the list.
 
-**Full-screen cover.** Hold the title on Music, or tap it and choose Immersive (or use the Immersive shortcut).
+**Full-screen cover.** Hold the title on Music, with Title Hold set to Immersive (or use the Immersive shortcut).
 Tap to leave.
 
 **Favourite with one hold.** Disco Options > Music Screen > Title Hold > Favourite: holding the title then adds or removes the
@@ -53,6 +53,9 @@ tags, or (with Display > Online & Extras > Online Lyrics on) an online lookup.
 
 **Resume the last song after a restart.** Settings > Playback > Resume Playback: **Song** reopens the last song,
 **Position** also returns to where you were.
+
+**Track details.** Tap the title on Music, then **Info**. Song Info presents the cover, title, artist
+and metadata as an album back sleeve. You can also hold a library song and choose Info.
 
 ## Queue
 
@@ -108,6 +111,9 @@ Screen > Title Position > Left.
 **Hide the clock on Music.** Hold the top of Music (the clock); hold again to bring it back. Or Disco Options >
 Music Screen > Show Clock. **Hide the times under the progress line:** Disco Options > Music Screen > Track Times. **Turn off the rainbow rim:** Disco Options > Colours > Rim Sheen.
 
+**Thicker Music text.** Settings > Display > Disco Options > Music Screen > Track Font:
+choose **Inter Semibold** or **Nunito Bold**, or keep Original. Applying restarts the UI while music keeps playing.
+
 **Bigger text.** Settings > Display > Text & Layout > Font Size > Large.
 
 **Choose your shortcuts.** Settings > Display > Online & Extras > Shortcuts. Tap one of the five slots and pick what it opens.
@@ -133,7 +139,7 @@ Rescan Library). A small dot runs around the rim while it scans.
 **Update from the SD card.**
 
 1. On your computer, make a signed update with the signing script:
-   `sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 1.3.0` (the last part labels the update package; About shows the version compiled into mq_ui).
+   `sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 1.3.1` (the last part labels the update package; About shows the version compiled into mq_ui).
 2. Copy the resulting `diskos-update` folder to the root of the SD card.
 3. On the Disc: Settings > System > Maintenance > Update from SD Card > Update, then restart.
 4. The new version starts as a **trial**. Play some music (or tap **Keep** when asked) to keep it. If it
@@ -142,7 +148,7 @@ Rescan Library). A small dot runs around the rim while it scans.
 Updates are signed with your own keys, made once with `diskos-keys.sh`; the Disc only accepts updates signed with
 the key it was installed with.
 
-**See which version you're on.** Settings > System > About ("Disco! 1.3.0" plus the build ID).
+**See which version you're on.** Settings > System > About ("Disco! 1.3.1" plus the build ID).
 
 **If a restart is refused.** The toast says why; for details, `cat /tmp/restart_last` over SSH (Debug Mode).
 

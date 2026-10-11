@@ -5,6 +5,24 @@ All notable changes to diskOS Disco! (and the diskOS releases underneath) are do
 Entries follow the Keep a Changelog format, with Added, Changed, and Fixed categories where applicable.
 diskOS remains beta software; version numbers do not imply broad hardware or feature validation.
 
+## [Disco! 1.3.1] - 2026-10-11
+
+### Added
+- Disco Song Info as an album back sleeve, accessible through Info in Music's title menu.
+- Track Font: Original, Inter Semibold and Nunito Bold, with larger alternate Music type and existing international/CJK fallbacks. Bundled font sources, OFL licenses and generator.
+- Session-only Library scroll memory for twelve views, transient position/count hints in long lists and queues, and brief reveal of highlighted long titles.
+
+### Changed
+- Larger action targets, icons and captions across track/group/file menus and confirmations; roomier Music actions.
+- Bigger Disco Shortcuts and All apps rows, labels and pills; clearer pressed feedback in Quick Settings, Modes and Shortcuts.
+- Queue: larger Play/Random/Clear, highlighted current track and separator, with tiny explanation and duplicate headings removed. Empty controls disable; Random requires two entries.
+- Disco EQ spreads bands across the screen, enlarges labels and preset, says "Choose a band", and adds a back chevron before the preset.
+- About and shipped payload now show 1.3.1. Website, screenshots, tour and update examples refreshed.
+
+### Validation
+- Owner approved the polished3 interface after physical-device testing. Final version rebuild checked on the host; no separate battery measurement.
+- Production static MIPS ABI, theme/punctuation checks, LVGL layouts and focused interaction checks. See [release notes](docs/releases/v1.3.1.md).
+
 ## [Disco! 1.3.0] - 2026-10-10
 
 ### Added

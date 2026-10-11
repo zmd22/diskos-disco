@@ -84,7 +84,7 @@ Run from the repository root. Replace the binary and keys paths with your actual
 
 ```sh
 sh ui/tools/owner-keys/diskos-sign.sh \
-  ui/mq_ui 1.3.0-test \
+  ui/mq_ui 1.3.1-test \
   /absolute/path/to/your/diskos-keys ./diskos-update
 ```
 

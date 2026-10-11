@@ -321,7 +321,9 @@ void ui_set_prewarm_mode(int m);          /* 0=covers only 1=+per-track sweep wh
 int  ui_run_cap_bounded(const char *cmd, char *out, int cap, int timeout_ms);   /* bt.c: popen-like capture, killed at timeout */
 int  bt_radio_on(void);              /* current mode; 0 = Album Art Cache off */
 int  ui_main_is_idle(void);               /* main.c: 1 when the screen is dimmed/off (no active use) */
-const lv_font_t *ui_font_cjk(int size);   /* shared montserrat + Source Han Sans fallback user-text font (14/16/20) */
+const lv_font_t *ui_font_cjk(int size);   /* international/CJK user-text chain */
+void ui_reveal_title(lv_obj_t *label);
+const lv_font_t *ui_np_font(int size);    /* optional Now Playing face, with the same fallbacks */
 int  ui_take_art_applied(void);           /* 1 once after art (re)applied -> re-push surfaces */
 int  ui_np_seek_press(int x, int y);
 int  ui_np_cover_hit(int x, int y);      /* 1 = (x,y) is on the visible NP cover */

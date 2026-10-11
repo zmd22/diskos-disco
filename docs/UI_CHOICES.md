@@ -132,3 +132,20 @@ See [UPDATING.md](UPDATING.md).
 - **Glass** — a third theme with a navigation hub (Music · Library · Settings · Modes · Shortcuts · EQ),
   configurable hub items and a title-tap action overlay. Mocked up, not built.
 - **Null** (Nothing-phone pixel style) and a 90s cassette theme — shelved after testing.
+
+## Disco 1.3.1: readable, tactile, economical
+
+Song Info is an album back sleeve: a cover stamp and a calm metadata card. Music's title menu
+opens Info; immersive art remains a title-hold/shortcut action. Queue gives its space to the
+highlighted current track and queued rows, separated by a line, with larger controls and no
+small explanatory copy. Clear keeps its two-tap confirmation.
+
+Action menus and Shortcuts use larger touch targets and labels. Pressed Quick Settings,
+Modes and shortcut controls change their existing fill and border, without a continuous
+animation. The EQ spans the available width and gives its preset and band labels more room.
+
+Original remains the default Music font; Inter Semibold and Nunito Bold are optional heavier
+bitmap faces. Existing international/CJK fallback chains remain. Library position memory is
+bounded to twelve views in RAM; position hints reuse existing timing. These choices avoid
+runtime font rasterization, persistent scroll writes and new idle timers. Battery benefit is
+not a measured claim. See [1.3.1](releases/v1.3.1.md) for the full release.

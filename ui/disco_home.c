@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-extern const lv_font_t font_theme_20;
+extern const lv_font_t font_theme_20, font_theme_24;
 extern const lv_font_t font_weather16;
 
 /* text over the cover: every label has a twin one pixel down-right in the opposite colour (a soft shadow), and the pair
@@ -329,7 +329,7 @@ static lv_obj_t *g_ov, *g_ov_btn[6], *g_ov_cap[6];
 static void ov_close(void){ if(g_ov){ lv_obj_delete(g_ov); g_ov = NULL; } }
 void dhome_overlay_close(void){ ov_close(); }
 static void ov_title_cb(lv_event_t *e){ if(lv_event_get_code(e) == LV_EVENT_CLICKED) ov_close(); }
-enum { OV_FAV, OV_ALBUM, OV_ARTIST, OV_QUEUE, OV_LYRICS, OV_IMM, OV_N };
+enum { OV_FAV, OV_ALBUM, OV_ARTIST, OV_QUEUE, OV_LYRICS, OV_INFO, OV_N };
 void disco_open_np_immersive(void);
 static void ov_mark(int i, int on){
     lv_obj_t *b = g_ov_btn[i], *l = lv_obj_get_child(b, 0);
@@ -337,7 +337,7 @@ static void ov_mark(int i, int on){
     lv_obj_set_style_border_opa(b, on ? LV_OPA_COVER : 60, 0);
     lv_obj_set_style_text_color(l, g_acc, 0); lv_obj_set_style_bg_color(b, on ? TC(SURFACE_RAISED) : TC(SURFACE), 0);
 }
-static void ov_place_cap(int i, int x, int y){ lv_obj_update_layout(g_ov_cap[i]); lv_obj_set_pos(g_ov_cap[i], x - lv_obj_get_width(g_ov_cap[i]) / 2, y + 33); }
+static void ov_place_cap(int i, int x, int y){ lv_obj_update_layout(g_ov_cap[i]); lv_obj_set_pos(g_ov_cap[i], x - lv_obj_get_width(g_ov_cap[i]) / 2, y + 40); }
 static void ov_paint(void){
     if(!g_ov) return;
     ov_mark(OV_FAV, ui_np_fav_state() == 1);
@@ -351,7 +351,7 @@ static void ov_act_cb(lv_event_t *e){
         case OV_ARTIST: ov_close(); ui_np_open_artist(); break;
         case OV_QUEUE:  ov_close(); queue_open(); break;                /* our own Queue */
         case OV_LYRICS: ov_close(); lyrics_open(); break;
-        case OV_IMM:    ov_close(); disco_open_np_immersive(); break;
+        case OV_INFO: { track_state_t st; ipc_get_state(&st); ov_close(); songinfo_unpin(); songinfo_set(&st); screen_show(SCR_SONGINFO); break; }
     }
 }
 static void ov_open(void){
@@ -359,32 +359,40 @@ static void ov_open(void){
     g_ov = lv_obj_create(lv_layer_top());
     lv_obj_remove_style_all(g_ov);
     lv_obj_set_size(g_ov, 360, 360);
-    lv_obj_set_style_bg_color(g_ov, TC(CANVAS), 0); lv_obj_set_style_bg_opa(g_ov, 225, 0);
+    lv_obj_set_style_bg_color(g_ov, TC(CANVAS), 0); lv_obj_set_style_bg_opa(g_ov, 245, 0);
     lv_obj_add_flag(g_ov, LV_OBJ_FLAG_CLICKABLE); lv_obj_clear_flag(g_ov, LV_OBJ_FLAG_SCROLLABLE);   /* swallows taps */
     lv_obj_t *tb = lv_obj_create(g_ov); lv_obj_remove_style_all(tb);   /* the title + artist: tap here to close */
-    lv_obj_set_size(tb, 260, 64); lv_obj_align(tb, LV_ALIGN_TOP_MID, 0, 66);
+    lv_obj_set_size(tb, 260, 64); lv_obj_align(tb, LV_ALIGN_TOP_MID, 0, 38);
     lv_obj_add_flag(tb, LV_OBJ_FLAG_CLICKABLE); lv_obj_set_ext_click_area(tb, 10);
     lv_obj_add_event_cb(tb, ov_title_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *t = lv_label_create(tb); lv_label_set_text(t, L_TITLE.cur);
     lv_label_set_long_mode(t, LV_LABEL_LONG_DOT); lv_obj_set_size(t, 250, 28);
-    lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, 0); lv_obj_set_style_text_font(t, ui_font_cjk(20), 0);
+    lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, 0); lv_obj_set_style_text_font(t, ui_font_cjk(22), 0);
     lv_obj_set_style_text_color(t, TC(TEXT_PRIMARY), 0); lv_obj_align(t, LV_ALIGN_TOP_MID, 0, 8);
     lv_obj_t *ar = lv_label_create(tb); lv_label_set_text(ar, L_ARTIST.cur);
     lv_label_set_long_mode(ar, LV_LABEL_LONG_DOT); lv_obj_set_size(ar, 230, 22);
     lv_obj_set_style_text_align(ar, LV_TEXT_ALIGN_CENTER, 0); lv_obj_set_style_text_font(ar, ui_font_cjk(16), 0);
     lv_obj_set_style_text_color(ar, TC(TEXT_SECONDARY), 0); lv_obj_align(ar, LV_ALIGN_TOP_MID, 0, 38);
     static const struct { int x, y; const char *cap; } P[OV_N] = {          /* two gentle arcs of three */
-        { 104, 164, "Favourite" }, { 180, 174, "Album" }, { 256, 164, "Artist" },
-        { 112, 254, "Queue" },     { 180, 266, "Lyrics" }, { 248, 254, "Immersive" } };
-    const char *G[OV_N] = { TH_IC_HEART, TH_IC_RECORD, "\xEF\x84\xB0", LV_SYMBOL_LIST, LV_SYMBOL_FILE, LV_SYMBOL_IMAGE };   /* Artist: microphone */
+        { 84, 146, "Favourite" }, { 180, 160, "Album" }, { 276, 146, "Artist" },
+        { 94, 250, "Queue" },     { 180, 270, "Lyrics" }, { 266, 250, "Info" } };
+    const char *G[OV_N] = { TH_IC_HEART, TH_IC_RECORD, "\xEF\x84\xB0", LV_SYMBOL_LIST, LV_SYMBOL_FILE, "i" };   /* Artist: microphone; Info: circled i */
     for(int i = 0; i < OV_N; i++){
-        lv_obj_t *b = glass_circle(g_ov, P[i].x, P[i].y, 58, G[i]);
+        lv_obj_t *b = glass_circle(g_ov, P[i].x, P[i].y, 70, G[i]);
         g_ov_btn[i] = b; lv_obj_set_style_text_color(lv_obj_get_child(b, 0), g_acc, 0); lv_obj_set_style_border_color(b, g_acc, 0); lv_obj_set_style_border_opa(b, 140, 0);
-        if(i == OV_FAV || i == OV_ALBUM) lv_obj_set_style_text_font(lv_obj_get_child(b, 0), &font_theme_20, 0);
-        if(i == OV_ARTIST) lv_obj_set_style_text_font(lv_obj_get_child(b, 0), TF(ICON_20), 0);
-        lv_obj_add_event_cb(b, ov_act_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i);
+        if(i == OV_FAV || i == OV_ALBUM) lv_obj_set_style_text_font(lv_obj_get_child(b, 0), &font_theme_24, 0);
+        if(i == OV_ARTIST) lv_obj_set_style_text_font(lv_obj_get_child(b, 0), TF(ICON_28), 0);
+        if(i == OV_INFO){
+            lv_obj_t *ic = lv_obj_get_child(b, 0);
+            lv_obj_set_style_text_font(ic, TF(UI_24), 0); lv_obj_set_size(ic, 32, 32);
+            lv_obj_set_style_text_align(ic, LV_TEXT_ALIGN_CENTER, 0);
+            lv_obj_set_style_border_width(ic, 2, 0); lv_obj_set_style_border_color(ic, g_acc, 0);
+            lv_obj_set_style_radius(ic, LV_RADIUS_CIRCLE, 0); lv_obj_center(ic);
+        }
+        static const char *const actions[OV_N] = { "disco.track.favourite", "disco.track.album", "disco.track.artist", "disco.track.queue", "disco.track.lyrics", "disco.track.info" };
+        ui_on(b, ov_act_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i, actions[i], UI_REACHABLE);
         g_ov_cap[i] = lv_label_create(g_ov); lv_label_set_text(g_ov_cap[i], P[i].cap);
-        lv_obj_set_style_text_font(g_ov_cap[i], TF(UI_12), 0); lv_obj_set_style_text_color(g_ov_cap[i], TC(TEXT_SECONDARY), 0);
+        lv_obj_set_style_text_font(g_ov_cap[i], TF(UI_18), 0); lv_obj_set_style_text_color(g_ov_cap[i], TC(TEXT_PRIMARY), 0);
         ov_place_cap(i, P[i].x, P[i].y);
     }
     kit_pass(g_ov);
@@ -522,9 +530,9 @@ void dhome_create(lv_obj_t *root){
     g_trk = lv_obj_create(root); lv_obj_remove_style_all(g_trk);
     lv_obj_set_pos(g_trk, 30, 136); lv_obj_set_size(g_trk, 300, 66);
     lv_obj_add_flag(g_trk, LV_OBJ_FLAG_CLICKABLE); lv_obj_add_event_cb(g_trk, title_cb, LV_EVENT_ALL, NULL);
-    g_title = dl_make(g_trk, &L_TITLE, ui_font_cjk(28), 272, 36, LV_ALIGN_TOP_MID, 0, 0, 0);
+    g_title = dl_make(g_trk, &L_TITLE, ui_np_font(28), 272, 40, LV_ALIGN_TOP_MID, 0, 0, 0);
     dl_text(&L_TITLE, "Not Playing");
-    g_artist = dl_make(g_trk, &L_ARTIST, ui_font_cjk(20), 252, 26, LV_ALIGN_TOP_MID, 0, 38, 1);
+    g_artist = dl_make(g_trk, &L_ARTIST, ui_np_font(20), 252, 32, LV_ALIGN_TOP_MID, 0, 42, 1);
     dl_scroll5(&L_TITLE); dl_scroll5(&L_ARTIST);
     dhome_title_apply();
     underline_create(root);

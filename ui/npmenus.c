@@ -221,9 +221,9 @@ static void build_menu(lv_obj_t *box){
     lv_label_set_long_mode(g_menu_title, LV_LABEL_LONG_DOT);
     lv_obj_set_width(g_menu_title, 200);
     lv_obj_set_style_text_align(g_menu_title, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_text_font(g_menu_title, ui_font_cjk(14), 0);
+    lv_obj_set_style_text_font(g_menu_title, ui_font_cjk(18), 0);
     lv_obj_set_style_text_color(g_menu_title, TC(TEXT_SECONDARY), 0);
-    lv_obj_align(g_menu_title, LV_ALIGN_TOP_MID, 0, 16);
+    lv_obj_align(g_menu_title, LV_ALIGN_TOP_MID, 0, 10);
     if(book){
         static const orbit_item_t it[4] = { { LV_SYMBOL_LIST, "Chapters" }, { LV_SYMBOL_FILE, "Details" },
                                             { LV_SYMBOL_SETTINGS, "Equalizer" }, { LV_SYMBOL_IMAGE, "Full art" } };
@@ -239,6 +239,7 @@ static void build_menu(lv_obj_t *box){
         lv_obj_set_style_text_font(g_orb.icon[0], &font_theme_20, 0);
         for(int i = 0; i < 8; i++) lv_obj_add_event_cb(g_orb.btn[i], CB[i], LV_EVENT_CLICKED, NULL);
     }
+    orbit_popup_polish(&g_orb);
     orbit_hub_create(&g_orb, box, close_cb, "", "");            /* the hub: the cover inside its progress ring */
     lv_obj_set_style_clip_corner(g_orb.hub, true, 0);
     g_cover_img = lv_image_create(g_orb.hub);

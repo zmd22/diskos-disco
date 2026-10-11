@@ -238,13 +238,14 @@ static int si_poll(const char *path, int track, si_tech_t *out, int *changed){
     return got;
 }
 
+static void sleeve_back_cb(lv_event_t *e){ (void)e; screen_back(); }
 void songinfo_create(lv_obj_t *root)
 {
     lv_obj_set_style_bg_color(root, TC(CANVAS), 0);
     lv_obj_set_style_bg_opa(root, LV_OPA_COVER, 0);
 
-    g_header = ui_header(root, "Song Info");   /* kept for the book relabel; the cover ring replaces it visually */
-    lv_obj_add_flag(g_header, LV_OBJ_FLAG_HIDDEN);
+    g_header = th_disco() ? NULL : ui_header(root, "Song Info");
+    if(g_header) lv_obj_add_flag(g_header, LV_OBJ_FLAG_HIDDEN);
     /* the cover inside its progress ring, then title and artist */
     g_ring = lv_arc_create(root);
     lv_obj_remove_style(g_ring, NULL, LV_PART_KNOB);
@@ -312,6 +313,48 @@ void songinfo_create(lv_obj_t *root)
         g_val[i] = v;
         if(i == F_TITLE || i == F_ARTIST) lv_obj_add_flag(cell, LV_OBJ_FLAG_HIDDEN);   /* shown in the header instead */
     }
+    if(th_disco()){
+        /* Album back sleeve: a compact artwork stamp and a roomy metadata panel.
+         * The existing metadata worker and pinned-track handling stay shared. */
+        lv_obj_add_flag(g_ring, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_t *back = lv_button_create(root); lv_obj_remove_style_all(back);
+        lv_obj_set_size(back, 152, 36); lv_obj_align(back, LV_ALIGN_TOP_MID, 0, 26);
+        lv_obj_set_style_radius(back, LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_style_bg_color(back, TC(SURFACE), 0); lv_obj_set_style_bg_opa(back, 170, 0);
+        lv_obj_set_style_bg_color(back, TC(SURFACE_RAISED), LV_STATE_PRESSED); lv_obj_set_style_bg_opa(back, LV_OPA_COVER, LV_STATE_PRESSED);
+        lv_obj_t *arrow = lv_label_create(back); lv_label_set_text(arrow, LV_SYMBOL_LEFT);
+        lv_obj_set_style_text_font(arrow, TF(UI_18), 0); lv_obj_set_style_text_color(arrow, TC(TEXT_PRIMARY), 0); lv_obj_align(arrow, LV_ALIGN_LEFT_MID, 14, 0);
+        g_header = lv_label_create(back); lv_label_set_text(g_header, "Song Info");
+        lv_obj_set_style_text_font(g_header, TF(UI_18), 0); lv_obj_set_style_text_color(g_header, TC(TEXT_PRIMARY), 0); lv_obj_align(g_header, LV_ALIGN_CENTER, 10, 0);
+        lv_obj_add_event_cb(back, sleeve_back_cb, LV_EVENT_CLICKED, NULL);
+        lv_obj_t *sleeve = lv_obj_create(root); lv_obj_remove_style_all(sleeve);
+        lv_obj_set_pos(sleeve, 44, 72); lv_obj_set_size(sleeve, 272, 246);
+        lv_obj_set_style_radius(sleeve, 20, 0);
+        lv_obj_set_style_bg_color(sleeve, TC(SURFACE), 0); lv_obj_set_style_bg_opa(sleeve, 205, 0);
+        lv_obj_set_style_border_width(sleeve, 1, 0); lv_obj_set_style_border_color(sleeve, TC(BORDER), 0);
+        lv_obj_clear_flag(sleeve, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_move_to_index(sleeve, lv_obj_get_index(g_cover));
+        lv_obj_set_size(g_cover, 52, 52); lv_obj_align(g_cover, LV_ALIGN_TOP_LEFT, 58, 86);
+        lv_obj_set_style_radius(g_cover, 8, 0);
+        lv_obj_set_width(g_title, 178); lv_obj_set_style_text_font(g_title, ui_font_cjk(20), 0);
+        lv_obj_set_style_text_align(g_title, LV_TEXT_ALIGN_LEFT, 0); lv_obj_align(g_title, LV_ALIGN_TOP_LEFT, 122, 86);
+        lv_obj_set_width(g_artist, 178); lv_obj_set_style_text_font(g_artist, ui_font_cjk(16), 0);
+        lv_obj_set_style_text_align(g_artist, LV_TEXT_ALIGN_LEFT, 0); lv_obj_align(g_artist, LV_ALIGN_TOP_LEFT, 122, 115);
+        lv_obj_t *rule = lv_obj_create(root); lv_obj_remove_style_all(rule);
+        lv_obj_set_pos(rule, 58, 148); lv_obj_set_size(rule, 244, 1);
+        lv_obj_set_style_bg_color(rule, TC(BORDER), 0); lv_obj_set_style_bg_opa(rule, LV_OPA_COVER, 0);
+        lv_obj_clear_flag(rule, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_set_pos(list, 58, 156); lv_obj_set_size(list, 244, 146);
+        lv_obj_set_style_pad_row(list, 8, 0); lv_obj_set_style_pad_bottom(list, 8, 0);
+        for(int i = 0; i < F_COUNT; i++){
+            lv_obj_set_style_pad_bottom(g_cell[i], 7, 0);
+            lv_obj_set_style_border_width(g_cell[i], 1, 0); lv_obj_set_style_border_side(g_cell[i], LV_BORDER_SIDE_BOTTOM, 0);
+            lv_obj_set_style_border_color(g_cell[i], TC(BORDER), 0); lv_obj_set_style_border_opa(g_cell[i], 100, 0);
+            lv_obj_set_style_text_font(g_key[i], TF(UI_14), 0); lv_obj_set_style_text_color(g_key[i], TC(TEXT_SECONDARY), 0);
+            lv_obj_set_style_text_font(g_val[i], ui_font_cjk(18), 0);
+            lv_label_set_long_mode(g_val[i], LV_LABEL_LONG_WRAP);
+        }
+    }
     if(th_braun()){                                               /* Braun: the grille; details on the lower segment */
         br_face(root); lv_obj_move_to_index(br_segment(root, 186), 1);
         lv_obj_set_style_text_color(g_title, TC(TEXT_PRIMARY), 0); lv_obj_set_style_text_font(g_title, br_font(18, 1), 0);
@@ -337,7 +380,7 @@ static void header_update(const track_state_t *st){         /* cover (the playin
     const void *dsc = current ? ui_current_cover_dsc() : NULL;
     lv_image_set_src(g_cover_img, NULL);
     if(dsc){ const lv_image_dsc_t *d = dsc; lv_image_set_src(g_cover_img, dsc);
-             if(d->header.w > 0) lv_image_set_scale(g_cover_img, (uint32_t)(88 * 256 / d->header.w) + 2);
+             if(d->header.w > 0) lv_image_set_scale(g_cover_img, (uint32_t)((th_disco() ? 52 : 88) * 256 / d->header.w) + 2);
              lv_obj_center(g_cover_img); lv_obj_remove_flag(g_cover_img, LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(g_cover_note, LV_OBJ_FLAG_HIDDEN); }
     else { lv_obj_add_flag(g_cover_img, LV_OBJ_FLAG_HIDDEN); lv_obj_remove_flag(g_cover_note, LV_OBJ_FLAG_HIDDEN); }
 }

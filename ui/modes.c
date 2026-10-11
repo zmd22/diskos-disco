@@ -359,6 +359,10 @@ void modes_create(lv_obj_t *root){
             int y = 54 + k * 58, h = 56;
             g_drow[i] = disco_row(root, y, h, MODES[i].glyph,
                                  i == 1 ? TF(UI_20) : TF(UI_24), NM[i], disco_row_cb, (void *)(intptr_t)i);
+            lv_obj_set_style_bg_opa(g_drow[i], LV_OPA_COVER, LV_STATE_PRESSED);
+            lv_obj_set_style_border_width(g_drow[i], 2, LV_STATE_PRESSED);
+            lv_obj_set_style_border_color(g_drow[i], ui_current_accent(), LV_STATE_PRESSED);
+            lv_obj_set_style_border_opa(g_drow[i], LV_OPA_COVER, LV_STATE_PRESSED);
             /* Rounded caps fit the rim more closely than a rectangular bounding box.
              * Keep the final row readable while using the panel down to y=342. */
             int dy = y + h / 2 - 180, radius = h / 2;

@@ -84,6 +84,31 @@ static int g_fill_i, g_fill_n;
 static lv_timer_t *g_fill_timer;
 
 static void library_reload(void);
+static lv_obj_t *g_position, *g_position_label;
+static uint32_t g_position_tick;
+static int g_position_fading;
+static int g_restoring, g_restore_y;
+#define POSITION_KEY (MDB_STR * 3 + 96)
+static struct { char key[POSITION_KEY]; int y; } g_positions[12];
+static char g_position_key[POSITION_KEY];
+static unsigned g_position_next;
+static void position_key(char *out){
+    const char *drill=g_view==VIEW_GROUP?g_drill:"";
+    const char *artist=g_view==VIEW_ARTIST_ALBUMS?g_artist:"";
+    const char *album=g_view==VIEW_GROUP && g_scope_lvl==2?g_scope_album:"";
+    snprintf(out,POSITION_KEY,"%d/%d/%d/%zu:%s/%zu:%s/%zu:%s",g_view,
+        g_view==VIEW_GROUP?g_drill_kind:0,g_view==VIEW_GROUP?g_scope_lvl:0,
+        strlen(drill),drill,strlen(artist),artist,strlen(album),album);
+}
+static void position_tick(void){
+    if(g_restoring || !g_position || g_count < 12) return;
+    int idx=(lv_obj_get_scroll_y(g_list)-g_hdr_extra_px)/(ROW_H+4)-g_has_header;
+    if(idx<0)idx=0; if(idx>=g_count)idx=g_count-1;
+    char b[32]; snprintf(b,sizeof b,"%d / %d",idx+1,g_count);
+    if(strcmp(lv_label_get_text(g_position_label),b))lv_label_set_text(g_position_label,b);
+    lv_anim_delete(g_position,NULL);lv_obj_set_style_opa(g_position,LV_OPA_COVER,0);
+    lv_obj_remove_flag(g_position,LV_OBJ_FLAG_HIDDEN);g_position_tick=lv_tick_get();g_position_fading=0;
+}
 static void focus_clear(void);
 /* album order: disc, then track number (untagged tracks after tagged ones), then title */
 static int track_cmp(const void *pa, const void *pb){
@@ -198,7 +223,7 @@ static void pdots_create(lv_obj_t *root){
     g_pdot_cur = -2;
 }
 static void virt_follow(void);
-static void curve_scroll_cb(lv_event_t *e){ (void)e; virt_follow(); curve_rows(); pdots_update(); }
+static void curve_scroll_cb(lv_event_t *e){ (void)e; virt_follow(); curve_rows(); pdots_update(); position_tick(); }
 
 static lv_obj_t *base_row(void){
     lv_obj_t *r = lv_obj_create(g_list);
@@ -268,14 +293,14 @@ static void fav_confirm_cb(lv_event_t *e){
 static void fav_modal_pill(lv_obj_t *card, int x, const char *txt, theme_color_role_t col, lv_event_cb_t cb){
     lv_obj_t *b = lv_button_create(card);
     lv_obj_remove_style_all(b);
-    lv_obj_set_size(b, 108, 42); lv_obj_align(b, LV_ALIGN_BOTTOM_MID, x, -16);
+    lv_obj_set_size(b, 112, 48); lv_obj_align(b, LV_ALIGN_BOTTOM_MID, x, -16);
     lv_obj_set_style_radius(b, 12, 0);
     lv_obj_set_style_bg_color(b, TC(SURFACE_RAISED), 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
     ui_on(b, cb, LV_EVENT_CLICKED, NULL, "library.cb", UI_CORE);
     lv_obj_t *l = lv_label_create(b);
     lv_label_set_text(l, txt);
-    lv_obj_set_style_text_font(l, TF(UI_16), 0);
+    lv_obj_set_style_text_font(l, TF(UI_18), 0);
     lv_obj_set_style_text_color(l, theme_color(col), 0);
     lv_obj_center(l);
 }
@@ -293,22 +318,22 @@ static void fav_confirm(int i){   /* i = the row's index into g_favs */
     ui_on(g_fav_modal, fav_cancel_cb, LV_EVENT_CLICKED, NULL, "library.fav_cancel", UI_CORE); /* tap outside = cancel */
     lv_obj_t *card = lv_obj_create(g_fav_modal);
     lv_obj_remove_style_all(card);
-    lv_obj_set_size(card, 264, 168); lv_obj_center(card);
+    lv_obj_set_size(card, 272, 184); lv_obj_center(card);
     lv_obj_set_style_radius(card, 18, 0);
     lv_obj_set_style_bg_color(card, TC(SURFACE), 0);
     lv_obj_set_style_bg_opa(card, LV_OPA_COVER, 0);
     lv_obj_clear_flag(card, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_t *t = lv_label_create(card);
     lv_label_set_text(t, "Remove from Favourites?");
-    lv_obj_set_style_text_font(t, TF(UI_16), 0);
+    lv_obj_set_style_text_font(t, TF(UI_18), 0);
     lv_obj_set_style_text_color(t, TC(TEXT_PRIMARY), 0);
     lv_obj_align(t, LV_ALIGN_TOP_MID, 0, 24);
     lv_obj_t *s = lv_label_create(card);
     lv_label_set_text(s, title);
     lv_label_set_long_mode(s, LV_LABEL_LONG_DOT);
-    lv_obj_set_width(s, 224);
+    lv_obj_set_size(s,224,lv_font_get_line_height(ui_font_cjk(16)));
     lv_obj_set_style_text_align(s, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_text_font(s, ui_font_cjk(14), 0);   /* song title is user data: Cyrillic/CJK-capable (issue #3) */
+    lv_obj_set_style_text_font(s, ui_font_cjk(16), 0);   /* song title is user data: Cyrillic/CJK-capable (issue #3) */
     lv_obj_set_style_text_color(s, TC(TEXT_MUTED), 0);
     lv_obj_align(s, LV_ALIGN_TOP_MID, 0, 52);
     fav_modal_pill(card, -58, "Cancel", THEME_CLR_TEXT_SECONDARY, fav_cancel_cb);
@@ -548,7 +573,10 @@ static void focus_mark(lv_obj_t *r){   /* lifted row + accent title: "you are he
     lv_obj_set_style_bg_opa(r, LV_OPA_COVER, 0);
     lv_obj_set_style_radius(r, 14, 0);
     lv_obj_t *t = lv_obj_get_child(r, 0);
-    if(t && lv_obj_check_type(t, &lv_label_class)) lv_obj_set_style_text_color(t, TC(ACCENT_PRIMARY), 0);
+    if(t && lv_obj_check_type(t, &lv_label_class)){
+        lv_obj_set_style_text_color(t, TC(ACCENT_PRIMARY), 0);
+        ui_reveal_title(t);
+    }
     g_focus_row = r;
 }
 static void add_row(int i){
@@ -713,7 +741,8 @@ static void fill_start(int n){
         curve_rows(); g_pdot_cur = -2; pdots_update();
         return;
     }
-    int first = n < 18 ? n : 18;                 /* first screenful, instantly */
+    int first = n < 18 ? n : 18;
+    if(g_restore_y>0){int need=g_restore_y/PITCH+LIST_H/PITCH+2;if(need>first)first=need<n?need:n;}                 /* first screenful, instantly */
     if(g_focus_idx >= first) first = g_focus_idx + 1 < n ? g_focus_idx + 1 : n;   /* ...through the focused song */
     for(; g_fill_i < first; g_fill_i++) add_row(g_fill_i);
     lv_obj_update_layout(g_list);
@@ -961,7 +990,7 @@ static void add_plist_row(int centered){
     g_has_header = 2;                            /* Play All / Shuffle + this row */
 }
 
-static void library_reload(void){
+static void library_reload_inner(void){
     if(!g_list) return;
     if(g_lhint){ lv_obj_add_flag(g_lhint, LV_OBJ_FLAG_HIDDEN); g_lhint_ch = 0; }  /* don't leave a stale A-Z hint across views */
     fill_stop();              /* cancel any in-flight stream before wiping rows */
@@ -1111,6 +1140,29 @@ static void library_reload(void){
     if(th_braun()){ lv_obj_update_layout(g_list); curve_rows(); }   /* Braun: every view's rows get the Braun styling */
 }
 
+/* Twelve session-local views, no flash writes on scrolling. Restore after rebuilding
+ * and after the virtual spacers exist; explicit track focus takes priority. */
+static void library_reload(void){
+    if(!g_list)return;
+    if(g_position_key[0]){
+        int slot=-1;for(int i=0;i<12;i++)if(!strcmp(g_positions[i].key,g_position_key)){slot=i;break;}
+        if(slot<0)slot=(int)(g_position_next++%12);
+        snprintf(g_positions[slot].key,POSITION_KEY,"%s",g_position_key);
+        g_positions[slot].y=lv_obj_get_scroll_y(g_list);
+    }
+    char key[POSITION_KEY];position_key(key);g_restore_y=0;
+    for(int i=0;i<12;i++)if(!strcmp(g_positions[i].key,key)){g_restore_y=g_positions[i].y;break;}
+    g_restoring=1;
+    library_reload_inner();
+    position_key(g_position_key);
+    if(g_restore_y>0 && !g_np_jump){
+        lv_obj_update_layout(g_list);lv_obj_scroll_to_y(g_list,g_restore_y,LV_ANIM_OFF);
+        lv_obj_update_layout(g_list);virt_follow();curve_rows();pdots_update();
+    }
+    g_restoring=0;
+    if(g_position)lv_obj_add_flag(g_position,LV_OBJ_FLAG_HIDDEN);
+}
+
 void library_set_song_click_cb(library_song_click_cb_t cb){ g_song_cb=cb; }
 
 /* Rebuild the current Library view from the DB - used after an external change
@@ -1163,6 +1215,11 @@ void library_open_artist(const char *name){
 /* ---- rim-scroll alphabet hint: a big centred letter shown while flying through
  * an alphabetical list, auto-hidden ~650ms after scrolling stops. -------------- */
 static void lhint_timer_cb(lv_timer_t *t){ (void)t;
+    if(g_position && !lv_obj_has_flag(g_position,LV_OBJ_FLAG_HIDDEN)){
+        uint32_t elapsed=lv_tick_elaps(g_position_tick);
+        if(elapsed>650 && !g_position_fading){g_position_fading=1;lv_obj_fade_out(g_position,120,0);}
+        if(elapsed>850)lv_obj_add_flag(g_position,LV_OBJ_FLAG_HIDDEN);
+    }
     if(g_lhint && !lv_obj_has_flag(g_lhint, LV_OBJ_FLAG_HIDDEN) && lv_tick_elaps(g_lhint_tick) > 650)
         lv_obj_add_flag(g_lhint, LV_OBJ_FLAG_HIDDEN);
 }
@@ -1270,6 +1327,13 @@ void library_create(lv_obj_t *root){
     lv_obj_set_style_text_color(g_lhint_lbl, TC(TEXT_PRIMARY), 0);
     lv_label_set_text(g_lhint_lbl, "A");
     lv_obj_center(g_lhint_lbl);
+    g_position=lv_obj_create(root);lv_obj_remove_style_all(g_position);
+    lv_obj_set_size(g_position,108,24);lv_obj_align(g_position,LV_ALIGN_TOP_MID,0,42);
+    lv_obj_set_style_bg_color(g_position,TC(SURFACE),0);lv_obj_set_style_bg_opa(g_position,LV_OPA_COVER,0);
+    lv_obj_set_style_radius(g_position,LV_RADIUS_CIRCLE,0);lv_obj_clear_flag(g_position,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
+    g_position_label=lv_label_create(g_position);lv_label_set_text(g_position_label,"");
+    lv_obj_set_style_text_font(g_position_label,TF(UI_14),0);lv_obj_set_style_text_color(g_position_label,TC(TEXT_PRIMARY),0);
+    lv_obj_center(g_position_label);lv_obj_add_flag(g_position,LV_OBJ_FLAG_HIDDEN);
     lv_timer_create(lhint_timer_cb, 150, NULL);
 
     mdb_load();

@@ -183,9 +183,15 @@ static void disco_build(void){
     }
     for(int i = 0; i < cnt; i++){
         int f = g_items[first + i].font;
-        lv_obj_t *r = disco_row(g_box, 66 + i * 50, 44, g_items[first + i].icon, f == 1 ? TF(ICON_28) : f == 2 ? &font_theme_20 : TF(UI_20),
+        lv_obj_t *r = disco_row(g_box, 60 + i * 54, 50, g_items[first + i].icon, f == 1 ? TF(ICON_28) : f == 2 ? &font_theme_20 : TF(UI_24),
                                 g_items[first + i].name, disco_pick_cb, (void *)(intptr_t)(g_all ? i : i));
-        lv_obj_set_style_text_font(lv_obj_get_child(r, 1), ui_font_cjk(18), 0);
+        lv_obj_update_layout(r);
+        lv_obj_t *label=lv_obj_get_child(r,1);
+        lv_obj_set_style_text_font(label,ui_font_cjk(20),0);
+        lv_obj_set_size(label,lv_obj_get_width(r)-72,lv_font_get_line_height(ui_font_cjk(20)));
+        lv_obj_set_style_border_width(r,2,LV_STATE_PRESSED);
+        lv_obj_set_style_border_color(r,TC(ACCENT_PRIMARY),LV_STATE_PRESSED);
+        lv_obj_set_style_bg_opa(r,LV_OPA_COVER,LV_STATE_PRESSED);
     }
 }
 static void build_page(void){

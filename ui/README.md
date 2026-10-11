@@ -101,6 +101,7 @@ The installer keeps the stock `mq_player` audio engine; only the UI is replaced.
 - **SQLite amalgamation** (`sqlite3.c/.h`): public domain.
 - **jsmn** (`jsmn.h`): MIT (Serge Zaitsev).
 - **md5, RFC 1321** (`md5.c`): public domain (Alexander Peslyak).
+- **Optional Disco Music fonts:** Inter Semibold and Nunito Bold, pre-rendered at 30/22 px. Sources, OFL licenses and regeneration instructions: [fonts/nowplaying](fonts/nowplaying/README.md).
 - **Embedded fonts** (generated glyph arrays), all under the SIL Open Font License 1.1:
   - **Montserrat** - Latin UI text - [`licenses/OFL-1.1-Montserrat.txt`](licenses/OFL-1.1-Montserrat.txt)
   - **Source Han Sans** - CJK glyph fallback - [`licenses/OFL-1.1-SourceHanSans.txt`](licenses/OFL-1.1-SourceHanSans.txt)

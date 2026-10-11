@@ -83,7 +83,7 @@ static void open_menu(const char *title, const int *acts, int n){
     lv_obj_clear_flag(g_ov, LV_OBJ_FLAG_SCROLLABLE);
     static const char *const GLYPH[A_N] = { LV_SYMBOL_LIST, LV_SYMBOL_PLUS, TH_IC_HEART, LV_SYMBOL_IMAGE, LV_SYMBOL_HOME, LV_SYMBOL_FILE,
                                            LV_SYMBOL_DOWNLOAD, LV_SYMBOL_EDIT, LV_SYMBOL_COPY, LV_SYMBOL_TRASH, LV_SYMBOL_PLAY, LV_SYMBOL_SHUFFLE };
-    static const char *const CAP[A_N] = { "Add to queue", "Playlist", "Favourite", "Album", "Artist", "Info", "Tags", "Rename", "Copy / Move", "Delete", "Play", "Shuffle" };
+    static const char *const CAP[A_N] = { "Queue", "Playlist", "Favourite", "Album", "Artist", "Info", "Tags", "Rename", "Copy/Move", "Delete", "Play", "Shuffle" };
     orbit_item_t it[8];
     g_nact = n > 8 ? 8 : n;
     for(int i = 0; i < g_nact; i++){ g_act[i] = acts[i]; it[i].glyph = GLYPH[acts[i]]; it[i].cap = CAP[acts[i]]; }
@@ -98,10 +98,12 @@ static void open_menu(const char *title, const int *acts, int n){
     lv_label_set_long_mode(t, LV_LABEL_LONG_DOT);
     lv_obj_set_width(t, 220);
     lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_text_font(t, ui_font_cjk(16), 0);
-    lv_obj_set_height(t, lv_font_get_line_height(ui_font_cjk(16)));     /* fork: one line + "...", never wraps into the orbit */
+    lv_obj_set_style_text_font(t, ui_font_cjk(18), 0);
+    lv_obj_set_height(t, lv_font_get_line_height(ui_font_cjk(18)));     /* fork: one line + "...", never wraps into the orbit */
     lv_obj_set_style_text_color(t, TC(TEXT_PRIMARY), 0);
-    lv_obj_align(t, LV_ALIGN_TOP_MID, 0, 18);
+    lv_obj_align(t, LV_ALIGN_TOP_MID, 0, 10);
+    orbit_popup_polish(&g_orb);
+    if(g_fav) for(int i=0;i<g_nact;i++) if(g_act[i]==A_FAV) orbit_set_on(&g_orb,i,1,ui_current_accent());
     disco_menu_glass(&g_orb, g_ov);                                   /* Disco: glass over the cover backdrop */
 }
 static void load_song(const char *path){

@@ -184,9 +184,9 @@ static void braun_faders_paint(void){
     else lv_obj_add_flag(g_flamp, LV_OBJ_FLAG_HIDDEN);
 }
 /* ---- Disco: rainbow faders - ten rounded glass sliders on a gentle smile, each filled from 0 dB in its own CD colour ---- */
-#define DX0   40
-#define DSTEP 28.4f
-#define DTOP  72
+#define DX0   34
+#define DSTEP (292.0f / (NB - 1))
+#define DTOP  88
 #define DBOT  206
 #define DMID  ((DTOP + DBOT) / 2)
 #define DKPX  ((DBOT - DTOP) / 2.0f / 6.0f * 0.88f)          /* px per dB (a little headroom at the ends) */
@@ -211,7 +211,7 @@ static void disco_faders_create(lv_obj_t *root){
         lv_obj_set_style_bg_color(g_dknob[i], TC(FIXED_MEDIA_WHITE), 0); lv_obj_set_style_bg_opa(g_dknob[i], LV_OPA_COVER, 0);
         lv_obj_t *ob[3] = { g_dtrk[i], g_dfill[i], g_dknob[i] };
         for(int k = 0; k < 3; k++) lv_obj_clear_flag(ob[k], LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
-        lv_obj_set_style_text_font(g_rim[i], TF(UI_12), 0);
+        lv_obj_set_style_text_font(g_rim[i], TF(UI_14), 0);
         lv_obj_align(g_rim[i], LV_ALIGN_TOP_MID, x - 180, DBOT + o + 6);
     }
 }
@@ -334,7 +334,7 @@ static void refresh_labels(void){
         if(th_disco()){                                  /* bigger text, bigger touch areas (the active value on the lower line) */
             lv_obj_set_style_text_font(g_flbl, g_mode_freq ? TF(UI_32) : TF(UI_22), 0);
             lv_obj_set_style_text_font(g_glbl, g_mode_freq ? TF(UI_22) : TF(UI_32), 0);
-            lv_obj_align(g_flbl, LV_ALIGN_TOP_MID, -4, g_mode_freq ? 290 : 252); lv_obj_align(g_glbl, LV_ALIGN_TOP_MID, -4, g_mode_freq ? 252 : 290);
+            lv_obj_align(g_flbl, LV_ALIGN_TOP_MID, 0, g_mode_freq ? 290 : 252); lv_obj_align(g_glbl, LV_ALIGN_TOP_MID, 0, g_mode_freq ? 252 : 290);
             lv_obj_set_ext_click_area(g_flbl, 22); lv_obj_set_ext_click_area(g_glbl, 22);   /* two well-separated lines, each easy to hit */
         }
         lv_label_set_text(g_modecap, g_mode_freq ? "FREQ" : "GAIN");
@@ -342,7 +342,7 @@ static void refresh_labels(void){
     const char *note = NULL;
     if(g_save_busy) note="Saving...";
     else if(!g_editable) note = g_preset == 0 ? "EQ off" : g_readfail ? "Couldn't read this preset" : g_parametric ? "Advanced preset" : g_preset >= USER_MIN ? "Custom editing unavailable" : th_braun() ? "Built-in preset" : "built-in preset";
-    else if(g_sel < 0) note = "tap a band";
+    else if(g_sel < 0) note = th_disco() ? "Choose a band" : "tap a band";
     if(note){ lv_label_set_text(g_note, note); lv_obj_remove_flag(g_note, LV_OBJ_FLAG_HIDDEN); }
     else lv_obj_add_flag(g_note, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(g_lock, LV_OBJ_FLAG_HIDDEN);   /* no lock glyph in the fonts: the grey + caption say it */
@@ -569,6 +569,7 @@ static void glbl_cb(lv_event_t *e){
 }
 
 /* ------------------------------------------------------------------ building the screen */
+static void editor_back_cb(lv_event_t *e){ (void)e; screen_back(); }
 static lv_obj_t *round_btn(lv_obj_t *p, const char *sym, int dx, int dir){
     lv_obj_t *b = lv_button_create(p);
     lv_obj_remove_style_all(b);
@@ -670,19 +671,34 @@ void eqcustom_create(lv_obj_t *root){
     }
     if(th_disco()){                                    /* Disco: the faders; preset on top, the band's value and - / + below */
         disco_faders_create(root);
-        lv_obj_align(pill, LV_ALIGN_TOP_MID, -10, 24); lv_obj_set_size(pill, 150, 32);
+        lv_obj_align(pill, LV_ALIGN_TOP_MID, 22, 30); lv_obj_set_size(pill, 184, 44);
         lv_obj_set_style_radius(pill, LV_RADIUS_CIRCLE, 0); lv_obj_set_style_bg_color(pill, TC(SURFACE), 0); lv_obj_set_style_bg_opa(pill, 170, 0);
         lv_obj_set_style_border_width(pill, 1, 0); lv_obj_set_style_border_color(pill, TC(TEXT_PRIMARY), 0); lv_obj_set_style_border_opa(pill, 60, 0);
-        lv_obj_set_style_text_font(g_pill_lbl, TF(UI_14), 0);
+        lv_obj_set_style_text_font(g_pill_lbl, TF(UI_18), 0);
+        lv_obj_set_width(g_pill_lbl, 148); lv_label_set_long_mode(g_pill_lbl, LV_LABEL_LONG_DOT);
+        lv_obj_set_style_text_align(g_pill_lbl, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_align(g_pill_lbl, LV_ALIGN_CENTER, -10, 0);
+        lv_obj_set_style_text_font(chev, TF(UI_18), 0);
+        lv_obj_align(chev, LV_ALIGN_RIGHT_MID, -10, 0);
+        lv_obj_t *back = lv_button_create(root); lv_obj_remove_style_all(back);
+        lv_obj_set_size(back, 44, 44); lv_obj_set_pos(back, 58, 30);
+        lv_obj_set_style_radius(back, LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_style_bg_color(back, TC(SURFACE), 0); lv_obj_set_style_bg_opa(back, 170, 0);
+        lv_obj_set_style_bg_color(back, TC(SURFACE_RAISED), LV_STATE_PRESSED);
+        lv_obj_set_style_bg_opa(back, LV_OPA_COVER, LV_STATE_PRESSED);
+        lv_obj_set_style_border_width(back, 1, 0); lv_obj_set_style_border_color(back, TC(TEXT_PRIMARY), 0); lv_obj_set_style_border_opa(back, 60, 0);
+        lv_obj_t *back_label = lv_label_create(back); lv_label_set_text(back_label, LV_SYMBOL_LEFT);
+        lv_obj_set_style_text_font(back_label, TF(UI_18), 0); lv_obj_set_style_text_color(back_label, TC(TEXT_PRIMARY), 0); lv_obj_center(back_label);
+        ui_on(back, editor_back_cb, LV_EVENT_CLICKED, NULL, "eq.editor.back", UI_CORE);
         lv_obj_t *pm[2] = { g_minus, g_plus };
-        for(int k = 0; k < 2; k++){ lv_obj_set_size(pm[k], 52, 52); lv_obj_align(pm[k], LV_ALIGN_TOP_MID, k ? 92 : -100, 268); lv_obj_set_ext_click_area(pm[k], 8);
+        for(int k = 0; k < 2; k++){ lv_obj_set_size(pm[k], 52, 52); lv_obj_align(pm[k], LV_ALIGN_TOP_MID, k ? 94 : -94, 268); lv_obj_set_ext_click_area(pm[k], 8);
             lv_obj_set_style_bg_color(pm[k], TC(SURFACE), 0); lv_obj_set_style_bg_opa(pm[k], 190, 0);
             lv_obj_set_style_border_width(pm[k], 1, 0); lv_obj_set_style_border_color(pm[k], ui_current_accent(), 0); lv_obj_set_style_border_opa(pm[k], 150, 0);
             kit_keep(pm[k]); lv_obj_add_flag(pm[k], LV_OBJ_FLAG_USER_2); }
         lv_obj_align(g_modecap, LV_ALIGN_TOP_MID, -4, 232);   /* right under the band labels */ lv_obj_set_style_text_color(g_modecap, TC(TEXT_SECONDARY), 0);
         lv_obj_set_style_text_font(g_modecap, TF(UI_12), 0);
-        lv_obj_align(g_note, LV_ALIGN_TOP_MID, -4, 290); lv_obj_set_style_text_color(g_note, TC(TEXT_SECONDARY), 0);
-        lv_obj_set_style_text_font(g_note, TF(UI_14), 0);
+        lv_obj_align(g_note, LV_ALIGN_TOP_MID, 0, 290); lv_obj_set_style_text_color(g_note, TC(TEXT_PRIMARY), 0);
+        lv_obj_set_style_text_font(g_note, TF(UI_20), 0);
     }
     if(!g_draw_tmr) g_draw_tmr = lv_timer_create(draw_tmr_cb, 50, NULL);
     /* No profile reads/verification for a hidden editor at startup. */
