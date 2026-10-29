@@ -2590,7 +2590,7 @@ typedef struct {
     char out[40], tout[40], bout[40], sharp[40];
     char art_key[420];       /* album+dir reuse/staleness key (see last_art_key) */
     char artist[160], album[160], title[160];
-    int online, from_net;
+    int online, from_net, noart;                 /* noart: no cover anywhere, the default artwork is shown */
     int  is_clear;           /* "no track" - handled on the main thread; worker skips */
 } art_req_t;
 
@@ -2707,7 +2707,7 @@ static void apply_art(const art_req_t *job)
     copy_cstr(last_art_key, sizeof last_art_key, job->art_key);   /* cache key (album+dir) */
     copy_cstr(simple_art_album,sizeof simple_art_album,job->album);
     copy_cstr(simple_art_artist,sizeof simple_art_artist,job->artist);
-    simple_art_reusable=!job->from_net&&!mdb_is_book_path(job->track);
+    simple_art_reusable=!job->from_net&&!job->noart&&!mdb_is_book_path(job->track);
     if(backdrop) {
         lv_image_set_src(backdrop, backdrop_src);
         lv_obj_remove_flag(backdrop, LV_OBJ_FLAG_HIDDEN);
@@ -2765,7 +2765,7 @@ static void *art_worker(void *arg)
         pthread_mutex_unlock(&g_art_mu);
 
         char sharp_src[512]; copy_cstr(sharp_src,sizeof sharp_src,job.track);
-        int rc, decode_exit = -1, from_net = 0, cache_primary = 0, cache_sharp = 0;                             /* from_net: the picture came from Online Album Art */
+        int rc, decode_exit = -1, from_net = 0, noart = 0, fail_rc = 0, cache_primary = 0, cache_sharp = 0;                             /* from_net: the picture came from Online Album Art */
         char fp0[24] = "";                                /* the cover's fingerprint (for the accent's freshness) */
         if(job.is_clear) rc = -1;
         else if(artcache_get(job.track, job.out, job.tout, job.bout) == 0){ rc = 0;   /* cached -> fast copy, no decode */
@@ -2788,29 +2788,37 @@ static void *art_worker(void *arg)
                    }
                }
                decode_exit=art_last_exit();
+               /* no cover anywhere: the default artwork (grey note on dark grey), decoded like a real one */
+               char na[64];
+               if(rc != 0 && rc != -2 && art_noart_source(na, sizeof na) == 0){
+                   fail_rc = rc;
+                   if(art_make_all_ex_gen(na, job.out, job.tout, job.bout, 1, my_gen) == 0){
+                       rc = 0; noart = 1; copy_cstr(sharp_src, sizeof sharp_src, na);
+                   }
+               }
                pthread_mutex_unlock(&g_decode_mu);
                /* an online picture is never cached as the song's own cover: turning the setting off must drop it */
-               cache_primary = rc == 0 && have_fp && !from_net; }
+               cache_primary = rc == 0 && have_fp && !from_net && !noart; }
 
         unlink(job.sharp);
         if(rc == 0 && !job.is_clear){
-            int hit = !from_net && artcache_get_sharp(job.track, job.sharp) == 0;
+            int hit = !from_net && !noart && artcache_get_sharp(job.track, job.sharp) == 0;
             if(!hit){
                 pthread_mutex_lock(&g_decode_mu);
                 int sharp_rc = art_make_poster(sharp_src, job.sharp, my_gen);
                 pthread_mutex_unlock(&g_decode_mu);
-                cache_sharp = sharp_rc == 0 && !from_net && fp0[0];
+                cache_sharp = sharp_rc == 0 && !from_net && !noart && fp0[0];
             }
         }
 
         /* Superseded requests never allocate large preparation buffers. */
         pthread_mutex_lock(&g_art_mu);int current=g_art_req==my_req;pthread_mutex_unlock(&g_art_mu);
         if(!current)continue;
-        if(rc && rc!=-2 && !job.is_clear && decode_exit!=3){
+        if((rc || noart) && (noart ? fail_rc : rc)!=-2 && !job.is_clear && decode_exit!=3){
             static time_t last_failure;time_t now=time(NULL);
             if(!last_failure || now-last_failure>=10){
                 last_failure=now;
-                fprintf(stderr,"artwork: decode failed rc=%d exit=%d track=%.160s\n",rc,decode_exit,job.track);
+                fprintf(stderr,"artwork: decode failed rc=%d exit=%d track=%.160s%s\n",noart?fail_rc:rc,decode_exit,job.track,noart?" - default artwork":"");
             }
         }
         job.pixels=NULL;job.rgb=0;
@@ -2830,14 +2838,14 @@ static void *art_worker(void *arg)
         }
         /* Always derive from these pixels, never block the UI on ACCENT queries.
          * Persistent writes happen only after publication, off the input thread. */
-        if(rc==0 && !job.is_clear && !ui_accent_is_static()){
+        if(rc==0 && !job.is_clear && !noart && !ui_accent_is_static()){   /* the grey default never sets the accent */
             uint8_t *buf=job.pixels?job.pixels->cover:malloc(CBMP*CBMP*4);
             if(buf){uint32_t rgb;
                 if((job.pixels || read_cover_bmp(job.out,buf)==0) && accent_from_buf(buf,&rgb))job.rgb=(int)(rgb&0xffffff);
                 if(!job.pixels)free(buf);
             }
         }
-        job.from_net = from_net;
+        job.from_net = from_net; job.noart = noart;
         ui_perf_note("artwork-prepared");
         pthread_mutex_lock(&g_art_mu);
         if(g_art_req == my_req){            /* still the latest request -> publish + stop */
@@ -3172,6 +3180,12 @@ void ui_art_poll(lv_timer_t *t)
             /* an online picture may be one song's own (not its album's) and must disappear when the setting goes off:
              * never reuse it for the next track of the album */
             if(res.from_net) last_art_key[0] = '\0';
+            /* the default artwork: no cover of its own, so look it up online (as a failure did) and never reuse it
+             * for the next track - that one may have its own */
+            if(res.noart){
+                last_art_key[0] = '\0';
+                if(res.online && simple_cfg_get_int("online_art", 0)) netart_request(res.track, res.artist, res.album, res.title);
+            }
         }
     }
     else if(strcmp(res.art_key, want_art_key) == 0) {

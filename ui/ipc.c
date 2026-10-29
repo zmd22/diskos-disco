@@ -180,10 +180,12 @@ static int a2_repair(const char *payload, int len, char *out, int cap){
         if(ve - vs >= 4 && !memcmp(vs, "\\\"", 2) && !memcmp(ve - 2, "\\\"", 2)){   /* a string: re-escape its raw bytes */
             vs += 2; ve -= 2;
             o += snprintf(out + o, (size_t)(cap - o), "\\\"");
+            /* The player does escape what it escapes (a path's slashes arrive as \\\/): an escape sequence is kept as
+             * sent. Only a bare double quote - the one it forgot - is escaped, twice: \" inside the song, \\\" here. */
             for(const char *c = vs; c < ve; c++){
                 if(o + 8 >= cap) return 0;
-                if(*c == '"')       { memcpy(out + o, "\\\\\\\"", 4); o += 4; }   /* " -> \" inside the song -> \\\" outside */
-                else if(*c == '\\') { memcpy(out + o, "\\\\\\\\", 4); o += 4; }
+                if(*c == '\\' && c + 1 < ve){ out[o++] = *c++; out[o++] = *c; }
+                else if(*c == '"') { memcpy(out + o, "\\\\\\\"", 4); o += 4; }
                 else if((unsigned char)*c < 0x20) out[o++] = ' ';
                 else out[o++] = *c;
             }

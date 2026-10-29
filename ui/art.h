@@ -29,4 +29,6 @@ void art_sidecar_signature(const char *track, uint64_t *h);
 int art_make_saver(const char *track, const char *out_raw, int64_t deadline_ms);   /* CLOCK_MONOTONIC ms */
 /* Fork sharp cover: 364x364 BGRA, skip-cancellable. Worker threads only. */
 int art_make_poster(const char *track, const char *out_raw, unsigned gen0);
+/* The default artwork (grey note on dark grey, 360px BMP in /tmp) for songs with no cover; writes its path. */
+int art_noart_source(char *out, int cap);
 #endif

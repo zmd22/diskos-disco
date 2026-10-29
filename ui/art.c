@@ -396,3 +396,58 @@ int art_make_all_ex_gen(const char *track, const char *cover_bmp, const char *th
     sd_io_end();
     return result;
 }
+
+/* ---- default artwork ----------------------------------------------------------------------------------------
+ * A song with no cover anywhere (embedded, sidecar file, Online Album Art) gets a plain picture instead: a grey
+ * eighth note on dark grey, in the fixed media greys so it reads the same in every theme. It is an ordinary 360px
+ * BMP decoded through the same pipeline as a real cover, so the Music screen, backdrop, thumbnails and Immersive all
+ * show it. Drawn once per boot into /tmp; 4x4 supersampling keeps the edges smooth. */
+#define NOART_N 360
+static int noart_inside(float x, float y){
+    float hx = x - 158.f, hy = y - 238.f;                                /* note head: an ellipse tilted -20 deg */
+    float c = 0.9397f, s = -0.3420f, u = hx * c - hy * s, v = hx * s + hy * c;
+    if(u * u / (44.f * 44.f) + v * v / (31.f * 31.f) <= 1.f) return 1;
+    if(x >= 186.f && x <= 200.f && y >= 96.f && y <= 232.f) return 1;   /* stem */
+    if(y >= 96.f && y <= 186.f && x >= 200.f){                          /* flag: a band curving out and down */
+        float t = (y - 96.f) / 90.f;
+        float outer = 200.f + 62.f * (1.f - (1.f - t) * (1.f - t)) - 30.f * t * t * t;
+        float inner = outer - 20.f * (1.f - t) - 4.f;
+        if(t < 0.22f) inner = 200.f;
+        if(x <= outer && x >= inner) return 1;
+    }
+    return 0;
+}
+int art_noart_source(char *out, int cap){
+    const char *path = "/tmp/diskos-noart.bmp";
+    if(snprintf(out, (size_t)cap, "%s", path) >= cap) return -1;
+    if(art_bmp_valid(path, NOART_N)) return 0;
+    uint32_t bg = theme_rgb(THEME_CLR_FIXED_MEDIA_TRACK), fg = theme_rgb(THEME_CLR_FIXED_MEDIA_HINT);
+    int row = NOART_N * 3, size = 54 + row * NOART_N;
+    uint8_t *img = malloc((size_t)size);
+    if(!img) return -1;
+    memset(img, 0, 54);
+    img[0] = 'B'; img[1] = 'M';
+    #define LE32(o, v) do{ uint32_t _v = (uint32_t)(v); for(int _i = 0; _i < 4; _i++) img[(o) + _i] = (uint8_t)(_v >> (8 * _i)); }while(0)
+    LE32(2, size); LE32(10, 54); LE32(14, 40); LE32(18, NOART_N); LE32(22, NOART_N);
+    img[26] = 1; img[28] = 24; LE32(34, row * NOART_N);
+    #undef LE32
+    for(int y = 0; y < NOART_N; y++){
+        uint8_t *p = img + 54 + (size_t)(NOART_N - 1 - y) * row;          /* bottom-up rows */
+        for(int x = 0; x < NOART_N; x++, p += 3){
+            int hit = 0;
+            for(int sy = 0; sy < 4; sy++) for(int sx = 0; sx < 4; sx++)
+                hit += noart_inside(x + (sx + .5f) / 4.f, y + (sy + .5f) / 4.f);
+            for(int ch = 0; ch < 3; ch++){                                /* BGR: blue first */
+                int b = (int)(bg >> (8 * ch)) & 0xFF, f = (int)(fg >> (8 * ch)) & 0xFF;
+                p[ch] = (uint8_t)(b + (f - b) * hit / 16);
+            }
+        }
+    }
+    char tmp[64]; snprintf(tmp, sizeof tmp, "%s.%d", path, (int)getpid());
+    FILE *f = fopen(tmp, "wb");
+    int ok = f && fwrite(img, 1, (size_t)size, f) == (size_t)size;
+    if(f && fclose(f) != 0) ok = 0;
+    free(img);
+    if(!ok || rename(tmp, path) != 0){ unlink(tmp); return -1; }
+    return 0;
+}

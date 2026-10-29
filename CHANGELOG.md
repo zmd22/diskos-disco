@@ -11,6 +11,9 @@ diskOS remains beta software; version numbers do not imply broad hardware or fea
 - 3.2.2 (test build): the Queue always starts a queued song while something plays - if the playing song or its list can't be read, the queue plays on its own (and the log says why) instead of "Couldn't start queued song". Includes the Zune fixes from pull request #22.
 - 3.2.2 test 2: a queue that had to play on its own now returns to the album or playlist it interrupted, after the interrupted song, when its last song ends (it used to stop).
 - 3.2.2 test 3: songs whose title, artist, album or path contain a double quote (an album tagged "Let's Rock", quotes included) now show on Now Playing; before, the screen stayed on the previous song while the new one played. The stock player doesn't escape quotes in its track message; Disco now rebuilds such a message from its fixed layout.
+- 3.2.2 test 4: the Music screen shows the cover again for songs with a double quote in a tag (test 3 read their file path with its slashes still escaped, so the cover decoder couldn't find the file; thumbnails and Immersive were unaffected).
+- 3.2.2 test 4: songs with no cover anywhere (embedded, cover file or Online Album Art) show a default artwork - a grey note on dark grey - on the Music screen, backdrop, thumbnails and Immersive, instead of an empty square. It never sets the accent colour and is never cached as the song's cover.
+- 3.2.2 test 4: Wheel lists - an album opens with its cover, Play and Shuffle just under the screen header and the first songs visible below; the songs under that row never overlap it, at any scroll position.
 
 ## 3.2.1
 

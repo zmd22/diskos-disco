@@ -1296,11 +1296,15 @@ static void wheel_pill_btn(lv_obj_t *r, int cx, int y, const char *glyph, const 
     lv_obj_t *l = lv_label_create(b); lv_label_set_text_fmt(l, "%s  %s", glyph, text); lv_obj_center(l);
     ui_pill_style(b, primary);
 }
+/* Set when an album opens with this header: it then starts raised under the screen header (library_reload). */
+static int g_album_wheel_hdr;
+#define AWH_H 164        /* 156 of content and 8 clear below the artist (curvelist keeps the songs below its drawn bottom) */
+#define AWH_RAISE 20     /* how far under the list's top edge it rests: just past the soft top fade */
 static void add_album_wheel_header(const char *album, const char *artist){
     lv_obj_t *r = lv_obj_create(g_list);
     lv_obj_remove_style_all(r);
-    lv_obj_set_size(r, 286, 156);
-    g_hdr_extra_px = 156 + 4;
+    lv_obj_set_size(r, 286, AWH_H);
+    g_hdr_extra_px = AWH_H + 4; g_album_wheel_hdr = 1;
     lv_obj_clear_flag(r, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(r, LV_OBJ_FLAG_USER_1);                 /* a wheel row */
     lv_obj_set_style_transform_pivot_x(r, 143, 0); lv_obj_add_flag(r, LV_OBJ_FLAG_USER_2);   /* centred content: it grows and shrinks from its middle */
@@ -2052,7 +2056,7 @@ static void library_reload_inner(void){
         free(g_favs); g_favs = NULL; g_fav_cap = 0;
     }
     g_has_header = 0;
-    g_hdr_extra_px = 0;
+    g_hdr_extra_px = 0; g_album_wheel_hdr = 0;
     lv_obj_scroll_to_y(g_list, 0, LV_ANIM_OFF);
 
     const char *ttl = (g_view==VIEW_GROUP) ? g_drill : (g_view==VIEW_ARTIST_ALBUMS) ? g_artist : VIEW_TITLE[g_view];
@@ -2253,6 +2257,13 @@ static void library_reload(void){
     if(g_restore_y>0 && !g_np_jump){
         lv_obj_update_layout(g_list);lv_obj_scroll_to_y(g_list,g_restore_y,LV_ANIM_OFF);
         lv_obj_update_layout(g_list);virt_follow();curve_rows();pdots_update();
+    } else if(g_album_wheel_hdr && !g_np_jump && curvelist_wheel()){
+        /* Wheel album, first open: the cover / Play / Shuffle row would wait in the middle with the songs below the
+         * screen. Raise it to just under the screen header so the first songs show beneath it; the first scroll
+         * snaps back to the usual wheel. Not a snap point: scroll_to never snaps, only a drag does. */
+        lv_obj_update_layout(g_list);
+        int y = lv_obj_get_style_pad_top(g_list, 0) - AWH_RAISE;
+        if(y > 0){ lv_obj_scroll_to_y(g_list, y, LV_ANIM_OFF); lv_obj_update_layout(g_list); curve_rows(); pdots_update(); }
     }
     onboarding_library(g_count>0 && (g_view==VIEW_SONGS || g_view==VIEW_ALBUMS || g_view==VIEW_GROUP || g_view==VIEW_ARTIST_ALBUMS));
     g_restoring=0;

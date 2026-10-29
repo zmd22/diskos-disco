@@ -25,9 +25,15 @@ static pthread_mutex_t g_mu = PTHREAD_MUTEX_INITIALIZER;
 static track_state_t g_state;
 int mdb_tag_title_by_path(const char *path, char *out, int cap){ (void)path; (void)out; (void)cap; return 0; }
 ''' + src[start:end] + r'''
+/* As the player sends a path: each '/' escaped for the song's JSON and again for the frame (\\\/); quotes are not. */
+static void player_path(const char *in, char *out, size_t cap){
+    size_t o = 0;
+    for(; *in && o + 5 < cap; in++){ if(*in == '/'){ memcpy(out + o, "\\\\\\/", 4); o += 4; } else out[o++] = *in; }
+    out[o] = 0;
+}
 static void frame(const char *title, const char *path, const char *artist, const char *album, int pos){
-    char f[4096];
-    snprintf(f, sizeof f, TEMPLATE, 7, pos, title, 240000, path, 44100, 900, 16, artist, album, "Rock", 1, 2,
+    char f[4096], pp[1024]; player_path(path, pp, sizeof pp);
+    snprintf(f, sizeof f, TEMPLATE, 7, pos, title, 240000, pp, 44100, 900, 16, artist, album, "Rock", 1, 2,
              "false", "false", "false", "false", "", "false", 0, 2, "1/12", "8");
     memset(&g_state, 0, sizeof g_state);
     parse_a2(f, (int)strlen(f));
@@ -41,9 +47,9 @@ int main(void){
     assert(!strcmp(g_state.path, "/tmp/sdcard/Keys/2019 - Let's Rock/01. Shine A Little Light.flac"));
     assert(g_state.pos_id == 1 && g_state.duration_ms == 240000 && g_state.sample_rate == 44100 && g_state.state == 2);
     puts("PASS an album tagged with quotes (\"Let's Rock\") is read: title, album, path, position and state");
-    frame("Say \"Hi\" \\ back", "/tmp/sdcard/a \"b\"/c.flac", "The \"Band\"", "x", 5);
-    assert(!strcmp(g_state.title, "Say \"Hi\" \\ back") && !strcmp(g_state.artist, "The \"Band\"") && !strcmp(g_state.path, "/tmp/sdcard/a \"b\"/c.flac"));
-    puts("PASS quotes and backslashes in title, artist and path survive exactly");
+    frame("Say \"Hi\"", "/tmp/sdcard/a \"b\"/c.flac", "The \"Band\"", "x", 5);
+    assert(!strcmp(g_state.title, "Say \"Hi\"") && !strcmp(g_state.artist, "The \"Band\"") && !strcmp(g_state.path, "/tmp/sdcard/a \"b\"/c.flac"));
+    puts("PASS quotes in title, artist and path survive exactly; the path's escaped slashes come back as plain '/'");
     memset(&g_state, 0, sizeof g_state);
     const char *junk = "{\"song\":\"{\\\"id\\\":1,\\\"pos_id\\\":\"garbage";
     parse_a2(junk, (int)strlen(junk));

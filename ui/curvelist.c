@@ -222,6 +222,23 @@ void curvelist_wheel_row(lv_obj_t *r, lv_obj_t *list){
     /* packing: the centre goes where the rows in between, at their sizes, put it */
     int ty = 0;
     if(!centred){ int want_off = wheel_reach(u) * pitch / 100; ty = (dq < 0 ? -1 : 1) * (want_off - u * pitch / 100); }
+    if(!centred && dq > 0){
+        /* The packing above assumes every row in between is song-sized; a taller centred row (the album's cover /
+         * Play / Shuffle row) is not, so the songs below it would be pulled up into it. Keep this row's top clear of
+         * the drawn bottom of the row above (its scale and offset are already set this pass); among song rows this
+         * never applies, and below the tall row it carries the push down the list. */
+        for(int32_t i = (int32_t)lv_obj_get_index(r) - 1; i >= 0; i--){
+            lv_obj_t *p = lv_obj_get_child(list, i);
+            if(!lv_obj_has_flag(p, LV_OBJ_FLAG_USER_1)) continue;
+            lv_area_t pa; lv_obj_get_coords(p, &pa);
+            int ph = lv_area_get_height(&pa), psc = lv_obj_get_style_transform_scale_y(p, 0);
+            int pcy = (pa.y1 + pa.y2) / 2 - ra.y1;                        /* coords include its translate_y */
+            int pbot = pcy + ph * psc / 512, top = cy + ty - h * sc / 512;
+            int gap = lv_obj_has_flag(p, LV_OBJ_FLAG_USER_2) ? 6 : 0;
+            if(top < pbot + gap) ty += pbot + gap - top;
+            break;
+        }
+    }
     int vy = cy + ty, dy = abs(vy - 180);
     /* the drum: rows away from the middle start a little further in, along the round edge */
     int indent = 0;
