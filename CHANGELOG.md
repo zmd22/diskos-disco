@@ -6,6 +6,10 @@ Entries follow the Keep a Changelog format, with Added, Changed, and Fixed categ
 diskOS remains beta software; version numbers do not imply broad hardware or feature validation.
 
 
+## Unreleased
+
+- 3.2.2 (test build): the Queue always starts a queued song while something plays - if the playing song or its list can't be read, the queue plays on its own (and the log says why) instead of "Couldn't start queued song". Includes the Zune fixes from pull request #22.
+
 ## 3.2.1
 
 Smoother wheel lists, depth for Disco's buttons, idle power-off that respects the charger, a safer power-button shutdown and a Queue fix. [Release notes](docs/releases/v3.2.1.md).
