@@ -1,4 +1,4 @@
-# Null in Disco 3.2.1
+# Null in Disco 3.2.2
 
 Null uses pixel typography, a right-side menu and fixed-dark palettes: Cyan/Yellow, Red/Lime and Matrix. Music supports Black/Dark cover/Pixel cover backgrounds, its own font choices and alignment, album/track information and controls. Quick Settings offers Text/Icons presentation. Volume uses Null's own overlay.
 

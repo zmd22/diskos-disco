@@ -2,7 +2,7 @@
 
 > **Development builds on `dev` are experimental / in testing.** Use tagged releases for the published downloads. [Development notes](docs/DEV.md).
 
-**Disco! 3.2.1:** Smoother wheel lists, depth for Disco's buttons, idle power-off that respects the charger, a safer power-button shutdown and a Queue fix — on top of 3.2.0's wheel lists, Shade, letter wheel and round track menus. [Release notes](docs/releases/v3.2.1.md) · [Changelog](CHANGELOG.md).
+**Disco! 3.2.2:** A default cover for songs without one, wheel lists that open with Play and Shuffle in view, quoted tags on Now Playing, a Queue that always starts and comes back, and Zune fixes — on top of 3.2.1's smoother wheel lists and charger-aware power-off. [Release notes](docs/releases/v3.2.2.md) · [Changelog](CHANGELOG.md).
 
 <p align="center">
   <b>Your music. Your kind of Disco.</b><br>
@@ -45,7 +45,7 @@
 
 Seven themes: Disco, Null, Squash, Zune, Ring, Braun and Stone. Browse local music, use playlists and Queue, choose List/Wall/Coverflow or supported Wheel lists, and open Immersive with lyrics and transport controls. SongSphere, Listening Stats, Album Roulette, Boomshine and Disc Shelf are built in.
 
-See the [3.2.1 tour](docs/DISCO_TOUR.md), [actual settings](docs/DISPLAY_SETTINGS.md) and [release notes](docs/releases/v3.2.1.md). Earlier feature announcements belong in the [changelog](CHANGELOG.md).
+See the [3.2.2 tour](docs/DISCO_TOUR.md), [actual settings](docs/DISPLAY_SETTINGS.md) and [release notes](docs/releases/v3.2.2.md). Earlier feature announcements belong in the [changelog](CHANGELOG.md).
 
 ## Install
 
@@ -116,7 +116,7 @@ SD card ([how](docs/WINDOWS.md#step-4--update-from-the-sd-card)). **On Linux:** 
 your keys:
 
 ```sh
-sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 3.2.1      # -> ./diskos-update/ (the label is free text)
+sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 3.2.2      # -> ./diskos-update/ (the label is free text)
 ```
 
 Reuse the signing keys whose root public key was installed on this Disc. Copy the complete

@@ -1,4 +1,4 @@
-# Disco 3.2.1 documentation
+# Disco 3.2.2 documentation
 
 These guides describe the shipped 3.2.1 source and payload, commit `91a7151720d55583c766f7ebd2047ba6620921e1`. Later branch changes are not part of this baseline.
 
@@ -22,6 +22,6 @@ These guides describe the shipped 3.2.1 source and payload, commit `91a7151720d5
 
 ## Release and provenance
 
-- [3.2.1 changes](releases/v3.2.1.md), [binary record](RELEASE_3.2.1.md), [changelog](../CHANGELOG.md).
+- [3.2.2 changes](releases/v3.2.2.md), [binary record](RELEASE_3.2.2.md), [changelog](../CHANGELOG.md).
 - Earlier release notes are historical records, not current instructions.
 - [Licenses](../licenses/README.md), [third-party notice](../NOTICE.md), [SPL source](../SPL_SOURCE.md), [security](../SECURITY.md).

@@ -1,6 +1,6 @@
 # Website maintenance
 
-GitHub Pages source is in `docs/`. The site uses local assets, theme galleries and a Zune walkthrough. Screenshots illustrate their capture revision; they do not establish every detail of the 3.2.1 UI. Update version links and images from verified release material.
+GitHub Pages source is in `docs/`. The site uses local assets, theme galleries and a Zune walkthrough. Screenshots illustrate their capture revision; they do not establish every detail of the 3.2.2 UI. Update version links and images from verified release material.
 
 Regenerate the 28 actual LVGL screenshots in a disposable Linux host container:
 

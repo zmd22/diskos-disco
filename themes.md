@@ -7,7 +7,7 @@ Disco → Null → Squash implementation and the regressions found during that w
 A new theme should inherit working features before it gets its own look.
 Existing themes retain their approved look and behaviour throughout.
 
-This document covers the implemented interfaces. It describes the compiled theme/kit interfaces in 3.2.1. A general registry/capability refactor is not implemented.
+This document covers the implemented interfaces. It describes the compiled theme/kit interfaces in 3.2.2. A general registry/capability refactor is not implemented.
 
 ## Compatibility contract: existing themes are protected
 

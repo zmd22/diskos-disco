@@ -1,4 +1,4 @@
-# Settings in Disco 3.2.1
+# Settings in Disco 3.2.2
 
 The seven root categories are shared by all themes. Visible rows depend on theme and firmware capability. Most irrelevant theme options are hidden; dependency-blocked options can remain visible with an explanation. Saved option values are not reordered when the menus are sorted.
 
@@ -23,7 +23,7 @@ The seven root categories are shared by all themes. Visible rows depend on theme
 - **Text & layout** contains shared text sizing, screen rotation and transitions where supported. Music-title font selection is separate.
 - **QS style** selects Classic or Shade. Off Music, Shade opens a now-playing panel first; a second pull or the handle opens Quick Settings. Music opens Quick Settings directly.
 
-List motion is under **Display > <theme> settings > Navigation**. Disco, Null and Squash offer Classic, Straight, Disco and Wheel. In Wheel, rows scale and change colour continuously around the central row; the 3.2.1 layout respects list headers and action controls. Library main lists show their count above the first row.
+List motion is under **Display > <theme> settings > Navigation**. Disco, Null and Squash offer Classic, Straight, Disco and Wheel. In Wheel, rows scale and change colour continuously around the central row; the layout respects list headers and action controls, and an album opens with its Play / Shuffle row under the screen header. Library main lists show their count above the first row.
 
 ## Theme differences
 

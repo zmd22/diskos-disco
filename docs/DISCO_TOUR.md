@@ -1,4 +1,4 @@
-# Disco 3.2.1 tour
+# Disco 3.2.2 tour
 
 A native LVGL interface for the 360 × 360 Snowsky Disc. The stock music player continues to handle audio; Disco provides browsing, controls and its additional apps. This describes the release, not later development changes. See [settings](DISPLAY_SETTINGS.md) for exact menu ownership.
 
@@ -6,7 +6,7 @@ A native LVGL interface for the 360 × 360 Snowsky Disc. The stock music player 
 
 Disco uses an edge shard that opens a navigation circle; select a destination from the circle. Left-handed mode mirrors the navigation. Null uses its own right-side menu; Squash uses a rising launcher; Zune uses a scrolling main menu. Theme-specific menu and gesture assignments are under Display > the selected theme's settings > Navigation.
 
-Use the edge Back gesture or the available Back control to return. Quick Settings opens with a top-edge pull. With QS style Shade, screens other than Music first show a cover, track details, transport, progress, clock and battery; pull again or tap the handle for Quick Settings. Swipe up to dismiss. Shade animates after the gesture; it does not continuously follow the finger in 3.2.1.
+Use the edge Back gesture or the available Back control to return. Quick Settings opens with a top-edge pull. With QS style Shade, screens other than Music first show a cover, track details, transport, progress, clock and battery; pull again or tap the handle for Quick Settings. Swipe up to dismiss. Shade animates after the gesture; it does not continuously follow the finger in 3.2.2.
 
 ## Music and Immersive
 
@@ -20,7 +20,7 @@ The round track menus in Disco/Null/Squash provide Favourite, Lyrics, Album, Art
 
 Browse songs, artists, albums, genres, favourites, history, playlists and folders. Artists can group by Artist or Album Artist. Play and Shuffle actions operate on the chosen list. Album presentation supports List, Wall and Coverflow.
 
-Disco/Null/Squash list motion includes Wheel. Rows scale and fade with distance from the centre, follow the round edge and snap; 3.2.1 keeps Queue/radio action controls clear of scrolling rows. Library seek selects A–Z keys or the letter wheel. Empty letters are dimmed; the wheel moves through letters clockwise/counter-clockwise.
+Disco/Null/Squash list motion includes Wheel. Rows scale and fade with distance from the centre, follow the round edge and snap; Queue/radio action controls stay clear of scrolling rows. An album, or an artist's albums, opens with its cover / Play / Shuffle row just under the screen header and the first songs below. Library seek selects A–Z keys or the letter wheel. Empty letters are dimmed; the wheel moves through letters clockwise/counter-clockwise.
 
 Search has a landing page, recent searches, keyboard and explicit search action. Results support artists and songs. Books and chapter navigation are separate from ordinary album browsing.
 
@@ -36,7 +36,7 @@ Wi-Fi and Bluetooth have connection/detail screens. Bluetooth codec preference i
 
 ## Power and standby
 
-Screensaver and screen-off timing are in Battery & power. Display sleep is distinct from idle power-off. Idle shutdown is suppressed during playback, Sendspin audio, active Disc Shelf work, nonlocal working modes and detected external power. In 3.2.1 charger detection remains latched until evidence of battery discharge; a computer USB connection also counts.
+Screensaver and screen-off timing are in Battery & power. Display sleep is distinct from idle power-off. Idle shutdown is suppressed during playback, Sendspin audio, active Disc Shelf work, nonlocal working modes and detected external power. Since 3.2.1, charger detection remains latched until evidence of battery discharge; a computer USB connection also counts.
 
 The explicit Sleep timer can pause or shut down when it expires. Holding the hardware power button saves statistics and battery history and starts a card flush before the stock player's own power-off. This source behaviour is not a guarantee against interruption or storage failure.
 

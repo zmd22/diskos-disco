@@ -1,6 +1,6 @@
 # Disc Shelf — your music, to go
 
-Built into **diskOS Disco! 3.2.1**. Browse a **Navidrome** library or an **SMB3** share and download original files to your SD card. There is no separate app to install on 3.2.1.
+Built into **diskOS Disco! 3.2.2**. Browse a **Navidrome** library or an **SMB3** share and download original files to your SD card. There is no separate app to install on 3.2.1.
 
 [Home](../README.md) · [How-to](HOWTO.md) · [Tour](DISCO_TOUR.md#disc-shelf)
 
@@ -76,6 +76,6 @@ Configuration remains in internal storage. Private local-presence/ownership cata
 
 ## Older firmware
 
-The separate **Disc Shelf 1.0.4** release archive is the legacy Navidrome-only app. It does not contain SMB3. It remains available for older firmware; native Disco hides duplicate standalone menu entries. On 3.2.1, use the built-in app and preserve your existing configuration rather than reinstalling the standalone executable.
+The separate **Disc Shelf 1.0.4** release archive is the legacy Navidrome-only app. It does not contain SMB3. It remains available for older firmware; native Disco hides duplicate standalone menu entries. On 3.2.x, use the built-in app and preserve your existing configuration rather than reinstalling the standalone executable.
 
 [Implementation and limits](../archive/docs/plans/disc-shelf-smb3.md) · [Validation notes](../archive/docs/performance/disc-shelf-native.md)

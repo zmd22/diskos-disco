@@ -1,4 +1,4 @@
-# UI source and build reference — 3.2.1
+# UI source and build reference — 3.2.2
 
 `mq_ui` is the native LVGL 9.2.2 interface. It talks to the stock `mq_player` over POSIX message queues; it does not replace the audio engine. The target is a 360 × 360 framebuffer on the Ingenic X2000, using static little-endian MIPS32r2/o32, FP64, NaN2008 binaries.
 

@@ -1,6 +1,6 @@
 # Settings and submenu template
 
-Current hierarchy in Disco 3.2.1. Display ownership is documented in
+Current hierarchy in Disco 3.2.2. Display ownership is documented in
 [DISPLAY_SETTINGS_SPLIT.md](DISPLAY_SETTINGS_SPLIT.md). Explicit anchors take
 precedence over alphabetical ordering.
 

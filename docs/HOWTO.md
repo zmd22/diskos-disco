@@ -1,4 +1,4 @@
-# Disco 3.2.1 quick reference
+# Disco 3.2.2 quick reference
 
 | Task | Where / how |
 |---|---|

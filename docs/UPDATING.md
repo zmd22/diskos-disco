@@ -79,7 +79,7 @@ use the desktop `host-render` program on the Disc.
 From the repository root, with your keys in `./diskos-keys`:
 
 ```sh
-sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 3.2.1
+sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 3.2.2
 ```
 
 With keys elsewhere: `diskos-sign.sh <binary> [label] [keys-folder] [output-folder]`. The label (up to 32 letters,
@@ -155,6 +155,6 @@ power-on boots the other one once. Boot scripts and root keys can only be change
 See the [README](../README.md#going-back), and [Flashing and switching interfaces](SWITCHING.md) for what stays in
 the Disc's data area when you go back to stock.
 
-## 3.2.1 signing limitation
+## Signing limitation (3.2.x)
 
 The bundled `ui/tools/owner-keys/diskos-sign.sh` computes UTC minutes since 2026 and then raises that value above `keys/last-epoch` if necessary. It does not read the Disc’s accepted or baked floor. A Disc with a larger timestamp-format floor can reject an update made with a different keys-folder history even though its version label is newer. Compare the generated manifest epoch with the device floor before installation; keep the existing keys and monotonic epoch history. The separate timestamp-based update.sh supplied outside this release is not bundled here. Do not lower verification floors or edit a signed manifest after signing.

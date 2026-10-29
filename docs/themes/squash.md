@@ -1,4 +1,4 @@
-# Squash in Disco 3.2.1
+# Squash in Disco 3.2.2
 
 Squash has bold Music typography, a rising launcher, fixed right-side navigation, eight-icon Quick Settings and a bottom volume arc. Single-tap track text opens actions; double-tap controls playback; horizontal swipes skip. The launcher supports configured shortcuts.
 
