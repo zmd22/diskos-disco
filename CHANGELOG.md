@@ -10,6 +10,7 @@ diskOS remains beta software; version numbers do not imply broad hardware or fea
 
 - 3.2.2 (test build): the Queue always starts a queued song while something plays - if the playing song or its list can't be read, the queue plays on its own (and the log says why) instead of "Couldn't start queued song". Includes the Zune fixes from pull request #22.
 - 3.2.2 test 2: a queue that had to play on its own now returns to the album or playlist it interrupted, after the interrupted song, when its last song ends (it used to stop).
+- 3.2.2 test 3: songs whose title, artist, album or path contain a double quote (an album tagged "Let's Rock", quotes included) now show on Now Playing; before, the screen stayed on the previous song while the new one played. The stock player doesn't escape quotes in its track message; Disco now rebuilds such a message from its fixed layout.
 
 ## 3.2.1
 

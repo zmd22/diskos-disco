@@ -135,7 +135,82 @@ static void clear_track(void){
     g_state.sample_rate=0; g_state.is_dsd=0;
 }
 
+/* The stock player builds a2 with sprintf and does not escape the song's fields: a title, artist, album, genre or
+ * path holding a double quote (an album tagged "Let's Rock", quotes included) breaks the JSON, the frame was
+ * dropped and the previous song stayed on screen. a2_valid() says whether a frame parses as sent; a2_repair()
+ * rebuilds a broken one from the player's fixed template (the key order below, from mq_player's format string),
+ * escaping each string value, so it parses exactly like a well-formed frame. */
+static const char *const A2_KEYS[] = { "id","pos_id","song_name","song_duration_time","song_file_path","song_sample_rate",
+    "song_encoding_rate","song_bit_rate","song_artist_name","song_album_name","song_style_name","song_track",
+    "song_channel","is_sacd","is_cue","is_dsd","is_m3u","m3u_file_path" };
+static int a2_valid(const char *payload, int len){
+    jsmn_parser p; jsmntok_t tk[64]; jsmn_init(&p);
+    int nt = jsmn_parse(&p, payload, len, tk, 64);
+    if(nt < 1) return 0;
+    int v = find_val(payload, tk, nt, "song");
+    if(v < 0 || tk[v].type != JSMN_STRING || tk[v].end - tk[v].start <= 2) return 1;
+    static char song[8192];
+    unescape(payload + tk[v].start, tk[v].end - tk[v].start, song, sizeof song);
+    jsmn_parser p2; jsmntok_t st[96]; jsmn_init(&p2);
+    return jsmn_parse(&p2, song, strlen(song), st, 96) > 0;
+}
+static const char *a2_find(const char *s, const char *end, const char *needle){
+    size_t n = strlen(needle);
+    for(const char *q = s; q + n <= end; q++) if(!memcmp(q, needle, n)) return q;
+    return NULL;
+}
+static int a2_repair(const char *payload, int len, char *out, int cap){
+    const char *end = payload + len, *head = "{\"song\":\"{";
+    if(len < 12 || memcmp(payload, head, strlen(head))) return 0;
+    const char *tail = NULL;                                   /* the LAST }","love": ends the song (a value may hold it) */
+    for(const char *q = payload; (q = a2_find(q, end, "}\",\"love\":")); q++) tail = q;
+    if(!tail) return 0;
+    int o = snprintf(out, (size_t)cap, "%s", head), nk = (int)(sizeof A2_KEYS / sizeof *A2_KEYS);
+    const char *at = payload + strlen(head);
+    for(int k = 0; k < nk; k++){
+        char mark[48]; snprintf(mark, sizeof mark, "%s\\\"%s\\\":", k ? "," : "", A2_KEYS[k]);
+        const char *m = a2_find(at, tail, mark); if(!m) return 0;
+        const char *vs = m + strlen(mark), *ve = tail;
+        if(k + 1 < nk){
+            char next[48]; snprintf(next, sizeof next, ",\\\"%s\\\":", A2_KEYS[k + 1]);
+            ve = a2_find(vs, tail, next); if(!ve) return 0;
+        }
+        if(o + 8 >= cap) return 0;
+        o += snprintf(out + o, (size_t)(cap - o), "%s", mark);
+        if(ve - vs >= 4 && !memcmp(vs, "\\\"", 2) && !memcmp(ve - 2, "\\\"", 2)){   /* a string: re-escape its raw bytes */
+            vs += 2; ve -= 2;
+            o += snprintf(out + o, (size_t)(cap - o), "\\\"");
+            for(const char *c = vs; c < ve; c++){
+                if(o + 8 >= cap) return 0;
+                if(*c == '"')       { memcpy(out + o, "\\\\\\\"", 4); o += 4; }   /* " -> \" inside the song -> \\\" outside */
+                else if(*c == '\\') { memcpy(out + o, "\\\\\\\\", 4); o += 4; }
+                else if((unsigned char)*c < 0x20) out[o++] = ' ';
+                else out[o++] = *c;
+            }
+            if(o + 3 >= cap) return 0;
+            memcpy(out + o, "\\\"", 2); o += 2;
+        } else {
+            if(o + (ve - vs) + 1 >= cap) return 0;
+            memcpy(out + o, vs, (size_t)(ve - vs)); o += (int)(ve - vs);
+        }
+        at = ve;
+    }
+    if(o + (end - tail) + 1 >= cap) return 0;
+    memcpy(out + o, tail, (size_t)(end - tail)); o += (int)(end - tail);
+    out[o] = 0;
+    return o;
+}
+static void parse_a2_frame(const char*payload,int len);
 static void parse_a2(const char*payload,int len){
+    if(!a2_valid(payload, len)){
+        static char fixed[16384];
+        int n = a2_repair(payload, len, fixed, sizeof fixed);
+        if(n > 0 && a2_valid(fixed, n)){ parse_a2_frame(fixed, n); return; }
+        fprintf(stderr, "ipc: unreadable a2 frame (%d bytes), track not updated\n", len);
+    }
+    parse_a2_frame(payload, len);
+}
+static void parse_a2_frame(const char*payload,int len){
     jsmn_parser p; jsmntok_t tk[64];
     jsmn_init(&p);
     int nt=jsmn_parse(&p,payload,len,tk,64);
