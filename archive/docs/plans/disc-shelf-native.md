@@ -1,3 +1,5 @@
+> Historical material. Not current 3.2.1 instructions; see the current documentation index.
+
 # Disc Shelf: themed firmware integration plan
 
 Status: shipped in Disco 2.7.0, including the SMB3 follow-up. Navidrome has been used on the owner’s Disc; independent SMB3 NAS/device acceptance remains pending. See docs/performance/disc-shelf-native.md for validation and remaining limits.

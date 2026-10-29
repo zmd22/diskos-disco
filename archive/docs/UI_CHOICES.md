@@ -1,6 +1,8 @@
+> Historical material. Not current 3.2.1 instructions; see the current documentation index.
+
 # UI choices
 
-[Back to the README](../README.md)
+[Back to the README](../../README.md)
 
 Why this fork looks and behaves the way it does — including the bits that aren't obvious from the screen.
 The Disc is a **360 × 360 round display**, a single-core-feeling MIPS chip and a finger. Most decisions
@@ -24,7 +26,7 @@ and switching themes never loses a choice: each theme keeps its own saved prefer
 
 The original theme is by [namastecoconut-imagined](https://github.com/namastecoconut-imagined/diskos-disco-zune). Its type-led home menu, deep black and personal accent bring a different personality to the same circular display. zmd22’s pass balances large headings against readable detail, gives track/artist text more space and integrates shared controls. The fixed four-square shortcut avoids font-dependent missing glyphs; its three gestures remain independently configurable. The unused Now Playing style selector is hidden in this theme.
 
-Immersive 3.0 shares the transport overlay and spinning-disc transition with the other modern themes. Volume captures touches above Music to prevent accidental seeking. [Theme guide](themes/zune.md).
+Immersive 3.0 shares the transport overlay and spinning-disc transition with the other modern themes. Volume captures touches above Music to prevent accidental seeking. [Theme guide](../../docs/themes/zune.md).
 
 ### Disco (the default)
 - **The Disc looks like a CD, so the interface does too.** The playing album's cover fills the screen, sharp on
@@ -162,7 +164,7 @@ Upstream's Wi-Fi updates trust upstream's release key. This fork **removes that 
 **yours**, so the Disc accepts only builds you signed — via the SD card. Why the SD card and not SSH:
 the boot script verifies `mq_ui` against a read-only manifest, so hand-copying a binary gets quarantined
 and the Disc falls back to stock. Signed updates go through the proper trial-and-rollback path instead.
-See [UPDATING.md](UPDATING.md).
+See [UPDATING.md](../../docs/UPDATING.md).
 
 ---
 

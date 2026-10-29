@@ -1,3 +1,5 @@
+> Historical material. Not current 3.2.1 instructions; see the current documentation index.
+
 # Older local work — recovery only
 
 `1.3.0-polished2.patch` is the complete tracked working diff recovered on

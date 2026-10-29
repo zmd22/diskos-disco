@@ -1,3 +1,5 @@
+> Historical material. Not current 3.2.1 instructions; see the current documentation index.
+
 # Display and efficiency pass checkpoints
 
 Base: stable 2.5.3 (`9ba4ded`). Candidate: 2.5.4-dev1, no release tag or push.
@@ -9,6 +11,6 @@ Base: stable 2.5.3 (`9ba4ded`). Candidate: 2.5.4-dev1, no release tag or push.
 - [05 — final cumulative record and remaining device checks](save-point-05.md)
 - [Device testing and rollback](TESTING.md)
 - [Native suite results](native-test-results.txt)
-- [Current Display map](../../DISPLAY_SETTINGS.md)
+- [Current Display map](../../../../docs/DISPLAY_SETTINGS.md)
 
 The workspace reset between sessions; checkpoints 01–04 were reconstructed from the recorded chat and revalidated. The delivered Git bundle preserves all replacement checkpoint commits and the final source.

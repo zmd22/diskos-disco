@@ -1,3 +1,5 @@
+> Historical material. Not current 3.2.1 instructions; see the current documentation index.
+
 # Plan: Offline mode
 
 Status: **on hold** (owner, 2026-10-21: not useful enough for its risk). Previously queued for 2.7.0. Our plan of 2026-10-20 merged with the "Offline mode proposal

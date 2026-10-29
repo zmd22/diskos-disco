@@ -1,3 +1,5 @@
+> Historical material. Not current 3.2.1 instructions; see the current documentation index.
+
 # Disc Shelf: SMB3 source integration
 
 Shipped as Disco 2.7.0, based on public 2.6.2 plus the native Disc Shelf integration. SMB3 remains experimental; the validation limits below still apply.

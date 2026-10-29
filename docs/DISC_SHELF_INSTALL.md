@@ -1,6 +1,6 @@
 # Disc Shelf — your music, to go
 
-Built into **diskOS Disco! 2.7.0**. Browse a **Navidrome** library or an **SMB3** share and download original files to your SD card. There is no separate app to install on 2.7.0.
+Built into **diskOS Disco! 3.2.1**. Browse a **Navidrome** library or an **SMB3** share and download original files to your SD card. There is no separate app to install on 3.2.1.
 
 [Home](../README.md) · [How-to](HOWTO.md) · [Tour](DISCO_TOUR.md#disc-shelf)
 
@@ -50,7 +50,7 @@ Swipe from the middle of a row to enter selection. A first-use hint explains thi
 
 The download page shows up to three text lines with ellipsis, the current file’s percentage and rolling speed, a progress bar, and transferred/total MiB. These are **per-file**, not a total-job percentage. The speed settles after the first sample and resets for each file.
 
-In the next development build, the small **D! circle on the right edge** opens a music overlay matching your theme. It shows scrolling **Artist - Title**, Previous, Play/Pause and Next. **Close**, or the Back gesture, dismisses the overlay and returns to the copy. Music controls use Disco's existing playback commands; the download continues underneath.
+The small **D! circle on the right edge** opens a music overlay matching your theme. It shows separate scrolling title and artist lines, progress, Previous, Play/Pause and Next. **Close**, or the Back gesture, dismisses the overlay and returns to the copy. Music controls use Disco's existing playback commands; the download continues underneath.
 
 During a copy, **Home and Back cannot exit Disc Shelf**, and the header Back arrow does not cancel it. Use **Cancel** to stop copying; navigation stays locked until the worker has finished cleanup. Quick Settings and the screensaver remain available. This is a local overlay, not background downloading or an app switcher. It adds no new worker, polling timer, artwork decode or network request; its labels refresh only through the existing visible-app update cycle.
 
@@ -76,6 +76,6 @@ Configuration remains in internal storage. Private local-presence/ownership cata
 
 ## Older firmware
 
-The separate **Disc Shelf 1.0.4** release archive is the legacy Navidrome-only app. It does not contain SMB3. It remains available for older firmware; native Disco hides duplicate standalone menu entries. On 2.7.0, use the built-in app and preserve your existing configuration rather than reinstalling the standalone executable.
+The separate **Disc Shelf 1.0.4** release archive is the legacy Navidrome-only app. It does not contain SMB3. It remains available for older firmware; native Disco hides duplicate standalone menu entries. On 3.2.1, use the built-in app and preserve your existing configuration rather than reinstalling the standalone executable.
 
-[Implementation and limits](plans/disc-shelf-smb3.md) · [Validation notes](performance/disc-shelf-native.md)
+[Implementation and limits](../archive/docs/plans/disc-shelf-smb3.md) · [Validation notes](../archive/docs/performance/disc-shelf-native.md)

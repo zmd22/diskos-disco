@@ -1,3 +1,5 @@
+> Historical material. Not current 3.2.1 instructions; see the current documentation index.
+
 # Save point 05 — validated development candidate
 
 Baseline: 2.5.3 `9ba4dedfbba9d4a0ed4421cba10c3c4800f48818`. Compiled source commit: `0d2ce3c7c6602d024fa5e974e7fe5acf4c0191a6`. Candidate: **2.5.4-dev1**.

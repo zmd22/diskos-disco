@@ -1,3 +1,5 @@
+> Historical material. Not current 3.2.1 instructions; see the current documentation index.
+
 # Unified settings validation
 
 Source update for dev. The approved reusable hierarchy is in SETTINGS_TEMPLATE.md.
@@ -239,4 +241,3 @@ Source update for dev. The approved reusable hierarchy is in SETTINGS_TEMPLATE.m
 | About | About → Device Info → Temperature |
 | Volume Keys | Press → Double Press → Long Press |
 | MA Sendspin | Server → Player Name → Sync Delay → Sendspin |
-

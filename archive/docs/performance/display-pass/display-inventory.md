@@ -1,3 +1,5 @@
+> Historical material. Not current 3.2.1 instructions; see the current documentation index.
+
 # Display inventory — 2.5.3 baseline
 
 Declared rows from settings.c at 9ba4ded; theme filters determine visibility. Help included for interaction hints.

@@ -79,7 +79,7 @@ use the desktop `host-render` program on the Disc.
 From the repository root, with your keys in `./diskos-keys`:
 
 ```sh
-sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 2.0.0
+sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 3.2.1
 ```
 
 With keys elsewhere: `diskos-sign.sh <binary> [label] [keys-folder] [output-folder]`. The label (up to 32 letters,
@@ -109,7 +109,7 @@ Eject the card safely. If you used the Disc's USB storage mode, eject on the com
 ## 5. Install and keep the trial
 
 1. **Settings > System > Maintenance > Update from SD Card > Update.** Wait for staging, then restart when asked.
-2. Check **Settings > System > About** for the expected version and build ID.
+2. Check **Settings > Help > About** for the expected version and build ID.
 3. Use it for at least **three minutes** and play some music. After that, music that actually plays accepts the
    build by itself; otherwise answer **Keep** when asked (or **Go back** to revert). Just browsing doesn't count.
 4. Restart once more and check it still runs: the build is now kept.
@@ -128,7 +128,7 @@ repeatedly before the trial is accepted.
 | Looks or behaves wrong after switching from upstream diskOS | Settings > System > Maintenance > Reset diskOS Settings (music, Wi-Fi, Bluetooth, EQ and audio settings stay). Going back to stock doesn't clear diskOS's leftover files. |
 | Update folder not found | `diskos-update` at the card's top level, all six files present. |
 | Update refused / damaged | Verify on the computer, compare the root key hash (below), recopy the whole folder, check the epoch. |
-| Same or older epoch | Sign again a minute later with a correct clock and replace the whole folder. |
+| Same or older epoch | Compare the installed/accepted floor with the generated epoch; waiting a minute does not solve a timestamp-floor mismatch. |
 | "This exact build was rolled back before" | A build that rolled back is remembered (`updates/rejected`). Signing the same `mq_ui` again won't help: use a new build. |
 | Not enough space | The Disc's own data partition is full; free space on the SD card doesn't help. |
 | Old build after a trial | The trial was rolled back or never accepted; check About. |
@@ -154,3 +154,7 @@ the Disc would reject it and fall back to stock.
 power-on boots the other one once. Boot scripts and root keys can only be changed by flashing with the installer.
 See the [README](../README.md#going-back), and [Flashing and switching interfaces](SWITCHING.md) for what stays in
 the Disc's data area when you go back to stock.
+
+## 3.2.1 signing limitation
+
+The bundled `ui/tools/owner-keys/diskos-sign.sh` computes UTC minutes since 2026 and then raises that value above `keys/last-epoch` if necessary. It does not read the Disc’s accepted or baked floor. A Disc with a larger timestamp-format floor can reject an update made with a different keys-folder history even though its version label is newer. Compare the generated manifest epoch with the device floor before installation; keep the existing keys and monotonic epoch history. The separate timestamp-based update.sh supplied outside this release is not bundled here. Do not lower verification floors or edit a signed manifest after signing.

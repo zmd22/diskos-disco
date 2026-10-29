@@ -1,3 +1,5 @@
+> Historical material. Not current 3.2.1 instructions; see the current documentation index.
+
 # Native Disc Shelf integration: validation
 
 Development branch based on public Disco 2.6.2 (`e8b3b3a`). No Bluetooth, power-button or timeout-lock changes.

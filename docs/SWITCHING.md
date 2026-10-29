@@ -78,7 +78,7 @@ If Volume Up doesn't bring Disco up either, Disco didn't start, and the Disc fel
 Disco can't start). Flash again from stock V2.57; if it keeps happening, the installer's log and
 `/usr/data/diskos_install.log` (over SSH, once Disco runs) show why.
 
-**Is Disco installed?** Settings > System > About in Disco shows its version. Stock's own settings show FiiO's version.
+**Is Disco installed?** Settings > Help > About in Disco shows its version. Stock's own settings show FiiO's version.
 
 **I want to try upstream diskOS (or come back from it).** Go back to stock first, then install the other one. Your
 Disco settings stay in the data area meanwhile, and upstream may leave its own there too: if something looks or

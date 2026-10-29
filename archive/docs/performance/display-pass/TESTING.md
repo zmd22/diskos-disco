@@ -1,3 +1,5 @@
+> Historical material. Not current 3.2.1 instructions; see the current documentation index.
+
 # Test 2.5.4-dev1 against 2.5.3
 
 This candidate changes Display organization and avoids identified invisible visual work. Your stable 2.5.3 remains the comparison and rollback build. It does not include the shelved migration system or GIF screensaver.

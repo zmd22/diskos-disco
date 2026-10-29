@@ -1,63 +1,26 @@
-# Documentation
+# Disco 3.2.1 documentation
 
-[Back to the README](../README.md)
+These guides describe the shipped 3.2.1 source and payload, commit `91a7151720d55583c766f7ebd2047ba6620921e1`. Later branch changes are not part of this baseline.
 
-## Themes
+## Use
 
-- **[Zune](themes/zune.md)**: by namastecoconut-imagined, with bold type, deep black, a personal accent and Immersive 3.0. [3.0.0 notes](releases/v3.0.0.md) · [release checks](RELEASE_3.0.0.md).
-
-- **Disco** (the default): the album cover, a navigation circle and a rainbow CD rim. See the [tour](DISCO_TOUR.md).
-- **[Squash](themes/squash.md)**: big bold text, touch playback, a rising launcher and a bottom volume arc.
-- **[Null](NULL_THEME.md)**: pixel fonts, a dithered cover and colour palettes, including Matrix.
-- **Ring**, **Braun** and **Stone**: earlier themes, still included. [Why each looks the way it does](UI_CHOICES.md).
-- [Writing a new theme](../themes.md) - the rules and checklist for adding one.
-
-## Using diskOS Disco!
-
-**Recommended: start from FiiO's stock V2.57 firmware.** Installing over upstream diskOS or another diskOS build is not supported and can be buggy; restore stock first.
-Switched to Disco from upstream diskOS or another build, and something looks or behaves wrong? **Settings > System > Maintenance > Reset diskOS Settings** gives the interface a fresh start; your music, Wi-Fi, Bluetooth, EQ and audio settings stay. Going back to stock in between does *not* clear what diskOS leaves on the Disc.
-
-
-- [A tour of Disco!](DISCO_TOUR.md) - every screen, gesture and setting, with screenshots.
-- [Flashing and switching interfaces](SWITCHING.md) - what stays and what goes when you flash, go back to stock or try
-  upstream diskOS, and fixes for the usual surprises.
-- [How-to](HOWTO.md) - short answers for everyday tasks, including the Display menu at a glance.
-- [Display settings](DISPLAY_SETTINGS.md) - what's under each Display page and why some are dimmed.
-- [Immersive 3.0](IMMERSIVE_CONTROLS.md) - transport overlay, spinning-disc transitions and circular seeking/volume.
-- [Updating from the SD card](UPDATING.md) - keys, signing, flashing once, troubleshooting.
-- [macOS](MACOS.md) - installing from a Mac.
-- [diskOS Disco! for Windows](WINDOWS.md) - unsupported, but working as intended (confirmed by users). Start from FiiO's stock firmware.
-- [UI choices](UI_CHOICES.md) - why things look and work the way they do.
-- [Privacy and network use](PRIVACY.md).
-- [Release notes](releases/) and the [changelog](../CHANGELOG.md).
-- [Project site](https://zmd22.github.io/diskos-disco/) - the landing page (this folder, served by GitHub Pages).
-
-## Built-in apps
-
-- **Listening Stats** - your week, month and year in music, with highlights. See the [tour](DISCO_TOUR.md#listening-stats).
-- **SongSphere** - tag songs by mood, then pick a spot on the sphere for a playlist. See the [tour](DISCO_TOUR.md#songsphere); Settings > Playback > SongSphere turns it off.
-- **Album Roulette** and **Boomshine** - see below.
-
-## Optional apps
-
-- [Disc Shelf](DISC_SHELF_INSTALL.md) - Navidrome/SMB3 browser and original-file downloader ([what it does](DISCO_TOUR.md#disc-shelf)).
-- [Album Roulette](ALBUM_ROULETTE_INSTALL.md) - built in since 2.2.0; removing the old separate app.
-- [Boomshine](DISCO_TOUR.md#boomshine) - a chain-reaction game, built in since 1.5.0 (nothing to install).
-- [Apps in the menu](DISCO_TOUR.md#apps-in-the-menu) - put any installed app in the navigation circle, and give it a landing page.
+- [Install and restore](../README.md#install): start from the recommended stock V2.57 base.
+- [Tour](DISCO_TOUR.md): screens, controls and built-in apps.
+- [Settings](DISPLAY_SETTINGS.md): current categories, paths and theme differences.
+- [How-to](HOWTO.md): common tasks.
+- [Immersive](IMMERSIVE_CONTROLS.md), [Disc Shelf](DISC_SHELF_INSTALL.md), [privacy](PRIVACY.md).
+- [Signed SD updates](UPDATING.md), [Windows](WINDOWS.md), [macOS](MACOS.md), [switching and recovery](SWITCHING.md).
+- Themes: [Disco](DISCO_TOUR.md), [Null](themes/null.md), [Squash](themes/squash.md), [Zune](themes/zune.md). Ring, Braun and Stone remain available.
 
 ## Develop
 
-- [UI development workflow](DEV_WORKFLOW.md), [branches and recovery](DEVELOPMENT.md) and [UI source](../ui/README.md).
-- [Contributing](../CONTRIBUTING.md), [native flash tools](../build/NATIVE_TOOLS.md), [tool scripts](../tools/README.md).
-- [Design system](DESIGN_SYSTEM.md) - upstream's round-screen layout rules.
-- [Hardware](HARDWARE.md), [command map](COMMAND_MAP.md), [reverse-engineering catalogue](RE_CATALOGUE.md).
+- [Build, test and deliver](DEV_WORKFLOW.md), [branch rules](DEVELOPMENT.md), [current targets](../todo.md).
+- [Source map and upstream comparison](SOURCE_MAP.md), [UI implementation](UI.md), [theme contract](../themes.md).
+- [Settings implementation](SETTINGS_TEMPLATE.md), [design rules](DESIGN_SYSTEM.md).
+- [Hardware](HARDWARE.md), [IPC commands](COMMAND_MAP.md), [reverse engineering](RE_CATALOGUE.md).
 
-## Legal
+## Release and provenance
 
-- [License](../LICENSE), [UI license](../ui/COPYING), [third-party notice](../NOTICE.md), [license texts](../licenses/README.md).
-- [SPL source and DDR parameter provenance](../SPL_SOURCE.md), [onefile dependencies](../build/ONEFILE_DEPENDENCIES.md).
-- [Security reporting](../SECURITY.md).
-
-## Latest release
-
-[Disco 2.7.0: Disc Shelf, Shuffle! and themed app previews](releases/v2.7.0.md).
+- [3.2.1 changes](releases/v3.2.1.md), [binary record](RELEASE_3.2.1.md), [changelog](../CHANGELOG.md).
+- Earlier release notes are historical records, not current instructions.
+- [Licenses](../licenses/README.md), [third-party notice](../NOTICE.md), [SPL source](../SPL_SOURCE.md), [security](../SECURITY.md).

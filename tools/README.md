@@ -19,7 +19,7 @@ first. A couple of the device's behaviors are non-obvious and easy to get wrong.
 - For screenshots: `python3` with Pillow (`pip install Pillow`)
 
 ## Getting access
-Enable **Debug Mode** on the device (Settings > System). It shows the device IP and a one-time SSH
+Enable **Debug Mode** on the device (Settings > System > Maintenance). It shows the device IP and a one-time SSH
 password. The password is regenerated on every enable and **does not survive a reboot**, so grab a
 fresh one each session. The scripts read the IP and password from environment variables:
 

@@ -1,3 +1,5 @@
+> Historical material. Not current 3.2.1 instructions; see the current documentation index.
+
 # Letter pickers
 
 Lists with an A–Z index have two pickers; Display › your theme's settings chooses which one the list uses.

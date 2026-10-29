@@ -7,9 +7,7 @@ Disco → Null → Squash implementation and the regressions found during that w
 A new theme should inherit working features before it gets its own look.
 Existing themes retain their approved look and behaviour throughout.
 
-This document distinguishes **implemented interfaces** from **proposed
-refactoring**. It is an authoring contract and implementation plan; the proposed
-registry and capability APIs below are not present in the runtime yet.
+This document covers the implemented interfaces. It describes the compiled theme/kit interfaces in 3.2.1. A general registry/capability refactor is not implemented.
 
 ## Compatibility contract: existing themes are protected
 
@@ -281,81 +279,11 @@ On/Off and actual read-only values remain visible.
 
 ### E. Check the differences, then package
 
-Use focused checks for the changed components and the boundary paths in section
-7. Do not rerun a broad suite repeatedly for wording or colour-only tweaks.
+Use focused checks for the changed components and the boundary paths below. Do not rerun a broad suite repeatedly for wording or colour-only tweaks.
 Document what was rendered, what was exercised interactively and what still
 requires a physical Disc. Build/source/patch must identify the same revision.
 
-## 6. Modular extension model — proposed, not yet implemented
-
-The current kit is useful, but screen routing, settings visibility, hint keys,
-QS capacity and some components still branch on `th_disco()` / `th_null()`.
-A new theme should not require another theme-name condition in every screen.
-
-Refactor these seams gradually while preserving current behaviour:
-
-| Module | Shared owner | Theme supplies |
-| --- | --- | --- |
-| Registry | Stable identity, ordering and lifecycle dispatch | Definition, options group, capabilities, view hooks |
-| Music | Metadata, controls, seek and track actions | View builder/layout and optional background renderer |
-| Navigation | Destination catalogue, editor, actions and back policy | Geometry, drawing, configured shortcut affordances |
-| QS | Catalogue, editor, selection, state and dispatch | View, capacity and any explicit pinning policy |
-| Settings | Row/detail engine, persistence and disabled explanations | A registered table of scoped options |
-| Help | Topic registry, onboarding timers and counters | Applicable topics, gesture descriptions and presentation |
-| Status/volume/EQ | State, commands and throttling | Rendering and hit geometry |
-
-### Capability decisions
-
-Introduce capability queries for behaviour such as supported appearances,
-handedness, Music control modes, custom QS view and custom navigation. Use traits
-for styling decisions already represented by `theme_trait_t`.
-
-A capability must have an explicit fallback that preserves existing themes.
-Register each old theme’s current behaviour explicitly before migrating it; do
-not infer missing support from an absent field. New presentation behaviours are
-opt-in and are not retroactively enabled for existing presets.
-
-A capability must have an explicit fallback. Hiding a control requires another
-route or an explained restriction. Keep core action availability separate from
-visual traits: “pixel font” must not decide whether seeking exists.
-
-### Proposed registration shape
-
-Conceptual example only; these types are not drop-in C for the current tree:
-
-```c
-register_theme({
-    .id = "new_theme",                 // stable machine identity
-    .definition = &new_theme_definition,
-    .views = &new_theme_views,          // NULL members inherit shared views
-    .capabilities = &new_theme_capabilities,
-    .settings = &new_theme_options,     // owned settings table, scoped keys
-    .help = &new_theme_help             // shared topic IDs + applicable variants
-});
-```
-
-Common features belong in shared components first. A new feature should declare
-its settings, actions, help and lifecycle together, rather than relying on a
-maintainer to remember four separate ports.
-
-For a theme-only feature: own its state/view/settings in that theme's module,
-call shared services, and register only the hooks it needs. If another theme
-adopts it, extract the reusable part before making another copy.
-
-### Lifecycle requirements
-
-A custom view needs clear create, enter, update, leave and destroy/reset paths.
-Stop timers/animations on leave when they are not visible; release or invalidate
-widget pointers on destruction; close overlays before rebuilding their owners.
-A delayed callback must not address a deleted widget or an inactive theme.
-Only restart/rebuild where required; cosmetic changes should not restart music.
-
-Migration order: extract the existing QS selection/capacity policy first, then
-shared settings registration and Help mapping, then Music/navigation view
-dispatch. Preserve baseline renders and interaction checks as each seam moves.
-Do not combine a new visual design with a full framework rewrite.
-
-## 7. Lightweight acceptance checks
+## 6. Lightweight acceptance checks
 
 ### Visual pass
 
@@ -426,7 +354,7 @@ physical-device verification. If an interrupted build left empty objects or a
 zero-byte executable, remove the incomplete outputs and rebuild before claiming
 success. An empty executable can otherwise appear to exit successfully.
 
-## 8. Release handoff
+## 7. Release handoff
 
 - Record the baseline, source commit, binary hash and relevant settings changes.
 - Supply the matching `mq_ui`, source and patch/bundle requested for that release.
@@ -437,7 +365,7 @@ success. An empty executable can otherwise appear to exit successfully.
 - Separate native checks, ABI checks and physical testing in the release notes.
 - A documentation-only change does not require rebuilding the UI.
 
-## 9. New-theme handoff template
+## 8. New-theme handoff template
 
 Copy this into the theme's implementation notes:
 
@@ -463,13 +391,3 @@ Copy this into the theme's implementation notes:
 A theme is ready when it looks coherent, preserves the shared action contracts,
 returns through every route correctly, and has no unexplained blanks in its
 completeness table—not merely when Music looks finished.
-
-## 10. Squash 2.5.0: implemented lessons
-
-Squash is a shipped implementation path, not the proposed registry API. See [the theme guide](docs/themes/squash.md). Its user-visible name is Squash; preset 12 and internal `simple_*` names remain stable for preference compatibility.
-
-- **Own typography end to end.** MUSIC_TITLE/ARTIST/ALBUM roles use fixed 36/32/28 px faces across Original, Inter and default Nunito Bold. Protect theme-owned labels from the generic button-fit pass so long metadata scrolls instead of shrinking. Standby uses those same roles.
-- **Namespace actual options.** `simple_track_font`, `simple_play_state`, `simple_play_mode` and the existing configuration adapter isolate Squash choices; shared system preferences stay shared.
-- **Reuse working behavior.** Main-menu protection, QS editing/catalogue, mode cycling, transport IPC, track actions/Mood, Help and hint counters carry over. Both Squash launcher targets use the configured Hold action; ignore drags and preserve Nothing.
-- **A distinct overlay can stay modular.** Volume B is owned by Squash, selected only in the Squash route of ui_show_volume/visibility. Other volume UI stays untouched. Use the authoritative 0–120 range, throttle writes, commit the final drag value, reject stale touch echoes, pause idle timeout during drag, and retain/pause overlay resources when hidden.
-- **On-screen guidance is documentation too.** Theme-specific How to and onboarding text must describe the current launcher and volume controls. Screenshots, build manifests, release notes and bundled mq_ui must agree.

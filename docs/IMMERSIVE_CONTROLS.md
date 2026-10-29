@@ -1,10 +1,10 @@
 # Immersive 3.0
 
-Zune now shares the spinning-disc entry/exit animation and transport overlay with Disco, Null and Squash. Tap the artwork to reveal title, artist, time and previous/play-pause/next controls. Use the left-edge Back gesture to leave; the overlay hides again when idle. Animations follows the global setting.
+Zune shares the spinning-disc entry/exit animation and transport overlay with Disco, Null and Squash. Tap the artwork to reveal title, artist, time and previous/play-pause/next controls. Use the left-edge Back gesture to leave; the overlay hides again when idle. Animation follows the global setting.
 
-Open **Display → Music screen → Immersive**. **Circular control** defaults Off; turn it On and choose **Control action: Duration / Volume**.
+Open **Display → Immersive**. **Circular control** defaults Off; turn it On and choose **Control action: Duration / Volume**.
 
-Rotate the artwork clockwise to increase the selected value or counterclockwise to decrease it. The picture follows your finger, including while paused, and normal rotation resumes from the released angle. Crossing the centre re-anchors without a value jump. Sensitivity is 75% of the earlier dev2 candidate.
+Rotate the artwork clockwise to increase the selected value or counterclockwise to decrease it. The picture follows your finger, including while paused, and normal rotation resumes from the released angle. Crossing the centre re-anchors without a value jump.
 
 **Duration:** a compact box shows the selected time and total. Lyrics hold while dragging; release commits one seek and resumes lyrics at the new position. Changed tracks and lost touches cancel the pending seek. Old player position echoes are briefly ignored after an accepted seek.
 

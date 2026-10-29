@@ -1,3 +1,5 @@
+> Historical material. Not current 3.2.1 instructions; see the current documentation index.
+
 # Save point 04 — reduce unnecessary visual work
 
 ## This step

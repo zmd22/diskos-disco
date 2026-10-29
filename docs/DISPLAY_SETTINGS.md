@@ -1,38 +1,49 @@
-# Display settings
+# Settings in Disco 3.2.1
 
-Display uses the same order and names in every theme. Each theme keeps its own look and existing preferences. Dimmed settings say **Disabled**; tap one to learn why it does not apply. Switching themes does not reset saved values.
+The seven root categories are shared by all themes. Visible rows depend on theme and firmware capability. Most irrelevant theme options are hidden; dependency-blocked options can remain visible with an explanation. Saved option values are not reordered when the menus are sorted.
 
-| Under Display | What you can change |
+| Category | Current contents |
 |---|---|
-| Brightness | Screen brightness. Outdoor mode overrides it while enabled. |
-| QS style | What the pull from the top opens (all themes). **Classic**: Quick settings, as before. **Shade**: a now-playing shade first (cover tap plays/pauses, previous/next, title/artist tap opens the album, progress, clock, battery); pull again or tap the grab bar for the theme's Quick settings; swipe up to close. Music always opens Quick settings directly. |
-| Theme | Choose the theme directly. |
-| Appearance | Light/dark, automatic appearance, Outdoor mode, Null colour scheme, accent and theme colours. |
-| Music screen | Background and controls; Text, Information, Progress and Immersive subpages; the separate Now Playing style for themes that use it. |
-| Standby | Screensaver delay, screen-off delay and supported screensaver styles. Screen-off delay is additional time after the screensaver. |
-| Navigation | Menu items, Quick settings, Shortcuts, Gestures, interaction hints, navigation side and supported menu timeout. |
-| Layout & extras | General text size, rotation, time format, list motion, transitions, album-list track numbers, album view and startup disc colour. Online & cache contains online artwork, lyrics, cover caching and weather. |
+| Playback | Play Mode, Equalizer, Library seek, Resume Playback, Artists grouping, Auto-tag, Play Through Folders, Up Next and SongSphere. Play Mode and Equalizer lead; SongSphere is last. |
+| Audio | Working Mode, Gain, DAC Filter, ReplayGain, DRE, Gapless, Max Volume, Balance, supported SPDIF Output and read-only DSD Output. |
+| Display | Brightness, Theme, selected theme settings, supported Light / dark, Immersive, Library appearance, Navigation, QS style and Text & layout. |
+| Connectivity | Wi-Fi, Bluetooth (Devices and codec), MA Sendspin and Online services. |
+| System | Language, Controls, Date & Time, Library management and Maintenance. |
+| Battery & power | Details, Idle power-off, Restart, Screen-off delay, Screensaver delay, Shut down player, Sleep timer, supported battery-percentage display and Charging limit. |
+| Help | How to, About, supported Interaction hints and Show hints again. |
 
-Your theme's settings → **Scroll** sets how lists move: Classic, Straight, Disco, or **Wheel** (Disco, Squash, Null) — the current row large in the middle of the screen, one row above, smaller and greyer rows below under a soft fade, snapping to the middle.
+## Display
 
-Music screen → Information → Track number changes the Music title. Layout & extras → Album track numbers changes album lists. They are independent.
+- **Theme** selects Disco, Ring, Braun, Stone, Null, Squash or Zune. Retired preset IDs are not offered.
+- **<theme> settings** owns applicable Appearance, Music screen, Navigation, Quick settings layout and Screensaver design. Empty or irrelevant pages are omitted.
+- **Light / dark** offers Dark, Light and Auto for supported themes, including Zune. Null is fixed-dark. Auto changes at an off-screen boundary; day is 07:00–19:00.
+- **Immersive** owns Style (Vinyl/CD/Cover), lyrics and optional Circular control with Duration/Volume action.
+- **Library appearance** owns List/Wall/Coverflow and album-list track numbers.
+- **Navigation** owns shared Quick settings items, Shortcuts and Back-swipe distance. Theme menu destinations and gestures live in the theme's Navigation page.
+- **Text & layout** contains shared text sizing, screen rotation and transitions where supported. Music-title font selection is separate.
+- **QS style** selects Classic or Shade. Off Music, Shade opens a now-playing panel first; a second pull or the handle opens Quick Settings. Music opens Quick Settings directly.
 
-Null keeps its dark appearance and right-side menu. Its Colour scheme option includes Matrix. Squash uses fixed gesture controls, navigation side and QS layout. Null and Squash use their own palettes instead of the custom accent. Disco, Ring and Braun support automatic light/dark changes. Themes with their own screensaver do not use the generic screensaver-style selector.
+List motion is under **Display > <theme> settings > Navigation**. Disco, Null and Squash offer Classic, Straight, Disco and Wheel. In Wheel, rows scale and change colour continuously around the central row; the 3.2.1 layout respects list headers and action controls. Library main lists show their count above the first row.
 
-Help still contains How to. Hint preferences and reset now live under Display → Navigation. Long setting names wrap within their rows instead of moving continuously.
+## Theme differences
 
-## Zune in 3.0.0
+| Theme | Applicable distinctions |
+|---|---|
+| Disco | Artwork-backed Music, Buttons/Auto-hide/Gestures, text alignment/font, progress shape/colour, rim sheen, right/left navigation and List/Arc Quick Settings layout. |
+| Null | Fixed-dark palettes (Cyan/Yellow, Red/Lime, Matrix), its own Music background/font/alignment and menu controls, right-side navigation, Text/Icons Quick Settings layout. No custom accent selector. |
+| Squash | Plain/Blur/Cover background, independent Music font preference, playback state/mode indicators, gesture Music controls and fixed right-side navigation/QS layout. No custom accent selector. |
+| Zune | Dark/Light/Auto, accent and main-icon/menu assignments, lock-screen content and clock tint. No separate Now Playing style selector. |
+| Ring / Braun / Stone | Their own applicable appearance, Music and saver controls. The **Ring Now Playing layout** is distinct from the **Ring theme**. |
 
-Zune stays dark and uses its selected accent across Music, Quick Settings, settings and volume. **Music screen → Zune** contains **Main icon**, **Main icon double-tap** and **Main icon hold**. The unused Now Playing style choice is hidden for Zune. The icon keeps a four-square outline for every assigned action; its upper-right square takes the accent.
+## Other important paths
 
-**Layout & extras → Album View** selects List, Wall or Coverflow. Small/Medium/Large library text choices use different sizes; Medium matches the previous default. **Music screen → Immersive** controls Immersive 3.0, including in Zune. See the [theme guide](themes/zune.md).
+- **Connectivity > Online services**: online artwork, online lyrics, artwork cache and weather.
+- **System > Date & Time**: date/time and 24-hour format.
+- **Battery & power**: activation delays; **theme settings > Screensaver**: supported saver design. Screen-off delay is additional to screensaver delay.
+- **Battery & power > Sleep timer**: Duration and When sleep ends. This explicit timer is distinct from idle shutdown.
+- **Help > About**: running version and binary-derived build ID.
+- **System > Maintenance**: signed SD update, reset and debug entry points.
 
-## What changed for efficiency
+DSD Output is information labelled Player-managed, not a Native/DoP/PCM selector. Gain, codec, power, rotation and key controls have firmware/install guards. A setting's presence does not prove support on another stock firmware.
 
-Null pauses its frequent visual timer when Music, QS and an open menu do not need it. Visual callbacks skip a fully-off screen, unused QS state copies are removed, and unchanged settings/scan labels avoid repeated text updates. Clock refresh resumes on wake. Playback, History, animation timings and artwork quality retain their existing behavior.
-
-Battery/status polling deliberately continues with the screen off. The source documents a hardware freeze when that keep-alive was removed. It must not be paused as a battery optimization.
-
-These changes reduce identified work; battery-life gains have not been measured on the Disc.
-
-Immersive controls: [Circular seeking, volume and Cover style](IMMERSIVE_CONTROLS.md).
+Source: `ui/settings.c`, `ui/settings_display.h`, `ui/settings_order.h`, `ui/theme.c` and the feature handlers.

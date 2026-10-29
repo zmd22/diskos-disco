@@ -1,6 +1,6 @@
 # Settings and submenu template
 
-Status: approved hierarchy implemented for dev. Display ownership is documented in
+Current hierarchy in Disco 3.2.1. Display ownership is documented in
 [DISPLAY_SETTINGS_SPLIT.md](DISPLAY_SETTINGS_SPLIT.md). Explicit anchors take
 precedence over alphabetical ordering.
 
@@ -79,7 +79,7 @@ physical DSD/audio testing or a target firmware build.
 | --- | --- |
 | Playback | Play mode; Equalizer; alphabetical choices; alphabetical On/Off items; SongSphere last |
 | Audio | Balance; DAC filter; DSD output (read-only); Gain; Max volume; ReplayGain; Working mode; DRE; Gapless; supported SPDIF |
-| Display | Brightness; Theme picker; selected theme settings; Immersive; Library appearance; Navigation; Text & layout |
+| Display | Brightness; Theme picker; selected theme settings; supported Light / dark; QS style; Immersive; Library appearance; Navigation; Text & layout |
 | Connectivity | Wi-Fi; Bluetooth (Devices, codec); MA Sendspin; Online services |
 | System | Language; Controls; Date & time; Library management; Maintenance |
 | Battery & power | Details; Idle power-off; Restart; Screen-off delay; Screensaver delay; Shut down player; Sleep timer; supported battery-percentage display; Charging limit |
@@ -95,10 +95,4 @@ Sleep timer contains Duration and When sleep ends. Screen-off and screensaver
 activation timing lives in Battery & power; screensaver design remains theme-owned.
 Startup disc colour and the old preset-only Equalizer shortcut are removed.
 
-Validation: `settings_alignment_test.py` exercises all seven themes / twelve
-appearances, every visible submenu handler and Back destination, nonempty menus,
-Equalizer and battery Details routing, read-only DSD, ordering and configuration
-preservation. `display_pass_test.py` retains direct capability guards and writable
-per-theme setting checks. The known pre-existing REVIEW_HINTS overlay assertion
-still fails on the baseline host renderer; this change does not fix that issue.
-Host tests cannot establish physical-device playback or charging behaviour.
+These are verification instructions, not results from this documentation pass. Host tests cannot establish physical-device playback or charging behaviour.

@@ -1,3 +1,5 @@
+> Historical material. Not current 3.2.1 instructions; see the current documentation index.
+
 # Save point 06 — Roulette copy and larger Null text
 
 Base: stable 2.5.3 (`9ba4ded`); follows tested 2.5.4-dev1 save point 05.
