@@ -1338,6 +1338,10 @@ LV_FONT_DECLARE(font_zune_light_96) LV_FONT_DECLARE(font_zune_regular_14)
 static void row_cb(lv_event_t *e);
 static void list_back_cb(lv_event_t *e);
 static lv_obj_t *make_list(lv_obj_t *root);
+/* Themes offered: Disco first; the other presets stay in the code and keep working if already selected, but are not
+ * offered here for now (retired IDs have no name). Rows still carry the real preset index. */
+static const int THEME_SHOWN[] = { THEME_PRESET_DISCO, THEME_PRESET_NULL, THEME_PRESET_SIMPLE, THEME_PRESET_ZUNE, THEME_PRESET_RING, THEME_PRESET_BRAUN, THEME_PRESET_STONE };
+#define N_THEME_SHOWN ((int)(sizeof THEME_SHOWN / sizeof THEME_SHOWN[0]))
 static void zlower(char *o, size_t n, const char *s){
     size_t i = 0; for(; s && s[i] && i + 1 < n; i++) o[i] = (s[i] >= 'A' && s[i] <= 'Z') ? s[i] + 32 : s[i]; o[i] = 0;
 }
@@ -1480,8 +1484,10 @@ static void zsetlist(lv_obj_t *root){
 
 /* a choice: the options as a dial, the current one in the accent; a slider: an arc on the rim with the value big */
 static void zdetail_back(void *u){ (void)u; screen_back(); }
+static int g_zdetail_theme;                                 /* the dial lists THEME_SHOWN: a row is not a preset ID */
 static void zdetail_pick(int i){
     const setting_t *s = g_active;
+    if(g_zdetail_theme){ if(i < 0 || i >= N_THEME_SHOWN) return; i = THEME_SHOWN[i]; }
     if(!s || display_blocked(s) || i < 0 || i >= s->nopts) return;
     int is_theme = s->cfg_key && !strcmp(s->cfg_key, "theme_preset");
     if(is_theme && g_reload_tm) return;
@@ -1553,11 +1559,19 @@ static int zdetail(lv_obj_t *root){
         lv_obj_set_style_bg_color(root, TC(CANVAS), 0); lv_obj_set_style_bg_opa(root, LV_OPA_COVER, 0);
         lv_obj_remove_flag(root, LV_OBJ_FLAG_SCROLLABLE);
         static char names[ZDIAL_MAX][40]; const char *lb[ZDIAL_MAX];
-        for(int i = 0; i < s->nopts; i++){ zlower(names[i], sizeof names[i], tr(s->opts[i])); lb[i] = names[i]; }
-        int v = get_val(s); if(v < 0 || v >= s->nopts) v = 0;
-        zdial_build(root, lb, s->nopts, v, zdetail_pick, 100, "settings.zdetail");
-        zdial_set_color(v, TC(ACCENT_PRIMARY));
-        if(s->opt_descs) for(int i = 0; i < s->nopts; i++) if(s->opt_descs[i]){ char d[120]; zlower(d, sizeof d, tr(s->opt_descs[i])); zdial_set_sub(i, d); }
+        int is_theme = s->cfg_key && !strcmp(s->cfg_key, "theme_preset");
+        int n = is_theme ? N_THEME_SHOWN : s->nopts;            /* themes: only the offered presets, no nameless rows */
+        g_zdetail_theme = is_theme;
+        int v = get_val(s), f = 0;
+        for(int r = 0; r < n; r++){
+            int i = is_theme ? THEME_SHOWN[r] : r;
+            zlower(names[r], sizeof names[r], tr(s->opts[i])); lb[r] = names[r];
+            if(i == v) f = r;
+        }
+        zdial_build(root, lb, n, f, zdetail_pick, 100, "settings.zdetail");
+        if((is_theme ? THEME_SHOWN[f] : f) == v) zdial_set_color(f, TC(ACCENT_PRIMARY));
+        if(s->opt_descs) for(int r = 0; r < n; r++){ int i = is_theme ? THEME_SHOWN[r] : r;
+            if(s->opt_descs[i]){ char d[120]; zlower(d, sizeof d, tr(s->opt_descs[i])); zdial_set_sub(r, d); } }
         char t[64]; zlower(t, sizeof t, tr(display_label(s)));
         zune_pivot(root, t, detail_back_cb);
         zune_status(root, SCR_SETTING_DETAIL);
@@ -1609,10 +1623,7 @@ void setting_detail_refresh(void){
         lv_obj_t *list = make_list(g_detail_root);
         lv_obj_set_height(list,210);
         int is_theme = !strcmp(s->cfg_key, "theme_preset");
-        /* Themes: Disco first, then Ring, Braun and Stone; the other presets stay in the code and keep working if
-         * already selected, but are not offered here for now. Rows still carry the real preset index. */
-        int THEME_SHOWN[7] = { THEME_PRESET_DISCO, THEME_PRESET_NULL, THEME_PRESET_SIMPLE, THEME_PRESET_ZUNE, THEME_PRESET_RING, THEME_PRESET_BRAUN, THEME_PRESET_STONE }, nshown = 7;
-        int nrows = is_theme ? nshown : s->nopts;
+        int nrows = is_theme ? N_THEME_SHOWN : s->nopts;
         for(int r = 0; r < nrows; r++){
             int i = is_theme ? THEME_SHOWN[r] : r;
             lv_obj_t *row = setting_card(list);

@@ -130,7 +130,8 @@ static void res_row(const mdb_song_t *s){
     lv_obj_set_pos(a, 12, 31); lv_obj_set_size(a, 244, 20);
     lv_obj_set_style_text_font(a, ui_font_user(16), 0);
     lv_obj_set_style_text_color(a, TC(TEXT_LYRICS), 0);
-    if(th_zune()){ zrow(r, t, a); lv_obj_set_pos(t, 12, 4); lv_obj_set_pos(a, 14, 34); lv_obj_set_height(r, 56); }
+    /* the Zune title font is taller than 24 px: a fixed height would make the circular scroll run vertically */
+    if(th_zune()){ zrow(r, t, a); lv_obj_set_height(t, LV_SIZE_CONTENT); lv_obj_set_pos(t, 12, 4); lv_obj_set_pos(a, 14, 34); lv_obj_set_height(r, 56); }
 }
 /* an artist hit: one line with the microphone; a tap opens the artist's albums */
 static char g_res_art[5][MDB_STR];

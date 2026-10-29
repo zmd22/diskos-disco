@@ -120,7 +120,15 @@ static void build_page(void);
 static const char *sc_key(int slot){                                         /* the stored choice ("" = empty) */
     char k[8]; snprintf(k, sizeof k, "sc%d", slot + 1);
     const char *v = simple_cfg_get_str(k, NULL);
-    return v ? v : SC_DEFAULT[slot];
+    if(v) return v;
+    if(th_zune() && slot < 2){   /* Zune: Weather and Equalizer are on the main menu already; offer two built-in apps */
+        static char zk[2][40];
+        static const char *const ZAPP[2] = { "album-roulette", "boomshine" };
+        char id[33]; md5_hex(ZAPP[slot], strlen(ZAPP[slot]), id);
+        snprintf(zk[slot], sizeof zk[slot], "appid:%s", id);
+        return zk[slot];
+    }
+    return SC_DEFAULT[slot];
 }
 static int app_index(const char *name){
     int found = -1;
