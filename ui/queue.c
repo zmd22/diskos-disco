@@ -57,6 +57,10 @@ static uint32_t g_back_at;                       /* the Previous button was just
 void queue_note_prev(void){ g_back_at = lv_tick_get() | 1; }
 static long g_last_pos, g_last_dur;               /* where the last song was, to tell a natural end */
 static int  g_skip_change;                        /* the user just started something: that start isn't ours */
+/* When the queue had to play on its own (the playing list couldn't be read), the list it interrupted - by its
+ * name, not its rows - and the position after the interrupted song: it is restarted there when the queue ends. */
+static int  g_resume_type = -1; static char g_resume_name[256]; static long g_resume_pid; static int g_resume_pos;
+static int  g_was_playing;
 
 static void view_reload(void);
 /* ---------------------------------------------------------------- storage */
@@ -255,7 +259,7 @@ void queue_path_removed(const char *p){                      /* file / folder de
 }
 /* the user started something else: the queue stays, and re-anchors after the new song */
 void queue_note_external_play(void){
-    g_active = 0;                                             /* it plays after the song you just started */
+    g_active = 0; g_resume_type = -1;                         /* it plays after the song you just started */
     g_skip_change = 1;
 }
 long queue_pid(int create){ (void)create; return 0; }        /* the queue is no longer a playlist */
@@ -311,7 +315,15 @@ static void pop_through(int k){ memmove(&g_q[0], &g_q[k+1], (size_t)(g_qn - k - 
                                 if(screen_current() == SCR_QUEUE) view_reload(); }
 /* Nothing to come back to (nothing loaded, or nothing playing whose song we can identify): the queue is the whole
  * list. Song `first` starts now and the rest follow in order; in the Shuffle play mode the queue is shuffled first.
- * When the queue is done, playback simply stops (there is no album or playlist to return to). */
+ * When the queue is done, playback stops - unless remember_resume() kept the list it interrupted (queue_tick). */
+static void remember_resume(const track_state_t *st){
+    if(g_active && g_resume_type >= 0) return;                    /* a running queue keeps its way back */
+    g_resume_type = -1;
+    if(!st->have_track || st->pos_id <= 0) return;
+    int type = ui_play_context(&g_resume_type, g_resume_name, sizeof g_resume_name, &g_resume_pid);
+    if(type < 0 || (type == 5 && g_resume_pid <= 0)){ g_resume_type = -1; return; }   /* a single song, or the queue's own copy */
+    g_resume_pos = st->pos_id + 1;
+}
 static int start_fresh(int first){
     if(first < 0 || first >= g_qn) return 0;
     if(!g_copy) g_copy = malloc(sizeof(*g_copy) * (QMAX + RMAX));
@@ -335,11 +347,12 @@ int queue_next(void){
     if(g_qn == 0) return 0;
     if(!ui_local_playback_allowed() || modes_output_busy()) return -1;
     track_state_t st; ipc_get_state(&st);
+    if(!g_active) g_resume_type = -1;                            /* a running queue keeps its way back */
     if(!st.have_track) return start_fresh(0);                                /* nothing loaded: the queue is the list */
     if(mdb_is_book_path(st.path)) return 0;
     int current=mdb_queue_current_id(st.path,st.pos_id,st.title);
-    if(!current){ fprintf(stderr, "queue next: playing song not identified - the queue plays on its own\n"); return start_fresh(0); }
-    if(!g_active && !capture_context(current, 0)){ fprintf(stderr, "queue next: list unreadable - the queue plays on its own\n"); return start_fresh(0); }
+    if(!current){ fprintf(stderr, "queue next: playing song not identified - the queue plays on its own\n"); remember_resume(&st); return start_fresh(0); }
+    if(!g_active && !capture_context(current, 0)){ fprintf(stderr, "queue next: list unreadable - the queue plays on its own\n"); remember_resume(&st); return start_fresh(0); }
     if(!play_copy(0)) return -1;
     g_prev2=current; g_last_id=g_q[0].id;
     pop_through(0);
@@ -351,15 +364,18 @@ void queue_jump(int i){                                       /* play queued son
     track_state_t st; ipc_get_state(&st);
     int current = st.have_track ? mdb_queue_current_id(st.path,st.pos_id,st.title) : 0;
     /* The queued song always starts. If the playing song can't be found in the library, or the list it plays from
-     * can't be read, the queue simply plays on its own (what was playing doesn't resume after it) - better than
-     * refusing. The log says which, so the cause can be found. */
+     * can't be read, the queue plays on its own; that list is then restarted after the interrupted song when the
+     * queue ends (by name and position, see queue_tick). The log says which, so the cause can be found. */
+    if(!g_active) g_resume_type = -1;                            /* a running queue keeps its way back */
     if(!current){
         if(st.have_track) fprintf(stderr, "queue: playing song not identified (%s, pos %d) - starting the queue on its own\n", st.path, st.pos_id);
+        remember_resume(&st);
         if(start_fresh(i) < 0){ fprintf(stderr, "queue: start_fresh failed\n"); ui_toast("Couldn't start queued song - try again"); }
         return;
     }
     if(!g_active && !capture_context(current, 0)){
         fprintf(stderr, "queue: the playing list couldn't be read (song %d, type %d, %d rows) - starting the queue on its own\n", current, g_ctx_type, g_nctx);
+        remember_resume(&st);
         if(start_fresh(i) < 0){ fprintf(stderr, "queue: start_fresh failed\n"); ui_toast("Couldn't start queued song - try again"); }
         return;
     }
@@ -367,7 +383,7 @@ void queue_jump(int i){                                       /* play queued son
     else fprintf(stderr, "queue: handing the queue to the player failed\n");
 }
 void queue_tick(const track_state_t *st, int playing){
-    (void)playing;
+    int was_playing = g_was_playing; g_was_playing = playing;
     if(!st || !st->have_track || !ui_local_playback_allowed() || modes_output_busy()) return;
     load();
     /* The song's ID only changes with the track: look it up once per (path, list position, title), not every frame.
@@ -420,6 +436,15 @@ void queue_tick(const track_state_t *st, int playing){
         if(!forward) return;                                  /* Previous: left alone */
         if(g_qn > 0){ play_copy(0); return; }                 /* the copy is out of date (reordered / added / a repeat): the head now */
         hand_back(idx_of(g_rest, g_nrest, current) >= 0 ? current : (g_nrest ? g_rest[0] : current));   /* queue done */
+        return;
+    }
+    /* A queue that played on its own has nothing after it: the player stops at the end of its last song. Back to
+     * the list it interrupted, after the interrupted song. */
+    if(g_active && g_resume_type >= 0 && g_qn == 0 && g_ncopy > 0 && current == g_copy[g_ncopy - 1]
+       && was_playing && !playing && g_last_dur > 0 && g_last_pos >= g_last_dur - 2500){
+        int type = g_resume_type; g_resume_type = -1;
+        if(ui_play_restore(type, g_resume_name, g_resume_pid, g_resume_pos)) g_active = 0;
+        else fprintf(stderr, "queue: returning to the interrupted list failed (type %d, pos %d)\n", type, g_resume_pos);
         return;
     }
     g_last_pos = st->position_ms; g_last_dur = st->duration_ms;

@@ -9,7 +9,7 @@ diskOS remains beta software; version numbers do not imply broad hardware or fea
 ## Unreleased
 
 - 3.2.2 (test build): the Queue always starts a queued song while something plays - if the playing song or its list can't be read, the queue plays on its own (and the log says why) instead of "Couldn't start queued song". Includes the Zune fixes from pull request #22.
-- Known issue (3.2.2, tested on the Disc): when the queue plays on its own, playback stops after the last queued song - what was playing before does not resume.
+- 3.2.2 test 2: a queue that had to play on its own now returns to the album or playlist it interrupted, after the interrupted song, when its last song ends (it used to stop).
 
 ## 3.2.1
 
