@@ -294,7 +294,8 @@ static int play_copy(int first){
     }
     for(int i=0;i<g_nrest;i++) if(idx_of(candidate,n,g_rest[i])<0) candidate[n++]=g_rest[i];
     int pos=mdb_queue_slot_set(candidate,n,g_q[first].id);
-    if(!pos || !ui_play_slot(pos)) return 0;
+    if(!pos){ fprintf(stderr, "queue: writing the queue to the library failed (%d songs)\n", n); return 0; }
+    if(!ui_play_slot(pos)){ fprintf(stderr, "queue: the player refused the queue (slot %d)\n", pos); return 0; }
     memcpy(g_copy,candidate,(size_t)n*sizeof *g_copy);
     g_ncopy=n; g_active=1;
     return 1;
@@ -337,8 +338,8 @@ int queue_next(void){
     if(!st.have_track) return start_fresh(0);                                /* nothing loaded: the queue is the list */
     if(mdb_is_book_path(st.path)) return 0;
     int current=mdb_queue_current_id(st.path,st.pos_id,st.title);
-    if(!current) return ui_is_playing() ? -1 : start_fresh(0);              /* stopped on an unknown song: start fresh */
-    if(!g_active && !capture_context(current, 0)) return -1;                 /* you skipped this song: your list resumes after it */
+    if(!current){ fprintf(stderr, "queue next: playing song not identified - the queue plays on its own\n"); return start_fresh(0); }
+    if(!g_active && !capture_context(current, 0)){ fprintf(stderr, "queue next: list unreadable - the queue plays on its own\n"); return start_fresh(0); }
     if(!play_copy(0)) return -1;
     g_prev2=current; g_last_id=g_q[0].id;
     pop_through(0);
@@ -349,13 +350,21 @@ void queue_jump(int i){                                       /* play queued son
     load(); if(i < 0 || i >= g_qn) return;
     track_state_t st; ipc_get_state(&st);
     int current = st.have_track ? mdb_queue_current_id(st.path,st.pos_id,st.title) : 0;
-    if(!current){                                                         /* nothing (identifiable) playing */
-        if(st.have_track && ui_is_playing()){ ui_toast("Couldn't start queued song - try again"); return; }
-        if(start_fresh(i) < 0) ui_toast("Couldn't start queued song - try again");
+    /* The queued song always starts. If the playing song can't be found in the library, or the list it plays from
+     * can't be read, the queue simply plays on its own (what was playing doesn't resume after it) - better than
+     * refusing. The log says which, so the cause can be found. */
+    if(!current){
+        if(st.have_track) fprintf(stderr, "queue: playing song not identified (%s, pos %d) - starting the queue on its own\n", st.path, st.pos_id);
+        if(start_fresh(i) < 0){ fprintf(stderr, "queue: start_fresh failed\n"); ui_toast("Couldn't start queued song - try again"); }
         return;
     }
-    if(!g_active && !capture_context(current, 0)){ ui_toast("Couldn't start queued song - try again"); return; }
+    if(!g_active && !capture_context(current, 0)){
+        fprintf(stderr, "queue: the playing list couldn't be read (song %d, type %d, %d rows) - starting the queue on its own\n", current, g_ctx_type, g_nctx);
+        if(start_fresh(i) < 0){ fprintf(stderr, "queue: start_fresh failed\n"); ui_toast("Couldn't start queued song - try again"); }
+        return;
+    }
     if(play_copy(i)){ g_prev2=current; g_last_id=g_q[i].id; pop_through(i); }
+    else fprintf(stderr, "queue: handing the queue to the player failed\n");
 }
 void queue_tick(const track_state_t *st, int playing){
     (void)playing;
