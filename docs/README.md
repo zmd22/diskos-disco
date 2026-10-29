@@ -18,6 +18,7 @@ These guides describe the shipped 3.2.1 source and payload, commit `91a7151720d5
 - [Source map and upstream comparison](SOURCE_MAP.md), [UI implementation](UI.md), [theme contract](../themes.md).
 - [Settings implementation](SETTINGS_TEMPLATE.md), [design rules](DESIGN_SYSTEM.md).
 - [Hardware](HARDWARE.md), [IPC commands](COMMAND_MAP.md), [reverse engineering](RE_CATALOGUE.md).
+- [Audiobook speed](AUDIOBOOK_SPEED.md): why there is no playback-speed control (investigated, not planned).
 
 ## Release and provenance
 
