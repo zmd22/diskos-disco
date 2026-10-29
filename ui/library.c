@@ -2257,9 +2257,9 @@ static void library_reload(void){
     if(g_restore_y>0 && !g_np_jump){
         lv_obj_update_layout(g_list);lv_obj_scroll_to_y(g_list,g_restore_y,LV_ANIM_OFF);
         lv_obj_update_layout(g_list);virt_follow();curve_rows();pdots_update();
-    } else if(g_album_wheel_hdr && !g_np_jump && curvelist_wheel()){
-        /* Wheel album, first open: the cover / Play / Shuffle row would wait in the middle with the songs below the
-         * screen. Raise it to just under the screen header so the first songs show beneath it; the first scroll
+    } else if((g_album_wheel_hdr || (g_view==VIEW_ARTIST_ALBUMS && g_has_header)) && !g_np_jump && curvelist_wheel()){
+        /* Wheel album (and an artist's albums, whose first row is Play / Shuffle), first open: that row would wait in
+         * the middle with the rest below the screen. Raise it to just under the screen header so the first songs show beneath it; the first scroll
          * snaps back to the usual wheel. Not a snap point: scroll_to never snaps, only a drag does. */
         lv_obj_update_layout(g_list);
         int y = lv_obj_get_style_pad_top(g_list, 0) - AWH_RAISE;
@@ -2283,6 +2283,14 @@ void library_artist_mode_changed(void){
     if(g_list) library_reload();
 }
 lv_obj_t *library_scroller(void){ return g_list; }
+/* theme_kit.c, after a styling pass over `root`: if that was the library's screen in Wheel mode, lay the wheel out again
+ * (the pass gives new rows the theme's row look - Squash: pills - which the wheel takes off). Rows already placed keep
+ * their key and return at once. */
+void library_kit_done(lv_obj_t *root){
+    if(!g_list || !root || !curvelist_wheel() || library_wall_active()) return;
+    lv_obj_t *p = g_list; while(p && p != root) p = lv_obj_get_parent(p);   /* the pass covered the list */
+    if(p) curve_rows();
+}
 
 /* If the user is inside an album/artist/genre drill-in, report the player
  * list_type (3=album,2=artist,10=genre) + name so a song tap plays the exact

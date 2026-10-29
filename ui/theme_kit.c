@@ -212,6 +212,9 @@ void kit_accent_changed(void){
     lv_obj_t *root=screen_get_root(screen_current());
     if(root)lv_obj_invalidate(root);
 }
+/* Wheel lists: a theme that styles rows (Squash's pills, its list placement) must not undo the wheel layout until the
+ * first scroll - the library lays its wheel out again after every pass over its screen (library.c). */
+void library_kit_done(lv_obj_t *root);
 /* sizes decide roles (a row is wide): lay out first, or content built this frame still measures 0 */
 void kit_pass(lv_obj_t *root){
     if(!root || !theme_kit()->style) return;
@@ -221,11 +224,13 @@ void kit_pass(lv_obj_t *root){
     }
     lv_obj_update_layout(root); pass(root, KIT_OTHER, 1, on_top_layer(root), force);
     if(theme_kit()->pass_end) theme_kit()->pass_end();
+    library_kit_done(root);
 }
 void kit_restyle(lv_obj_t *root){
     if(!root || !theme_kit()->style) return;
     lv_obj_update_layout(root); pass(root, KIT_OTHER, 1, on_top_layer(root), 1);
     if(theme_kit()->pass_end) theme_kit()->pass_end();
+    library_kit_done(root);
 }
 
 void kit_keep(lv_obj_t *obj){ if(obj) lv_obj_add_flag(obj, KIT_DONE); }
