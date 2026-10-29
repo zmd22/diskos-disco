@@ -6,6 +6,19 @@ Entries follow the Keep a Changelog format, with Added, Changed, and Fixed categ
 diskOS remains beta software; version numbers do not imply broad hardware or feature validation.
 
 
+## 3.2.1
+
+Smoother wheel lists, depth for Disco's buttons, idle power-off that respects the charger, a safer power-button shutdown and a Queue fix. [Release notes](docs/releases/v3.2.1.md).
+
+### Changed
+- Wheel lists: size and colour change smoothly with the distance from the middle; rows pack round the large middle row and follow the round edge; the Library's main lists show their size ("80 songs") above the first row.
+- Disco: buttons have a little depth (lighter top, fine light edge, soft shadow), flat when pressed.
+
+### Fixed
+- Wheel mode: the Queue (and lists below a status, like Bluetooth and Wi-Fi) no longer move over their buttons; the buttons respond again and "Nothing queued" shows.
+- Idle power-off never switches the Disc off on the charger, even with a full battery or one held at 80 % (the charger is remembered until the level drops; a computer USB connection counts).
+- Holding the power button: stats and battery history are saved and the card flushed before the player's own power-off.
+
 ## 3.2.0
 
 Wheel lists, the QS style *Shade*, the letter wheel and A–Z keypad, round track menus, one header line everywhere, cleaner fades, idle power-off fixed and a battery-friendlier interface. [Release notes](docs/releases/v3.2.0.md).

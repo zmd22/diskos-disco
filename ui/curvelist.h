@@ -15,7 +15,8 @@ int curvelist_circle_half(int radius, int distance);
 void curvelist_edge_fade(lv_obj_t *list);   /* Disco, Squash, Null: soft top/bottom edges in the list's empty space */
 int curvelist_disco_scroll(void);
 const lv_image_dsc_t *curvelist_fade_strip(int vertical, int len, int opaque_end, lv_color_t col);   /* dithered fade ramp */
-int  curvelist_wheel(void);                                 /* List motion "Wheel" is on (Disco, Squash, Null) */
+int  curvelist_wheel(void);
+void curvelist_wheel_exclude(lv_obj_t *list);   /* this list keeps its own motion in Wheel mode */                                 /* List motion "Wheel" is on (Disco, Squash, Null) */
 void curvelist_wheel_list(lv_obj_t *list, int row_h);       /* Wheel: centring pads + snap */
 void curvelist_wheel_row(lv_obj_t *row, lv_obj_t *list);    /* Wheel: one row's size, place and colour */   /* Disco > Scroll: 0 Classic, 1 Straight, 2 Disco (0 outside Disco/Null) */
 int curvelist_disco_geom(int mode, int y1, int y2, int full_w, int *w, int *shift);   /* 1 = handled */

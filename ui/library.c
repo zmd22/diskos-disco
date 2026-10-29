@@ -343,7 +343,39 @@ static void lean_free_edge(int y1, int y2, int *w, int *shift){
     (void)y1; (void)y2;
     *w += LEAN; *shift += disco_mirror() ? LEAN / 2 : -LEAN / 2;
 }
+int disco_mirror(void);
 static void curve_rows(void);
+/* Wheel: the space above the first row (it waits in the middle) holds the list's size - "80 songs" - large and
+ * quiet, and scrolls away with the list. Only on the main lists; drilled views have their own first rows. */
+static void wheel_lead(void){
+    static const char *NOUN[][2] = { [VIEW_SONGS]={"song","songs"}, [VIEW_ALBUMS]={"album","albums"}, [VIEW_ARTISTS]={"artist","artists"},
+                                     [VIEW_GENRES]={"genre","genres"}, [VIEW_PLAYLISTS]={"playlist","playlists"}, [VIEW_FAVS]={"favourite","favourites"} };
+    int n = g_count;
+    if(g_view == VIEW_PLAYLISTS){   /* the playlists' rows, less "New Playlist" */
+        n = 0; for(uint32_t i = 0; i < lv_obj_get_child_count(g_list); i++) if(lv_obj_has_flag(lv_obj_get_child(g_list, i), LV_OBJ_FLAG_USER_1)) n++;
+        n--;
+    }
+    int ok = (g_view==VIEW_SONGS||g_view==VIEW_ALBUMS||g_view==VIEW_ARTISTS||g_view==VIEW_GENRES||g_view==VIEW_PLAYLISTS||g_view==VIEW_FAVS) && n > 0;
+    lv_obj_t *first = lv_obj_get_child_count(g_list) ? lv_obj_get_child(g_list, 0) : NULL;
+    int has = first && lv_obj_has_flag(first, LV_OBJ_FLAG_USER_3) && !lv_obj_has_flag(first, LV_OBJ_FLAG_USER_1);
+    if(!ok){ if(has) lv_obj_delete(first); return; }
+    lv_obj_t *lead = first, *num, *noun;
+    if(!has){
+        lead = lv_obj_create(g_list); lv_obj_remove_style_all(lead); kit_keep(lead);
+        lv_obj_set_size(lead, lv_pct(100), 80); lv_obj_move_to_index(lead, 0);
+        lv_obj_add_flag(lead, LV_OBJ_FLAG_USER_3); lv_obj_remove_flag(lead, LV_OBJ_FLAG_SNAPPABLE | LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+        num = lv_label_create(lead); kit_keep(num); lv_obj_set_style_text_font(num, TF(UI_28), 0);
+        lv_obj_set_style_text_color(num, theme_color_mix(TC(CANVAS), TC(TEXT_PRIMARY), 120), 0);
+        noun = lv_label_create(lead); kit_keep(noun); lv_obj_set_style_text_font(noun, TF(UI_14), 0);
+        lv_obj_set_style_text_color(noun, theme_color_mix(TC(CANVAS), TC(TEXT_PRIMARY), 150), 0);
+    } else { num = lv_obj_get_child(lead, 0); noun = lv_obj_get_child(lead, 1); }
+    char b[16]; snprintf(b, sizeof b, "%d", n);
+    if(strcmp(lv_label_get_text(num), b)) lv_label_set_text(num, b);
+    const char *w = tr(NOUN[g_view][n == 1 ? 0 : 1]);
+    if(strcmp(lv_label_get_text(noun), w)) lv_label_set_text(noun, w);
+    int lx = disco_mirror() ? 20 : -14;   /* clear of Disco's navigation shard */
+    lv_obj_align(num, LV_ALIGN_BOTTOM_MID, lx, -22); lv_obj_align(noun, LV_ALIGN_BOTTOM_MID, lx, -4);
+}
 static int g_wheel_settle;
 static void wheel_settle_rows(lv_timer_t *t){ (void)t; g_wheel_settle = 2; curve_rows(); g_wheel_settle = 0; }   /* 2: no new settle from inside */
 static void curve_rows(void){
@@ -364,6 +396,7 @@ static void curve_rows(void){
     uint32_t n = lv_obj_get_child_count(g_list);
     int mode = curvelist_disco_scroll();
     if(curvelist_wheel()){
+        wheel_lead();
         if(!g_wheel_settle){ g_wheel_settle = 1;   /* once the theme has styled the rows: place them again shortly after */
             lv_timer_t *st = lv_timer_create(wheel_settle_rows, 80, NULL); lv_timer_set_repeat_count(st, 1); }
         curvelist_wheel_list(g_list, ROW_H);

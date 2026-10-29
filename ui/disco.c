@@ -337,6 +337,21 @@ void disco_menu_glass(orbit_t *o, lv_obj_t *ov){
                 lv_obj_set_style_border_width(o->hub, 1, 0); lv_obj_set_style_border_color(o->hub, TC(TEXT_PRIMARY), 0); lv_obj_set_style_border_opa(o->hub, 60, 0); }
     if(o->ring) lv_obj_add_flag(o->ring, LV_OBJ_FLAG_HIDDEN);                    /* the hub's own ring says it */
 }
+/* ---- shading: Disco's buttons get a little depth - lighter at the top, a fine light edge along the top and a soft
+ * shadow under them - so they stand off the artwork behind. Pressed, the shading flattens. */
+void disco_button_shade(lv_obj_t *b){
+    if(!b || !th_disco()) return;
+    lv_color_t bg = lv_obj_get_style_bg_color(b, 0);
+    lv_obj_set_style_bg_grad_color(b, bg, 0);
+    lv_obj_set_style_bg_color(b, theme_color_mix(TC(FIXED_MEDIA_WHITE), bg, 34), 0);     /* lighter at the top */
+    lv_obj_set_style_bg_grad_dir(b, LV_GRAD_DIR_VER, 0);
+    lv_obj_set_style_bg_grad_dir(b, LV_GRAD_DIR_NONE, LV_STATE_PRESSED);
+    lv_obj_set_style_border_side(b, LV_BORDER_SIDE_TOP, 0);
+    lv_obj_set_style_border_width(b, 1, 0); lv_obj_set_style_border_color(b, TC(FIXED_MEDIA_WHITE), 0); lv_obj_set_style_border_opa(b, 46, 0);
+    lv_obj_set_style_shadow_width(b, 10, 0); lv_obj_set_style_shadow_offset_y(b, 3, 0); lv_obj_set_style_shadow_spread(b, 0, 0);
+    lv_obj_set_style_shadow_color(b, TC(FIXED_MEDIA_BLACK), 0); lv_obj_set_style_shadow_opa(b, 90, 0);
+    lv_obj_set_style_shadow_opa(b, 30, LV_STATE_PRESSED);
+}
 /* ---- glass: opaque surface-coloured cards become translucent (once per screen entry) -------------- */
 static void glass_walk(lv_obj_t *o, uint32_t s1, uint32_t s2, lv_opa_t opa, int depth){
     uint32_t n = lv_obj_get_child_count(o);
@@ -352,6 +367,7 @@ static void glass_walk(lv_obj_t *o, uint32_t s1, uint32_t s2, lv_opa_t opa, int 
                  * (playlist picker, Shortcuts setup, Date & Time boxes, other screens' cards) */
                 int32_t w = lv_obj_get_width(c), h = lv_obj_get_height(c), r = lv_obj_get_style_radius(c, 0);
                 if(h >= 26 && h <= 72 && w >= 60 && r < h / 2) lv_obj_set_style_radius(c, LV_RADIUS_CIRCLE, 0);
+                if(lv_obj_check_type(c, &lv_button_class) && h >= 26 && h <= 72 && !lv_obj_has_flag(c, LV_OBJ_FLAG_USER_1)) disco_button_shade(c);   /* buttons, not list rows */
                 else if(h > 72 && w >= 40 && r < 18) lv_obj_set_style_radius(c, 22, 0);
             }
         }

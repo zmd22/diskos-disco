@@ -2,7 +2,7 @@
 
 > **Development builds on `dev` are experimental / in testing.** Use tagged releases for the published downloads. [Development notes](docs/DEV.md).
 
-**Disco! 3.2.0:** Wheel lists, a now-playing *Shade* before Quick settings, the letter wheel and A–Z keypad, round track menus, one header line everywhere and a battery-friendlier interface. [Release notes](docs/releases/v3.2.0.md) · [Changelog](CHANGELOG.md).
+**Disco! 3.2.1:** Smoother wheel lists, depth for Disco's buttons, idle power-off that respects the charger, a safer power-button shutdown and a Queue fix — on top of 3.2.0's wheel lists, Shade, letter wheel and round track menus. [Release notes](docs/releases/v3.2.1.md) · [Changelog](CHANGELOG.md).
 
 <p align="center">
   <b>Your music. Your kind of Disco.</b><br>

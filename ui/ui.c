@@ -4496,5 +4496,6 @@ void ui_pill_style(lv_obj_t *b, int primary){
         if(ts.x + 24 > lv_obj_get_width(b) && lv_obj_get_width(b) > 60){   /* never clip the word: grow around the centre */
             int grow = ts.x + 24 - lv_obj_get_width(b); lv_obj_set_width(b, ts.x + 24); lv_obj_set_x(b, lv_obj_get_x(b) - grow / 2); }
     }
+    { void disco_button_shade(lv_obj_t *); disco_button_shade(b); }   /* Disco: a little depth */
     kit_keep(b);
 }

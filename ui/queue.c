@@ -688,9 +688,10 @@ void queue_create(lv_obj_t *root){
             if(k) g_clear_btn = o; else g_shuffle_btn = o;
         }
         g_play_btn = NULL;
-        curvelist_attach(&g_cl, g_list, root, 340);
+        curvelist_wheel_exclude(g_list); curvelist_attach(&g_cl, g_list, root, 340);
         for(int k = 0; k < 11; k++) if(g_cl.dot[k]) lv_obj_add_flag(g_cl.dot[k], LV_OBJ_FLAG_HIDDEN);   /* Zune: no position dots */
     } else
+    curvelist_wheel_exclude(g_list);   /* the Queue keeps its own rows in Wheel mode */
     curvelist_attach(&g_cl, g_list, root, QW);
     lv_obj_add_event_cb(g_list,queue_position_cb,LV_EVENT_SCROLL,NULL);
     lv_obj_add_event_cb(g_list,queue_position_cb,LV_EVENT_SCROLL_END,NULL);

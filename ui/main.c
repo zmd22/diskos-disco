@@ -3921,6 +3921,18 @@ int main(int argc, char **argv){
                 if(d && !pk_down && pk_seen_up){ pk_down = 1; pk_since = lv_tick_get(); }
                 else if(!d && pk_down){ pk_down = 0; pk_rel = lv_tick_get(); }
                 int hold = simple_cfg_get_int("pwr_hold_ms", 5000); if(hold < 300) hold = 300;
+                /* The player's own power-off (the 5 s hold) kills the interface and powers off without a sync. Save
+                 * what diskOS holds in memory and flush the card well before that; harmless if the key is let go. */
+                static int pk_saved; static pid_t pk_sync;
+                if(pk_sync > 0 && waitpid(pk_sync, NULL, WNOHANG) != 0) pk_sync = 0;   /* reap the flush */
+                if(!pk_down) pk_saved = 0;
+                else if(!pk_saved && lv_tick_elaps(pk_since) >= (uint32_t)(hold > 2500 ? hold - 2500 : hold / 2)){
+                    pk_saved = 1;
+                    stats_flush(); usage_save();
+                    char *sync_argv[] = { "sync", NULL }; pid_t sp = 0;
+                    if(pk_sync <= 0 && command_spawn(&sp, sync_argv) == 0 && sp > 0) pk_sync = sp;
+                    fprintf(stderr, "power key held: saved and flushed before the player's power-off\n"); fflush(stderr);
+                }
                 if(pk_down && !pk_shown && lv_tick_elaps(pk_since) >= (uint32_t)hold){
                     pk_shown = 1;
                     if(bl_state){ ui_backlight(ui_effective_brightness()); bl_state = 0; player_blanked = 0; }   /* lit, so it can be seen */

@@ -93,7 +93,35 @@ int usage_charging(void){ return g_chg; }   /* the battery is being charged (pos
 #ifndef POWER_SUPPLY_DIR
 #define POWER_SUPPLY_DIR "/sys/class/power_supply"
 #endif
+/* This Disc lists no charger at all, and its gauge reports current only while it is actually charging: once charging
+ * stops (battery full, or held at 80 % by Charging optimization) a connected charger is invisible. So remember it -
+ * seen charging means on the charger, until the level drops below where the charging stopped (a 1 % fall can only
+ * happen on battery). A USB connection to a computer counts too. Errs on the safe side: after unplugging a full
+ * Disc, it counts as plugged in until the first 1 % is used. */
+static int charger_remembered(void){
+    static int on, held = -1;
+    if(g_chg){ on = 1; if(g_batt > held) held = g_batt; }
+    else if(on && g_batt >= 0 && held >= 0 && g_batt < held){ on = 0; held = -1; }
+    if(!on) held = -1;
+    return on;
+}
+static int usb_to_computer(void){   /* read at most every 5 s */
+    static uint32_t at; static int have, on;
+    if(have && lv_tick_get() - at < 5000u) return on;
+    have = 1; at = lv_tick_get();
+    char v[24] = ""; FILE *f = fopen("/sys/class/android_usb/android0/state", "r");
+    if(f){ if(!fgets(v, sizeof v, f)) v[0] = 0; fclose(f); }
+    on = !strncmp(v, "CONFIGURED", 10);
+    return on;
+}
+static int plugged_listed(void);
 int usage_plugged_in(void){
+    int r = plugged_listed();
+    if(r == 1) return 1;
+    if(charger_remembered() || usb_to_computer()) return 1;
+    return r;
+}
+static int plugged_listed(void){
     static uint32_t at; static int have, cached = -1;
     uint32_t now = lv_tick_get();
     if(have && now - at < 5000u) return cached;

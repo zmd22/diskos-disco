@@ -153,66 +153,105 @@ static void wheel_paint(lv_obj_t *o, lv_color_t c){
 #define WHEEL_FADE_TOP 26   /* Wheel: the soft top edge, taken from the header's space above the row above */
 #define WHEEL_FADE_BOT 52   /* Wheel: the soft bottom edge, the footer's space at the foot of the screen */
 #define WHEEL_ABOVE 46      /* room for the one row shown above the current one */
+/* Lists that stay as they are in Wheel mode (the Queue: its rows are handles to drag, its current song a pill). */
+static lv_obj_t *g_wheel_off[4];
+void curvelist_wheel_exclude(lv_obj_t *list){
+    for(int i = 0; i < 4; i++) if(g_wheel_off[i] == list) return;
+    for(int i = 0; i < 4; i++) if(!g_wheel_off[i] || !lv_obj_is_valid(g_wheel_off[i])){ g_wheel_off[i] = list; return; }
+}
+/* Excluded too: a list that does not start right under the header (Bluetooth, Wi-Fi: a status and controls above) -
+ * it has no room to pin its current row to the middle without covering them, so it keeps its usual motion. */
+static int wheel_excluded(lv_obj_t *list){
+    for(int i = 0; i < 4; i++) if(g_wheel_off[i] == list) return 1;
+    return lv_obj_get_y(list) > 70;
+}
 void curvelist_wheel_list(lv_obj_t *list, int row_h){
     int top = 50, h = 352 - top;   /* the list starts right under the header line: more shows above the current row */
     if(lv_obj_get_y(list) != top || lv_obj_get_height(list) != h){ lv_obj_set_y(list, top); lv_obj_set_height(list, h); }
     int pt = 180 - row_h / 2 - top, pb = h - pt - row_h; if(pb < 0) pb = 0;
+    /* a lead in the space above the first row (USER_3, not a row): it takes that space, the padding gives it back */
+    lv_obj_t *lead = lv_obj_get_child_count(list) ? lv_obj_get_child(list, 0) : NULL;
+    if(lead && lv_obj_has_flag(lead, LV_OBJ_FLAG_USER_3) && !lv_obj_has_flag(lead, LV_OBJ_FLAG_USER_1)){
+        int lh = pt - lv_obj_get_style_pad_row(list, 0); if(lh < 0) lh = 0;
+        if(lv_obj_get_height(lead) != lh) lv_obj_set_height(lead, lh);
+        pt = 0;
+    }
     if(lv_obj_get_style_pad_top(list, 0) != pt || lv_obj_get_style_pad_bottom(list, 0) != pb){
         lv_obj_set_style_pad_top(list, pt, 0); lv_obj_set_style_pad_bottom(list, pb, 0); }
     lv_obj_set_scroll_snap_y(list, LV_SCROLL_SNAP_START);
 }
+/* The wheel's size profile, in 1/256: 110 % in the middle, easing down to 84 % one row away and 68 % two rows away,
+ * and its running integral (how far a row's centre sits from the middle when the rows in between touch). */
+static int wheel_scale(int u){   /* u: distance in hundredths of a row */
+    if(u <= 100) return 282 - 66 * u / 100;          /* 282 -> 216 */
+    if(u <= 200) return 216 - 42 * (u - 100) / 100;  /* 216 -> 174 */
+    return 174;
+}
+static int wheel_reach(int u){   /* integral of the profile over 0..u, in hundredths of a row (x 1/256) */
+    long r = 0; int seg;
+    seg = u < 100 ? u : 100; r += (long)seg * (282 + wheel_scale(seg)) / 2;
+    if(u > 100){ seg = (u < 200 ? u : 200) - 100; r += (long)seg * (216 + wheel_scale(100 + seg)) / 2; }
+    if(u > 200) r += (long)(u - 200) * 174;
+    return (int)(r / 256);
+}
 void curvelist_wheel_row(lv_obj_t *r, lv_obj_t *list){
-    lv_area_t a, l; lv_obj_get_coords(r, &a); lv_obj_get_coords(list, &l);
+    lv_area_t a; lv_obj_get_coords(r, &a);
     int h = lv_area_get_height(&a); if(h < 1) return;
-    lv_area_t sc; lv_obj_get_coords(lv_obj_get_parent(list), &sc);
-    int cy = (a.y1 + a.y2) / 2 - lv_obj_get_style_translate_y(r, 0), vc = sc.y1 + 180;   /* the screen's middle */
-    (void)l;
-    int dq = (cy - vc) * 100 / h;                                   /* distance from the middle, in hundredths of a row */
-    int ad = abs(dq), lvl = ad < 50 ? 0 : ad < 150 ? 1 : 2;
-    static const int SC[3] = { 282, 218, 176 };                     /* 110 %, 85 %, 69 % */
-    intptr_t key = ((intptr_t)lvl << 20 | ((dq / 10) & 0xFFFF)) + 0x5A000000;
-    /* the middle row in the main text colour (white, or black on light); the rest greyed towards the background */
-    lv_color_t want = lvl == 0 ? TC(TEXT_PRIMARY) : theme_color_mix(TC(CANVAS), TC(TEXT_PRIMARY), lvl == 1 ? 120 : 185);
-    lv_obj_t *probe = NULL;                                         /* a theme pass may have restyled the row since */
-    for(uint32_t i = 0; i < lv_obj_get_child_count(r) && !probe; i++) if(lv_obj_check_type(lv_obj_get_child(r, i), &lv_label_class) && !is_icon(lv_obj_get_child(r, i))) probe = lv_obj_get_child(r, i);   /* a text label, not an icon */
-    int fresh = lv_obj_get_style_bg_opa(r, 0) == LV_OPA_TRANSP && lv_obj_get_style_border_width(r, 0) == 0 && (!probe || lv_color_eq(lv_obj_get_style_text_color(probe, 0), want));
+    lv_area_t ra; lv_obj_get_coords(lv_obj_get_parent(list), &ra);   /* its screen, which may be sliding in */
+    int centred = lv_obj_has_flag(r, LV_OBJ_FLAG_USER_2);             /* centred content (the album row) */
+    int cy = (a.y1 + a.y2) / 2 - lv_obj_get_style_translate_y(r, 0) - ra.y1;   /* where the row sits on its own */
+    int pitch = centred ? h : h + lv_obj_get_style_pad_row(list, 0);   /* one row: its height and the gap to the next */
+    int dq = (cy - 180) * 100 / pitch, u = abs(dq);                   /* distance from the middle, hundredths of a row */
+    /* Size, colour and place change smoothly with the distance: a few steps per row, so a scroll reads as one
+     * continuous roll. The rows pack round the large middle one (no gaps, no overlap) and their starts follow the
+     * round edge a little, like text on a drum. */
+    intptr_t key = ((intptr_t)(dq / 6) & 0xFFFF) + 0x5A000000;
+    int sc = wheel_scale(u);
+    int fade = u * 120 / 100; if(fade > 205) fade = 205;              /* 0 in the middle .. 205 at the outside */
+    lv_color_t want = fade < 8 ? TC(TEXT_PRIMARY) : theme_color_mix(TC(CANVAS), TC(TEXT_PRIMARY), (uint8_t)fade);
+    lv_obj_t *probe = NULL;                                           /* a theme pass may have restyled the row since */
+    for(uint32_t i = 0; i < lv_obj_get_child_count(r) && !probe; i++)
+        if(lv_obj_check_type(lv_obj_get_child(r, i), &lv_label_class) && !is_icon(lv_obj_get_child(r, i))) probe = lv_obj_get_child(r, i);
+    int fresh = lv_obj_get_style_bg_opa(r, 0) == LV_OPA_TRANSP && lv_obj_get_style_border_width(r, 0) == 0 &&
+                (!probe || lv_color_eq(lv_obj_get_style_text_color(probe, 0), want));
     if(fresh && (intptr_t)lv_obj_get_user_data(r) == key) return;
     lv_obj_set_user_data(r, (void *)key);
     lv_obj_set_style_bg_opa(r, LV_OPA_TRANSP, 0); lv_obj_set_style_border_width(r, 0, 0);   /* no pill */
     lv_obj_set_style_shadow_width(r, 0, 0); lv_obj_set_style_outline_width(r, 0, 0);
-    if(!lv_obj_get_style_transform_pivot_x(r, 0)) lv_obj_set_style_transform_pivot_x(r, 18, 0);   /* from the text's start (left edges in line), unless the row set its own pivot (centred content) */ lv_obj_set_style_transform_pivot_y(r, h / 2, 0);
-    lv_obj_set_style_transform_scale(r, SC[lvl], 0);
-    {   /* Disco's navigation shard on the rim: no row reaches under it. A row whose far end (a time, a count, a ›)
-         * would - at its size here, or already at full width - moves left until it is 16 px clear, as far as the round
-         * edge on the left allows; whatever is still over is taken off its size. Rows are never narrowed: their parts
-         * would be cut. Left-handed: rows already start right of the shard. */
-        int sc = SC[lvl], w0 = lv_obj_get_width(r), shift = 0;
-        lv_area_t ra; lv_obj_get_coords(lv_obj_get_parent(list), &ra);   /* its screen, which may be sliding in */
-        int ax1 = a.x1 - lv_obj_get_style_translate_x(r, 0) - ra.x1;      /* where the row sits on its screen, before any shift of ours */
-        int ay = (a.y1 + a.y2) / 2 - ra.y1;
-        int y1 = ay - h * sc / 512, y2 = y1 + h * sc / 256;
-        int rx = lv_obj_has_flag(r, LV_OBJ_FLAG_USER_2) ? 0 : disco_clear_right(y1, y2);
-        int pv = lv_obj_has_flag(r, LV_OBJ_FLAG_USER_2) ? w0 / 2 : 18;   /* USER_2: centred content (the album row) */
-        if(rx > 0){
-            int limit = rx - 16, right = ax1 + pv + (w0 - pv) * sc / 256, over = right - limit;
-            if(over > 0){
-                int cy = ay, dy = abs(cy - 180), edge = 180 - (dy < 180 ? curvelist_circle_half(180, dy) : 0) + 12;
-                int left = ax1 + pv - pv * sc / 256;                          /* the row's left end at this size */
-                shift = over < left - edge ? over : (left - edge > 0 ? left - edge : 0);
-                over -= shift;
-                if(over > 0 && w0 - pv > 0){ sc = (limit + shift - ax1 - pv) * 256 / (w0 - pv); if(sc < 160) sc = 160; }
-            }
+    lv_obj_set_style_transform_pivot_y(r, h / 2, 0);
+    /* packing: the centre goes where the rows in between, at their sizes, put it */
+    int ty = 0;
+    if(!centred){ int want_off = wheel_reach(u) * pitch / 100; ty = (dq < 0 ? -1 : 1) * (want_off - u * pitch / 100); }
+    int vy = cy + ty, dy = abs(vy - 180);
+    /* the drum: rows away from the middle start a little further in, along the round edge */
+    int indent = 0;
+    if(!centred){ int half = dy < 170 ? curvelist_circle_half(170, dy) : 0; indent = (170 - half) * 2 / 3; }
+    /* Disco's navigation shard: no row reaches under it. A row whose far end would moves left until it is 16 px
+     * clear, as far as the round edge allows; whatever is still over comes off its size. Rows are never narrowed. */
+    int w0 = lv_obj_get_width(r), shift = 0;
+    int ax1 = a.x1 - lv_obj_get_style_translate_x(r, 0) - ra.x1 + indent;
+    int pv = centred ? w0 / 2 : 18;                                   /* grow from the text's start (centred: the middle) */
+    int y1 = vy - h * sc / 512, y2 = y1 + h * sc / 256;
+    int rx = centred ? 0 : disco_clear_right(y1, y2);
+    if(rx > 0){
+        int limit = rx - 16, right = ax1 + pv + (w0 - pv) * sc / 256, over = right - limit;
+        if(over > 0){
+            int edge = 180 - (dy < 180 ? curvelist_circle_half(180, dy) : 0) + 12;
+            int left = ax1 + pv - pv * sc / 256;
+            shift = over < left - edge ? over : (left - edge > 0 ? left - edge : 0);
+            over -= shift;
+            if(over > 0 && w0 - pv > 0){ sc = (limit + shift - ax1 - pv) * 256 / (w0 - pv); if(sc < 150) sc = 150; }
         }
-        if(lv_obj_get_style_transform_pivot_x(r, 0) != pv) lv_obj_set_style_transform_pivot_x(r, pv, 0);
-        if(sc != SC[lvl]) lv_obj_set_style_transform_scale(r, sc, 0);
-        lv_obj_set_style_translate_x(r, -shift, 0);
     }
-    lv_obj_set_style_translate_y(r, 0, 0);   /* natural spacing: rows of different heights (an album's cover row) never overlap */
-    g_wheel_icon = lvl == 0 ? TC(ACCENT_PRIMARY) : theme_color_mix(TC(CANVAS), TC(ACCENT_PRIMARY), lvl == 1 ? 120 : 185);   /* Squash icons stay orange */
+    if(lv_obj_get_style_transform_pivot_x(r, 0) != pv) lv_obj_set_style_transform_pivot_x(r, pv, 0);
+    lv_obj_set_style_transform_scale(r, sc, 0);
+    lv_obj_set_style_translate_x(r, indent - shift, 0);
+    lv_obj_set_style_translate_y(r, ty, 0);
+    g_wheel_icon = fade < 8 ? TC(ACCENT_PRIMARY) : theme_color_mix(TC(CANVAS), TC(ACCENT_PRIMARY), (uint8_t)fade);   /* Squash icons stay orange */
     wheel_paint(r, want);
 }
 static void curve(curvelist_t *c){
-    if(curvelist_wheel()){
+    if(curvelist_wheel() && !wheel_excluded(c->list)){
         curvelist_wheel_list(c->list, 48);
         for(uint32_t i = 0; i < lv_obj_get_child_count(c->list); i++){
             lv_obj_t *r = lv_obj_get_child(c->list, i);
@@ -331,10 +370,10 @@ static void edge_fade_cb(lv_event_t *e){
     lv_obj_t *list = lv_event_get_current_target(e);
     lv_area_t a; lv_obj_get_coords(list, &a);
     /* Roughly half a standard menu row; clamp for small embedded lists. */
-    int h = curvelist_wheel() ? WHEEL_FADE_BOT : th_null() ? 32 : 27;   /* Wheel: the footer's space */
+    int h = (curvelist_wheel() && !wheel_excluded(list)) ? WHEEL_FADE_BOT : th_null() ? 32 : 27;   /* Wheel: the footer's space */
     int height = lv_area_get_height(&a);
     if(h > height / 2) h = height / 2;
-    int h_top = curvelist_wheel() ? WHEEL_FADE_TOP : h;       /* Wheel: the header's space above the row above */
+    int h_top = (curvelist_wheel() && !wheel_excluded(list)) ? WHEEL_FADE_TOP : h;       /* Wheel: the header's space above the row above */
     int room[2] = { lv_obj_get_style_pad_top(list, LV_PART_MAIN) + lv_obj_get_scroll_y(list),
                     lv_obj_get_style_pad_bottom(list, LV_PART_MAIN) + lv_obj_get_scroll_bottom(list) };
     int band_h[2];

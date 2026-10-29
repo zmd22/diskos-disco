@@ -1,6 +1,6 @@
 # diskOS Disco! - to do
 
-Live list. Released: 3.2.0 (tag v3.2.0). Older notes: `todo-history.md`.
+Live list. Released: 3.2.1 (tag v3.2.1). Older notes: `todo-history.md`.
 How we work: owner suggests -> Claude offers fixes -> host renders for big visual changes -> owner's go ->
 batch -> one test build -> a few days on the Disc -> one release; Claude hands over patch files, ChatGPT applies them.
 List words: "add to the list" pins an item; "major" / "minor" sorts it; "priority" puts it first.

@@ -1,17 +1,17 @@
 {
-  "version": "3.2.0",
-  "revision": "Wheel lists, QS style Shade, letter wheel and A-Z keypad, round track menus, header line, fades, idle power-off fix, battery work",
-  "baseline": "v3.1.0",
-  "source_commit": "the v3.2.0 release commit (ui source as hashed below)",
-  "ui_source_sha256": "b536e5b1fbf13f1b50e1adfecd5c03c34ac825e02910fd56074dd685c6802baa",
+  "version": "3.2.1",
+  "revision": "Smoother wheel lists, Disco button depth, Queue fix in Wheel mode, idle power-off never on the charger, power-button save",
+  "baseline": "v3.2.0",
+  "source_commit": "the v3.2.1 release commit (ui source as hashed below)",
+  "ui_source_sha256": "6a9b81f3685768141d254b779b7a7697ee892bf20701ab79f5117f791abebba0",
   "ui_source_hash_recipe": "sorted tracked ui paths: path + NUL + file bytes + NUL",
   "compiler": "musl-cross-make GCC 11.2.0, musl 1.2.6; mipsel-linux-musl, -ffp-contract=off",
   "abi": "static little-endian MIPS32r2, o32, FP64, NaN2008",
-  "status": "Disco 3.2.0. Fresh static MIPS build from the release source; the changes were tried by the owner through preview builds 3.1.1-3.3.0.",
+  "status": "Disco 3.2.1. Fresh static MIPS build from the release source; host-checked, power and charger behaviour to be confirmed on the Disc.",
   "binary": {
-    "bytes": 7264288,
-    "sha256": "c2acc7e8f2180daa837b5272f01c9d7ddcebe46c6bd357ffd310e1bebd6ae06f",
-    "md5": "f0504c65959114ea2fef1a9d9e313624"
+    "bytes": 7268460,
+    "sha256": "597d8f2e4b881cf590392481a17b4eea385fef0e9ea25d74074a749e3b9731bb",
+    "md5": "913a91e2c281bcfc2c659113a2b890bf"
   },
   "artwork_helper": {
     "bytes": 119424,
@@ -23,5 +23,5 @@
     "commit": "2bcb014b23a8c8cccf534eea8bda2fe5df453cfd",
     "license": "LGPL-2.1-or-later"
   },
-  "baseline_commit": "243beb125ca431d3e84141b14ffa7ad4f4b598ec"
+  "baseline_commit": "fe0257b93295d174e692be8b011bb42a2ee49905"
 }

@@ -1,6 +1,6 @@
-# Current release: 3.2.0
+# Current release: 3.2.1
 
-The prepared payload is rebuilt for this release. See [3.2.0 release record](RELEASE_3.2.0.md) for current testing limits. The records below describe earlier development checkpoints and their historical artifacts.
+The prepared payload is rebuilt for this release. See [3.2.1 release record](RELEASE_3.2.1.md) for current testing limits. The records below describe earlier development checkpoints and their historical artifacts.
 
 # dev — experimental / in testing
 
