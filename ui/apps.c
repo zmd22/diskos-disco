@@ -92,7 +92,8 @@ static void scan_apps(void){
  * (Weather, Immersive, Equalizer, Folders, Lyrics, Queue, Audiobooks, Search, Battery, Song Info, Last.fm,
  * All apps) plus every homebrew app. "All apps" shows the full app orbit (six to a page, the hub pages). */
 #define PER_PAGE 6
-#define NSC 5
+#define NSC 6                                   /* storage; shown: sc_count() */
+static int sc_count(void){ return th_braun2() ? 6 : 5; }   /* Braun 2.0 keys fit a sixth slot (two rows of three) */
 extern const lv_font_t font_theme_20;
 typedef struct { const char *key, *name, *glyph; int big; } scdef_t;          /* big: glyph from the large icon font role */
 static const scdef_t SC[] = {
@@ -110,7 +111,7 @@ static const scdef_t SC[] = {
     { "allapps",  "All apps",   LV_SYMBOL_DRIVE, 0 },
 };
 #define NSCDEF ((int)(sizeof SC / sizeof SC[0]))
-static const char *const SC_DEFAULT[NSC] = { "weather", "eq", "folders", "immersive", "allapps" };
+static const char *const SC_DEFAULT[NSC] = { "weather", "eq", "folders", "immersive", "allapps", "search" };
 typedef struct { const char *icon; char name[64]; int kind; int idx; int font; } aitem_t;  /* kind: 0 Last.fm, 1 app, 2 Settings, 3 shortcut */
 static aitem_t g_items[MAX_APPS + 2];
 static int g_nitems, g_page, g_all;          /* g_all: showing All apps instead of the shortcuts */
@@ -167,11 +168,19 @@ void shortcut_run(const char *key){
     else if(!strcmp(key, "lastfm")) lastfm_open();
     else if(!strcmp(key, "allapps")){ g_all = 1; g_page = 0; apps_reload(); }
 }
+/* an app's glyph: Braun 2.0 draws Stats and Boomshine with the vector icons Squash uses; Disc Shelf has its own everywhere */
+static const char *app_glyph(int i){
+    if(i < 0) return LV_SYMBOL_FILE;
+    if(!strcmp(g_apps[i].exec, APP_BUILTIN_SHELF)) return "@shelf";
+    if(th_braun2() && !strcmp(g_apps[i].exec, APP_BUILTIN_STATS)) return "@stats";
+    if(th_braun2() && !strcmp(g_apps[i].exec, APP_BUILTIN_BOOMSHINE)) return "@boom";
+    return LV_SYMBOL_FILE;
+}
 /* label + glyph for a key (built-in or app) */
 static int sc_describe(const char *key, const char **glyph, char *name, size_t n, int *font){
     if(!strncmp(key, "app:", 4) || !strncmp(key, "appid:", 6)){
         int i = app_for_key(key);
-        *glyph = i>=0&&!strcmp(g_apps[i].exec,APP_BUILTIN_SHELF)?"@shelf":LV_SYMBOL_FILE; *font = 1;
+        *glyph = app_glyph(i); *font = 1;
         snprintf(name, n, "%s", i >= 0 ? g_apps[i].name : !strncmp(key, "app:", 4) ? key + 4 : "App unavailable");
         return 1;
     }
@@ -266,7 +275,7 @@ static void b2_lamp_cb(lv_event_t *e){
 static void b2_back_cb(lv_event_t *e){ (void)e; if(g_all){ g_all = 0; g_page = 0; apps_reload(); } else screen_back(); }
 static void b2_more_cb(lv_event_t *e){ (void)e; int pages = (g_nitems + PER_PAGE - 1) / PER_PAGE; g_page = pages > 1 ? (g_page + 1) % pages : 0; build_page(); }
 static void b2_build(void){
-    int per = g_all ? PER_PAGE : NSC, pages = g_all ? (g_nitems + PER_PAGE - 1) / PER_PAGE : 1; if(pages < 1) pages = 1;
+    int per = g_all ? PER_PAGE : sc_count(), pages = g_all ? (g_nitems + PER_PAGE - 1) / PER_PAGE : 1; if(pages < 1) pages = 1;
     if(g_page >= pages) g_page = 0;
     int first = g_page * per, cnt = g_nitems - first; if(cnt > per) cnt = per; if(cnt < 0) cnt = 0;
     char t[32];
@@ -289,7 +298,7 @@ static void b2_build(void){
         lv_obj_set_style_bg_color(b, TC(SURFACE_PRESSED), LV_STATE_PRESSED); br2_emboss(b, 1);
         lv_obj_t *ic = br_label(b, g_items[first + i].icon, f == 1 ? TF(ICON_28) : f == 2 ? &font_theme_20 : TF(UI_22), BR_TXT);
         lv_obj_align(ic, LV_ALIGN_CENTER, 0, -10); lv_obj_set_style_text_color(ic, TC(ACCENT_PRIMARY), 0); br2_depth(b, 0);
-        if(!strcmp(g_items[first + i].icon, "@shelf")) disco_vec_icon(ic, "@shelf", 26);
+        if(g_items[first + i].icon[0] == '@') disco_vec_icon(ic, g_items[first + i].icon, 26);   /* Shelf, Stats, Boomshine */
         lv_obj_t *lamp = br_disc(b, 74, 12, 4, BR_SURF); lv_obj_set_style_bg_color(lamp, TC(CONTROL_TRACK), 0);
         lv_obj_t *cap = br_label(b, g_items[first + i].name, br_font(14, 0), BR_TXT2);
         lv_obj_set_width(cap, 80); lv_label_set_long_mode(cap, LV_LABEL_LONG_DOT); lv_obj_set_style_text_align(cap, LV_TEXT_ALIGN_CENTER, 0);
@@ -305,7 +314,7 @@ static void build_page(void){
     if(th_zune()){ zune_build(); return; }
     if(th_braun2()){ b2_build(); return; }
     if((th_disco_family() || th_null())){ disco_build(); return; }
-    int per = g_all ? PER_PAGE : NSC;
+    int per = g_all ? PER_PAGE : sc_count();
     int pages = g_all ? (g_nitems + PER_PAGE - 1) / PER_PAGE : 1; if(pages < 1) pages = 1;
     if(g_page >= pages) g_page = 0;
     int first = g_page * per, cnt = g_nitems - first; if(cnt > per) cnt = per;
@@ -338,7 +347,7 @@ void apps_reload(void){
     scan_apps();
     g_nitems = 0;
     if(!g_all){                                                            /* the shortcuts */
-        for(int s2 = 0; s2 < NSC; s2++){
+        for(int s2 = 0; s2 < sc_count(); s2++){
             const char *k = sc_key(s2); const char *gl; int f;
             snprintf(g_sckey[s2], sizeof g_sckey[s2], "%s", k);
             if(!k[0] || !sc_describe(k, &gl, g_items[g_nitems].name, sizeof g_items[0].name, &f)) continue;
@@ -349,7 +358,7 @@ void apps_reload(void){
     /* All apps: Last.fm, the homebrew apps, Settings */
     g_items[g_nitems].icon = LFM_ICON; g_items[g_nitems].font = 1; snprintf(g_items[g_nitems].name, sizeof g_items[0].name, "Last.fm"); g_items[g_nitems].kind = 0; g_items[g_nitems].idx = -1; g_nitems++;
     for(int i = 0; i < g_napps && g_nitems < MAX_APPS + 1; i++){
-        g_items[g_nitems].icon = !strcmp(g_apps[i].exec,APP_BUILTIN_SHELF)?"@shelf":LV_SYMBOL_FILE; g_items[g_nitems].font = 1; snprintf(g_items[g_nitems].name, sizeof g_items[0].name, "%.63s", g_apps[i].name);
+        g_items[g_nitems].icon = app_glyph(i); g_items[g_nitems].font = 1; snprintf(g_items[g_nitems].name, sizeof g_items[0].name, "%.63s", g_apps[i].name);
         g_items[g_nitems].kind = 1; g_items[g_nitems].idx = i; g_nitems++;
     }
     g_items[g_nitems].icon = LV_SYMBOL_SETTINGS; g_items[g_nitems].font = 1; snprintf(g_items[g_nitems].name, sizeof g_items[0].name, "Settings"); g_items[g_nitems].kind = 2; g_items[g_nitems].idx = -1; g_nitems++;
@@ -408,7 +417,7 @@ static void cfg_build(void){
     lv_obj_clean(g_cfg_list);
     if(g_cfg_slot < 0){
         lv_label_set_text(g_cfg_title, "Shortcuts");
-        for(int s2 = 0; s2 < NSC; s2++){
+        for(int s2 = 0; s2 < sc_count(); s2++){
             const char *k = sc_key(s2), *gl; char nm[64] = "Empty"; int f;
             if(k[0]) sc_describe(k, &gl, nm, sizeof nm, &f);
             char left[16]; snprintf(left, sizeof left, "Shortcut %d", s2 + 1);
