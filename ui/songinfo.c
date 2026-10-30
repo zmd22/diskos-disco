@@ -395,6 +395,19 @@ void songinfo_create(lv_obj_t *root)
             if(g_key[i]){ lv_obj_set_style_text_color(g_key[i], TC(TEXT_DISABLED), 0); lv_obj_set_style_text_font(g_key[i], br_font(12, 0), 0); }
             if(g_val[i]) lv_obj_set_style_text_color(g_val[i], TC(TEXT_PRIMARY), 0);
         }
+        if(th_braun2()){   /* Braun 2.0: a rounded artwork tile with no ring around it, and readable details */
+            lv_obj_add_flag(g_ring, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_set_size(g_cover, 96, 96); lv_obj_align(g_cover, LV_ALIGN_TOP_MID, 0, 36);
+            lv_obj_set_style_radius(g_cover, 20, 0); lv_obj_set_style_bg_color(g_cover, TC(SURFACE_STRONG), 0);
+            lv_obj_set_style_text_font(g_title, br_font(22, 1), 0); lv_obj_set_style_text_font(g_artist, br_font(16, 0), 0);
+            lv_obj_align(g_title, LV_ALIGN_TOP_MID, 0, 140); lv_obj_align(g_artist, LV_ALIGN_TOP_MID, 0, 168);
+            lv_obj_set_pos(list, 56, 196); lv_obj_set_size(list, 248, 124);
+            for(int i = 0; i < F_COUNT; i++){
+                if(g_key[i]){ lv_obj_set_style_text_color(g_key[i], TC(TEXT_SECONDARY), 0); lv_obj_set_style_text_font(g_key[i], br_font(14, 0), 0); }
+                if(g_val[i]) lv_obj_set_style_text_font(g_val[i], br_font(16, 0), 0);
+            }
+            kit_keep(g_cover); kit_keep(g_title); kit_keep(g_artist);
+        }
     }
 }
 
@@ -469,11 +482,11 @@ static void header_update(const track_state_t *st){         /* cover (the playin
     int v = (current && st->duration_ms > 0) ? (int)((long long)st->position_ms * 1000 / st->duration_ms) : 0;
     lv_arc_set_value(g_ring, v > 1000 ? 1000 : v);
     lv_obj_set_style_arc_color(g_ring, ui_media_accent(), LV_PART_INDICATOR);
-    lv_obj_set_style_bg_color(g_cover, current ? ui_media_accent() : TC(SURFACE_RAISED), 0);
+    lv_obj_set_style_bg_color(g_cover, th_braun2() ? TC(SURFACE_STRONG) : current ? ui_media_accent() : TC(SURFACE_RAISED), 0);
     const void *dsc = current ? ui_current_cover_dsc() : NULL;
     lv_image_set_src(g_cover_img, NULL);
     if(dsc){ const lv_image_dsc_t *d = dsc; lv_image_set_src(g_cover_img, dsc);
-             if(d->header.w > 0) lv_image_set_scale(g_cover_img, (uint32_t)(((th_disco_family() || th_null()) ? (th_null()?56:52) : 88) * 256 / d->header.w) + 2);
+             if(d->header.w > 0) lv_image_set_scale(g_cover_img, (uint32_t)((th_braun2() ? 96 : (th_disco_family() || th_null()) ? (th_null()?56:52) : 88) * 256 / d->header.w) + 2);
              lv_obj_center(g_cover_img); lv_obj_remove_flag(g_cover_img, LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(g_cover_note, LV_OBJ_FLAG_HIDDEN); }
     else { lv_obj_add_flag(g_cover_img, LV_OBJ_FLAG_HIDDEN); lv_obj_remove_flag(g_cover_note, LV_OBJ_FLAG_HIDDEN); }
 }

@@ -405,8 +405,8 @@ static void theme_fonts_install(void){
         g_tf[r] = *face;
         /* the chain of the role's size (the largest chain is 20 px); 12 px and under: Montserrat 12 (symbols) */
         g_tf[r].fallback = px <= 12 ? &lv_font_montserrat_12 : ui_font_cjk(px > 20 ? 20 : px);
-        if(th_zune()){
-            /* Open Sans lacks the shared magnifier and several app symbols.
+        if(th_zune() || th_braun2()){
+            /* Open Sans (Zune) and Inter (Braun 2.0) lack the shared magnifier and several app symbols.
              * Reuse Squash's icon faces before the existing language fallback. */
             static lv_font_t symbols[THEME_FONT_COUNT];
             extern const lv_font_t font_theme_20,font_theme_24;

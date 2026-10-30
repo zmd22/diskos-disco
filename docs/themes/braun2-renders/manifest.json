@@ -207,12 +207,12 @@
   {
     "screen": "SCR_APPLAND",
     "variant": 0,
-    "file": "41-appland-0.png"
+    "error": "mkdir: cannot create directory \u2018/usr/data\u2019: Permission denied\nhost-render: tests/host_render.c:579: stats_seed_demo: Assertion `sqlite3_open(\"/usr/data/fiio/db/song.db\",&d)==SQLITE_OK' failed.\n"
   },
   {
     "screen": "SCR_STATS",
     "variant": 0,
-    "file": "42-stats-0.png"
+    "error": "mkdir: cannot create directory \u2018/usr/data\u2019: Permission denied\nhost-render: tests/host_render.c:579: stats_seed_demo: Assertion `sqlite3_open(\"/usr/data/fiio/db/song.db\",&d)==SQLITE_OK' failed.\n"
   },
   {
     "screen": "SCR_APPSHELF",
@@ -447,12 +447,12 @@
   {
     "screen": "SCR_APPLAND",
     "variant": 1,
-    "file": "41-appland-1.png"
+    "error": "mkdir: cannot create directory \u2018/usr/data\u2019: Permission denied\nhost-render: tests/host_render.c:579: stats_seed_demo: Assertion `sqlite3_open(\"/usr/data/fiio/db/song.db\",&d)==SQLITE_OK' failed.\n"
   },
   {
     "screen": "SCR_STATS",
     "variant": 1,
-    "file": "42-stats-1.png"
+    "error": "mkdir: cannot create directory \u2018/usr/data\u2019: Permission denied\nhost-render: tests/host_render.c:579: stats_seed_demo: Assertion `sqlite3_open(\"/usr/data/fiio/db/song.db\",&d)==SQLITE_OK' failed.\n"
   },
   {
     "screen": "SCR_APPSHELF",

@@ -469,8 +469,9 @@ static void relayout(int style)
         if(g_bg)lv_obj_add_flag(g_bg,LV_OBJ_FLAG_HIDDEN);
         if(g_sec)lv_obj_add_flag(g_sec,LV_OBJ_FLAG_HIDDEN);
         if(g_clock){lv_obj_set_style_text_font(g_clock,br_font(44,1),0);lv_obj_set_style_text_color(g_clock,TC(TEXT_SECONDARY),0);}
-        if(g_track){lv_label_set_long_mode(g_track,LV_LABEL_LONG_DOT);lv_obj_set_width(g_track,240);}
-        if(g_artist){lv_label_set_long_mode(g_artist,LV_LABEL_LONG_DOT);lv_obj_set_width(g_artist,220);}
+        if(g_track){lv_label_set_long_mode(g_track,LV_LABEL_LONG_DOT);lv_obj_set_width(g_track,240);lv_obj_set_style_text_font(g_track,br_font(22,1),0);}
+        if(g_artist){lv_label_set_long_mode(g_artist,LV_LABEL_LONG_DOT);lv_obj_set_width(g_artist,220);lv_obj_set_style_text_font(g_artist,br_font(20,0),0);}
+        if(g_weather){static lv_font_t wx;wx=*br_font(20,0);wx.fallback=&font_weather16;lv_obj_set_style_text_font(g_weather,&wx,0);}   /* Inter, weather glyphs */
     }
 
 }

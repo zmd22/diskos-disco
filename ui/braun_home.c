@@ -21,7 +21,10 @@ extern const lv_font_t font_theme_20;
 extern const lv_font_t font_weather16;
 #define CX 180
 #define CY (th_braun2()?126:138)
-#define RD (th_braun2()?94:104)
+#define RD (th_braun2()?90:104)
+#define HAND_H (th_braun2()?46:50)   /* Braun 2.0: hands fit its smaller face */
+#define HAND_M (th_braun2()?74:82)
+#define HAND_S (th_braun2()?82:92)
 static lv_obj_t *g_canvas, *g_hh, *g_mm, *g_ss, *g_hub, *g_wx, *g_date, *g_title, *g_artist, *g_pp, *g_batt;
 static lv_point_precise_t g_hp[2], g_mp[2], g_sp[2];
 static lv_timer_t *g_tick;
@@ -37,9 +40,9 @@ static void tick_cb(lv_timer_t *t){
     (void)t;
     if(screen_current() != SCR_HOME) return;
     time_t now = time(NULL); struct tm tm; localtime_r(&now, &tm);
-    hand(g_hh, g_hp, (tm.tm_hour % 12 + tm.tm_min / 60.0f) * 30, 50, 0);
-    hand(g_mm, g_mp, (tm.tm_min + tm.tm_sec / 60.0f) * 6, 82, 0);
-    hand(g_ss, g_sp, tm.tm_sec * 6, 92, 18);
+    hand(g_hh, g_hp, (tm.tm_hour % 12 + tm.tm_min / 60.0f) * 30, HAND_H, 0);
+    hand(g_mm, g_mp, (tm.tm_min + tm.tm_sec / 60.0f) * 6, HAND_M, 0);
+    hand(g_ss, g_sp, tm.tm_sec * 6, HAND_S, 18);
 }
 static lv_obj_t *mkline(lv_obj_t *root, int w, uint32_t col){
     lv_obj_t *l = lv_line_create(root);
@@ -88,15 +91,17 @@ void bhome_create(lv_obj_t *root){
     /* the battery: a thin black arc on the top rim */
     battery_arc_create(&g_battery,root,344,4,236,304,0);g_batt=g_battery.arc;
     if(th_braun2()){
-        lv_obj_set_pos(w,130,166);lv_obj_set_size(w,100,28);lv_obj_set_style_bg_opa(w,LV_OPA_TRANSP,0);lv_obj_set_style_border_width(w,0,0);
-        lv_obj_set_style_text_font(g_wx,br_font(16,0),0);lv_obj_center(g_wx);
-        lv_obj_set_size(g_date,64,24);lv_obj_set_align(g_date,LV_ALIGN_TOP_LEFT);lv_obj_set_pos(g_date,204,115);lv_obj_set_style_text_font(g_date,br_font(14,1),0);lv_obj_set_style_text_color(g_date,TC(TEXT_PRIMARY),0);
+        lv_obj_set_pos(w,130,CY+22);lv_obj_set_size(w,100,24);lv_obj_set_style_bg_opa(w,LV_OPA_TRANSP,0);lv_obj_set_style_border_width(w,0,0);
+        lv_obj_set_style_text_font(g_wx,br_font(14,0),0);lv_obj_set_style_text_color(g_wx,TC(TEXT_SECONDARY),0);lv_obj_center(g_wx);
+        /* the date in a small window left of the 3 o'clock tick, as on Braun's wall clocks */
+        lv_obj_set_size(g_date,56,24);lv_obj_set_align(g_date,LV_ALIGN_TOP_LEFT);lv_obj_set_pos(g_date,CX+RD-76,CY-12);lv_obj_set_style_text_font(g_date,br_font(14,1),0);lv_obj_set_style_text_color(g_date,TC(TEXT_PRIMARY),0);
+        lv_obj_set_style_text_align(g_date,LV_TEXT_ALIGN_CENTER,0);lv_obj_set_style_pad_top(g_date,3,0);lv_obj_set_style_radius(g_date,8,0);lv_obj_set_style_bg_color(g_date,TC(SURFACE_STRONG),0);lv_obj_set_style_bg_opa(g_date,LV_OPA_COVER,0);
         lv_label_set_long_mode(g_title,LV_LABEL_LONG_DOT);lv_label_set_long_mode(g_artist,LV_LABEL_LONG_DOT);
         br2_keep_tree(root);
     }
     g_tick = lv_timer_create(tick_cb, 1000, NULL);
     tick_cb(NULL); { time_t now = time(NULL); struct tm tm; localtime_r(&now, &tm);   /* first paint even before Home shows */
-        hand(g_hh, g_hp, (tm.tm_hour % 12 + tm.tm_min / 60.0f) * 30, 50, 0); hand(g_mm, g_mp, tm.tm_min * 6, 82, 0); hand(g_ss, g_sp, tm.tm_sec * 6, 92, 18); }
+        hand(g_hh, g_hp, (tm.tm_hour % 12 + tm.tm_min / 60.0f) * 30, HAND_H, 0); hand(g_mm, g_mp, tm.tm_min * 6, HAND_M, 0); hand(g_ss, g_sp, tm.tm_sec * 6, HAND_S, 18); }
 }
 /* "Thursday, 17 September" -> "THU 17" */
 void bhome_set_clock(const char *t, const char *sub){

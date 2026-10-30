@@ -2021,12 +2021,14 @@ void kit_fork_np_braun2(void){
     if(artist){lv_obj_set_size(artist,260,28);lv_obj_align(artist,LV_ALIGN_TOP_MID,0,130);lv_label_set_long_mode(artist,LV_LABEL_LONG_DOT);kit_keep(artist);}
     if(album){lv_obj_remove_flag(album,LV_OBJ_FLAG_HIDDEN);lv_obj_set_size(album,230,22);lv_obj_set_style_text_font(album,br_font(12,0),0);lv_obj_align(album,LV_ALIGN_TOP_MID,0,58);lv_label_set_long_mode(album,LV_LABEL_LONG_DOT);kit_keep(album);}
     if(np_mid_btn){lv_obj_set_size(np_mid_btn,280,80);lv_obj_align(np_mid_btn,LV_ALIGN_TOP_MID,0,82);kit_keep(np_mid_btn);}
-    if(t_elapsed){lv_obj_set_style_text_font(t_elapsed,br_font(44,1),0);lv_obj_set_style_text_color(t_elapsed,TC(TEXT_PRIMARY),0);lv_obj_align(t_elapsed,LV_ALIGN_TOP_MID,0,164);kit_keep(t_elapsed);}
-    if(t_remain){lv_obj_set_style_text_font(t_remain,br_font(14,0),0);lv_obj_align(t_remain,LV_ALIGN_TOP_MID,0,218);kit_keep(t_remain);}
+    if(t_elapsed){lv_obj_set_width(t_elapsed,200);lv_obj_set_style_text_align(t_elapsed,LV_TEXT_ALIGN_CENTER,0);lv_obj_set_style_text_font(t_elapsed,br_font(44,1),0);lv_obj_set_style_text_color(t_elapsed,TC(TEXT_PRIMARY),0);lv_obj_align(t_elapsed,LV_ALIGN_TOP_MID,0,164);kit_keep(t_elapsed);}
+    if(t_remain){lv_obj_set_width(t_remain,120);lv_obj_set_style_text_align(t_remain,LV_TEXT_ALIGN_CENTER,0);lv_obj_set_style_text_font(t_remain,br_font(14,0),0);lv_obj_set_style_text_color(t_remain,TC(TEXT_SECONDARY),0);lv_obj_align(t_remain,LV_ALIGN_TOP_MID,0,216);kit_keep(t_remain);}
     lv_obj_t *controls[]={btn_prev,btn_pp,btn_next};
     for(int i=0;i<3;i++)if(controls[i]){
         lv_obj_t *b=controls[i];int d=i==1?58:46;
-        lv_obj_set_size(b,d,d);lv_obj_set_style_pad_all(b,0,0);lv_obj_set_style_pad_top(b,(d-lv_font_get_line_height(TF(UI_24)))/2,0);
+        lv_obj_set_size(b,d,d);lv_obj_set_style_pad_all(b,0,0);
+        for(uint32_t k=0;k<lv_obj_get_child_count(b);k++){lv_obj_t *c=lv_obj_get_child(b,k);   /* icon-only glyphs, centred in their knobs */
+            if(lv_obj_check_type(c,&lv_label_class))lv_obj_set_style_text_font(c,&lv_font_montserrat_24,0);lv_obj_center(c);}
         lv_obj_set_style_text_font(b,TF(UI_24),0);lv_obj_set_style_bg_color(b,i==1?TC(ACCENT_PRIMARY):TC(CONTROL_KNOB),0);
         lv_obj_set_style_text_color(b,i==1?TC(ON_ACCENT):TC(ON_CONTROL),0);lv_obj_set_style_bg_opa(b,LV_OPA_COVER,0);
         lv_obj_align(b,LV_ALIGN_TOP_MID,(i-1)*64,i==1?284:290);br2_keep_tree(b);
@@ -2036,7 +2038,10 @@ void kit_fork_np_braun2(void){
     if(btn_sleep){lv_obj_set_align(btn_sleep,LV_ALIGN_TOP_LEFT);lv_obj_set_pos(btn_sleep,274,200);lv_obj_set_size(btn_sleep,44,44);}
     if(btn_mode){lv_obj_set_align(btn_mode,LV_ALIGN_TOP_LEFT);lv_obj_set_pos(btn_mode,274,151);lv_obj_set_size(btn_mode,44,44);}
     lv_obj_t *utility[]={btn_fav,btn_sleep,btn_mode,btn_queue};
-    for(unsigned i=0;i<4;i++)if(utility[i]){lv_obj_set_style_bg_opa(utility[i],LV_OPA_TRANSP,0);lv_obj_set_style_border_width(utility[i],0,0);br2_keep_tree(utility[i]);}
+    for(unsigned i=0;i<4;i++)if(utility[i]){   /* small panel knobs, so the four utilities read as one set */
+        lv_obj_set_size(utility[i],44,44);lv_obj_set_style_radius(utility[i],LV_RADIUS_CIRCLE,0);
+        lv_obj_set_style_bg_color(utility[i],TC(SURFACE_STRONG),0);lv_obj_set_style_bg_opa(utility[i],LV_OPA_COVER,0);
+        lv_obj_set_style_bg_color(utility[i],TC(SURFACE_PRESSED),LV_STATE_PRESSED);lv_obj_set_style_border_width(utility[i],0,0);lv_obj_set_style_shadow_width(utility[i],0,0);br2_keep_tree(utility[i]);}
     if(fav_icon&&!g_np_fav)lv_obj_set_style_text_color(fav_icon,TC(TEXT_SECONDARY),0);
     if(mode_icon)lv_obj_set_style_text_color(mode_icon,TC(TEXT_SECONDARY),0);
     if(btn_queue){lv_obj_t *l=lv_obj_get_child(btn_queue,0);lv_obj_set_style_text_color(l,TC(TEXT_SECONDARY),0);}

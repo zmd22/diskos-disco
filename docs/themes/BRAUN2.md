@@ -15,6 +15,20 @@ A separate light/dark native LVGL preset, appended as ID 14. Choose **Display â†
 
 The supplied [guide](BRAUN2_GUIDE.md) is the reference brief; the choices above override its alternative layout defaults.
 
+## Polish pass
+
+- Fonts: every text role the theme uses is Inter (22, 24, 26/28, 36, date and standby clock were Montserrat). Icon glyphs in Inter text fall back to the shared icon faces, as in Zune. The 44 px time font gains a real colon (`font_inter_bold_44_colon.c`, chained by `br_font()`), so `1:32` no longer shows a 20 px colon. Classic Braun benefits from the same colon.
+- Cards: the styler no longer turns round objects (artwork, discs) into rounded squares.
+- Song info: a 96 px rounded artwork tile filled edge to edge, no progress ring behind it; 22/16 px title/artist and 14/16 px details.
+- EQ editor: Braun sliders with orange highlights: thin slots, dark ribbed caps, an orange run from 0 dB to each cap, and the selected cap in orange. The preset pill is 14 px bold and fits its name.
+- EQ presets: the name steps down a size and ends in an ellipsis instead of clipping mid-scroll; On is the orange primary key again.
+- Headers: the cap is shorter so it no longer overlaps the first row of lists and Settings.
+- Home: smaller face with hands to match, the date in a window left of 3 o'clock, weather as a quiet line under the hub.
+- Music: elapsed time no longer wraps, transport glyphs are centred, and queue/mode/favourite/sleep are matching 44 px panel knobs.
+- Standby, Queue: Inter type on standby; Queue's Play stays orange.
+
+Renders were regenerated after this pass (142 of 146 captures). Stats and its landing view need a writable `/usr/data` on the host and were not recaptured; their committed images are from the first pass.
+
 ## Screen and subscreen coverage
 
 | Family | Treatment |

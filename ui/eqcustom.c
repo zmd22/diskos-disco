@@ -165,7 +165,7 @@ static int g_lastsel = -2, g_lastgrey = -1; static uint32_t g_lastacc;
 #define FBOT  214
 #define FMID  ((FTOP + FBOT) / 2)
 #define FKPX  ((FBOT - FTOP) / 2.0f / 6.0f)                 /* px per dB */
-static lv_obj_t *g_fslot[NB], *g_fcap[NB], *g_fline[NB], *g_flamp;
+static lv_obj_t *g_fslot[NB], *g_fcap[NB], *g_fline[NB], *g_flamp, *g_ffill[NB];   /* g_ffill: Braun 2.0 orange travel from 0 dB */
 static int fx(int i){ return (int)lroundf(FX0 + i * FSTEP); }
 static void braun_faders_create(lv_obj_t *root){
     lv_obj_t *zero = lv_obj_create(root); lv_obj_remove_style_all(zero);        /* the 0 dB line */
@@ -178,12 +178,19 @@ static void braun_faders_create(lv_obj_t *root){
         g_fslot[i] = lv_obj_create(root); lv_obj_remove_style_all(g_fslot[i]);
         lv_obj_set_size(g_fslot[i], 6, FBOT - FTOP); lv_obj_set_pos(g_fslot[i], fx(i) - 3, FTOP);
         lv_obj_set_style_radius(g_fslot[i], 3, 0); lv_obj_set_style_bg_color(g_fslot[i], TC(EQ_SLOT), 0); lv_obj_set_style_bg_opa(g_fslot[i], LV_OPA_COVER, 0);
+        if(th_braun2()){                                            /* a thin slot with an orange run from 0 dB to the cap */
+            lv_obj_set_size(g_fslot[i], 4, FBOT - FTOP); lv_obj_set_pos(g_fslot[i], fx(i) - 2, FTOP); lv_obj_set_style_radius(g_fslot[i], 2, 0);
+            g_ffill[i] = lv_obj_create(root); lv_obj_remove_style_all(g_ffill[i]);
+            lv_obj_set_style_radius(g_ffill[i], 2, 0); lv_obj_set_style_bg_color(g_ffill[i], TC(ACCENT_PRIMARY), 0); lv_obj_set_style_bg_opa(g_ffill[i], LV_OPA_COVER, 0);
+            lv_obj_clear_flag(g_ffill[i], LV_OBJ_FLAG_CLICKABLE);
+        }
         g_fcap[i] = lv_obj_create(root); lv_obj_remove_style_all(g_fcap[i]);
         lv_obj_set_size(g_fcap[i], 18, 12); lv_obj_set_style_radius(g_fcap[i], 2, 0);
         lv_obj_set_style_bg_color(g_fcap[i], TC(CONTROL_KNOB), 0); lv_obj_set_style_bg_opa(g_fcap[i], LV_OPA_COVER, 0);
         lv_obj_set_style_shadow_color(g_fcap[i], TC(ACTION_SHADOW), 0); lv_obj_set_style_shadow_width(g_fcap[i], 4, 0); lv_obj_set_style_shadow_offset_y(g_fcap[i], 1, 0);
         g_fline[i] = lv_obj_create(g_fcap[i]); lv_obj_remove_style_all(g_fline[i]);
         lv_obj_set_size(g_fline[i], 12, 2); lv_obj_center(g_fline[i]);
+        if(th_braun2()){ lv_obj_set_size(g_fcap[i], 22, 16); lv_obj_set_style_radius(g_fcap[i], 4, 0); lv_obj_set_size(g_fline[i], 14, 2); lv_obj_center(g_fline[i]); }
         lv_obj_set_style_bg_opa(g_fline[i], LV_OPA_COVER, 0);
         lv_obj_clear_flag(g_fslot[i], LV_OBJ_FLAG_CLICKABLE); lv_obj_clear_flag(g_fcap[i], LV_OBJ_FLAG_CLICKABLE); lv_obj_clear_flag(g_fline[i], LV_OBJ_FLAG_CLICKABLE);
         lv_obj_set_style_text_font(g_rim[i], br_font(12, 0), 0);
@@ -195,6 +202,17 @@ static void braun_faders_paint(void){
     for(int i = 0; i < NB; i++){
         int t = clampi(g_t[i], -GMAX, GMAX);
         int y = (int)lroundf(FMID - t / 10.0f * FKPX);
+        if(th_braun2()){                                            /* knob caps; the selected one turns orange */
+            int sel = i == g_sel && g_editable;
+            lv_obj_set_pos(g_fcap[i], fx(i) - 11, y - 8);
+            lv_obj_set_style_bg_color(g_fcap[i], sel ? TC(ACCENT_PRIMARY) : g_editable ? TC(CONTROL_KNOB) : TC(EQ_CAP_DISABLED), 0);
+            lv_obj_set_style_bg_color(g_fline[i], sel ? TC(ON_ACCENT) : g_editable ? TC(ON_CONTROL) : TC(EQ_FADER_DISABLED), 0);
+            int top = y < FMID ? y : FMID, h = abs(y - FMID);
+            if(h < 2 || !g_editable) lv_obj_add_flag(g_ffill[i], LV_OBJ_FLAG_HIDDEN);
+            else { lv_obj_remove_flag(g_ffill[i], LV_OBJ_FLAG_HIDDEN); lv_obj_set_pos(g_ffill[i], fx(i) - 2, top); lv_obj_set_size(g_ffill[i], 4, h);
+                   lv_obj_set_style_bg_opa(g_ffill[i], sel ? LV_OPA_COVER : LV_OPA_70, 0); }
+            continue;
+        }
         lv_obj_set_pos(g_fcap[i], fx(i) - 9, y - 6);
         lv_obj_set_style_bg_color(g_fcap[i], g_editable ? TC(CONTROL_KNOB) : TC(EQ_CAP_DISABLED), 0);
         lv_obj_set_style_bg_color(g_fline[i], i == g_sel && g_editable ? TC(ACCENT_PRIMARY) : g_editable ? TC(EQ_FADER) : TC(EQ_FADER_DISABLED), 0);
@@ -751,6 +769,13 @@ void eqcustom_create(lv_obj_t *root){
         lv_obj_align(pill, LV_ALIGN_TOP_MID, 0, 28);
         lv_obj_set_style_bg_color(pill, TC(SURFACE), 0); lv_obj_set_style_text_color(g_pill_lbl, TC(TEXT_PRIMARY), 0);
         lv_obj_set_style_text_font(g_pill_lbl, br_font(12, 0), 0); lv_obj_set_style_text_color(chev, TC(TEXT_SECONDARY), 0);
+        if(th_braun2()){                                            /* a readable preset pill that fits its name */
+            lv_obj_set_size(pill, 176, 32); lv_obj_set_style_radius(pill, 16, 0); lv_obj_align(pill, LV_ALIGN_TOP_MID, 0, 22);
+            lv_obj_set_style_bg_color(pill, TC(SURFACE_STRONG), 0);
+            lv_obj_set_style_text_font(g_pill_lbl, br_font(14, 1), 0); lv_obj_set_width(g_pill_lbl, 136);
+            lv_label_set_long_mode(g_pill_lbl, LV_LABEL_LONG_DOT); lv_obj_set_style_text_align(g_pill_lbl, LV_TEXT_ALIGN_CENTER, 0);
+            lv_obj_align(g_pill_lbl, LV_ALIGN_CENTER, -8, 0); lv_obj_align(chev, LV_ALIGN_RIGHT_MID, -12, 0);
+        }
         lv_obj_t *pm[2] = { g_minus, g_plus };
         for(int k = 0; k < 2; k++){                                 /* - / + as dark knobs on the segment */
             lv_obj_set_size(pm[k], 42, 42); lv_obj_align(pm[k], LV_ALIGN_TOP_MID, k ? 84 : -84, 262);

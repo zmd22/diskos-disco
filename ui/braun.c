@@ -14,7 +14,8 @@
 /* ---- Inter (converted from the open-source Inter typeface): Medium 12/14/16, Bold 16/18/22, Bold 44 digits;
  * anything outside Latin-1 falls back to the international fonts (ui_font_cjk) ---- */
 extern const lv_font_t font_inter_medium_12, font_inter_medium_14, font_inter_medium_16, font_inter_medium_20,
-                       font_inter_bold_16, font_inter_bold_18, font_inter_bold_22, font_inter_bold_44;
+                       font_inter_bold_16, font_inter_bold_18, font_inter_bold_22, font_inter_bold_44,
+                       font_inter_bold_44_colon;
 extern const lv_font_t diskos_hifi_ui_24; /* bundled Inter SemiBold, reused for Braun's larger track title */
 const lv_font_t *br_font(int size, int bold){
     static lv_font_t f[7]; static int init;
@@ -23,6 +24,8 @@ const lv_font_t *br_font(int size, int bold){
                                     &font_inter_bold_16, &font_inter_bold_18, &font_inter_bold_22, &font_inter_bold_44 };
         const int fb[7] = { 14, 14, 16, 16, 18, 20, 20 };
         for(int i = 0; i < 7; i++){ f[i] = *src[i]; f[i].fallback = ui_font_cjk(fb[i]); }
+        static lv_font_t colon; colon = font_inter_bold_44_colon; colon.fallback = f[6].fallback;   /* 44 px: digits, then ':' */
+        f[6].fallback = &colon;
         init = 1;
     }
     if(size >= 40) return &f[6];
