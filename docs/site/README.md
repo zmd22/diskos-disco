@@ -1,12 +1,12 @@
 # Website maintenance
 
-GitHub Pages source is in `docs/`. The site uses local assets, theme galleries and a Zune walkthrough. Screenshots illustrate their capture revision; they do not establish every detail of the 3.2.2 UI. Update version links and images from verified release material.
+GitHub Pages serves `docs/` from `main`. The static site has a Zune accent walkthrough, theme previews, collection galleries and video chapters.
 
-Regenerate the 28 actual LVGL screenshots in a disposable Linux host container:
+Regenerate the actual LVGL screenshots in a disposable Linux host container:
 
 ```sh
-make -C ui CROSS= host-render -j4
+make -C ui CROSS= host-render -j2
 python3 tools/render-zune-site.py --allow-host-fixtures
 ```
 
-Requires Pillow. The host harness writes `/usr/data/fiio/db/song.db`; never run it on a player. Artwork is synthetic geometric illustration, not third-party album covers. Immersive is captured with its real transport overlay open. All UI colour changes are set before theme initialization.
+Requires Pillow and DejaVu Sans. Never run the host harness on a player: it replaces `/usr/data/fiio/db/song.db` with sample music and history. Geometric demo sleeves are original illustrations, not official artist covers. Capture settings and the source revision are recorded in `captures.json`. No device firmware files are changed by the website refresh.

@@ -1551,7 +1551,9 @@ int main(int argc, char **argv){
             puts("PASS: Squash radio logo centred, larger controls separated and touch corners inside round display");
         }
         if(!strncmp(page,"immersive",9)){
-            if(th_disco() || th_null()) disco_open_np_immersive(); else ui_np_fsart_open();assert(ui_np_fsart_active());
+            if(th_disco() || th_null()) disco_open_np_immersive(); else ui_np_fsart_open();
+            if(getenv("SITE_CAPTURE"))nav_wait(800);
+            assert(ui_np_fsart_active());
             for(int i=0;i<100;i++){lyrics_poll(NULL);usleep(1000);}
         }
         for(int i=0;i<120;i++){lv_tick_inc(10);lv_timer_handler();}kit_pass(screen_get_root(scr));
@@ -2154,6 +2156,18 @@ int main(int argc, char **argv){
         if(!strcmp(page,"albums") && !th_zune()){                  /* Library > Albums */
             lv_obj_t *l=find_text(screen_get_root(SCR_LIBRARY),"Albums"); assert(l); lv_obj_send_event(lv_obj_get_parent(l),LV_EVENT_CLICKED,NULL);
             for(int i=0;i<60;i++){lv_tick_inc(10);lv_timer_handler();}
+        }
+        /* Website captures navigate the production library; no replacement UI. */
+        if(getenv("SITE_ALBUM")){library_open_album(getenv("SITE_ALBUM"));nav_wait(300);}
+        if(getenv("SITE_ARTIST")){library_open_artist(getenv("SITE_ARTIST"));nav_wait(300);}
+        if(getenv("SITE_SCROLL")){
+            lv_obj_t *root=screen_get_root(SCR_LIBRARY),*list=NULL;
+            for(uint32_t i=0;i<lv_obj_get_child_count(root);i++){
+                lv_obj_t *c=lv_obj_get_child(root,i);
+                if(lv_obj_get_scroll_dir(c)==LV_DIR_VER && lv_obj_get_child_count(c)>4){list=c;break;}
+            }
+            assert(list);lv_obj_scroll_to_y(list,atoi(getenv("SITE_SCROLL")),LV_ANIM_OFF);
+            lv_obj_send_event(list,LV_EVENT_SCROLL,NULL);nav_wait(30);
         }
         if(getenv("POPUP")){
             const char *which=getenv("POPUP");

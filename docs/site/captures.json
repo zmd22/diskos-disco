@@ -1,0 +1,480 @@
+{
+  "release": "v3.2.2",
+  "source_commit": "458e4d44a6dba75767583711e05f30ca5c18d3ba",
+  "renderer": "LVGL host-render; production screen code with sample catalog and listening history",
+  "artwork": "Original geometric demo sleeves, not official album artwork",
+  "captures": [
+    {
+      "file": "zune/magenta-menu.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-home",
+      "options": {
+        "SITE_ACCENT": "ec008c",
+        "ZHFOCUS": "0"
+      }
+    },
+    {
+      "file": "zune/magenta-music.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-np",
+      "options": {
+        "SITE_ACCENT": "ec008c"
+      }
+    },
+    {
+      "file": "zune/magenta-coverflow.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-albums",
+      "options": {
+        "SITE_ACCENT": "ec008c",
+        "ALBUM_VIEW": "2",
+        "ZUNE_LIBRARY_FIXTURE": "1",
+        "PREVIEW_SETTLE": "3200"
+      }
+    },
+    {
+      "file": "zune/magenta-wall.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-albums",
+      "options": {
+        "SITE_ACCENT": "ec008c",
+        "ALBUM_VIEW": "1",
+        "ZUNE_LIBRARY_FIXTURE": "1",
+        "PREVIEW_SETTLE": "3200"
+      }
+    },
+    {
+      "file": "zune/magenta-quick.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-quick",
+      "options": {
+        "SITE_ACCENT": "ec008c"
+      }
+    },
+    {
+      "file": "zune/magenta-stats.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "statsapp",
+      "options": {
+        "SITE_ACCENT": "ec008c",
+        "STATS_WRAP": "0"
+      }
+    },
+    {
+      "file": "zune/magenta-immersive.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-immersive",
+      "options": {
+        "SITE_ACCENT": "ec008c",
+        "SITE_IMM_CONTROLS": "1"
+      }
+    },
+    {
+      "file": "zune/cyan-menu.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-home",
+      "options": {
+        "SITE_ACCENT": "00b7d8",
+        "ZHFOCUS": "0"
+      }
+    },
+    {
+      "file": "zune/cyan-music.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-np",
+      "options": {
+        "SITE_ACCENT": "00b7d8"
+      }
+    },
+    {
+      "file": "zune/cyan-coverflow.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-albums",
+      "options": {
+        "SITE_ACCENT": "00b7d8",
+        "ALBUM_VIEW": "2",
+        "ZUNE_LIBRARY_FIXTURE": "1",
+        "PREVIEW_SETTLE": "3200"
+      }
+    },
+    {
+      "file": "zune/cyan-wall.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-albums",
+      "options": {
+        "SITE_ACCENT": "00b7d8",
+        "ALBUM_VIEW": "1",
+        "ZUNE_LIBRARY_FIXTURE": "1",
+        "PREVIEW_SETTLE": "3200"
+      }
+    },
+    {
+      "file": "zune/cyan-quick.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-quick",
+      "options": {
+        "SITE_ACCENT": "00b7d8"
+      }
+    },
+    {
+      "file": "zune/cyan-stats.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "statsapp",
+      "options": {
+        "SITE_ACCENT": "00b7d8",
+        "STATS_WRAP": "0"
+      }
+    },
+    {
+      "file": "zune/cyan-immersive.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-immersive",
+      "options": {
+        "SITE_ACCENT": "00b7d8",
+        "SITE_IMM_CONTROLS": "1"
+      }
+    },
+    {
+      "file": "zune/orange-menu.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-home",
+      "options": {
+        "SITE_ACCENT": "ff751f",
+        "ZHFOCUS": "0"
+      }
+    },
+    {
+      "file": "zune/orange-music.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-np",
+      "options": {
+        "SITE_ACCENT": "ff751f"
+      }
+    },
+    {
+      "file": "zune/orange-coverflow.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-albums",
+      "options": {
+        "SITE_ACCENT": "ff751f",
+        "ALBUM_VIEW": "2",
+        "ZUNE_LIBRARY_FIXTURE": "1",
+        "PREVIEW_SETTLE": "3200"
+      }
+    },
+    {
+      "file": "zune/orange-wall.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-albums",
+      "options": {
+        "SITE_ACCENT": "ff751f",
+        "ALBUM_VIEW": "1",
+        "ZUNE_LIBRARY_FIXTURE": "1",
+        "PREVIEW_SETTLE": "3200"
+      }
+    },
+    {
+      "file": "zune/orange-quick.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-quick",
+      "options": {
+        "SITE_ACCENT": "ff751f"
+      }
+    },
+    {
+      "file": "zune/orange-stats.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "statsapp",
+      "options": {
+        "SITE_ACCENT": "ff751f",
+        "STATS_WRAP": "0"
+      }
+    },
+    {
+      "file": "zune/orange-immersive.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-immersive",
+      "options": {
+        "SITE_ACCENT": "ff751f",
+        "SITE_IMM_CONTROLS": "1"
+      }
+    },
+    {
+      "file": "zune/lime-menu.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-home",
+      "options": {
+        "SITE_ACCENT": "9bd238",
+        "ZHFOCUS": "0"
+      }
+    },
+    {
+      "file": "zune/lime-music.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-np",
+      "options": {
+        "SITE_ACCENT": "9bd238"
+      }
+    },
+    {
+      "file": "zune/lime-coverflow.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-albums",
+      "options": {
+        "SITE_ACCENT": "9bd238",
+        "ALBUM_VIEW": "2",
+        "ZUNE_LIBRARY_FIXTURE": "1",
+        "PREVIEW_SETTLE": "3200"
+      }
+    },
+    {
+      "file": "zune/lime-wall.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-albums",
+      "options": {
+        "SITE_ACCENT": "9bd238",
+        "ALBUM_VIEW": "1",
+        "ZUNE_LIBRARY_FIXTURE": "1",
+        "PREVIEW_SETTLE": "3200"
+      }
+    },
+    {
+      "file": "zune/lime-quick.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-quick",
+      "options": {
+        "SITE_ACCENT": "9bd238"
+      }
+    },
+    {
+      "file": "zune/lime-stats.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "statsapp",
+      "options": {
+        "SITE_ACCENT": "9bd238",
+        "STATS_WRAP": "0"
+      }
+    },
+    {
+      "file": "zune/lime-immersive.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-immersive",
+      "options": {
+        "SITE_ACCENT": "9bd238",
+        "SITE_IMM_CONTROLS": "1"
+      }
+    },
+    {
+      "file": "zune/light-music.webp",
+      "theme": 13,
+      "variant": 1,
+      "scene": "preview-np",
+      "options": {
+        "SITE_ACCENT": "ec008c"
+      }
+    },
+    {
+      "file": "zune/light-menu.webp",
+      "theme": 13,
+      "variant": 1,
+      "scene": "preview-home",
+      "options": {
+        "SITE_ACCENT": "ec008c",
+        "ZHFOCUS": "0"
+      }
+    },
+    {
+      "file": "zune/light-wall.webp",
+      "theme": 13,
+      "variant": 1,
+      "scene": "preview-albums",
+      "options": {
+        "SITE_ACCENT": "ec008c",
+        "ALBUM_VIEW": "1",
+        "ZUNE_LIBRARY_FIXTURE": "1",
+        "PREVIEW_SETTLE": "3200"
+      }
+    },
+    {
+      "file": "screens/disco-music.webp",
+      "theme": 10,
+      "variant": 0,
+      "scene": "preview-home",
+      "options": {}
+    },
+    {
+      "file": "screens/disco-immersive.webp",
+      "theme": 10,
+      "variant": 0,
+      "scene": "preview-immersive",
+      "options": {}
+    },
+    {
+      "file": "screens/disco-stats.webp",
+      "theme": 10,
+      "variant": 0,
+      "scene": "statsapp",
+      "options": {
+        "STATS_WRAP": "0"
+      }
+    },
+    {
+      "file": "screens/null-music.webp",
+      "theme": 11,
+      "variant": 0,
+      "scene": "preview-np",
+      "options": {}
+    },
+    {
+      "file": "screens/null-quick.webp",
+      "theme": 11,
+      "variant": 0,
+      "scene": "preview-quick",
+      "options": {}
+    },
+    {
+      "file": "screens/null-menu.webp",
+      "theme": 11,
+      "variant": 0,
+      "scene": "preview-home",
+      "options": {}
+    },
+    {
+      "file": "screens/squash-music.webp",
+      "theme": 12,
+      "variant": 0,
+      "scene": "preview-np",
+      "options": {}
+    },
+    {
+      "file": "screens/squash-light.webp",
+      "theme": 12,
+      "variant": 1,
+      "scene": "preview-np",
+      "options": {}
+    },
+    {
+      "file": "screens/squash-quick.webp",
+      "theme": 12,
+      "variant": 0,
+      "scene": "preview-quick",
+      "options": {}
+    },
+    {
+      "file": "screens/squash-menu.webp",
+      "theme": 12,
+      "variant": 0,
+      "scene": "preview-home",
+      "options": {}
+    },
+    {
+      "file": "screens/wheel-album.webp",
+      "theme": 10,
+      "variant": 0,
+      "scene": "preview-library",
+      "options": {
+        "ZUNE_LIBRARY_FIXTURE": "1",
+        "DISCO_SCROLL": "3",
+        "SITE_ALBUM": "Endless Summer",
+        "PREVIEW_SETTLE": "3200"
+      }
+    },
+    {
+      "file": "screens/wheel-tracks.webp",
+      "theme": 10,
+      "variant": 0,
+      "scene": "preview-library",
+      "options": {
+        "ZUNE_LIBRARY_FIXTURE": "1",
+        "DISCO_SCROLL": "3",
+        "SITE_ALBUM": "Endless Summer",
+        "SITE_SCROLL": "252",
+        "PREVIEW_SETTLE": "3200"
+      }
+    },
+    {
+      "file": "screens/wheel-artists.webp",
+      "theme": 10,
+      "variant": 0,
+      "scene": "preview-library",
+      "options": {
+        "ZUNE_LIBRARY_FIXTURE": "1",
+        "DISCO_SCROLL": "3",
+        "SITE_ARTIST": "The Midnight",
+        "PREVIEW_SETTLE": "3200"
+      }
+    },
+    {
+      "file": "screens/library-list.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "preview-albums",
+      "options": {
+        "ZUNE_LIBRARY_FIXTURE": "1",
+        "ALBUM_VIEW": "0",
+        "PREVIEW_SETTLE": "3200"
+      }
+    },
+    {
+      "file": "screens/stats-overview.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "statsapp",
+      "options": {}
+    },
+    {
+      "file": "screens/stats-albums.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "statsapp",
+      "options": {
+        "STATS_WRAP": "1"
+      }
+    },
+    {
+      "file": "screens/stats-artists.webp",
+      "theme": 13,
+      "variant": 0,
+      "scene": "statsapp",
+      "options": {
+        "STATS_WRAP": "0",
+        "STATS_PAGE": "1"
+      }
+    },
+    {
+      "file": "screens/help-howto.webp",
+      "theme": 10,
+      "variant": 0,
+      "scene": "preview-howto",
+      "options": {}
+    }
+  ]
+}

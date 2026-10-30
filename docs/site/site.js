@@ -36,37 +36,6 @@ if (dialog && typeof dialog.showModal === 'function') {
   dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
 }
 
-/* Native sticky chapters: document scrolling stays under the reader's control.
- * A tall panel scrolls completely into view before pinning. Mobile, short screens
- * and reduced motion use normal flow. No wheel/touch interception or scroll hijack. */
-const chapters = [...document.querySelectorAll('main > section')].map(panel => {
-  const chapter = document.createElement('div');
-  chapter.className = 'chapter';
-  panel.before(chapter); chapter.append(panel); panel.classList.add('chapter-panel');
-  return {chapter, panel};
-});
-const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-let layoutFrame = 0;
-function measureChapters() {
-  layoutFrame = 0;
-  const pin = window.innerWidth > 900 && window.innerHeight > 680 && !reducedMotion.matches;
-  chapters.forEach(({chapter, panel}) => {
-    const height = Math.ceil(panel.getBoundingClientRect().height);
-    chapter.style.setProperty('--chapter-height', pin ? `${height + Math.round(window.innerHeight * .2)}px` : 'auto');
-    panel.style.setProperty('--pin-top', `${Math.min(0, window.innerHeight - height)}px`);
-  });
-}
-function requestLayout() { if (!layoutFrame) layoutFrame = requestAnimationFrame(measureChapters); }
-window.addEventListener('resize', requestLayout, {passive: true});
-window.addEventListener('load', requestLayout, {once: true});
-reducedMotion.addEventListener('change', requestLayout);
-if (typeof ResizeObserver === 'function') {
-  const observer = new ResizeObserver(requestLayout);
-  chapters.forEach(({panel}) => observer.observe(panel));
-}
-if (document.fonts) document.fonts.ready.then(requestLayout);
-requestLayout();
-
 (() => {
   const v = document.querySelector('.showcase-video'); if (!v) return;
   const btns = [...document.querySelectorAll('.chapters button')];
@@ -82,13 +51,13 @@ requestLayout();
 (() => {
   const hero = document.querySelector('.zune-hero'); if (!hero) return;
   const steps = [
-    ['menu','Main menu','Start with the music.','A bold, flowing menu keeps your collection close. Return Home and Now Playing is ready, with room for the track and artist underneath.','On the player: swipe up to return Home.'],
-    ['music','Now Playing','Room for the song.','Artwork slips off the edge to give the title and artist more space. Duration and audio details stay together; your main icon can have separate tap, double-tap and hold shortcuts.','On the player: set shortcuts in Display → Music screen → Zune.'],
-    ['coverflow','Library · Coverflow','Take your covers for a spin.','Browse a curved carousel of albums. Coverflow, Wall and List are shared library choices, each dressed in the current theme.','On the player: choose Coverflow in the Album View setting.'],
-    ['wall','Library · Wall','A record shop in miniature.','Let the artwork lead. A compact wall puts more albums in view, with a little colour from your collection against Zune’s quiet black canvas.','On the player: choose Wall in the Album View setting.'],
-    ['quick','Quick Settings','The little things, close by.','Six configurable actions put the controls you use within reach. The track banner keeps moving while visible, with clear, centred pause and resume feedback.','On the player: customise your Quick Settings items.'],
-    ['stats','Listening stats','See where the music takes you.','Your listening history, wearing the same theme. Explore your week, month and year, with clearer small text and a calmer balance between headings and detail.','Sample history is shown here; your Disc builds its own story.'],
-    ['immersive','Immersive 3.0','More music. Less in the way.','Immersive 3.0 brings the spinning album and a shared transport overlay to Zune too. Tap to reveal track details, previous, play/pause and next; a spinning-disc transition carries you in and out.','Shown with the transport overlay open. Tap the artwork on your Disc to reveal it.']
+    ['menu','Main menu','Start with the music.','Big, flowing type puts Now Playing, your library and shortcuts within easy reach.','Swipe up on the player to return Home.'],
+    ['music','Now Playing','Room for the song.','The cover, title and artist share the spotlight. Playback controls, progress and audio details are always close.','Choose your controls and shortcuts in Display → Zune settings.'],
+    ['coverflow','Library · Coverflow','Take your covers for a spin.','Flip through a carousel of covers. Stop on an album, then dive into its tracks.','On the player: choose Coverflow in the Album View setting.'],
+    ['wall','Library · Wall','A record shop in miniature.','A wall of artwork turns your library into a record shop. See more of your collection at a glance.','On the player: choose Wall in the Album View setting.'],
+    ['quick','Quick Settings','The little things, close by.','Your most-used controls, one pull away. Choose the shortcuts that belong here.','On the player: customise your Quick Settings items.'],
+    ['stats','Listening stats','See where the music takes you.','Your favourite artists and albums, brought together with artwork. Look back over a week, a month or a year.','Sample history is shown here; your Disc builds its own story.'],
+    ['immersive','Immersive 3.0','More music. Less in the way.','A spinning record fills the screen. Tap for transport controls, then let the artwork take over again.','Shown with the transport overlay open. Tap the artwork on your Disc to reveal it.']
   ];
   const palette = {magenta:'#ec008c',cyan:'#00b7d8',orange:'#ff751f',lime:'#9bd238'};
   let step = 0, accent = 'magenta';
@@ -121,3 +90,35 @@ requestLayout();
     dialog.querySelector('p').textContent=`Zune · ${steps[step][1]} · ${accent}`;dialog.showModal();
   });
 })();
+
+/* Collection views use actual captures, without intercepting page scrolling. */
+document.querySelectorAll('[data-gallery]').forEach(card => {
+  const link = card.querySelector('.gallery-enlarge');
+  const image = link.querySelector('img');
+  const caption = card.querySelector('.gallery-caption');
+  const buttons = [...card.querySelectorAll('[data-image]')];
+  buttons.forEach(button => button.addEventListener('click', () => {
+    image.src = button.dataset.image;
+    image.alt = `${button.dataset.caption}, Disco 3.2.2 with illustrated demo artwork`;
+    link.href = button.dataset.image;
+    link.setAttribute('aria-label', `Enlarge ${button.dataset.caption}`);
+    caption.textContent = button.dataset.caption;
+    buttons.forEach(b => b.setAttribute('aria-pressed', String(b === button)));
+  }));
+  card.querySelector('.gallery-options').addEventListener('keydown', event => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    const index = buttons.indexOf(document.activeElement);
+    if (index < 0) return;
+    event.preventDefault();
+    const next = buttons[(index + (event.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length];
+    next.click(); next.focus();
+  });
+  link.addEventListener('click', event => {
+    if (!dialog || typeof dialog.showModal !== 'function') return;
+    event.preventDefault();
+    dialog.querySelector('img').src = link.href;
+    dialog.querySelector('img').alt = image.alt;
+    dialog.querySelector('p').textContent = caption.textContent;
+    dialog.showModal();
+  });
+});
