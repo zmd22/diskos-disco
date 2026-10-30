@@ -11,6 +11,7 @@
 #include <math.h>
 #include "theme.h"
 #include "braun.h"
+#include "braun2.h"
 #include <string.h>
 #include <stdint.h>
 #include <pthread.h>
@@ -329,7 +330,7 @@ void weather_poll(lv_timer_t *t)
 /* ---- Weather app: set the location used for home + screensaver weather ---- */
 /* the dial: 8 forecast slots round the rim, the current weather in the middle */
 #define WD_SLOTS 8
-static lv_obj_t *g_wd_pill[4];
+static lv_obj_t *g_wd_pill[WD_SLOTS];
 static lv_obj_t *g_wd_icon[WD_SLOTS], *g_wd_temp[WD_SLOTS], *g_wd_hour[WD_SLOTS];
 static lv_obj_t *g_wd_cicon, *g_wd_ctemp, *g_wd_cond, *g_wd_loc, *g_wd_hl, *g_wd_hint;
 void weather_app_open(void) { forecast_fetch_async(); weather_app_refresh(); screen_show(SCR_WEATHER); }
@@ -395,7 +396,7 @@ static void weather_app_refresh(void)
     if(have_fc && fc.ok){ for(int i = 0; i < fc.n; i++) if(fc.s[i].day * 1440 + fc.s[i].hour * 60 > now_abs){ first = i; break; } }
     for(int k = 0; k < WD_SLOTS; k++){
         int i = first >= 0 ? first + k : -1;
-        if((th_simple()||th_zune()) && k<4 && g_wd_pill[k]){
+        if((th_simple()||th_zune()||th_braun2()) && k<(th_braun2()?6:4) && g_wd_pill[k]){
             if(i<0 || i>=fc.n)lv_obj_add_flag(g_wd_pill[k],LV_OBJ_FLAG_HIDDEN);
             else lv_obj_remove_flag(g_wd_pill[k],LV_OBJ_FLAG_HIDDEN);
         }
@@ -404,7 +405,7 @@ static void weather_app_refresh(void)
         const char *ic = wd_icon(fc.s[i].code, night);
         set_if(g_wd_icon[k], ic); lv_obj_set_style_text_color(g_wd_icon[k], wd_col(ic), 0);
         char b[16]; snprintf(b, sizeof b, "%d\xC2\xB0", fc.s[i].t); set_if(g_wd_temp[k], b);
-        snprintf(b, sizeof b, (th_disco_family()||th_zune()) ? "%02d:00" : "%02d", fc.s[i].hour); set_if(g_wd_hour[k], b);
+        snprintf(b, sizeof b, (th_disco_family()||th_zune()||th_braun2()) ? "%02d:00" : "%02d", fc.s[i].hour); set_if(g_wd_hour[k], b);
     }
     set_if(g_wd_hint, (have_fc && fc.ok) ? "" : (fc_state ? "Loading forecast..." : "Forecast unavailable"));
 }
@@ -460,6 +461,38 @@ static lv_obj_t *wlabel(lv_obj_t *root, const lv_font_t *f, lv_color_t col){
     lv_label_set_text(l, "");
     lv_obj_set_style_text_font(l, f, 0); lv_obj_set_style_text_color(l, col, 0);
     return l;
+}
+/* Braun 2.0: a header, the next six forecast slots as Quick Settings keys either side of the centre line (hour, glyph,
+ * temperature), and "now" on the lower panel - like Music's controls: glyph and temperature, then condition, place, H/L. */
+static void braun2_layout(lv_obj_t *root, lv_obj_t *ring, lv_obj_t *disc){
+    lv_obj_add_flag(ring, LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(disc, LV_OBJ_FLAG_HIDDEN);
+    ui_header(root, "Weather");
+    for(int k = 0; k < WD_SLOTS; k++){
+        if(k >= 6){ lv_obj_add_flag(g_wd_icon[k], LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(g_wd_temp[k], LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(g_wd_hour[k], LV_OBJ_FLAG_HIDDEN); continue; }
+        lv_obj_t *c = lv_obj_create(root); lv_obj_remove_style_all(c); g_wd_pill[k] = c;
+        lv_obj_set_pos(c, 180 + (k % 3 - 1) * 96 - 44, k < 3 ? 106 : 184); lv_obj_set_size(c, 88, 70);
+        lv_obj_set_style_radius(c, 22, 0); lv_obj_set_style_bg_color(c, TC(SURFACE_STRONG), 0); lv_obj_set_style_bg_opa(c, LV_OPA_COVER, 0);
+        br2_emboss(c, 1); lv_obj_remove_flag(c, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_set_parent(g_wd_hour[k], c); lv_obj_set_parent(g_wd_icon[k], c); lv_obj_set_parent(g_wd_temp[k], c);
+        lv_obj_set_style_text_font(g_wd_hour[k], br_font(12, 0), 0); lv_obj_set_style_text_color(g_wd_hour[k], TC(TEXT_SECONDARY), 0);
+        lv_obj_set_style_text_font(g_wd_temp[k], br_font(16, 1), 0);
+        lv_obj_align(g_wd_hour[k], LV_ALIGN_TOP_MID, 0, 6); lv_obj_align(g_wd_icon[k], LV_ALIGN_CENTER, 0, 0); lv_obj_align(g_wd_temp[k], LV_ALIGN_BOTTOM_MID, 0, -6);
+        br2_keep_tree(c);
+    }
+    lv_obj_t *seg = br_segment(root, 262); br2_emboss(seg, 0); lv_obj_move_to_index(seg, 1);   /* "now", on the lower panel */
+    LV_FONT_DECLARE(font_weather20)
+    lv_obj_set_style_text_font(g_wd_cicon, &font_weather20, 0); lv_obj_update_layout(g_wd_cicon);   /* the glyph scaled to sit beside the 36 px figure */
+    lv_obj_set_style_transform_pivot_x(g_wd_cicon, LV_PCT(50), 0); lv_obj_set_style_transform_pivot_y(g_wd_cicon, LV_PCT(50), 0);
+    lv_obj_set_style_transform_scale(g_wd_cicon, 400, 0); lv_obj_align(g_wd_cicon, LV_ALIGN_TOP_MID, -62, 276);
+    lv_obj_set_style_text_font(g_wd_ctemp, TF(UI_36), 0); lv_obj_align(g_wd_ctemp, LV_ALIGN_TOP_MID, 16, 266);
+    lv_obj_set_style_text_font(g_wd_cond, br_font(14, 0), 0); lv_obj_set_width(g_wd_cond, 200); lv_label_set_long_mode(g_wd_cond, LV_LABEL_LONG_DOT);
+    lv_obj_align(g_wd_cond, LV_ALIGN_TOP_MID, 0, 310);
+    lv_obj_set_style_text_font(g_wd_loc, br_font(16, 1), 0); lv_obj_set_width(g_wd_loc, 180); lv_label_set_long_mode(g_wd_loc, LV_LABEL_LONG_DOT);
+    lv_obj_align(g_wd_loc, LV_ALIGN_TOP_MID, 0, 328);
+    lv_obj_add_flag(g_wd_hl, LV_OBJ_FLAG_HIDDEN);   /* the six keys carry the next hours; H/L would crowd the rim */
+    lv_obj_set_style_text_font(g_wd_hint, br_font(14, 0), 0); lv_obj_set_width(g_wd_hint, 220); lv_obj_set_style_text_align(g_wd_hint, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_align(g_wd_hint, LV_ALIGN_TOP_MID, 0, 170);
+    lv_obj_t *keep[] = { g_wd_cicon, g_wd_ctemp, g_wd_cond, g_wd_loc, g_wd_hl, g_wd_hint }; for(unsigned i = 0; i < sizeof keep / sizeof *keep; i++) kit_keep(keep[i]);
 }
 void weather_app_create(lv_obj_t *root)
 {
@@ -621,6 +654,7 @@ void weather_app_create(lv_obj_t *root)
         lv_obj_set_style_text_color(g_wd_loc, TC(TEXT_PRIMARY), 0);
         lv_obj_set_style_text_color(g_wd_hl, TC(TEXT_DISABLED), 0);
         for(int k = 0; k < WD_SLOTS; k++){ lv_obj_set_style_text_color(g_wd_temp[k], TC(TEXT_PRIMARY), 0); lv_obj_set_style_text_color(g_wd_hour[k], TC(TEXT_DISABLED), 0); }
+        if(th_braun2()) braun2_layout(root, ring, pd);
     }
     weather_app_refresh();
 }
