@@ -1488,6 +1488,7 @@ static void np_mid_cb(lv_event_t *e){
     track_state_t st;ipc_get_state(&st);
     if(!st.have_track){screen_show(SCR_LIBRARY);return;}
     if(th_zune()){screen_show(SCR_NPMENU);return;}
+    if(th_braun2()){songmenu_open_song(st.path[0]?st.path:g_np_curpath);return;}   /* Braun 2.0: the track popup, as the other themes */
     if(st.album[0])library_open_album_focus(st.album,st.artist,g_np_curpath);
     else if(st.artist[0])library_open_artist(st.artist);
     screen_show(SCR_LIBRARY);
