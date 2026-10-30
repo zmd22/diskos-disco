@@ -1735,7 +1735,7 @@ static void fav_refresh(int on, int have)
 {
     g_np_fav = on; g_np_have = have;
     if(!btn_fav || !fav_icon) return;
-    if(have && !th_zune() && !th_braun2()) lv_obj_remove_flag(btn_fav, LV_OBJ_FLAG_HIDDEN);   /* Zune: in the hub; Braun 2.0: in the track menu */
+    if(have && !th_zune()) lv_obj_remove_flag(btn_fav, LV_OBJ_FLAG_HIDDEN);   /* Zune: Favourite lives in the hub */
     else     lv_obj_add_flag(btn_fav, LV_OBJ_FLAG_HIDDEN);
     lv_label_set_text(fav_icon, HEART_FILLED);                     /* theme: solid, colour carries the state */
     lv_obj_set_style_text_color(fav_icon, on ? np_col() : th_braun_family() ? TC(TEXT_SECONDARY) : (g_np_poster || g_np_ring) ? TC(TEXT_PRIMARY) : TC(TEXT_MUTED), LV_PART_MAIN);
@@ -2089,10 +2089,16 @@ void kit_fork_np_braun2(void){
         lv_obj_set_style_text_color(b,i==1?TC(ON_ACCENT):TC(ON_CONTROL),0);lv_obj_set_style_bg_opa(b,LV_OPA_COVER,0);br2_emboss(b,1);
         lv_obj_align(b,LV_ALIGN_TOP_MID,(i-1)*64,i==1?284:290);br2_keep_tree(b);
     }
-    /* No icons beside the track: favourite, sleep and mode live in the track menu (tap the title), the queue in the
-     * hub (swipe), as in the other themes. */
-    lv_obj_t *utility[]={btn_fav,btn_sleep,btn_mode,btn_queue,queue_badge};
-    for(unsigned i=0;i<sizeof utility/sizeof *utility;i++)if(utility[i]){lv_obj_add_flag(utility[i],LV_OBJ_FLAG_HIDDEN);kit_keep(utility[i]);}
+    /* Play mode left and favourite right of the elapsed time, small and flat; their shared handlers are unchanged.
+     * The queue lives in the hub (swipe) and sleep in Quick Settings. */
+    lv_obj_t *beside[2]={btn_mode,btn_fav};
+    for(int k=0;k<2;k++)if(beside[k]){lv_obj_t *b=beside[k];
+        lv_obj_set_align(b,LV_ALIGN_TOP_LEFT);lv_obj_set_size(b,36,36);lv_obj_set_pos(b,k?214:110,BR2_SCALE_Y+10);
+        lv_obj_set_style_bg_opa(b,LV_OPA_TRANSP,0);lv_obj_set_style_border_width(b,0,0);lv_obj_set_style_shadow_width(b,0,0);lv_obj_set_style_pad_all(b,0,0);
+        lv_obj_set_ext_click_area(b,8);br2_keep_tree(b);}
+    if(mode_icon)lv_obj_center(mode_icon);if(fav_icon)lv_obj_center(fav_icon);
+    lv_obj_t *gone[]={btn_sleep,btn_queue,queue_badge};
+    for(unsigned i=0;i<sizeof gone/sizeof *gone;i++)if(gone[i]){lv_obj_add_flag(gone[i],LV_OBJ_FLAG_HIDDEN);kit_keep(gone[i]);}
 }
 /* Zune Now Playing: the cover as a square bleeding off the left edge, the track as a left-aligned column beside it
  * (SemiBold title, artist, album, times), the progress as a thin ring hugging the whole rim from 12 o'clock with a
@@ -4175,7 +4181,7 @@ void ui_update(const track_state_t *st)
             int armed = ui_sleep_state(NULL);                   /* accent the moon while a timer is set */
             lv_obj_set_style_text_color(sleep_icon, armed ? accent : TC(TEXT_MUTED), LV_PART_MAIN);
         } else {
-            if(!th_zune() && !th_braun2()) lv_obj_remove_flag(btn_mode, LV_OBJ_FLAG_HIDDEN);   /* Zune, Braun 2.0: play mode lives in the actions menu */
+            if(!th_zune()) lv_obj_remove_flag(btn_mode, LV_OBJ_FLAG_HIDDEN);   /* Zune: play mode lives in the actions menu */
             lv_obj_add_flag(btn_sleep, LV_OBJ_FLAG_HIDDEN);
             ui_np_close_overlays();   /* not a book -> dismiss any open sleep popover (its context is gone) */
         }

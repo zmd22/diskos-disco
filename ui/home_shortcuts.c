@@ -94,6 +94,7 @@ static lv_obj_t *shortcut(lv_obj_t *root, int cy, const char *glyph, const lv_fo
 }
 void home_shortcuts_refresh(void){
     if(!g_upnext) return;
+    if(th_braun2()){ lv_obj_add_flag(g_upnext, LV_OBJ_FLAG_HIDDEN); return; }   /* Braun 2.0: Up Next lives in the queue, not on Home */
     if(th_zune()){
         int a=main_choice("zune_main",ZMAIN_UPNEXT);
         for(int i=0;i<4;i++)if(g_main_tiles[i]){
