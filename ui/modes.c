@@ -329,6 +329,7 @@ static void b2modes_create(lv_obj_t *root){
         lv_obj_set_style_bg_color(b, TC(SURFACE_STRONG), 0); lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
         lv_obj_set_style_bg_color(b, TC(SURFACE_PRESSED), LV_STATE_PRESSED); br2_emboss(b, 1);
         g_b2ic[i] = br_label(b, MODES[i].glyph, TF(QS_ICON_28), BR_TXT); lv_obj_align(g_b2ic[i], LV_ALIGN_CENTER, 0, -10);
+        lv_obj_set_style_text_color(g_b2ic[i], TC(ACCENT_PRIMARY), 0); br2_depth(b, 0);
         g_b2lamp[i] = br_disc(b, 74, 12, 4, BR_SURF);
         lv_obj_t *cap = br_label(b, NM[i], br_font(14, 0), BR_TXT2); lv_obj_align(cap, LV_ALIGN_BOTTOM_MID, 0, -8);
         ui_on(b, b2modes_tap, LV_EVENT_CLICKED, (void *)(intptr_t)i, "modes.select", UI_CORE); br2_keep_tree(b);

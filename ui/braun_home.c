@@ -92,6 +92,7 @@ void bhome_create(lv_obj_t *root){
     /* the battery: a thin black arc on the top rim */
     if(!th_braun2()){ battery_arc_create(&g_battery,root,344,4,236,304,0);g_batt=g_battery.arc; }
     if(th_braun2()){
+        br2_depth(lib,1); br2_depth(g_pp,0); br2_depth(srch,1);   /* the transport with depth, orange icons */
         g_b2batt=br_label(root,LV_SYMBOL_BATTERY_FULL,theme_font_original(16),BR_TXT2);lv_obj_align(g_b2batt,LV_ALIGN_CENTER,-RD+44,CY-180);   /* inside the 9 o'clock tick */
         g_b2radio=br_label(root,"",theme_font_original(16),BR_TXT2);lv_obj_set_style_text_letter_space(g_b2radio,6,0);lv_obj_align(g_b2radio,LV_ALIGN_TOP_MID,0,CY-RD+24);   /* under the 12 o'clock tick */
         lv_obj_set_pos(w,130,CY+22);lv_obj_set_size(w,100,24);lv_obj_set_style_bg_opa(w,LV_OPA_TRANSP,0);lv_obj_set_style_border_width(w,0,0);

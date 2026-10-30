@@ -787,6 +787,7 @@ static void br2qs_build(void){
         lv_obj_set_style_radius(b,20,0);lv_obj_set_style_bg_color(b,TC(SURFACE_STRONG),0);lv_obj_set_style_bg_opa(b,LV_OPA_COVER,0);
         lv_obj_set_style_bg_color(b,TC(SURFACE_PRESSED),LV_STATE_PRESSED);br2_emboss(b,1);
         g_br2qs_ic[i]=br_label(b,quicksettings_item_glyph(g_items[i]),TF(QS_ICON_28),BR_TXT);lv_obj_center(g_br2qs_ic[i]);
+        lv_obj_set_style_text_color(g_br2qs_ic[i],TC(ACCENT_PRIMARY),0);br2_depth(b,0);
         g_br2qs_lamp[i]=br_disc(b,52,10,4,BR_SURF);
         ui_on(b,br2qs_tap,LV_EVENT_SHORT_CLICKED,(void*)(intptr_t)i,"qs.item",UI_CORE);
         ui_on(b,br2qs_hold,LV_EVENT_LONG_PRESSED,(void*)(intptr_t)i,"qs.detail",UI_REACHABLE);br2_keep_tree(b);

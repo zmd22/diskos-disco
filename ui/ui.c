@@ -2183,7 +2183,7 @@ void kit_fork_np_braun2(void){
             const lv_font_t *gf=theme_font_original(24);lv_obj_set_style_text_font(b,gf,0);lv_obj_set_style_text_align(b,LV_TEXT_ALIGN_CENTER,0);
             lv_obj_set_style_pad_top(b,(d-lv_font_get_line_height(gf))/2,0);}
         lv_obj_set_style_text_font(b,i==1?theme_font_original(24):TF(UI_24),0);lv_obj_set_style_bg_color(b,i==1?TC(ACCENT_PRIMARY):TC(CONTROL_KNOB),0);
-        lv_obj_set_style_text_color(b,i==1?TC(ON_ACCENT):TC(ON_CONTROL),0);lv_obj_set_style_bg_opa(b,LV_OPA_COVER,0);br2_emboss(b,1);
+        lv_obj_set_style_text_color(b,i==1?TC(ON_ACCENT):TC(ON_CONTROL),0);lv_obj_set_style_bg_opa(b,LV_OPA_COVER,0);br2_depth(b,i!=1);
         lv_obj_align(b,LV_ALIGN_TOP_MID,(i-1)*64,i==1?284:290);br2_keep_tree(b);
     }
     /* Play mode left and favourite right of the elapsed time, small and flat; their shared handlers are unchanged.

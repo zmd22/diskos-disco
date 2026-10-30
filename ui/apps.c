@@ -288,7 +288,7 @@ static void b2_build(void){
         lv_obj_set_style_bg_color(b, TC(SURFACE_STRONG), 0); lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
         lv_obj_set_style_bg_color(b, TC(SURFACE_PRESSED), LV_STATE_PRESSED); br2_emboss(b, 1);
         lv_obj_t *ic = br_label(b, g_items[first + i].icon, f == 1 ? TF(ICON_28) : f == 2 ? &font_theme_20 : TF(UI_22), BR_TXT);
-        lv_obj_align(ic, LV_ALIGN_CENTER, 0, -10);
+        lv_obj_align(ic, LV_ALIGN_CENTER, 0, -10); lv_obj_set_style_text_color(ic, TC(ACCENT_PRIMARY), 0); br2_depth(b, 0);
         if(!strcmp(g_items[first + i].icon, "@shelf")) disco_vec_icon(ic, "@shelf", 26);
         lv_obj_t *lamp = br_disc(b, 74, 12, 4, BR_SURF); lv_obj_set_style_bg_color(lamp, TC(CONTROL_TRACK), 0);
         lv_obj_t *cap = br_label(b, g_items[first + i].name, br_font(14, 0), BR_TXT2);

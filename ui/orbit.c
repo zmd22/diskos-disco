@@ -70,7 +70,7 @@ void orbit_create(orbit_t *o, lv_obj_t *root, const orbit_item_t *it, int n, int
                                                                            * and a notch only for keys that show on / off (orbit_set_on) */
             lv_obj_set_style_radius(b, 18, 0);
             lv_obj_set_style_bg_color(b, TC(SURFACE_STRONG), 0); lv_obj_set_style_bg_color(b, TC(SURFACE_PRESSED), LV_STATE_PRESSED); br2_emboss(b, 1);
-            lv_obj_set_style_text_color(o->icon[i], TC(TEXT_PRIMARY), 0);
+            lv_obj_set_style_text_color(o->icon[i], TC(ACCENT_PRIMARY), 0); br2_depth(b, 0);
             lv_obj_t *lamp = lv_obj_create(b); lv_obj_remove_style_all(lamp);
             lv_obj_set_size(lamp, 8, 8); lv_obj_align(lamp, LV_ALIGN_TOP_RIGHT, -7, 7); lv_obj_set_style_radius(lamp, LV_RADIUS_CIRCLE, 0);
             lv_obj_set_style_bg_color(lamp, TC(CONTROL_TRACK), 0); lv_obj_set_style_bg_opa(lamp, LV_OPA_COVER, 0);

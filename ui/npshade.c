@@ -228,7 +228,7 @@ void npshade_open(void){
         for(int k = 0; k < 3; k += 2) if(g_btn[k]){
             lv_obj_set_style_bg_color(g_btn[k], TC(CONTROL_KNOB), 0); lv_obj_set_style_bg_opa(g_btn[k], LV_OPA_COVER, 0);
             lv_obj_set_style_border_width(g_btn[k], 0, 0); lv_obj_set_style_text_color(g_btn_l[k], TC(ON_CONTROL), 0);
-            lv_obj_set_style_shadow_color(g_btn[k], TC(ACCENT_PRIMARY), 0); lv_obj_set_style_shadow_width(g_btn[k], 14, 0); lv_obj_set_style_shadow_opa(g_btn[k], 46, 0);
+            lv_obj_set_style_text_color(g_btn_l[k], TC(ACCENT_PRIMARY), 0); br2_depth(g_btn[k], 0);   /* shaded knob, orange glyph */
         }
         lv_obj_set_style_bg_color(g_handle, TC(SURFACE_RAISED), 0);
     }
