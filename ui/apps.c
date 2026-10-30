@@ -7,6 +7,7 @@
 #include "anim.h"
 #include "theme.h"
 #include "braun.h"
+#include "braun2.h"
 #include "orbit.h"
 #include "config.h"
 #include "curvelist.h"
@@ -254,11 +255,55 @@ static void zune_build(void){
                lv_obj_align(lv_obj_get_child(g_box, -1), LV_ALIGN_TOP_MID, 0, 110); return; }
     zdial_build(g_box, lb, n, 0, zapps_pick, 100, "apps.zune");
 }
+/* Braun 2.0: Quick Settings keys - three on the top row, the rest centred below, either side of the centre line - each
+ * with its name, a corner lamp lit while pressed and the theme's emboss. All apps pages six at a time (tap the title). */
+static void b2_pick_cb(lv_event_t *e){ apps_pick((int)(intptr_t)lv_event_get_user_data(e)); }
+static void b2_lamp_cb(lv_event_t *e){
+    lv_event_code_t c = lv_event_get_code(e); lv_obj_t *lamp = lv_event_get_user_data(e);
+    if(c == LV_EVENT_PRESSED) lv_obj_set_style_bg_color(lamp, TC(ACCENT_PRIMARY), 0);
+    else if(c == LV_EVENT_RELEASED || c == LV_EVENT_PRESS_LOST) lv_obj_set_style_bg_color(lamp, TC(CONTROL_TRACK), 0);
+}
+static void b2_back_cb(lv_event_t *e){ (void)e; if(g_all){ g_all = 0; g_page = 0; apps_reload(); } else screen_back(); }
+static void b2_more_cb(lv_event_t *e){ (void)e; int pages = (g_nitems + PER_PAGE - 1) / PER_PAGE; g_page = pages > 1 ? (g_page + 1) % pages : 0; build_page(); }
+static void b2_build(void){
+    int per = g_all ? PER_PAGE : NSC, pages = g_all ? (g_nitems + PER_PAGE - 1) / PER_PAGE : 1; if(pages < 1) pages = 1;
+    if(g_page >= pages) g_page = 0;
+    int first = g_page * per, cnt = g_nitems - first; if(cnt > per) cnt = per; if(cnt < 0) cnt = 0;
+    char t[32];
+    if(g_all && pages > 1) snprintf(t, sizeof t, "All apps %d/%d", g_page + 1, pages); else snprintf(t, sizeof t, "%s", g_all ? "All apps" : "Shortcuts");
+    lv_obj_t *tl = ui_header_cb(g_box, t, b2_back_cb);
+    if(g_all && pages > 1){ lv_obj_add_flag(tl, LV_OBJ_FLAG_CLICKABLE); lv_obj_set_ext_click_area(tl, 12); lv_obj_add_event_cb(tl, b2_more_cb, LV_EVENT_CLICKED, NULL); }
+    if(cnt < 1){
+        lv_obj_t *l = lv_label_create(g_box); lv_label_set_text(l, "Choose shortcuts in\nSettings > Display > Shortcuts");
+        lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, 0); lv_obj_set_style_text_color(l, TC(TEXT_SECONDARY), 0); lv_obj_set_style_text_font(l, br_font(16, 0), 0);
+        lv_obj_center(l); kit_keep(l); return;
+    }
+    int top = cnt > 3 ? 3 : cnt, bottom = cnt - top;
+    for(int i = 0; i < cnt; i++){
+        int row = i < top ? 0 : 1, n = row ? bottom : top, col = row ? i - top : i;
+        int x = 180 + (2 * col - (n - 1)) * 48 - 44, y = cnt > 3 ? (row ? 184 : 96) : 140;
+        int f = g_items[first + i].font;
+        lv_obj_t *b = lv_button_create(g_box); lv_obj_remove_style_all(b);
+        lv_obj_set_pos(b, x, y); lv_obj_set_size(b, 88, 80); lv_obj_set_style_radius(b, 22, 0);
+        lv_obj_set_style_bg_color(b, TC(SURFACE_STRONG), 0); lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
+        lv_obj_set_style_bg_color(b, TC(SURFACE_PRESSED), LV_STATE_PRESSED); br2_emboss(b, 1);
+        lv_obj_t *ic = br_label(b, g_items[first + i].icon, f == 1 ? TF(ICON_28) : f == 2 ? &font_theme_20 : TF(UI_22), BR_TXT);
+        lv_obj_align(ic, LV_ALIGN_CENTER, 0, -10);
+        if(!strcmp(g_items[first + i].icon, "@shelf")) disco_vec_icon(ic, "@shelf", 26);
+        lv_obj_t *lamp = br_disc(b, 74, 12, 4, BR_SURF); lv_obj_set_style_bg_color(lamp, TC(CONTROL_TRACK), 0);
+        lv_obj_t *cap = br_label(b, g_items[first + i].name, br_font(14, 0), BR_TXT2);
+        lv_obj_set_width(cap, 80); lv_label_set_long_mode(cap, LV_LABEL_LONG_DOT); lv_obj_set_style_text_align(cap, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_align(cap, LV_ALIGN_BOTTOM_MID, 0, -8);
+        lv_obj_add_event_cb(b, b2_lamp_cb, LV_EVENT_ALL, lamp);
+        ui_on(b, b2_pick_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i, "apps.pick", UI_CORE); br2_keep_tree(b);
+    }
+}
 static void build_page(void){
     if(!g_box) return;
     lv_obj_clean(g_box);
     memset(&g_orb, 0, sizeof g_orb);
     if(th_zune()){ zune_build(); return; }
+    if(th_braun2()){ b2_build(); return; }
     if((th_disco_family() || th_null())){ disco_build(); return; }
     int per = g_all ? PER_PAGE : NSC;
     int pages = g_all ? (g_nitems + PER_PAGE - 1) / PER_PAGE : 1; if(pages < 1) pages = 1;
