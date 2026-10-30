@@ -2,9 +2,9 @@
 
 ## Baselines
 
-This documentation describes **Disco 3.2.1**, release commit `91a7151720d55583c766f7ebd2047ba6620921e1`. Its shipped mq_ui SHA-256 is `597d8f2e4b881cf590392481a17b4eea385fef0e9ea25d74074a749e3b9731bb`.
+This documentation describes **Disco 3.2.2**, the release commit tagged `v3.2.2`. Its shipped mq_ui SHA-256 is `0c84a91c4272bccaa5e4858867b23b557fbcaa92e259816d4da69bf28a5a7b99`.
 
-The later main merge `bb389f6` changes Apps, Search and Settings for Zune; those changes are not in the 3.2.1 payload and are not described as shipped here.
+The main merge `bb389f6` (Zune Apps, Search and Settings fixes, pull request #22) is part of the 3.2.2 source and payload.
 
 Reference: [b0hemia/diskOS](https://github.com/b0hemia/diskOS/tree/53a9cc512d7aec766fd7c5e304e78cac6ca9b7d3), commit `53a9cc512d7aec766fd7c5e304e78cac6ca9b7d3`. Upstream's tour, documentation index, contribution rules and developer workflow informed the organisation, not Disco's feature list.
 

@@ -1,17 +1,17 @@
 {
-  "version": "3.2.1",
-  "revision": "Smoother wheel lists, Disco button depth, Queue fix in Wheel mode, idle power-off never on the charger, power-button save",
-  "baseline": "v3.2.0",
-  "source_commit": "the v3.2.1 release commit (ui source as hashed below)",
-  "ui_source_sha256": "6a9b81f3685768141d254b779b7a7697ee892bf20701ab79f5117f791abebba0",
+  "version": "3.2.2",
+  "revision": "Default artwork, Wheel album/artist header under the screen header, quoted tags on Now Playing, Queue always starts and returns, Squash wheel pills, Zune fixes (PR #22)",
+  "baseline": "v3.2.1",
+  "source_commit": "the v3.2.2 release commit (ui source as hashed below)",
+  "ui_source_sha256": "82cc8f4fac0239931c5ef647dfaf315ebf98ad0b1aca22506d97b51b88c52a49",
   "ui_source_hash_recipe": "sorted tracked ui paths: path + NUL + file bytes + NUL",
   "compiler": "musl-cross-make GCC 11.2.0, musl 1.2.6; mipsel-linux-musl, -ffp-contract=off",
   "abi": "static little-endian MIPS32r2, o32, FP64, NaN2008",
-  "status": "Disco 3.2.1. Fresh static MIPS build from the release source; host-checked, power and charger behaviour to be confirmed on the Disc.",
+  "status": "Disco 3.2.2. Fresh static MIPS build of the release source; tested on the owner's Disc as 3.2.2-test4 (same binary).",
   "binary": {
-    "bytes": 7268460,
-    "sha256": "597d8f2e4b881cf590392481a17b4eea385fef0e9ea25d74074a749e3b9731bb",
-    "md5": "913a91e2c281bcfc2c659113a2b890bf"
+    "bytes": 7273272,
+    "sha256": "0c84a91c4272bccaa5e4858867b23b557fbcaa92e259816d4da69bf28a5a7b99",
+    "md5": "5be048029528090907626260b7701f5f"
   },
   "artwork_helper": {
     "bytes": 119424,
@@ -23,5 +23,5 @@
     "commit": "2bcb014b23a8c8cccf534eea8bda2fe5df453cfd",
     "license": "LGPL-2.1-or-later"
   },
-  "baseline_commit": "fe0257b93295d174e692be8b011bb42a2ee49905"
+  "baseline_commit": "91a7151720d55583c766f7ebd2047ba6620921e1"
 }

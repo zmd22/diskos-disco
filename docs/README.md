@@ -1,6 +1,6 @@
 # Disco 3.2.2 documentation
 
-These guides describe the shipped 3.2.1 source and payload, commit `91a7151720d55583c766f7ebd2047ba6620921e1`. Later branch changes are not part of this baseline.
+These guides describe the shipped 3.2.2 source and payload, the release commit tagged `v3.2.2`. Later branch changes are not part of this baseline.
 
 ## Use
 

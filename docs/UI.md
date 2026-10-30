@@ -8,4 +8,4 @@ See [the source map](SOURCE_MAP.md) for components and [theme authoring](../them
 
 ## Frozen release snapshot
 
-The shipped payload manifest hashes every tracked file under `ui/`, including its README and historical development notes. Those files remain unchanged to preserve verification of the original 3.2.1 binary. The old candidate/version and deployment prose in `ui/README.md` is historical; this guide supersedes it. Use the current guides under `docs/` for development. Do not replace the recorded source hash merely to make a changed source tree appear to have built the old payload.
+The shipped payload manifest hashes every tracked file under `ui/`, including its README and historical development notes. Those files remain unchanged to preserve verification of the 3.2.2 binary. The old candidate/version and deployment prose in `ui/README.md` is historical; this guide supersedes it. Use the current guides under `docs/` for development. Do not replace the recorded source hash merely to make a changed source tree appear to have built the old payload.
