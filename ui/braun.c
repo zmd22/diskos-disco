@@ -19,6 +19,11 @@ extern const lv_font_t font_inter_medium_12, font_inter_medium_14, font_inter_me
 extern const lv_font_t diskos_hifi_ui_24; /* bundled Inter SemiBold, reused for Braun's larger track title */
 const lv_font_t *br_font(int size, int bold){
     static lv_font_t f[7]; static int init;
+    if(th_braun2() && size <= 22){   /* Braun 2.0 follows Font Size for body text (titles, clocks and figures stay fixed) */
+        int sz = theme_font_size(); if(sz == 0) size -= 2; else if(sz == 2) size += 2;
+        if(!bold && size >= 22){ extern const lv_font_t font_np_inter_22; static lv_font_t m22; static int i22;
+            if(!i22){ m22 = font_np_inter_22; m22.fallback = ui_font_cjk(20); i22 = 1; } return &m22; }
+    }
     if(!init){
         const lv_font_t *src[7] = { &font_inter_medium_12, &font_inter_medium_14, &font_inter_medium_16,
                                     &font_inter_bold_16, &font_inter_bold_18, &font_inter_bold_22, &font_inter_bold_44 };
