@@ -1268,8 +1268,8 @@ static void shuffle_all_cb(lv_event_t *e){ if(lv_event_get_code(e)==LV_EVENT_CLI
 static void hdr_btn(lv_obj_t *row, int x, const char *txt, lv_event_cb_t cb){
     lv_obj_t *b = lv_button_create(row);
     lv_obj_remove_style_all(b);
-    lv_obj_set_size(b, 128, 44); lv_obj_set_pos(b, x, 4);
-    lv_obj_set_style_radius(b, 12, 0);
+    lv_obj_set_size(b, th_braun2() ? 112 : 128, 44); lv_obj_set_pos(b, x, 4);   /* Braun 2.0: a pair that fits inside the circle */
+    lv_obj_set_style_radius(b, th_braun2() ? 22 : 12, 0);
     int br = th_braun_family();                                            /* Braun: flat off-white keys, dark type */
     lv_obj_set_style_bg_color(b, br ? TC(SURFACE) : TC(SURFACE), 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
@@ -1281,6 +1281,8 @@ static void hdr_btn(lv_obj_t *row, int x, const char *txt, lv_event_cb_t cb){
     lv_obj_set_style_text_font(l, TF(UI_14), 0);
     lv_obj_set_style_text_color(l, br ? TC(TEXT_PRIMARY) : TC(TEXT_PRIMARY), 0);
     lv_obj_center(l);
+    if(th_braun2()){ lv_obj_set_style_shadow_color(b, TC(ACCENT_PRIMARY), 0); lv_obj_set_style_shadow_width(b, 14, 0); lv_obj_set_style_shadow_opa(b, 46, 0);
+                     lv_obj_set_style_bg_color(b, TC(SURFACE_STRONG), 0); }   /* the theme's soft orange glow */
 }
 /* Album detail header: the album cover on top (from the art cache) with the artist beneath it, shown
  * above the Play All / Shuffle row for an album drill - from EITHER the list view or the cover flow. */
@@ -1422,6 +1424,13 @@ static void add_play_header(int centered){
         g_has_header = 1; return;
     }
     int base = centered ? 16 : 0;                 /* r-local 16 => screen-centre (list is at x30/w286) */
+    if(th_braun2()){                              /* centred on the screen, whatever the row's inset */
+        lv_obj_update_layout(g_list); lv_area_t la; lv_obj_get_coords(r, &la);
+        int mid = 180 - la.x1;
+        hdr_btn(r, mid - 116, tr_sym(LV_SYMBOL_PLAY, "Play"), play_all_cb);
+        hdr_btn(r, mid + 4,   tr_sym(LV_SYMBOL_SHUFFLE, "Shuffle"), shuffle_all_cb);
+        g_has_header = 1; return;
+    }
     hdr_btn(r, base,       tr_sym(LV_SYMBOL_PLAY, "Play All"), play_all_cb);
     hdr_btn(r, base + 140, tr_sym(LV_SYMBOL_SHUFFLE, "Shuffle"), shuffle_all_cb);
     g_has_header = 1;
@@ -1473,7 +1482,8 @@ static void add_plist_row(int centered){
     lv_obj_remove_style_all(r);
     lv_obj_set_size(r, centered ? 286 : 268, ROW_H);
     lv_obj_clear_flag(r, LV_OBJ_FLAG_SCROLLABLE);
-    hdr_btn(r, (centered ? 16 : 0) + 70, tr_sym(LV_SYMBOL_PLUS, "Playlist"), add_plist_cb);   /* centred under the pair above */
+    if(th_braun2()){ lv_obj_update_layout(g_list); lv_area_t la; lv_obj_get_coords(r, &la); hdr_btn(r, 180 - la.x1 - 56, tr_sym(LV_SYMBOL_PLUS, "Playlist"), add_plist_cb); }
+    else hdr_btn(r, (centered ? 16 : 0) + 70, tr_sym(LV_SYMBOL_PLUS, "Playlist"), add_plist_cb);   /* centred under the pair above */
     g_has_header = 2;                            /* Play All / Shuffle + this row */
 }
 

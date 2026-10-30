@@ -55,7 +55,7 @@ static const qs_item_t CATALOG[Q_COUNT]={
 };
 static const char *qs_config_key(void){return th_braun2()?"braun2_qs_items":th_zune()?"zune_qs_items":th_null()?"null_qs_items":th_disco_family()?"disco_qs_items":"qs_items";}
 int quicksettings_item_count(void){return Q_COUNT;}
-int quicksettings_item_limit(void){return (th_null()||th_simple())?8:th_disco()?7:6;}
+int quicksettings_item_limit(void){return (th_null()||th_simple()||th_braun2())?8:th_disco()?7:6;}
 int quicksettings_playback_item(void){return Q_PLAYBACK;}
 int quicksettings_equalizer_item(void){return Q_EQ;}
 int ui_sleep_state(int *secs_left);
@@ -73,7 +73,7 @@ int quicksettings_items_load(int *out){
     }
     if(!code || (code[0] && !n)){
         if(th_null()||th_simple()){static const int nd[]={T_WIFI,T_BT,T_MODE,Q_EQ,T_RESCAN,Q_SEARCH,Q_WEATHER,T_SET};memcpy(out,nd,sizeof nd);return 8;}
-        if(th_braun2()){static const int bd[]={T_WIFI,T_BT,Q_SLEEP,Q_SHUFFLE,Q_FAVS,T_SET};memcpy(out,bd,sizeof bd);return 6;}
+        if(th_braun2()){static const int bd[]={T_WIFI,T_BT,Q_SLEEP,Q_SHUFFLE,Q_FAVS,Q_EQ,T_MODE,T_SET};memcpy(out,bd,sizeof bd);return 8;}
         if(th_zune()){static const int zd[]={T_WIFI,T_BT,Q_GAIN,Q_SHUFFLE,Q_SLEEP,T_MODE};memcpy(out,zd,sizeof zd);return 6;}
         if(!th_disco_family()){for(int i=0;i<T_N;i++)out[i]=i;return T_N;}
         static const int defaults[]={T_WIFI,T_BT,T_MODE,T_LIB,Q_EQ,Q_SEARCH,T_SET};
@@ -132,7 +132,7 @@ const char *quicksettings_item_glyph(int id){const qs_item_t *item=quicksettings
 static void br2qs_paint(void);
 static void br2qs_build(void);
 static void br2qs_create(lv_obj_t *);
-static lv_obj_t *g_br2qs_btn[6],*g_br2qs_status;
+static lv_obj_t *g_br2qs_btn[QS_MAX_ITEMS],*g_br2qs_status;
 static int g_br2qs_pct=-1;
 static void zqs_paint(void);
 static void zqs_track(const char*,const char*,int);
@@ -747,8 +747,8 @@ static void zqs_create(lv_obj_t *root){
 }
 static lv_obj_t *zqs_test_button(int slot){return slot>=0&&slot<g_nitems?g_zq_hit[slot]:NULL;}
 
-/* Braun 2.0 six-key panel. Selection and all actions use the shared QS catalogue/editor. */
-static lv_obj_t *g_br2qs_items,*g_br2qs_lamp[6],*g_br2qs_ic[6],*g_br2qs_num,*g_br2qs_needle;
+/* Braun 2.0 eight-key panel (two rows of four either side of the centre line). Selection and all actions use the shared QS catalogue/editor. */
+static lv_obj_t *g_br2qs_items,*g_br2qs_lamp[QS_MAX_ITEMS],*g_br2qs_ic[QS_MAX_ITEMS],*g_br2qs_num,*g_br2qs_needle;
 static lv_point_precise_t g_br2qs_needle_pts[2];
 static int g_br2qs_needle_value=-1;
 static void br2qs_brightness_label(void){
@@ -773,12 +773,12 @@ static void br2qs_build(void){
     if(!g_br2qs_items)return;lv_obj_clean(g_br2qs_items);memset(g_br2qs_btn,0,sizeof g_br2qs_btn);
     g_nitems=quicksettings_items_load(g_items);
     for(int i=0;i<g_nitems;i++){
-        int x=62+(i%3)*82,y=82+(i/3)*78;
-        lv_obj_t *b=lv_button_create(g_br2qs_items);g_br2qs_btn[i]=b;lv_obj_remove_style_all(b);lv_obj_set_pos(b,x,y);lv_obj_set_size(b,72,66);
-        lv_obj_set_style_radius(b,22,0);lv_obj_set_style_bg_color(b,TC(SURFACE_STRONG),0);lv_obj_set_style_bg_opa(b,LV_OPA_COVER,0);
+        int x=40+(i%4)*72,y=i<4?112:186;   /* rows meet 4 px either side of y 180 */
+        lv_obj_t *b=lv_button_create(g_br2qs_items);g_br2qs_btn[i]=b;lv_obj_remove_style_all(b);lv_obj_set_pos(b,x,y);lv_obj_set_size(b,64,62);
+        lv_obj_set_style_radius(b,20,0);lv_obj_set_style_bg_color(b,TC(SURFACE_STRONG),0);lv_obj_set_style_bg_opa(b,LV_OPA_COVER,0);
         lv_obj_set_style_bg_color(b,TC(SURFACE_PRESSED),LV_STATE_PRESSED);
         g_br2qs_ic[i]=br_label(b,quicksettings_item_glyph(g_items[i]),TF(QS_ICON_28),BR_TXT);lv_obj_center(g_br2qs_ic[i]);
-        g_br2qs_lamp[i]=br_disc(b,60,11,4,BR_SURF);
+        g_br2qs_lamp[i]=br_disc(b,52,10,4,BR_SURF);
         ui_on(b,br2qs_tap,LV_EVENT_SHORT_CLICKED,(void*)(intptr_t)i,"qs.item",UI_CORE);
         ui_on(b,br2qs_hold,LV_EVENT_LONG_PRESSED,(void*)(intptr_t)i,"qs.detail",UI_REACHABLE);br2_keep_tree(b);
     }
@@ -787,7 +787,7 @@ static void br2qs_build(void){
 static void br2qs_create(lv_obj_t *root){
     br_face(root);
     battery_arc_create(&g_battery,root,344,4,236,304,0);g_batt=g_battery.arc;
-    lv_obj_t *status=br_label(root,"",br_font(14,0),BR_TXT2);g_br2qs_status=status;lv_obj_align(status,LV_ALIGN_TOP_MID,0,39);kit_keep(status);
+    lv_obj_t *status=br_label(root,"",br_font(22,1),BR_TXT);g_br2qs_status=status;lv_obj_align(status,LV_ALIGN_TOP_MID,0,44);kit_keep(status);
     g_br2qs_items=lv_obj_create(root);lv_obj_remove_style_all(g_br2qs_items);lv_obj_set_size(g_br2qs_items,360,250);lv_obj_remove_flag(g_br2qs_items,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);kit_keep(g_br2qs_items);
     g_bright=lv_arc_create(root);lv_obj_set_size(g_bright,344,344);lv_obj_center(g_bright);lv_arc_set_rotation(g_bright,0);lv_arc_set_bg_angles(g_bright,45,135);lv_arc_set_mode(g_bright,LV_ARC_MODE_REVERSE);lv_arc_set_range(g_bright,4,40);
     lv_obj_set_style_arc_opa(g_bright,LV_OPA_TRANSP,LV_PART_MAIN);lv_obj_set_style_arc_opa(g_bright,LV_OPA_TRANSP,LV_PART_INDICATOR);

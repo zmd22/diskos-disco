@@ -27,7 +27,16 @@ The supplied [guide](BRAUN2_GUIDE.md) is the reference brief; the choices above 
 - Music: elapsed time no longer wraps, transport glyphs are centred, and queue/mode/favourite/sleep are matching 44 px panel knobs.
 - Standby, Queue: Inter type on standby; Queue's Play stays orange.
 
-Renders were regenerated after this pass (142 of 146 captures). Stats and its landing view need a writable `/usr/data` on the host and were not recaptured; their committed images are from the first pass.
+## Second pass (3.3.0-test2)
+
+- Music: no icons beside the track (favourite, sleep and mode in the track menu, the queue in the hub); the album alone (no `3/19`) under the tuning scale; play/pause glyph centred in its key.
+- Headers: back knob and title share one centre line; the title steps 22 -> 18 -> 16 px to fit inside the circle, then ends in an ellipsis, and refits when a screen changes it.
+- Buttons: icon glyphs in orange with a soft orange glow; album Play / Shuffle / Playlist keys sized to fit the circle.
+- Quick Settings: eight keys (`braun2_qs_items`, limit 8) in two rows either side of the centre line; larger clock and battery line.
+- Volume: a right-hand half-screen panel with the knob and tick scale, plus a LO / HI gain switch and an LED strip (dull orange low, bright high) where the firmware supports gain.
+- Track / album / file menus: QS-style squircle keys, a corner lamp that lights while pressed, a notch only on keys that show on/off, no discs behind the keys.
+
+Renders were regenerated after the first pass (142 of 146 captures). Stats and its landing view need a writable `/usr/data` on the host and were not recaptured; their committed images are from the first pass.
 
 ## Screen and subscreen coverage
 

@@ -1746,11 +1746,11 @@ int main(int argc, char **argv){
         if(getenv("REVIEW_HINTS")){review_hints();return 0;}
         if(getenv("REVIEW_BRAUN2")){
             assert(th_braun2()&&theme_preset()==THEME_PRESET_BRAUN2);qs_wifi=qs_bt=0;
-            int items[QS_MAX_ITEMS];assert(quicksettings_items_load(items)==6);
-            assert(quicksettings_item_limit()==6);
+            int items[QS_MAX_ITEMS];assert(quicksettings_items_load(items)==8);
+            assert(quicksettings_item_limit()==8);
             lv_indev_t *in=lv_indev_create();lv_indev_set_type(in,LV_INDEV_TYPE_POINTER);lv_indev_set_read_cb(in,nav_read);lv_timer_set_period(lv_indev_get_read_timer(in),10);
             screen_show(SCR_QUICK);nav_wait(150);
-            for(int i=0;i<6;i++){lv_obj_t*b=quicksettings_test_button(i);assert(b&&lv_obj_get_width(b)>=44&&lv_obj_get_height(b)>=44);}
+            for(int i=0;i<8;i++){lv_obj_t*b=quicksettings_test_button(i);assert(b&&lv_obj_get_width(b)>=44&&lv_obj_get_height(b)>=44);}
             /* Real LVGL hit testing: physical endpoints and midpoint on the LOWER rim. */
             lv_obj_t *bright=ui_action_find("qs.brightness");assert(bright);
             nav_touch((lv_point_t){66,294},300);int low=lv_arc_get_value(bright);
@@ -1764,18 +1764,18 @@ int main(int argc, char **argv){
             lv_obj_send_event(quicksettings_test_button(0),LV_EVENT_LONG_PRESSED,NULL);assert(screen_current()==SCR_WIFI);
             screen_show(SCR_NOWPLAYING);nav_wait(150);
             before=send_count;nav_touch_object(ui_action_find("np.prev"),70);assert(send_count==before+1);assert(!strcmp(last_sent,"0201000C0002"));
-            before=scrub_seek_calls;assert(ui_np_seek_press(120,250));assert(ui_np_seek_move(238,250));assert(ui_np_seek_release(238,250));assert(scrub_seek_calls==before+1);assert(scrub_last_seek>150000&&scrub_last_seek<210000);
-            int original[6];memcpy(original,items,sizeof original);
-            for(int k=0;k<quicksettings_item_count();k+=6){int batch[6],n=0;for(int j=k;j<k+6&&j<quicksettings_item_count();j++)batch[n++]=j;
+            before=scrub_seek_calls;assert(ui_np_seek_press(120,216));assert(ui_np_seek_move(238,216));assert(ui_np_seek_release(238,216));assert(scrub_seek_calls==before+1);assert(scrub_last_seek>150000&&scrub_last_seek<210000);
+            int original[8];memcpy(original,items,sizeof original);
+            for(int k=0;k<quicksettings_item_count();k+=8){int batch[8],n=0;for(int j=k;j<k+8&&j<quicksettings_item_count();j++)batch[n++]=j;
                 assert(!quicksettings_items_save(batch,n));quicksettings_build();screen_show(SCR_QUICK);nav_wait(30);assert_visible_icon_glyphs(screen_get_root(SCR_QUICK));}
-            assert(!quicksettings_items_save(original,6));quicksettings_build();
+            assert(!quicksettings_items_save(original,8));quicksettings_build();
             screen_show(SCR_SETTINGS);disco_qs_menu_open();qs_editor_click("Wi-Fi",LV_SYMBOL_DOWN);
-            assert(quicksettings_items_load(items)==6&&items[0]==1&&items[1]==0);
+            assert(quicksettings_items_load(items)==8&&items[0]==1&&items[1]==0);
             void disco_test_editor_close(void);disco_test_editor_close();screen_show(SCR_QUICK);nav_wait(150);
-            assert(quicksettings_test_button(5));
+            assert(quicksettings_test_button(7));
             assert(quicksettings_items_save(items,0)==0);quicksettings_build();assert(!quicksettings_test_button(0));
             assert(!strcmp(cfg_get_str("qs_items","untouched"),"untouched"));
-            lv_indev_delete(in);puts("PASS Braun 2.0: reverse brightness touch geometry, six keys, radio tap/hold, transport, dial seek, editor persistence and empty state");return 0;
+            lv_indev_delete(in);puts("PASS Braun 2.0: reverse brightness touch geometry, eight keys, radio tap/hold, transport, dial seek, editor persistence and empty state");return 0;
         }
         if(getenv("REVIEW_QS_PARITY")){
             void disco_test_editor_close(void);lv_obj_t *null_test_qs_field(int);int null_test_qs_item(int);

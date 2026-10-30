@@ -8,11 +8,29 @@
 void bhome_create(lv_obj_t *);
 void br2_keep_tree(lv_obj_t *o){kit_keep(o);for(uint32_t i=0;i<lv_obj_get_child_count(o);i++)br2_keep_tree(lv_obj_get_child(o,i));}
 static void back(lv_event_t *e){(void)e;screen_back();}
+/* The header title steps down 22 -> 18 -> 16 px to fit beside the back knob, then ends in an ellipsis; it refits
+ * whenever a screen changes the text (album and folder names). */
+#define BR2_HDR_Y 38      /* the knob's and the title's shared centre line */
+#define BR2_HDR_X 118
+#define BR2_HDR_W 166     /* inside the circle at that height */
+static void br2_header_fit(lv_obj_t *l){
+    const lv_font_t *steps[3]={br_font(22,1),br_font(18,1),br_font(16,1)},*f=steps[2];
+    const char *t=lv_label_get_text(l);
+    for(int k=0;k<3;k++){lv_point_t sz;lv_text_get_size(&sz,t,steps[k],0,0,LV_COORD_MAX,LV_TEXT_FLAG_NONE);if(sz.x<=BR2_HDR_W){f=steps[k];break;}}
+    if(lv_obj_get_style_text_font(l,0)!=f)lv_obj_set_style_text_font(l,f,0);
+    int h=lv_font_get_line_height(f);lv_obj_set_height(l,h);lv_obj_set_y(l,BR2_HDR_Y-h/2);
+}
+static void br2_header_refit(void *l){if(lv_obj_is_valid(l))br2_header_fit(l);}
+static void br2_header_text_cb(lv_event_t *e){   /* a screen set new text: refit after this frame */
+    lv_obj_t *l=lv_event_get_target(e);uint32_t h=0;for(const char *c=lv_label_get_text(l);*c;c++)h=h*31+(uint8_t)*c;
+    if((uint32_t)(uintptr_t)lv_obj_get_user_data(l)!=h){lv_obj_set_user_data(l,(void *)(uintptr_t)h);lv_async_call(br2_header_refit,l);}
+}
 lv_obj_t *br2_header(lv_obj_t *root,const char *text,lv_event_cb_t cb){
-    lv_obj_t *cap=lv_obj_create(root);lv_obj_remove_style_all(cap);lv_obj_set_size(cap,304,58);lv_obj_set_pos(cap,28,0);
+    lv_obj_t *cap=lv_obj_create(root);lv_obj_remove_style_all(cap);lv_obj_set_size(cap,304,62);lv_obj_set_pos(cap,28,-4);
     lv_obj_set_style_radius(cap,28,0);lv_obj_set_style_bg_color(cap,TC(SURFACE_STRONG),0);lv_obj_set_style_bg_opa(cap,LV_OPA_COVER,0);lv_obj_remove_flag(cap,LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_t *b=br_button(root,96,36,20,LV_SYMBOL_LEFT,TF(UI_20),0);ui_on(b,cb?cb:back,LV_EVENT_CLICKED,NULL,"nav.back",UI_CORE);
-    lv_obj_t *l=br_label(root,text,br_font(22,1),BR_TXT);lv_obj_set_size(l,168,29);lv_obj_set_pos(l,126,22);lv_label_set_long_mode(l,LV_LABEL_LONG_DOT);
+    lv_obj_t *b=br_button(root,94,BR2_HDR_Y,19,LV_SYMBOL_LEFT,TF(UI_20),0);ui_on(b,cb?cb:back,LV_EVENT_CLICKED,NULL,"nav.back",UI_CORE);lv_obj_set_ext_click_area(b,6);
+    lv_obj_t *l=br_label(root,text,br_font(22,1),BR_TXT);lv_obj_set_width(l,BR2_HDR_W);lv_obj_set_x(l,BR2_HDR_X);lv_label_set_long_mode(l,LV_LABEL_LONG_DOT);
+    br2_header_fit(l);lv_obj_add_event_cb(l,br2_header_text_cb,LV_EVENT_DRAW_MAIN_BEGIN,NULL);
     br2_keep_tree(cap);br2_keep_tree(b);kit_keep(l);return l;
 }
 void br2_style(lv_obj_t *o,kit_role_t role){
@@ -49,7 +67,12 @@ void br2_style(lv_obj_t *o,kit_role_t role){
         if(lv_obj_has_flag(o,LV_OBJ_FLAG_USER_2))break;   /* an accent-filled primary (e.g. Queue's Play) stays orange */
         lv_obj_set_style_radius(o,role==KIT_ICON_BUTTON?LV_RADIUS_CIRCLE:24,0);
         lv_obj_set_style_bg_color(o,role==KIT_ICON_BUTTON?TC(CONTROL_KNOB):TC(SURFACE_STRONG),0);lv_obj_set_style_bg_opa(o,LV_OPA_COVER,0);
-        if(role==KIT_ICON_BUTTON)for(uint32_t i=0;i<lv_obj_get_child_count(o);i++){lv_obj_t *c=lv_obj_get_child(o,i);if(lv_obj_check_type(c,&lv_label_class))lv_obj_set_style_text_color(c,TC(ON_CONTROL),0);}
+        for(uint32_t i=0;i<lv_obj_get_child_count(o);i++){   /* icon glyphs glow orange; text stays neutral */
+            lv_obj_t *c=lv_obj_get_child(o,i);if(!lv_obj_check_type(c,&lv_label_class))continue;
+            const char *t=lv_label_get_text(c);int icon=t&&(uint8_t)t[0]==0xEF;
+            lv_obj_set_style_text_color(c,icon?TC(ACCENT_PRIMARY):role==KIT_ICON_BUTTON?TC(ON_CONTROL):TC(TEXT_PRIMARY),0);
+        }
+        lv_obj_set_style_shadow_color(o,TC(ACCENT_PRIMARY),0);lv_obj_set_style_shadow_width(o,14,0);lv_obj_set_style_shadow_opa(o,46,0);
         lv_obj_set_style_border_width(o,1,0);lv_obj_set_style_border_color(o,TC(BORDER),0);
         lv_obj_set_style_bg_color(o,TC(SURFACE_PRESSED),LV_STATE_PRESSED);break;
     case KIT_POPUP:

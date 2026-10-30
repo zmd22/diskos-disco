@@ -17,6 +17,7 @@
 #include "art_pixels.h"
 #include "artcache.h"   /* persistent decoded-cover cache on SD */
 #include "config.h"
+#include "fwcaps.h"
 #include "screens.h"
 #include "ma.h"
 #include "modes.h"
@@ -1723,7 +1724,7 @@ static void fav_refresh(int on, int have)
 {
     g_np_fav = on; g_np_have = have;
     if(!btn_fav || !fav_icon) return;
-    if(have && !th_zune()) lv_obj_remove_flag(btn_fav, LV_OBJ_FLAG_HIDDEN);   /* Zune: Favourite lives in the hub */
+    if(have && !th_zune() && !th_braun2()) lv_obj_remove_flag(btn_fav, LV_OBJ_FLAG_HIDDEN);   /* Zune: in the hub; Braun 2.0: in the track menu */
     else     lv_obj_add_flag(btn_fav, LV_OBJ_FLAG_HIDDEN);
     lv_label_set_text(fav_icon, HEART_FILLED);                     /* theme: solid, colour carries the state */
     lv_obj_set_style_text_color(fav_icon, on ? np_col() : th_braun_family() ? TC(TEXT_SECONDARY) : (g_np_poster || g_np_ring) ? TC(TEXT_PRIMARY) : TC(TEXT_MUTED), LV_PART_MAIN);
@@ -1848,11 +1849,11 @@ static void np_settle_cb(lv_timer_t *t){                  /* after 15 s: stop sc
  * redraws its strip ~30x/s for as long as the screen is on. */
 static void queue_click_cb(lv_event_t *e){ (void)e; queue_open(); }
 static void queue_long_cb(lv_event_t *e){ (void)e; if(simple_cfg_get_int("up_next",0)) screen_show(SCR_UPNEXT); else queue_open(); }
-static void np_queue_place(void){ if(th_braun2()&&btn_queue){lv_obj_set_align(btn_queue,LV_ALIGN_TOP_LEFT);lv_obj_set_pos(btn_queue,42,151);return;}if(btn_queue && btn_mode) lv_obj_align_to(btn_queue, btn_mode, th_zune() ? LV_ALIGN_OUT_RIGHT_MID : LV_ALIGN_OUT_BOTTOM_MID, 0, 0); }
+static void np_queue_place(void){ if(th_braun2())return;if(btn_queue && btn_mode) lv_obj_align_to(btn_queue, btn_mode, th_zune() ? LV_ALIGN_OUT_RIGHT_MID : LV_ALIGN_OUT_BOTTOM_MID, 0, 0); }
 void ui_queue_changed(void){                                  /* the badge: the queue's size, hidden when empty */
     if(!queue_badge) return;
     int n = queue_count();
-    if(n <= 0){ lv_obj_add_flag(queue_badge, LV_OBJ_FLAG_HIDDEN); return; }
+    if(n <= 0 || th_braun2()){ lv_obj_add_flag(queue_badge, LV_OBJ_FLAG_HIDDEN); return; }
     char b[8]; if(n > 99) snprintf(b, sizeof b, "99"); else snprintf(b, sizeof b, "%d", n);
     if(strcmp(lv_label_get_text(queue_badge_lbl), b)) lv_label_set_text(queue_badge_lbl, b);
     lv_obj_set_style_bg_color(queue_badge, ui_current_accent(), 0);
@@ -1993,13 +1994,14 @@ void kit_fork_np_braun(void){
                      if(lv_obj_check_type(c, &lv_label_class) && lv_obj_get_child_count(c) == 0 && k == 0) lv_obj_set_style_text_color(c, TC(TEXT_SECONDARY), 0); } }
 }
 /* Type-first Music C uses the same transport, track popup and seek controller. */
+#define BR2_SCALE_Y 216   /* the tuning scale; the album sits under it */
 void kit_fork_np_braun2(void){
     if(!th_braun2() || !g_np_scr)return;
     kit_fork_np_braun();
     static lv_obj_t *scale;
     if(!scale){
         scale=lv_slider_create(g_np_scr);lv_obj_remove_style_all(scale);
-        lv_obj_set_pos(scale,66,248);lv_obj_set_size(scale,228,4);
+        lv_obj_set_pos(scale,66,BR2_SCALE_Y-2);lv_obj_set_size(scale,228,4);
         lv_obj_set_style_bg_opa(scale,LV_OPA_TRANSP,LV_PART_MAIN);
         lv_obj_set_style_bg_opa(scale,LV_OPA_TRANSP,LV_PART_INDICATOR);
         lv_obj_set_style_bg_color(scale,TC(ACCENT_PRIMARY),LV_PART_KNOB);
@@ -2009,7 +2011,7 @@ void kit_fork_np_braun2(void){
         lv_obj_set_style_radius(scale,2,LV_PART_KNOB);lv_obj_set_ext_click_area(scale,20);
         static lv_point_precise_t pts[41][2];
         for(int i=0;i<=40;i++){
-            int h=i%5?7:12;pts[i][0]=(lv_point_precise_t){66+i*228/40,250-h/2};pts[i][1]=(lv_point_precise_t){66+i*228/40,250+h/2};
+            int h=i%5?7:12;pts[i][0]=(lv_point_precise_t){66+i*228/40,BR2_SCALE_Y-h/2};pts[i][1]=(lv_point_precise_t){66+i*228/40,BR2_SCALE_Y+h/2};
             lv_obj_t *l=lv_line_create(g_np_scr);g_br2_ticks[i]=l;lv_line_set_points(l,pts[i],2);lv_obj_set_style_line_color(l,TC(TEXT_SECONDARY),0);lv_obj_set_style_line_width(l,i%5?1:2,0);kit_keep(l);
         }
         lv_obj_move_to_index(scale,-1);kit_keep(scale);ui_np_seek_line(scale);
@@ -2017,34 +2019,29 @@ void kit_fork_np_braun2(void){
     lv_obj_t *hidden[]={ring,cover,g_br_disc,backdrop,np_dots[0],np_dots[1]};
     for(unsigned i=0;i<sizeof hidden/sizeof *hidden;i++)if(hidden[i])lv_obj_add_flag(hidden[i],LV_OBJ_FLAG_HIDDEN);
     lv_obj_set_y(g_br_seg,276);lv_obj_set_height(g_br_seg,84);
-    if(title){lv_obj_set_size(title,280,42);lv_obj_set_style_text_font(title,TF(MUSIC_TITLE),0);lv_obj_align(title,LV_ALIGN_TOP_MID,0,86);lv_label_set_long_mode(title,LV_LABEL_LONG_DOT);kit_keep(title);}
-    if(artist){lv_obj_set_size(artist,260,28);lv_obj_align(artist,LV_ALIGN_TOP_MID,0,130);lv_label_set_long_mode(artist,LV_LABEL_LONG_DOT);kit_keep(artist);}
-    if(album){lv_obj_remove_flag(album,LV_OBJ_FLAG_HIDDEN);lv_obj_set_size(album,230,22);lv_obj_set_style_text_font(album,br_font(12,0),0);lv_obj_align(album,LV_ALIGN_TOP_MID,0,58);lv_label_set_long_mode(album,LV_LABEL_LONG_DOT);kit_keep(album);}
-    if(np_mid_btn){lv_obj_set_size(np_mid_btn,280,80);lv_obj_align(np_mid_btn,LV_ALIGN_TOP_MID,0,82);kit_keep(np_mid_btn);}
-    if(t_elapsed){lv_obj_set_width(t_elapsed,200);lv_obj_set_style_text_align(t_elapsed,LV_TEXT_ALIGN_CENTER,0);lv_obj_set_style_text_font(t_elapsed,br_font(44,1),0);lv_obj_set_style_text_color(t_elapsed,TC(TEXT_PRIMARY),0);lv_obj_align(t_elapsed,LV_ALIGN_TOP_MID,0,164);kit_keep(t_elapsed);}
-    if(t_remain){lv_obj_set_width(t_remain,120);lv_obj_set_style_text_align(t_remain,LV_TEXT_ALIGN_CENTER,0);lv_obj_set_style_text_font(t_remain,br_font(14,0),0);lv_obj_set_style_text_color(t_remain,TC(TEXT_SECONDARY),0);lv_obj_align(t_remain,LV_ALIGN_TOP_MID,0,216);kit_keep(t_remain);}
+    if(title){lv_obj_set_size(title,244,42);lv_obj_set_style_text_font(title,TF(MUSIC_TITLE),0);lv_obj_align(title,LV_ALIGN_TOP_MID,0,58);lv_label_set_long_mode(title,LV_LABEL_LONG_DOT);kit_keep(title);}
+    if(artist){lv_obj_set_size(artist,260,28);lv_obj_align(artist,LV_ALIGN_TOP_MID,0,100);lv_label_set_long_mode(artist,LV_LABEL_LONG_DOT);kit_keep(artist);}
+    if(album){lv_obj_remove_flag(album,LV_OBJ_FLAG_HIDDEN);lv_obj_set_size(album,240,22);lv_obj_set_style_text_font(album,br_font(14,0),0);lv_obj_set_style_text_align(album,LV_TEXT_ALIGN_CENTER,0);lv_obj_set_style_text_color(album,TC(TEXT_SECONDARY),0);lv_obj_align(album,LV_ALIGN_TOP_MID,0,BR2_SCALE_Y+16);lv_label_set_long_mode(album,LV_LABEL_LONG_DOT);kit_keep(album);}
+    if(np_mid_btn){lv_obj_set_size(np_mid_btn,260,76);lv_obj_align(np_mid_btn,LV_ALIGN_TOP_MID,0,56);kit_keep(np_mid_btn);}
+    if(t_elapsed){lv_obj_set_width(t_elapsed,200);lv_obj_set_style_text_align(t_elapsed,LV_TEXT_ALIGN_CENTER,0);lv_obj_set_style_text_font(t_elapsed,br_font(44,1),0);lv_obj_set_style_text_color(t_elapsed,TC(TEXT_PRIMARY),0);lv_obj_align(t_elapsed,LV_ALIGN_TOP_MID,0,134);kit_keep(t_elapsed);}
+    if(t_remain){lv_obj_set_width(t_remain,120);lv_obj_set_style_text_align(t_remain,LV_TEXT_ALIGN_CENTER,0);lv_obj_set_style_text_font(t_remain,br_font(14,0),0);lv_obj_set_style_text_color(t_remain,TC(TEXT_SECONDARY),0);lv_obj_align(t_remain,LV_ALIGN_TOP_MID,0,184);kit_keep(t_remain);}
     lv_obj_t *controls[]={btn_prev,btn_pp,btn_next};
     for(int i=0;i<3;i++)if(controls[i]){
         lv_obj_t *b=controls[i];int d=i==1?58:46;
         lv_obj_set_size(b,d,d);lv_obj_set_style_pad_all(b,0,0);
         for(uint32_t k=0;k<lv_obj_get_child_count(b);k++){lv_obj_t *c=lv_obj_get_child(b,k);   /* icon-only glyphs, centred in their knobs */
             if(lv_obj_check_type(c,&lv_label_class))lv_obj_set_style_text_font(c,theme_font_original(24),0);lv_obj_center(c);}
-        lv_obj_set_style_text_font(b,TF(UI_24),0);lv_obj_set_style_bg_color(b,i==1?TC(ACCENT_PRIMARY):TC(CONTROL_KNOB),0);
+        if(lv_obj_check_type(b,&lv_label_class)){   /* play / pause is a label of its own: centre its glyph by padding */
+            const lv_font_t *gf=theme_font_original(24);lv_obj_set_style_text_font(b,gf,0);lv_obj_set_style_text_align(b,LV_TEXT_ALIGN_CENTER,0);
+            lv_obj_set_style_pad_top(b,(d-lv_font_get_line_height(gf))/2,0);}
+        lv_obj_set_style_text_font(b,theme_font_original(24),0);lv_obj_set_style_bg_color(b,i==1?TC(ACCENT_PRIMARY):TC(CONTROL_KNOB),0);
         lv_obj_set_style_text_color(b,i==1?TC(ON_ACCENT):TC(ON_CONTROL),0);lv_obj_set_style_bg_opa(b,LV_OPA_COVER,0);
         lv_obj_align(b,LV_ALIGN_TOP_MID,(i-1)*64,i==1?284:290);br2_keep_tree(b);
     }
-    /* Existing toggles remain immediately reachable, with full-size hit areas. */
-    if(btn_fav){lv_obj_set_align(btn_fav,LV_ALIGN_TOP_LEFT);lv_obj_set_pos(btn_fav,42,200);lv_obj_set_size(btn_fav,44,44);}
-    if(btn_sleep){lv_obj_set_align(btn_sleep,LV_ALIGN_TOP_LEFT);lv_obj_set_pos(btn_sleep,274,200);lv_obj_set_size(btn_sleep,44,44);}
-    if(btn_mode){lv_obj_set_align(btn_mode,LV_ALIGN_TOP_LEFT);lv_obj_set_pos(btn_mode,274,151);lv_obj_set_size(btn_mode,44,44);}
-    lv_obj_t *utility[]={btn_fav,btn_sleep,btn_mode,btn_queue};
-    for(unsigned i=0;i<4;i++)if(utility[i]){   /* small panel knobs, so the four utilities read as one set */
-        lv_obj_set_size(utility[i],44,44);lv_obj_set_style_radius(utility[i],LV_RADIUS_CIRCLE,0);
-        lv_obj_set_style_bg_color(utility[i],TC(SURFACE_STRONG),0);lv_obj_set_style_bg_opa(utility[i],LV_OPA_COVER,0);
-        lv_obj_set_style_bg_color(utility[i],TC(SURFACE_PRESSED),LV_STATE_PRESSED);lv_obj_set_style_border_width(utility[i],0,0);lv_obj_set_style_shadow_width(utility[i],0,0);br2_keep_tree(utility[i]);}
-    if(fav_icon&&!g_np_fav)lv_obj_set_style_text_color(fav_icon,TC(TEXT_SECONDARY),0);
-    if(mode_icon)lv_obj_set_style_text_color(mode_icon,TC(TEXT_SECONDARY),0);
-    if(btn_queue){lv_obj_t *l=lv_obj_get_child(btn_queue,0);lv_obj_set_style_text_color(l,TC(TEXT_SECONDARY),0);}
+    /* No icons beside the track: favourite, sleep and mode live in the track menu (tap the title), the queue in the
+     * hub (swipe), as in the other themes. */
+    lv_obj_t *utility[]={btn_fav,btn_sleep,btn_mode,btn_queue,queue_badge};
+    for(unsigned i=0;i<sizeof utility/sizeof *utility;i++)if(utility[i]){lv_obj_add_flag(utility[i],LV_OBJ_FLAG_HIDDEN);kit_keep(utility[i]);}
 }
 /* Zune Now Playing: the cover as a square bleeding off the left edge, the track as a left-aligned column beside it
  * (SemiBold title, artist, album, times), the progress as a thin ring hugging the whole rim from 12 o'clock with a
@@ -4088,11 +4085,11 @@ void ui_update(const track_state_t *st)
         char ab[240];
         if(!book_meta_line(st, ab, sizeof ab)){        /* not a book -> album + position */
             const char *alb = st->album;
-            if(alb[0] && st->playing_num[0])
+            if(alb[0] && st->playing_num[0] && !th_braun2())   /* Braun 2.0: the album alone, under the scale */
                 snprintf(ab, sizeof ab, "%s  \xC2\xB7  %s", alb, st->playing_num);          /* Album · 3/19 */
             else if(alb[0])
                 snprintf(ab, sizeof ab, "%s", alb);                                         /* Album */
-            else if(st->playing_num[0]){
+            else if(st->playing_num[0] && !th_braun2()){
                 const char *sl = strchr(st->playing_num, '/');
                 if(sl && sl[1]) snprintf(ab, sizeof ab, "%.*s / %s", (int)(sl - st->playing_num), st->playing_num, sl + 1);  /* 3 / 19 */
                 else            snprintf(ab, sizeof ab, "%s", st->playing_num);
@@ -4122,11 +4119,11 @@ void ui_update(const track_state_t *st)
         if(is_book){
             lv_obj_add_flag(btn_fav, LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(btn_mode, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_remove_flag(btn_sleep, LV_OBJ_FLAG_HIDDEN);   /* moon replaces the heart for books */
+            if(!th_braun2()) lv_obj_remove_flag(btn_sleep, LV_OBJ_FLAG_HIDDEN);   /* moon replaces the heart for books (Braun 2.0: the track menu) */
             int armed = ui_sleep_state(NULL);                   /* accent the moon while a timer is set */
             lv_obj_set_style_text_color(sleep_icon, armed ? accent : TC(TEXT_MUTED), LV_PART_MAIN);
         } else {
-            if(!th_zune()) lv_obj_remove_flag(btn_mode, LV_OBJ_FLAG_HIDDEN);   /* Zune: play mode lives in the actions menu */
+            if(!th_zune() && !th_braun2()) lv_obj_remove_flag(btn_mode, LV_OBJ_FLAG_HIDDEN);   /* Zune, Braun 2.0: play mode lives in the actions menu */
             lv_obj_add_flag(btn_sleep, LV_OBJ_FLAG_HIDDEN);
             ui_np_close_overlays();   /* not a book -> dismiss any open sleep popover (its context is gone) */
         }
@@ -4196,13 +4193,49 @@ static void vol_hide_cb(lv_timer_t *t){
 /* Throttle volume commits to <=1 per 120ms while dragging (the arc fires
  * VALUE_CHANGED every step - sending each one hammers the player). The on-screen
  * number tracks live; the final value is always committed on RELEASED. */
+#define VOL2_CX 268   /* Braun 2.0 volume knob centre, in the right-hand panel */
+#define VOL2_CY 118
+void ui_set_gain(int high);
+static lv_obj_t *g_vol2_seg[2], *g_vol2_led;
+static void vol2_gain_paint(void){
+    if(!g_vol2_led) return;
+    int high = simple_cfg_get_int("audio_gain", 0) != 0;
+    for(int k = 0; k < 2; k++){ int on = k == high;
+        lv_obj_set_style_bg_color(g_vol2_seg[k], on ? TC(CONTROL_KNOB) : TC(SURFACE_STRONG), 0);
+        lv_obj_set_style_text_color(lv_obj_get_child(g_vol2_seg[k], 0), on ? TC(ON_CONTROL) : TC(TEXT_SECONDARY), 0); }
+    lv_obj_set_style_bg_opa(g_vol2_led, high ? LV_OPA_COVER : 80, 0);   /* dull orange on low, bright on high */
+    lv_obj_set_style_shadow_opa(g_vol2_led, high ? 200 : 0, 0);
+}
+static void vol2_gain_cb(lv_event_t *e){
+    int high = (int)(intptr_t)lv_event_get_user_data(e);
+    if(high != (simple_cfg_get_int("audio_gain", 0) != 0)){ ui_set_gain(high); simple_cfg_set_int("audio_gain", high); }
+    vol2_gain_paint(); if(g_vol_timer) lv_timer_reset(g_vol_timer);
+}
+static void vol2_gain_build(lv_obj_t *panel){
+    lv_obj_t *cap = br_label(panel, "GAIN", br_font(14, 1), BR_TXT2); lv_obj_align(cap, LV_ALIGN_TOP_LEFT, VOL2_CX - 18, 222);
+    static const char *const L[2] = { "LO", "HI" };
+    for(int k = 0; k < 2; k++){
+        lv_obj_t *b = g_vol2_seg[k] = lv_button_create(panel); lv_obj_remove_style_all(b);
+        lv_obj_set_size(b, 58, 40); lv_obj_set_pos(b, VOL2_CX - 60 + k * 62, 246);
+        lv_obj_set_style_radius(b, 14, 0); lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
+        lv_obj_set_style_bg_color(b, TC(SURFACE_PRESSED), LV_STATE_PRESSED);
+        lv_obj_t *l = br_label(b, L[k], br_font(16, 1), BR_TXT); lv_obj_center(l);
+        lv_obj_add_event_cb(b, vol2_gain_cb, LV_EVENT_CLICKED, (void *)(intptr_t)k);
+    }
+    g_vol2_led = lv_obj_create(panel); lv_obj_remove_style_all(g_vol2_led);   /* the LED strip under the switch */
+    lv_obj_set_size(g_vol2_led, 64, 6); lv_obj_set_pos(g_vol2_led, VOL2_CX - 32, 296); lv_obj_set_style_radius(g_vol2_led, 3, 0);
+    lv_obj_set_style_bg_color(g_vol2_led, TC(ACCENT_PRIMARY), 0);
+    lv_obj_set_style_shadow_color(g_vol2_led, TC(ACCENT_PRIMARY), 0); lv_obj_set_style_shadow_width(g_vol2_led, 12, 0);
+    vol2_gain_paint();
+}
 static lv_obj_t *g_vol_needle; static lv_point_precise_t g_vol_np[2];
 static void vol_needle(int v){                               /* Braun: an orange line across the band at the level */
     if(!g_vol_needle) return;
     if(v < 0) v = 0; if(v > VOL_MAX) v = VOL_MAX;
     float an = (th_braun2() ? 135.0f + 270.0f * v / VOL_MAX : 48.0f - 96.0f * v / VOL_MAX) * 0.0174533f;    /* 0 at the bottom end, 120 at the top (the scale's 48..-48 degrees) */
-    g_vol_np[0].x = 180 + (th_braun2()?46:131) * cosf(an); g_vol_np[0].y = 180 + (th_braun2()?46:131) * sinf(an);
-    g_vol_np[1].x = 180 + (th_braun2()?82:169) * cosf(an); g_vol_np[1].y = 180 + (th_braun2()?82:169) * sinf(an);
+    int cx = th_braun2() ? VOL2_CX : 180, cy = th_braun2() ? VOL2_CY : 180;   /* Braun 2.0: the knob in the right-hand panel */
+    g_vol_np[0].x = cx + (th_braun2()?24:131) * cosf(an); g_vol_np[0].y = cy + (th_braun2()?24:131) * sinf(an);
+    g_vol_np[1].x = cx + (th_braun2()?46:169) * cosf(an); g_vol_np[1].y = cy + (th_braun2()?46:169) * sinf(an);
     lv_line_set_points(g_vol_needle, g_vol_np, 2);
 }
 static void dvol_paint(int v);
@@ -4391,18 +4424,28 @@ void ui_show_volume(int vol)
         lv_obj_add_event_cb(mid, vol_tap_close_cb, LV_EVENT_CLICKED, NULL);
         lv_obj_move_to_index(mid, 0);                             /* under the arc and the badge */
         if(th_braun2()){
-            br_face(g_vol_panel);lv_obj_add_flag(g_vol_panel,LV_OBJ_FLAG_CLICKABLE);
-            lv_obj_set_size(badge,184,184);lv_obj_center(badge);lv_obj_set_style_radius(badge,LV_RADIUS_CIRCLE,0);
+            /* Braun 2.0: a half-screen panel on the right - a volume knob with its tick scale, and the gain switch
+             * (LO / HI) with an LED strip under it. The left half keeps the screen visible; a tap there closes. */
+            lv_obj_set_style_bg_opa(g_vol_panel,90,0);lv_obj_add_flag(g_vol_panel,LV_OBJ_FLAG_CLICKABLE);
+            lv_obj_add_event_cb(g_vol_panel,vol_tap_close_cb,LV_EVENT_CLICKED,NULL);lv_obj_add_flag(mid,LV_OBJ_FLAG_HIDDEN);
+            lv_obj_t *card=lv_obj_create(g_vol_panel);lv_obj_remove_style_all(card);lv_obj_set_pos(card,176,16);lv_obj_set_size(card,220,328);
+            lv_obj_set_style_radius(card,44,0);lv_obj_set_style_bg_color(card,TC(CANVAS),0);lv_obj_set_style_bg_opa(card,LV_OPA_COVER,0);
+            lv_obj_set_style_shadow_color(card,TC(ACTION_SHADOW),0);lv_obj_set_style_shadow_width(card,24,0);
+            lv_obj_add_flag(card,LV_OBJ_FLAG_CLICKABLE);lv_obj_remove_flag(card,LV_OBJ_FLAG_SCROLLABLE);lv_obj_move_to_index(card,0);
+            lv_obj_set_parent(badge,g_vol_panel);lv_obj_set_size(badge,104,104);lv_obj_align(badge,LV_ALIGN_TOP_LEFT,VOL2_CX-52,VOL2_CY-52);
+            lv_obj_set_style_radius(badge,LV_RADIUS_CIRCLE,0);lv_obj_set_style_pad_all(badge,0,0);
             lv_obj_set_style_bg_color(badge,TC(CONTROL_KNOB),0);lv_obj_add_flag(spk,LV_OBJ_FLAG_HIDDEN);
-            lv_obj_set_style_text_font(g_vol_num,br_font(44,1),0);lv_obj_set_style_text_color(g_vol_num,TC(ON_CONTROL),0);
-            lv_obj_set_size(g_vol_arc,252,252);lv_obj_center(g_vol_arc);lv_arc_set_bg_angles(g_vol_arc,135,45);lv_arc_set_mode(g_vol_arc,LV_ARC_MODE_NORMAL);
+            lv_obj_set_style_text_font(g_vol_num,TF(UI_36),0);lv_obj_set_style_text_color(g_vol_num,TC(ON_CONTROL),0);
+            lv_obj_set_size(g_vol_arc,156,156);lv_obj_align(g_vol_arc,LV_ALIGN_TOP_LEFT,VOL2_CX-78,VOL2_CY-78);
+            lv_arc_set_bg_angles(g_vol_arc,135,45);lv_arc_set_mode(g_vol_arc,LV_ARC_MODE_NORMAL);lv_obj_set_style_arc_width(g_vol_arc,30,LV_PART_MAIN);
             lv_obj_set_style_arc_opa(g_vol_arc,LV_OPA_TRANSP,LV_PART_MAIN);lv_obj_set_style_arc_opa(g_vol_arc,LV_OPA_TRANSP,LV_PART_INDICATOR);lv_obj_set_style_bg_opa(g_vol_arc,LV_OPA_TRANSP,LV_PART_KNOB);lv_obj_set_style_border_width(g_vol_arc,0,LV_PART_KNOB);
             static lv_point_precise_t marks[31][2];
-            for(int i=0;i<=30;i++){float a=(135+i*9)*0.017453293f;int r=i%5?119:112;marks[i][0]=(lv_point_precise_t){180+r*cosf(a),180+r*sinf(a)};marks[i][1]=(lv_point_precise_t){180+126*cosf(a),180+126*sinf(a)};
+            for(int i=0;i<=30;i++){float a=(135+i*9)*0.017453293f;int r=i%5?64:59;marks[i][0]=(lv_point_precise_t){VOL2_CX+r*cosf(a),VOL2_CY+r*sinf(a)};marks[i][1]=(lv_point_precise_t){VOL2_CX+70*cosf(a),VOL2_CY+70*sinf(a)};
                 lv_obj_t *l=lv_line_create(g_vol_panel);lv_line_set_points(l,marks[i],2);lv_obj_set_style_line_color(l,TC(TEXT_SECONDARY),0);lv_obj_set_style_line_width(l,i%5?1:2,0);}
-            lv_obj_t *cap=br_label(g_vol_panel,"VOLUME",br_font(14,0),BR_TXT2);lv_obj_align(cap,LV_ALIGN_TOP_MID,0,300);
-            g_vol_needle=lv_line_create(g_vol_panel);lv_obj_set_style_line_color(g_vol_needle,TC(ACCENT_PRIMARY),0);lv_obj_set_style_line_width(g_vol_needle,5,0);lv_obj_set_style_line_rounded(g_vol_needle,true,0);
-            br2_keep_tree(g_vol_panel);lv_timer_set_period(g_vol_timer,1500);
+            lv_obj_t *cap=br_label(g_vol_panel,"VOLUME",br_font(14,1),BR_TXT2);lv_obj_align(cap,LV_ALIGN_TOP_LEFT,VOL2_CX-28,VOL2_CY+74);
+            g_vol_needle=lv_line_create(g_vol_panel);lv_obj_set_style_line_color(g_vol_needle,TC(ACCENT_PRIMARY),0);lv_obj_set_style_line_width(g_vol_needle,4,0);lv_obj_set_style_line_rounded(g_vol_needle,true,0);
+            if(fw_gain_tag()) vol2_gain_build(g_vol_panel);
+            lv_obj_move_foreground(g_vol_arc);br2_keep_tree(g_vol_panel);lv_timer_set_period(g_vol_timer,2500);
         }else if(th_braun_family()){
             /* Braun: a dark scale band along the right rim with light markings, an orange needle, and a
              * bigger dark number box. Same arc underneath, so dragging / auto-hide / tap-to-close are unchanged. */
@@ -4501,6 +4544,7 @@ void ui_show_volume(int vol)
             lv_obj_t *mid = lv_obj_get_child(g_vol_panel, 1); (void)mid;
         }
     }
+    if(th_braun2()) vol2_gain_paint();             /* gain may have changed in Settings or QS */
     if(th_zune() && !g_zvol_cap) zvol_build();
     int zvol_opening=th_zune()&&lv_obj_has_flag(g_vol_panel,LV_OBJ_FLAG_HIDDEN);
     if(th_zune()){zvol_paint();lv_obj_set_style_bg_color(g_zvol_mark,ui_current_accent(),0);}

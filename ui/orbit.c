@@ -4,6 +4,7 @@
 #include <string.h>
 #include "fork_theme.h"
 #include "braun.h"
+#include "theme_kit.h"
 #include "theme.h"
 #include <math.h>
 #include <stdint.h>
@@ -30,6 +31,11 @@ static float orbit_deg(const orbit_t *o, int i){
     if(o->first_deg == DISCO_DEG) return o->n > 1 ? 45.0f + i * 270.0f / (o->n - 1) : 180.0f;
     return o->first_deg + i * 360.0f / o->n;
 }
+static void br2_lamp_cb(lv_event_t *e){   /* Braun 2.0: the corner lamp glows while the key is held */
+    lv_event_code_t c = lv_event_get_code(e); lv_obj_t *lamp = lv_event_get_user_data(e);
+    if(c == LV_EVENT_PRESSED) lv_obj_set_style_bg_color(lamp, TC(ACCENT_PRIMARY), 0);
+    else if(c == LV_EVENT_RELEASED || c == LV_EVENT_PRESS_LOST) lv_obj_set_style_bg_color(lamp, TC(CONTROL_TRACK), 0);
+}
 void orbit_create(orbit_t *o, lv_obj_t *root, const orbit_item_t *it, int n, int first_deg, orbit_pick_cb pick){
     if(n > 8) n = 8;
     if(disco_screen_menu(root)) first_deg = DISCO_DEG;
@@ -41,7 +47,7 @@ void orbit_create(orbit_t *o, lv_obj_t *root, const orbit_item_t *it, int n, int
         lv_obj_t *b = lv_button_create(root);
         o->btn[i] = b;
         lv_obj_remove_style_all(b);
-        if(th_braun_family()){                                          /* Braun: each knob on its own panel disc over the grille */
+        if(th_braun_family() && !th_braun2()){                          /* Braun: each knob on its own panel disc over the grille */
             lv_obj_t *pd = br_disc(root, 180 + cx, 180 + cy + 8, ORBIT_BTN / 2 + 16, BR_PANEL);
             lv_obj_move_to_index(pd, lv_obj_get_index(b));       /* just behind the button */
         }
@@ -59,7 +65,23 @@ void orbit_create(orbit_t *o, lv_obj_t *root, const orbit_item_t *it, int n, int
         lv_label_set_text(o->icon[i], it[i].glyph);
         lv_obj_set_style_text_font(o->icon[i], TF(UI_18), 0);
         lv_obj_set_style_text_color(o->icon[i], TC(TEXT_PRIMARY), 0);
-        if(th_braun_family()){                                          /* the dark knob: turned edge, soft shadow, pointer, lamp */
+        if(th_braun2()){                                                /* Braun 2.0: a QS-style squircle key, a corner lamp lit while pressed,
+                                                                           * and a notch only for keys that show on / off (orbit_set_on) */
+            lv_obj_set_style_radius(b, 18, 0);
+            lv_obj_set_style_bg_color(b, TC(SURFACE_STRONG), 0); lv_obj_set_style_bg_color(b, TC(SURFACE_PRESSED), LV_STATE_PRESSED);
+            lv_obj_set_style_text_color(o->icon[i], TC(TEXT_PRIMARY), 0);
+            lv_obj_t *lamp = lv_obj_create(b); lv_obj_remove_style_all(lamp);
+            lv_obj_set_size(lamp, 8, 8); lv_obj_align(lamp, LV_ALIGN_TOP_RIGHT, -7, 7); lv_obj_set_style_radius(lamp, LV_RADIUS_CIRCLE, 0);
+            lv_obj_set_style_bg_color(lamp, TC(CONTROL_TRACK), 0); lv_obj_set_style_bg_opa(lamp, LV_OPA_COVER, 0);
+            lv_obj_clear_flag(lamp, LV_OBJ_FLAG_CLICKABLE);
+            lv_obj_t *p = lv_obj_create(b); lv_obj_remove_style_all(p);              /* the on / off notch, hidden until used */
+            lv_obj_set_size(p, 16, 4); lv_obj_align(p, LV_ALIGN_BOTTOM_MID, 0, -6); lv_obj_set_style_radius(p, 2, 0);
+            lv_obj_set_style_bg_color(p, TC(CONTROL_TRACK), 0); lv_obj_set_style_bg_opa(p, LV_OPA_COVER, 0);
+            lv_obj_clear_flag(p, LV_OBJ_FLAG_CLICKABLE); lv_obj_add_flag(p, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_event_cb(b, br2_lamp_cb, LV_EVENT_ALL, lamp);
+            o->lamp[i] = lamp; o->ptr[i] = p;
+            kit_keep(b); kit_keep(lamp); kit_keep(p); kit_keep(o->icon[i]);   /* the styler leaves the key as drawn */
+        } else if(th_braun_family()){                                   /* the dark knob: turned edge, soft shadow, pointer, lamp */
             lv_obj_set_style_bg_color(b, TC(CONTROL_KNOB), 0);
             lv_obj_set_style_bg_color(b, TC(ORBIT_PRESSED), LV_STATE_PRESSED);
             lv_obj_set_style_border_color(b, TC(CONTROL_FILL), 0); lv_obj_set_style_border_width(b, 2, 0);
@@ -132,6 +154,11 @@ void orbit_cap_width(orbit_t *o, int w, const lv_font_t *font){
 }
 void orbit_set_on(orbit_t *o, int i, int on, lv_color_t accent){
     if(i < 0 || i >= o->n) return;
+    if(th_braun2()){                                                    /* on: the notch shows and turns orange */
+        if(o->ptr[i]){ lv_obj_remove_flag(o->ptr[i], LV_OBJ_FLAG_HIDDEN); lv_obj_set_style_bg_color(o->ptr[i], on ? TC(ACCENT_PRIMARY) : TC(CONTROL_TRACK), 0); }
+        if(o->cap[i]) lv_obj_set_style_text_color(o->cap[i], on ? TC(TEXT_PRIMARY) : TC(TEXT_SECONDARY), 0);
+        return;
+    }
     if(th_braun_family()){                                              /* on: the pointer turns orange, the lamp lights */
         if(o->icon[i]) lv_obj_set_style_text_color(o->icon[i], TC(ON_CONTROL), 0);
         br_pointer_set(o->ptr[i], ORBIT_BTN, on);                 /* fork: OFF 0 deg icon colour, ON 45 deg orange */
@@ -150,6 +177,7 @@ void orbit_set_on(orbit_t *o, int i, int on, lv_color_t accent){
 void orbit_set_pending(orbit_t *o, int p, lv_color_t accent){
     for(int i = 0; i < o->n; i++){
         int on = (i == p);
+        if(th_braun2()){ lv_obj_set_style_border_color(o->btn[i], TC(ACCENT_PRIMARY), 0); lv_obj_set_style_border_width(o->btn[i], on ? 2 : 0, 0); continue; }
         if(th_braun_family()){ lv_obj_set_style_border_color(o->btn[i], on ? TC(ACCENT_PRIMARY) : TC(CONTROL_FILL), 0); lv_obj_set_style_border_width(o->btn[i], on ? 3 : 2, 0); continue; }
         lv_obj_set_style_border_width(o->btn[i], on ? 3 : 0, 0);
         lv_obj_set_style_border_color(o->btn[i], accent, 0);
@@ -159,7 +187,7 @@ void orbit_set_pending(orbit_t *o, int p, lv_color_t accent){
     }
 }
 void orbit_set_glyph(orbit_t *o, int i, const char *glyph){ if(i >= 0 && i < o->n) lv_label_set_text(o->icon[i], glyph); }
-void orbit_braun_icons(orbit_t *o){ if(!th_braun_family()) return; for(int i = 0; i < o->n; i++) if(o->icon[i]) lv_obj_set_style_text_color(o->icon[i], TC(ON_CONTROL), 0); }
+void orbit_braun_icons(orbit_t *o){ if(!th_braun_family() || th_braun2()) return; for(int i = 0; i < o->n; i++) if(o->icon[i]) lv_obj_set_style_text_color(o->icon[i], TC(ON_CONTROL), 0); }
 
 static void spin_exec(void *var, int32_t v){ lv_arc_set_rotation((lv_obj_t *)var, v % 360); }
 void orbit_hub_create(orbit_t *o, lv_obj_t *root, lv_event_cb_t hub_cb, const char *glyph, const char *cap){
