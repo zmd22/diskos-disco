@@ -304,5 +304,5 @@ void appshelf_pick_create(lv_obj_t *root){
     lv_obj_set_style_bg_main_stop(hd, 170, 0); lv_obj_set_style_bg_grad_stop(hd, 255, 0); lv_obj_set_style_bg_grad_dir(hd, LV_GRAD_DIR_VER, 0);   /* fades into the list */
     lv_obj_remove_flag(hd, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
     ui_header_cb(root, "Choose apps", pick_back_cb);
-    g_pick_sub = label(root, "", 80, 52, 200, TF(UI_14), TC(ACCENT_PRIMARY), LV_TEXT_ALIGN_CENTER);
+    g_pick_sub = label(root, "", 80, th_braun2() ? 66 : 52, 200, TF(UI_14), TC(ACCENT_PRIMARY), LV_TEXT_ALIGN_CENTER);   /* Braun 2.0: under its lower header */
 }

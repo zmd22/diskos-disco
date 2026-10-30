@@ -15,7 +15,7 @@ void br2_emboss(lv_obj_t *o,int raised){
     lv_obj_set_style_border_color(o,light?TC(ON_ACCENT):TC(TEXT_PRIMARY),0);lv_obj_set_style_border_opa(o,light?170:34,0);
     if(raised){lv_obj_set_style_shadow_color(o,TC(FIXED_MEDIA_BLACK),0);lv_obj_set_style_shadow_width(o,8,0);lv_obj_set_style_shadow_offset_y(o,2,0);lv_obj_set_style_shadow_opa(o,light?34:90,0);}
 }
-/* The header title steps down 22 -> 18 -> 16 px to fit beside the back knob, then ends in an ellipsis; it refits
+/* The header title steps down 22 -> 18 -> 16 px to fit beside the back knob, then clips; it refits
  * whenever a screen changes the text (album and folder names). */
 #define BR2_HDR_Y 50      /* the knob's and the title's shared centre line, inside the circle */
 #define BR2_HDR_X 132
@@ -36,7 +36,7 @@ lv_obj_t *br2_header(lv_obj_t *root,const char *text,lv_event_cb_t cb){
     lv_obj_t *cap=lv_obj_create(root);lv_obj_remove_style_all(cap);lv_obj_set_size(cap,304,72);lv_obj_set_pos(cap,28,-4);
     lv_obj_set_style_radius(cap,28,0);lv_obj_set_style_bg_color(cap,TC(SURFACE_STRONG),0);lv_obj_set_style_bg_opa(cap,LV_OPA_COVER,0);lv_obj_remove_flag(cap,LV_OBJ_FLAG_CLICKABLE);br2_emboss(cap,1);
     lv_obj_t *b=br_button(root,108,BR2_HDR_Y,18,LV_SYMBOL_LEFT,TF(UI_20),0);   /* edge at 168 px from the centre */ui_on(b,cb?cb:back,LV_EVENT_CLICKED,NULL,"nav.back",UI_CORE);lv_obj_set_ext_click_area(b,6);
-    lv_obj_t *l=br_label(root,text,br_font(22,1),BR_TXT);lv_obj_set_width(l,BR2_HDR_W);lv_obj_set_x(l,BR2_HDR_X);lv_label_set_long_mode(l,LV_LABEL_LONG_DOT);
+    lv_obj_t *l=br_label(root,text,br_font(22,1),BR_TXT);lv_obj_set_width(l,BR2_HDR_W);lv_obj_set_x(l,BR2_HDR_X);lv_label_set_long_mode(l,LV_LABEL_LONG_CLIP);   /* not DOT: it rewrites the text the refit measures */
     br2_header_fit(l);lv_obj_add_event_cb(l,br2_header_text_cb,LV_EVENT_DRAW_MAIN_BEGIN,NULL);
     br2_keep_tree(cap);br2_keep_tree(b);kit_keep(l);return l;
 }

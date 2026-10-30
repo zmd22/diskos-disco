@@ -36,6 +36,15 @@ The supplied [guide](BRAUN2_GUIDE.md) is the reference brief; the choices above 
 - Volume: a right-hand half-screen panel with the knob and tick scale, plus a LO / HI gain switch and an LED strip (dull orange low, bright high) where the firmware supports gain.
 - Track / album / file menus: QS-style squircle keys, a corner lamp that lights while pressed, a notch only on keys that show on/off, no discs behind the keys.
 
+## Third pass (3.3.0-test3)
+
+- Music options (Braun 2.0 settings > Music screen, live): **Controls** Buttons / Gestures (double-tap play/pause, swipe right next, left previous, faint hints; `main.c` leaves the zone's swipes alone) and **Progress** Linear / Circular (41 ticks along the rim from lower left over the top to lower right on the shared ring recognizer; presses in the 64 px back strip go to Back).
+- Scrubbing either scale shows the shared time preview as a raised Braun 2.0 tile.
+- Info block: title, artist, album wrap to two lines each and climb from the scale; fonts step down only if the block would leave the safe area. LONG_DOT rewrites a label's text, so the layout measures with LONG_WRAP and restores the ellipsis after; headers clip instead.
+- Play mode and favourite beside the elapsed time; hold = Title hold (Immersive by default).
+- Volume: classic Braun's right-rim scale and number box plus a LO / HI gain switch and LED strip (same `ui_set_gain()` path as Settings), only where the firmware supports gain.
+- Quick Settings: battery as a top-rim tick scale mirroring brightness. Working mode as QS keys. QS shade, popup keys, headers inside the circle, subtle emboss, Home weather glyph. Up Next hidden on Home; accent picker hidden.
+
 Renders were regenerated after the first pass (142 of 146 captures). Stats and its landing view need a writable `/usr/data` on the host and were not recaptured; their committed images are from the first pass.
 
 ## Screen and subscreen coverage
