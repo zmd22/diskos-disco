@@ -2021,43 +2021,55 @@ void kit_fork_np_braun(void){
 #define BR2_INFO_W (g_br2_circular ? 216 : 248)   /* the info lines' width: inside the circle, or inside the circular scale */
 #define BR2_INFO_TOP (g_br2_circular ? 80 : 40)   /* the highest the info block may climb */
 /* One info line: up to two wrapped lines in font f, ending in ... beyond that; returns its height (0 if empty). */
-static uint32_t g_br2_info_hash;
-static int br2_line_h(lv_obj_t *l, const lv_font_t *f){
-    const char *t = lv_label_get_text(l); if(!t || !t[0]) return 0;
+static char g_br2_src[3][256];   /* the text last laid out (labels in "..." mode rewrite theirs) */
+const lv_anim_t *disco_scroll5(void);
+/* One info line: wrapped to two lines; returns its height and sets *scroll when even two lines are not enough. */
+static int br2_text_h(const char *t, const lv_font_t *f, int *scroll){
+    *scroll = 0; if(!t || !t[0]) return 0;
     lv_point_t sz; lv_text_get_size(&sz, t, f, 0, 0, BR2_INFO_W, LV_TEXT_FLAG_NONE);
     int lh = lv_font_get_line_height(f), lines = (sz.y + lh - 1) / lh;
-    return (lines < 1 ? 1 : lines > 2 ? 2 : lines) * lh;
+    if(lines > 2){ *scroll = 1; return lh; }   /* too long: one line that scrolls */
+    return (lines < 1 ? 1 : lines) * lh;
 }
-/* Braun 2.0 Music info: big title, medium artist, small album, stacked upward from the scale. The lines wrap first,
- * the block climbs as it needs, and only if it would pass BR2_INFO_TOP do the fonts step down. Never overlaps. */
-static void br2_np_relayout(void){
+/* Braun 2.0 Music info: title, artist, album stacked upward from the scale. Lines wrap to two; text that still does
+ * not fit scrolls on one line five times after a song change, then rests. The block climbs as it needs, and the fonts
+ * step down only if it would pass BR2_INFO_TOP. Runs only when the text (or the scale) changes. */
+static void br2_np_relayout_src(const char *t, const char *a, const char *al){
     if(!th_braun2() || !title || !artist || !album) return;
-    uint32_t h = 2166136261u ^ (uint32_t)g_br2_circular;
     lv_obj_t *o[3] = { title, artist, album };
-    for(int k = 0; k < 3; k++) lv_label_set_long_mode(o[k], LV_LABEL_LONG_WRAP);   /* "..." is written into the text: restore it to measure */
-    for(int k = 0; k < 3; k++) for(const char *c = lv_label_get_text(o[k]); c && *c; c++) h = (h ^ (uint8_t)*c) * 16777619u;
-    if(h == g_br2_info_hash){ for(int k = 0; k < 3; k++) lv_label_set_long_mode(o[k], LV_LABEL_LONG_DOT); return; }
-    g_br2_info_hash = h;
-    const lv_font_t *F[3][3] = { { TF(MUSIC_TITLE), br_font(24, 1), br_font(22, 1) },
-                                 { br_font(20, 0),  br_font(16, 0), br_font(16, 0) },
-                                 { br_font(14, 0),  br_font(14, 0), br_font(12, 0) } };
+    char cur[3][256]; const char *src[3] = { t, a, al };
+    for(int k = 0; k < 3; k++) if(!src[k]){ lv_label_set_long_mode(o[k], LV_LABEL_LONG_WRAP); snprintf(cur[k], sizeof cur[k], "%s", lv_label_get_text(o[k])); src[k] = cur[k]; }
+    int same = 1; for(int k = 0; k < 3; k++) if(strncmp(g_br2_src[k], src[k], sizeof g_br2_src[k] - 1)) same = 0;
+    if(same) return;
+    for(int k = 0; k < 3; k++) snprintf(g_br2_src[k], sizeof g_br2_src[k], "%s", src[k]);
+    const lv_font_t *F[3][3] = { { br_font(24, 1), br_font(22, 1), br_font(18, 1) },
+                                 { TF(UI_22),       br_font(20, 0), br_font(16, 0) },
+                                 { br_font(16, 0),  br_font(16, 0), br_font(14, 0) } };
     const int gap[3] = { 0, 4, 4 };
-    int hh[3] = { 0 }, step = 0, total = 0, bottom = g_br2_circular ? BR2_SCALE_Y + 4 : BR2_SCALE_Y - 16;   /* circular: no straight scale above the time */
+    int hh[3] = { 0 }, sc[3] = { 0 }, step = 0, total = 0, bottom = g_br2_circular ? BR2_SCALE_Y + 4 : BR2_SCALE_Y - 16;   /* circular: no straight scale above the time */
+    const lv_font_t *use[3];
     for(; step < 3; step++){
         total = 0;
-        for(int k = 0; k < 3; k++){ hh[k] = br2_line_h(o[k], F[k][step]); if(hh[k]) total += hh[k] + (total ? gap[k] : 0); }
+        for(int k = 0; k < 3; k++){
+            use[k] = F[k][step]; hh[k] = br2_text_h(src[k], use[k], &sc[k]);
+            if(sc[k] && step < 2){ int s2; int h2 = br2_text_h(src[k], F[k][step + 1], &s2); if(!s2){ use[k] = F[k][step + 1]; hh[k] = h2; sc[k] = 0; } }   /* one size down before it scrolls */
+            if(hh[k]) total += hh[k] + (total ? gap[k] : 0);
+        }
         if(bottom - total >= BR2_INFO_TOP) break;
     }
     if(step == 3) step = 2;
     int y = bottom - total; if(y < BR2_INFO_TOP) y = BR2_INFO_TOP;
     for(int k = 0; k < 3; k++){
-        lv_obj_set_style_text_font(o[k], F[k][step], 0);
+        lv_label_set_long_mode(o[k], LV_LABEL_LONG_WRAP);   /* the full text back before restyling */
+        lv_obj_set_style_text_font(o[k], use[k], 0);
         if(!hh[k]){ lv_obj_set_height(o[k], 0); continue; }
         lv_obj_set_size(o[k], BR2_INFO_W, hh[k]); lv_obj_align(o[k], LV_ALIGN_TOP_MID, 0, y); y += hh[k] + (k < 2 ? gap[k + 1] : 0);
+        if(sc[k]){ lv_obj_set_style_anim(o[k], disco_scroll5(), 0); lv_label_set_long_mode(o[k], LV_LABEL_LONG_SCROLL_CIRCULAR); }
+        else lv_label_set_long_mode(o[k], LV_LABEL_LONG_DOT);
     }
-    for(int k = 0; k < 3; k++) lv_label_set_long_mode(o[k], LV_LABEL_LONG_DOT);
     if(np_mid_btn){ lv_obj_set_size(np_mid_btn, BR2_INFO_W, (hh[0] + hh[1] + 4) > 44 ? hh[0] + hh[1] + 4 : 44); lv_obj_align_to(np_mid_btn, title, LV_ALIGN_TOP_MID, 0, 0); }
 }
+static void br2_np_relayout(void){ br2_np_relayout_src(NULL, NULL, NULL); }
 /* Braun 2.0 Music, Controls = Gestures: the lower panel is a touch zone instead of the buttons - double tap play/pause,
  * swipe right next, left previous - with faint hints and a glyph that flashes for what was done (as Disco's). */
 static lv_obj_t *g_br2_gz,*g_br2_gz_hint[3],*g_br2_gz_fx,*g_br2_gz_dot[2];
@@ -2104,7 +2116,7 @@ static void br2_np_gestures(int on){
     lv_obj_t *t[3]={btn_prev,btn_pp,btn_next};
     for(int i=0;i<3;i++)if(t[i]){if(on)lv_obj_add_flag(t[i],LV_OBJ_FLAG_HIDDEN);else lv_obj_remove_flag(t[i],LV_OBJ_FLAG_HIDDEN);}
 }
-void ui_braun2_np_apply(void){ if(!th_braun2()||!g_np_scr)return; g_br2_info_hash=0; kit_fork_np_braun2(); }   /* Settings changed a Music option */
+void ui_braun2_np_apply(void){ if(!th_braun2()||!g_np_scr)return; memset(g_br2_src,0,sizeof g_br2_src); kit_fork_np_braun2(); }   /* Settings changed a Music option */
 void kit_fork_np_braun2(void){
     if(!th_braun2() || !g_np_scr)return;
     kit_fork_np_braun();
@@ -4181,7 +4193,7 @@ void ui_update(const track_state_t *st)
         update_accent_seed(st);   /* no-track -> neutral light grey (resets seed + applies once via the gate) */
 
         if(th_zune())zune_idle(1);
-        else{set_label_text_changed(title,"No Track");set_label_text_changed(artist,"");set_label_text_changed(album,"");}
+        else{set_label_text_changed(title,"No Track");set_label_text_changed(artist,"");set_label_text_changed(album,"");br2_np_relayout_src("No Track","","");}
         set_label_text_changed(t_elapsed, "0:00");
         set_label_text_changed(t_remain, "0:00");
         set_label_text_changed(btn_pp, LV_SYMBOL_PLAY);
@@ -4240,8 +4252,8 @@ void ui_update(const track_state_t *st)
             const char *za = book_meta_line(st, ab, sizeof ab) ? ab : st->album;
             if(strcmp(g_zalbum_input,za)){copy_cstr(g_zalbum_input,sizeof g_zalbum_input,za); lv_label_set_text(album, za); zune_album_fit(za); }
         } else set_label_text_changed(album, ab);
+        br2_np_relayout_src(st->title[0] ? st->title : "Untitled", st->artist, ab);   /* Braun 2.0: refit when the track's text changes */
     }
-    br2_np_relayout();   /* Braun 2.0: the info lines refit to the new text */
     /* honour an optimistic-favourite hold so a1 position frames don't bounce the heart back */
     snprintf(g_np_curpath, sizeof g_np_curpath, "%s", st->path);
     int fav_show = st->is_favorite;
