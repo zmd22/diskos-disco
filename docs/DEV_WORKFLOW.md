@@ -1,6 +1,6 @@
 # Build, verify and deliver
 
-Work on `dev` against an identified source baseline. For this documentation, that is Disco 3.2.2 (tag `v3.2.2`). Check the actual branch, local changes and payload manifest before starting. Keep host rendering and MIPS object files in separate build trees.
+Work on `dev` against an identified source baseline. For this documentation, that is Disco 3.3.0 (tag `v3.3.0`). Check the actual branch, local changes and payload manifest before starting. Keep host rendering and MIPS object files in separate build trees.
 
 ## Target build
 

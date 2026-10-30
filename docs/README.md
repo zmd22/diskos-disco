@@ -1,6 +1,6 @@
-# Disco 3.2.2 documentation
+# Disco 3.3.0 documentation
 
-These guides describe the shipped 3.2.2 source and payload, the release commit tagged `v3.2.2`. Later branch changes are not part of this baseline.
+These guides describe the shipped 3.3.0 source and payload, the release commit tagged `v3.3.0`. Later branch changes are not part of this baseline.
 
 ## Use
 
@@ -10,7 +10,7 @@ These guides describe the shipped 3.2.2 source and payload, the release commit t
 - [How-to](HOWTO.md): common tasks.
 - [Immersive](IMMERSIVE_CONTROLS.md), [Disc Shelf](DISC_SHELF_INSTALL.md), [privacy](PRIVACY.md).
 - [Signed SD updates](UPDATING.md), [Windows](WINDOWS.md), [macOS](MACOS.md), [switching and recovery](SWITCHING.md).
-- Themes: [Disco](DISCO_TOUR.md), [Null](themes/null.md), [Squash](themes/squash.md), [Zune](themes/zune.md). Ring, Braun and Stone remain available.
+- Themes: [Disco](DISCO_TOUR.md), [Null](themes/null.md), [Squash](themes/squash.md), [Zune](themes/zune.md), [Braun 2.0](themes/BRAUN2.md). Ring, Braun and Stone remain available.
 
 ## Develop
 
@@ -22,6 +22,6 @@ These guides describe the shipped 3.2.2 source and payload, the release commit t
 
 ## Release and provenance
 
-- [3.2.2 changes](releases/v3.2.2.md), [binary record](RELEASE_3.2.2.md), [changelog](../CHANGELOG.md).
+- [3.3.0 changes](releases/v3.3.0.md), [binary record](RELEASE_3.3.0.md), [changelog](../CHANGELOG.md).
 - Earlier release notes are historical records, not current instructions.
 - [Licenses](../licenses/README.md), [third-party notice](../NOTICE.md), [SPL source](../SPL_SOURCE.md), [security](../SECURITY.md).

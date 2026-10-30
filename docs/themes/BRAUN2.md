@@ -1,5 +1,7 @@
 # Braun 2.0
 
+Shipped in Disco 3.3.0.
+
 A separate light/dark native LVGL preset, appended as ID 14. Choose **Display → Theme → Braun 2.0**. Existing preset IDs and classic Braun remain intact.
 
 ![Clock Home, Music C and six-key Quick Settings in light and dark](braun2-renders/core-comparison.png)
@@ -38,7 +40,7 @@ The supplied [guide](BRAUN2_GUIDE.md) is the reference brief; the choices above 
 
 ## Third pass (3.3.0-test3)
 
-- Music options (Braun 2.0 settings > Music screen, live): **Controls** Buttons / Gestures (double-tap play/pause, swipe right next, left previous, faint hints; `main.c` leaves the zone's swipes alone) and **Progress** Linear / Circular (41 ticks along the rim from lower left over the top to lower right on the shared ring recognizer; presses in the 64 px back strip go to Back).
+- Music options (Braun 2.0 settings > Music screen, live): **Controls** Buttons / Gestures (double-tap play/pause, swipe right next, left previous, faint hints; `main.c` leaves the zone's swipes alone) and **Layout** Art left (artwork at the 40 px safe edge, text beside it, a 280 px straight scale) / Art on top (centred artwork, 41 ticks along the rim from lower left over the top to lower right on the shared ring recognizer; presses in the 64 px back strip go to Back). Layout replaced an earlier Progress option; a stored Progress choice carries over.
 - Scrubbing either scale shows the shared time preview as a raised Braun 2.0 tile.
 - Info block: title, artist, album wrap to two lines each and climb from the scale; fonts step down only if the block would leave the safe area. LONG_DOT rewrites a label's text, so the layout measures with LONG_WRAP and restores the ellipsis after; headers clip instead.
 - Play mode and favourite beside the elapsed time; hold = Title hold (Immersive by default).

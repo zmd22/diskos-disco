@@ -1,6 +1,6 @@
 # Disc Shelf — your music, to go
 
-Built into **diskOS Disco! 3.2.2**. Browse a **Navidrome** library or an **SMB3** share and download original files to your SD card. There is no separate app to install on 3.2.1.
+Built into **diskOS Disco! 3.3.0**. Browse a **Navidrome** library or an **SMB3** share and download original files to your SD card. There is no separate app to install on 3.2.1.
 
 [Home](../README.md) · [How-to](HOWTO.md) · [Tour](DISCO_TOUR.md#disc-shelf)
 

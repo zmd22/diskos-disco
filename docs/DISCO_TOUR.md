@@ -1,4 +1,4 @@
-# Disco 3.2.2 tour
+# Disco 3.3.0 tour
 
 A native LVGL interface for the 360 × 360 Snowsky Disc. The stock music player continues to handle audio; Disco provides browsing, controls and its additional apps. This describes the release, not later development changes. See [settings](DISPLAY_SETTINGS.md) for exact menu ownership.
 
@@ -6,7 +6,7 @@ A native LVGL interface for the 360 × 360 Snowsky Disc. The stock music player 
 
 Disco uses an edge shard that opens a navigation circle; select a destination from the circle. Left-handed mode mirrors the navigation. Null uses its own right-side menu; Squash uses a rising launcher; Zune uses a scrolling main menu. Theme-specific menu and gesture assignments are under Display > the selected theme's settings > Navigation.
 
-Use the edge Back gesture or the available Back control to return. Quick Settings opens with a top-edge pull. With QS style Shade, screens other than Music first show a cover, track details, transport, progress, clock and battery; pull again or tap the handle for Quick Settings. Swipe up to dismiss. Shade animates after the gesture; it does not continuously follow the finger in 3.2.2.
+Use the edge Back gesture or the available Back control to return. Quick Settings opens with a top-edge pull. With QS style Shade, screens other than Music first show a cover, track details, transport, progress, clock and battery; pull again or tap the handle for Quick Settings. Swipe up to dismiss. Shade animates after the gesture; it does not continuously follow the finger in 3.3.0.
 
 ## Music and Immersive
 

@@ -79,7 +79,7 @@ use the desktop `host-render` program on the Disc.
 From the repository root, with your keys in `./diskos-keys`:
 
 ```sh
-sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 3.2.2
+sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 3.3.0
 ```
 
 With keys elsewhere: `diskos-sign.sh <binary> [label] [keys-folder] [output-folder]`. The label (up to 32 letters,

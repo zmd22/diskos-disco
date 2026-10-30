@@ -1,4 +1,4 @@
-# Settings in Disco 3.2.2
+# Settings in Disco 3.3.0
 
 The seven root categories are shared by all themes. Visible rows depend on theme and firmware capability. Most irrelevant theme options are hidden; dependency-blocked options can remain visible with an explanation. Saved option values are not reordered when the menus are sorted.
 

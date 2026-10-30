@@ -1,17 +1,17 @@
-# Development targets after Disco 3.2.2
+# Development targets after Disco 3.3.0
 
 Targets below are proposals or verification work, not shipped features. Work belongs on dev; changes, builds and releases follow maintainer direction.
 
 ## Current UI targets
 
-- Make Shade follow the finger during the pull; 3.2.2 animates after the gesture.
+- Make Shade follow the finger during the pull; 3.3.0 animates after the gesture.
 - Extend artwork coverage in Wheel album/playlist lists; preserve smooth motion and bounded decoding work.
 - Refresh native 360 × 360 screenshots after layout approval, including long labels, empty states and all supported appearances.
 - Review secondary-screen theme consistency: Null Stats typography, file dialogs, Apps headers, Date & Time and Weather. These are audit proposals, not approved redesigns.
 
 ## Feature proposals
 
-- Local song ratings and smart playlists using reliable listening data; not implemented as a 3.2.2 feature.
+- Local song ratings and smart playlists using reliable listening data; not implemented as a 3.3.0 feature.
 - Optional dyslexia-friendly text font with preserved icon/clock/non-Latin rendering; requires layout and device evaluation.
 
 ## Engineering validation

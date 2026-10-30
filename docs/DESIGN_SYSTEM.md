@@ -1,6 +1,6 @@
 # Disco design rules
 
-Applies to the 3.2.2 UI. Themes deliberately differ; there is no universal ring angle, font family, accent, card radius or Music layout.
+Applies to the 3.3.0 UI. Themes deliberately differ; there is no universal ring angle, font family, accent, card radius or Music layout.
 
 - Design and inspect at native 360 × 360 resolution with the round bezel visible.
 - Keep primary text, controls and feedback clear of the bezel and each theme's navigation. Check Disco's mirrored side too.

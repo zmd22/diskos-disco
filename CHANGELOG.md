@@ -6,6 +6,21 @@ Entries follow the Keep a Changelog format, with Added, Changed, and Fixed categ
 diskOS remains beta software; version numbers do not imply broad hardware or feature validation.
 
 
+## 3.3.0
+
+Braun 2.0, a new light and dark theme, plus fixes it brought out. [Release notes](docs/releases/v3.3.0.md)
+
+### Added
+- Braun 2.0 theme (Display > Theme): warm ivory/charcoal panels, a speaker-grille texture, shaded keys with orange icons and one orange accent, Inter type that follows Font Size.
+- Braun 2.0 Home: a wall clock with a date window, weather and Wi-Fi/Bluetooth/battery glyphs on the face; Library, play/pause and Search below.
+- Braun 2.0 Music: artwork and wrapping title/artist/album over a radio-dial seek scale with scrubbing preview; Layout (Art left with a straight scale, or Art on top with a circular scale), Controls (Buttons or a gesture zone), favourite and play mode beside the time, a tap on the title for the track menu and a hold for Immersive.
+- Braun 2.0 Quick Settings: eight keys, battery and brightness tick scales; the QS shade, Working mode, Shortcuts (six slots) and Weather (six forecast keys and a now panel) in the same keys.
+- Braun 2.0 volume: Braun's right-rim dial with a LO/HI gain switch and LED (firmware with gain support).
+- Braun 2.0 EQ: Braun sliders with orange travel; track/album/file menus as squircle keys with the full song set of the other modern themes.
+
+### Fixed
+- The 44 px time font had no colon (Braun and Braun 2.0 showed a 20 px colon); the A-Z wheel's large letter fell back to a small font in Braun.
+
 ## 3.2.2
 
 A default cover for songs without one, wheel lists that open with their buttons in view, quoted tags on Now Playing and a Queue that always starts and comes back. [Release notes](docs/releases/v3.2.2.md).
