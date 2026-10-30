@@ -41,7 +41,7 @@ void orbit_create(orbit_t *o, lv_obj_t *root, const orbit_item_t *it, int n, int
         lv_obj_t *b = lv_button_create(root);
         o->btn[i] = b;
         lv_obj_remove_style_all(b);
-        if(th_braun()){                                          /* Braun: each knob on its own panel disc over the grille */
+        if(th_braun_family()){                                          /* Braun: each knob on its own panel disc over the grille */
             lv_obj_t *pd = br_disc(root, 180 + cx, 180 + cy + 8, ORBIT_BTN / 2 + 16, BR_PANEL);
             lv_obj_move_to_index(pd, lv_obj_get_index(b));       /* just behind the button */
         }
@@ -59,7 +59,7 @@ void orbit_create(orbit_t *o, lv_obj_t *root, const orbit_item_t *it, int n, int
         lv_label_set_text(o->icon[i], it[i].glyph);
         lv_obj_set_style_text_font(o->icon[i], TF(UI_18), 0);
         lv_obj_set_style_text_color(o->icon[i], TC(TEXT_PRIMARY), 0);
-        if(th_braun()){                                          /* the dark knob: turned edge, soft shadow, pointer, lamp */
+        if(th_braun_family()){                                          /* the dark knob: turned edge, soft shadow, pointer, lamp */
             lv_obj_set_style_bg_color(b, TC(CONTROL_KNOB), 0);
             lv_obj_set_style_bg_color(b, TC(ORBIT_PRESSED), LV_STATE_PRESSED);
             lv_obj_set_style_border_color(b, TC(CONTROL_FILL), 0); lv_obj_set_style_border_width(b, 2, 0);
@@ -84,8 +84,8 @@ void orbit_create(orbit_t *o, lv_obj_t *root, const orbit_item_t *it, int n, int
             o->cap[i] = lv_label_create(root);
             lv_label_set_text(o->cap[i], it[i].cap);
             lv_obj_set_style_text_font(o->cap[i], TH_F_CAPTION, 0);
-            lv_obj_set_style_text_color(o->cap[i], th_braun() ? TC(TEXT_SECONDARY) : TC(TEXT_SECONDARY), 0);
-            if(th_braun()) lv_obj_set_style_text_font(o->cap[i], br_font(12, 0), 0);
+            lv_obj_set_style_text_color(o->cap[i], th_braun_family() ? TC(TEXT_SECONDARY) : TC(TEXT_SECONDARY), 0);
+            if(th_braun_family()) lv_obj_set_style_text_font(o->cap[i], br_font(12, 0), 0);
             lv_obj_align(o->cap[i], LV_ALIGN_CENTER, cx, cy + ORBIT_BTN / 2 + 11);
             lv_obj_clear_flag(o->cap[i], LV_OBJ_FLAG_CLICKABLE);
         }
@@ -132,7 +132,7 @@ void orbit_cap_width(orbit_t *o, int w, const lv_font_t *font){
 }
 void orbit_set_on(orbit_t *o, int i, int on, lv_color_t accent){
     if(i < 0 || i >= o->n) return;
-    if(th_braun()){                                              /* on: the pointer turns orange, the lamp lights */
+    if(th_braun_family()){                                              /* on: the pointer turns orange, the lamp lights */
         if(o->icon[i]) lv_obj_set_style_text_color(o->icon[i], TC(ON_CONTROL), 0);
         br_pointer_set(o->ptr[i], ORBIT_BTN, on);                 /* fork: OFF 0 deg icon colour, ON 45 deg orange */
         if(o->lamp[i]) lv_obj_add_flag(o->lamp[i], LV_OBJ_FLAG_HIDDEN);   /* fork: no lamp */
@@ -150,7 +150,7 @@ void orbit_set_on(orbit_t *o, int i, int on, lv_color_t accent){
 void orbit_set_pending(orbit_t *o, int p, lv_color_t accent){
     for(int i = 0; i < o->n; i++){
         int on = (i == p);
-        if(th_braun()){ lv_obj_set_style_border_color(o->btn[i], on ? TC(ACCENT_PRIMARY) : TC(CONTROL_FILL), 0); lv_obj_set_style_border_width(o->btn[i], on ? 3 : 2, 0); continue; }
+        if(th_braun_family()){ lv_obj_set_style_border_color(o->btn[i], on ? TC(ACCENT_PRIMARY) : TC(CONTROL_FILL), 0); lv_obj_set_style_border_width(o->btn[i], on ? 3 : 2, 0); continue; }
         lv_obj_set_style_border_width(o->btn[i], on ? 3 : 0, 0);
         lv_obj_set_style_border_color(o->btn[i], accent, 0);
         if(!on && th_ringlike()){ lv_obj_set_style_border_width(o->btn[i], 2, 0); lv_obj_set_style_border_color(o->btn[i], ring_border_color(), 0); }   /* fork */
@@ -159,7 +159,7 @@ void orbit_set_pending(orbit_t *o, int p, lv_color_t accent){
     }
 }
 void orbit_set_glyph(orbit_t *o, int i, const char *glyph){ if(i >= 0 && i < o->n) lv_label_set_text(o->icon[i], glyph); }
-void orbit_braun_icons(orbit_t *o){ if(!th_braun()) return; for(int i = 0; i < o->n; i++) if(o->icon[i]) lv_obj_set_style_text_color(o->icon[i], TC(ON_CONTROL), 0); }
+void orbit_braun_icons(orbit_t *o){ if(!th_braun_family()) return; for(int i = 0; i < o->n; i++) if(o->icon[i]) lv_obj_set_style_text_color(o->icon[i], TC(ON_CONTROL), 0); }
 
 static void spin_exec(void *var, int32_t v){ lv_arc_set_rotation((lv_obj_t *)var, v % 360); }
 void orbit_hub_create(orbit_t *o, lv_obj_t *root, lv_event_cb_t hub_cb, const char *glyph, const char *cap){
@@ -188,8 +188,8 @@ void orbit_hub_create(orbit_t *o, lv_obj_t *root, lv_event_cb_t hub_cb, const ch
     lv_obj_align(o->hub_icon, LV_ALIGN_CENTER, 0, -9);
     o->hub_cap = lv_label_create(o->hub);
     lv_obj_set_style_text_font(o->hub_cap, TH_F_CAPTION, 0);
-    lv_obj_set_style_text_color(o->hub_cap, th_braun() ? TC(TEXT_SECONDARY) : TC(TEXT_SECONDARY), 0);
-    if(th_braun()){ lv_obj_set_style_text_font(o->hub_cap, br_font(12, 0), 0); lv_obj_set_style_text_color(o->hub_icon, TC(TEXT_PRIMARY), 0);
+    lv_obj_set_style_text_color(o->hub_cap, th_braun_family() ? TC(TEXT_SECONDARY) : TC(TEXT_SECONDARY), 0);
+    if(th_braun_family()){ lv_obj_set_style_text_font(o->hub_cap, br_font(12, 0), 0); lv_obj_set_style_text_color(o->hub_icon, TC(TEXT_PRIMARY), 0);
                     lv_obj_set_style_arc_color(o->ring, TC(SURFACE), LV_PART_MAIN); }
     lv_obj_align(o->hub_cap, LV_ALIGN_CENTER, 0, 20);
     orbit_hub_set(o, glyph, TC(TEXT_PRIMARY), cap);
@@ -199,7 +199,7 @@ void orbit_hub_create(orbit_t *o, lv_obj_t *root, lv_event_cb_t hub_cb, const ch
     }
 }
 void orbit_hub_ring(orbit_t *o, int mode, lv_color_t col, int value){
-    if(th_braun()) col = TC(ACCENT_PRIMARY);                 /* Braun: progress / active rings in orange */
+    if(th_braun_family()) col = TC(ACCENT_PRIMARY);                 /* Braun: progress / active rings in orange */
     if(!o->ring) return;
     lv_anim_delete(o->ring, spin_exec);
     lv_arc_set_rotation(o->ring, 270);                                  /* 12 o'clock */
@@ -220,15 +220,15 @@ void orbit_hub_ring(orbit_t *o, int mode, lv_color_t col, int value){
 void orbit_hub_set(orbit_t *o, const char *glyph, lv_color_t col, const char *cap){
     if(!o->hub) return;
     lv_label_set_text(o->hub_icon, glyph ? glyph : "");
-    lv_obj_set_style_text_color(o->hub_icon, th_braun() ? TC(TEXT_PRIMARY) : col, 0);   /* Braun: no album colour */
+    lv_obj_set_style_text_color(o->hub_icon, th_braun_family() ? TC(TEXT_PRIMARY) : col, 0);   /* Braun: no album colour */
     lv_label_set_text(o->hub_cap, cap ? cap : "");
 }
 lv_obj_t *orbit_title(lv_obj_t *root, const char *text){
     lv_obj_t *t = lv_label_create(root);
     lv_label_set_text(t, text);
     lv_obj_set_style_text_font(t, TH_F_CAPTION, 0);
-    lv_obj_set_style_text_color(t, th_braun() ? TC(TEXT_PRIMARY) : TC(TEXT_SECONDARY), 0);
-    if(th_braun()) lv_obj_set_style_text_font(t, br_font(14, 0), 0);
+    lv_obj_set_style_text_color(t, th_braun_family() ? TC(TEXT_PRIMARY) : TC(TEXT_SECONDARY), 0);
+    if(th_braun_family()) lv_obj_set_style_text_font(t, br_font(14, 0), 0);
     lv_obj_align(t, LV_ALIGN_TOP_MID, 0, 16);
     return t;
 }

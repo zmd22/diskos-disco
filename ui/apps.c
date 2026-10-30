@@ -315,7 +315,7 @@ void apps_create(lv_obj_t *root){
     lv_obj_set_style_bg_color(root, TC(CANVAS), 0);
     lv_obj_set_style_bg_opa(root, LV_OPA_COVER, 0);
     lv_obj_clear_flag(root, LV_OBJ_FLAG_SCROLLABLE);
-    if(th_braun()) br_face(root);
+    if(th_braun_family()) br_face(root);
     g_box = lv_obj_create(root);
     lv_obj_remove_style_all(g_box);
     lv_obj_set_size(g_box, 360, 360);
@@ -396,7 +396,7 @@ void shortcuts_config_create(lv_obj_t *root){
     lv_obj_set_flex_flow(g_cfg_list, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_scroll_dir(g_cfg_list, LV_DIR_VER); lv_obj_set_scrollbar_mode(g_cfg_list, LV_SCROLLBAR_MODE_OFF);
     lv_obj_add_flag(g_cfg_list, LV_OBJ_FLAG_SCROLL_MOMENTUM);
-    if(th_braun()){ br_face(root); lv_obj_move_to_index(br_segment(root, 64), 1); curvelist_braun_watch(g_cfg_list); }
+    if(th_braun_family()){ br_face(root); lv_obj_move_to_index(br_segment(root, 64), 1); curvelist_braun_watch(g_cfg_list); }
     cfg_build();
 }
 void shortcuts_config_refresh(void){ g_cfg_slot = -1; cfg_build(); }

@@ -50,7 +50,7 @@ int azjump_owns_point(int x,int y){
 static int focus_x[27],focus_y[27],focus_positions_ready;
 static char wheel_glyph(char c){return th_zune()&&c>='A'&&c<='Z'?(char)(c+32):c;}
 static const lv_font_t *wheel_font(int big){
-    if(th_braun())return br_font(big?56:18,0);
+    if(th_braun_family())return br_font(big?56:18,0);
     if(th_null())return big?TF(UI_36):TF(UI_16);
     if(th_zune()){
         LV_FONT_DECLARE(font_zune_light_50)

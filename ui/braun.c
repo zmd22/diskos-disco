@@ -63,13 +63,16 @@ int th_braun(void){
     const theme_def_t *d=theme_def(); return d && d->kit && !strcmp(d->kit->id,"braun");
 #endif
 }
+int th_braun2(void){ return theme_preset()==THEME_PRESET_BRAUN2; }
+int th_braun_family(void){ return th_braun() || th_braun2(); }
 int th_night_now(void){ time_t now = time(NULL); struct tm tm; localtime_r(&now, &tm); return tm.tm_hour >= 19 || tm.tm_hour < 7; }
 /* the variant the current settings and clock ask for (Braun family only) */
 int th_want_dark(void){
 #ifdef TH_FORCE_BRAUN_DARK
     return 1;
 #endif
-    if(!th_braun()) return 0;
+    if(!th_braun_family()) return 0;
+    if(th_braun2()) return !theme_variant();
     if(cfg_get_int("theme_variant", 0)==2) return th_night_now();
     return th_index() == 2;
 }
@@ -115,6 +118,8 @@ void br_face(lv_obj_t *root){
     lv_obj_set_style_bg_color(root, TC(CANVAS), 0);
     lv_obj_set_style_bg_opa(root, LV_OPA_COVER, 0);
     const lv_image_dsc_t *g = grille();
+    /* A style background survives lv_obj_clean() when async screens rebuild. */
+    if(th_braun2()){lv_obj_set_style_bg_image_src(root,g,0);return;}
     if(g){ lv_obj_t *im = lv_image_create(root); lv_image_set_src(im, g); lv_obj_set_pos(im, 0, 0);
            lv_obj_clear_flag(im, LV_OBJ_FLAG_CLICKABLE); lv_obj_move_to_index(im, 0); }
 }
@@ -196,12 +201,12 @@ lv_obj_t *br_button(lv_obj_t *parent, int cx, int cy, int r, const char *icon, c
     lv_obj_remove_style_all(b);
     lv_obj_set_size(b, 2 * r, 2 * r); lv_obj_set_pos(b, cx - r, cy - r);
     lv_obj_set_style_radius(b, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(b, primary ? TC(ACCENT_PRIMARY) : TC(SURFACE), 0); lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_color(b, primary ? TC(ACCENT_PRIMARY) : th_braun2()?TC(CONTROL_KNOB):TC(SURFACE), 0); lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
     lv_obj_set_style_bg_color(b, primary ? TC(PRIMARY_PRESSED) : TC(SURFACE_PRESSED), LV_STATE_PRESSED);
     lv_obj_set_ext_click_area(b, 6);
     lv_obj_t *l = lv_label_create(b); lv_label_set_text(l, icon ? icon : "");
     if(font) lv_obj_set_style_text_font(l, font, 0);
-    lv_obj_set_style_text_color(l, primary ? TC(ON_ACCENT) : TC(TEXT_PRIMARY), 0); lv_obj_center(l);
+    lv_obj_set_style_text_color(l, primary ? TC(ON_ACCENT) : th_braun2()?TC(ON_CONTROL):TC(TEXT_PRIMARY), 0); lv_obj_center(l);
     return b;
 }
 void br_style_switch(lv_obj_t *sw){                          /* a slot with a dark slider; the slot goes orange-tinted when on */

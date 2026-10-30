@@ -408,7 +408,7 @@ void plview_create(lv_obj_t *root){
     lv_obj_add_flag(g_song_list, LV_OBJ_FLAG_SCROLL_MOMENTUM);
     ui_library_list_watch(g_song_list);
     lv_obj_add_event_cb(g_song_list, plv_scroll_cb, LV_EVENT_SCROLL, NULL);
-    if(th_braun() && g_song_list){                                  /* Braun: the grille, the list on the segment, styled rows */
+    if(th_braun_family() && g_song_list){                                  /* Braun: the grille, the list on the segment, styled rows */
         br_face(root); lv_obj_update_layout(g_song_list);
         int y = lv_obj_get_y(g_song_list) - 6; if(y < 40) y = 40;
         lv_obj_move_to_index(br_segment(root, y), 1);

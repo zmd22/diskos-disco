@@ -36,7 +36,7 @@ void ui_toast_icon(const char *icon, lv_color_t icol, const char *msg)
                    g_toast_timer = lv_timer_create(toast_hide_cb, 2400, NULL); return; }
     g_toast = lv_obj_create(lv_layer_top());
     lv_obj_remove_style_all(g_toast);
-    int br = th_braun();                                       /* Braun: an off-white panel, dark text, an orange lamp */
+    int br = th_braun_family();                                       /* Braun: an off-white panel, dark text, an orange lamp */
     lv_obj_set_style_bg_color(g_toast, TC(TOAST_SURFACE), 0);
     lv_obj_set_style_bg_opa(g_toast, LV_OPA_COVER, 0);
     lv_obj_set_style_border_color(g_toast, TC(TOAST_BORDER), 0);
@@ -87,7 +87,7 @@ static int g_orb_on;
 static uint32_t g_orb_t0;
 static void orb_place(void){
     float a0 = (float)lv_tick_elaps(g_orb_t0) * 0.18f - 90.0f;      /* one lap every 2 s */
-    if(th_braun()) a0 = (float)((int)(a0 / 7.5f)) * 7.5f;           /* Braun: steps, like an indicator lamp */
+    if(th_braun_family()) a0 = (float)((int)(a0 / 7.5f)) * 7.5f;           /* Braun: steps, like an indicator lamp */
     for(int k = 0; k < ORB_N; k++){
         float a = (a0 - k * 3.4f) * 0.0174533f;
         int sz = lv_obj_get_width(g_orb[k]);
@@ -118,7 +118,7 @@ void ui_scan_orbit(int on){
                         lv_obj_set_style_border_width(g_orb[k], k == 0 ? 2 : 0, 0); lv_obj_set_style_border_color(g_orb[k], ui_current_accent(), 0);
             if(on) lv_obj_move_foreground(g_orb[k]);
         }
-        if(th_braun()) lv_obj_set_style_bg_color(g_orb[k], k == 0 ? TC(ACCENT_PRIMARY) : TC(TOAST_ORB), 0);
+        if(th_braun_family()) lv_obj_set_style_bg_color(g_orb[k], k == 0 ? TC(ACCENT_PRIMARY) : TC(TOAST_ORB), 0);
         else lv_obj_set_style_bg_color(g_orb[k], k == 0 ? TC(TEXT_PRIMARY) : ui_current_accent(), 0);
         if(on) lv_obj_remove_flag(g_orb[k], LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(g_orb[k], LV_OBJ_FLAG_HIDDEN);
     }

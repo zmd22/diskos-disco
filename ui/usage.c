@@ -280,7 +280,7 @@ static void draw(void){
     if(pct >= 0) snprintf(b, sizeof b, "%d%%", pct); else snprintf(b, sizeof b, "-");
     lv_label_set_text(g_pct, b);
     lv_arc_set_value(g_ring, pct >= 0 ? pct : 0);
-    lv_color_t c = g_chg ? TC(STATUS_SUCCESS) : (pct >= 0 && pct <= 15) ? TC(STATUS_DANGER) : th_braun() ? TC(ACCENT_PRIMARY) : ui_current_accent();
+    lv_color_t c = g_chg ? TC(STATUS_SUCCESS) : (pct >= 0 && pct <= 15) ? TC(STATUS_DANGER) : th_braun_family() ? TC(ACCENT_PRIMARY) : ui_current_accent();
     lv_obj_set_style_arc_color(g_ring, c, LV_PART_INDICATOR);
     if(g_chg) lv_obj_remove_flag(g_chg_ic, LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(g_chg_ic, LV_OBJ_FLAG_HIDDEN);
     lv_obj_set_style_text_color(g_chg_ic, c, 0);
@@ -449,7 +449,7 @@ void usage_create(lv_obj_t *root){
     if(th_zune()){zusage_create(root);return;}
     lv_obj_set_style_bg_color(root,TC(CANVAS),0);lv_obj_set_style_bg_opa(root,LV_OPA_COVER,0);
     lv_obj_clear_flag(root,LV_OBJ_FLAG_SCROLLABLE);
-    if(th_braun())br_face(root);
+    if(th_braun_family())br_face(root);
     int centered=th_simple()||th_null();
     int left=centered?0:disco_mirror(),dx=centered?0:(left?30:-30);
     g_start=centered?130:(left?220:40);

@@ -137,7 +137,7 @@ void eqpreset_refresh(void){
  if(p>=11){profile_ticket=eq_profile_request(p);profile_paint(p,profile_ticket?-2:-1,0,NULL);}
  else profile_paint(p,0,0,NULL);
  lv_label_set_text(switch_label,p?"On":"Off");
- if(switch_pointer&&th_braun())br_pointer_set(switch_pointer,58,p);
+ if(switch_pointer&&th_braun_family())br_pointer_set(switch_pointer,58,p);
  if(switch_pointer)lv_obj_set_style_bg_color(switch_pointer,p?theme_on_color(ui_current_accent()):TC(TEXT_MUTED),0);
  lv_obj_set_style_bg_color(switch_button,p?ui_current_accent():TC(SURFACE),0);
  lv_obj_set_style_text_color(switch_label,p?theme_on_color(ui_current_accent()):TC(TEXT_PRIMARY),0);

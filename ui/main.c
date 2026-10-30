@@ -1314,7 +1314,7 @@ void ui_shutdown_screen(void){
     lv_obj_set_style_bg_opa(o, LV_OPA_COVER, 0);
     lv_obj_add_flag(o, LV_OBJ_FLAG_CLICKABLE);                  /* taps do nothing now */
     lv_obj_clear_flag(o, LV_OBJ_FLAG_SCROLLABLE);
-    if(th_braun()){
+    if(th_braun_family()){
         br_face(o);
         lv_obj_t *k = br_knob(o, 180, 140, 52, LV_SYMBOL_POWER, TF(UI_38));
         br_knob_set_on(k, 1);

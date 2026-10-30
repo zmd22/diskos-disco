@@ -214,6 +214,7 @@ static int g_znalb;                    /* albums on the tile wall (rows hold thr
 static int lib_zalbum(void){ return g_view==VIEW_GROUP && (g_drill_kind==1 || g_scope_lvl==2); }   /* one album's songs */
 int library_wall_active(void){return g_view==VIEW_ALBUMS && simple_cfg_get_int("album_view",0)==1;}
 static int lib_row_h(void){
+    if(th_braun2())return 56;
     if(library_wall_active())return 98;
     if(!th_zune()) return th_null()?60:52;
     if(lib_zalbum()) return theme_font_size()==2?36:30;                             /* compact track rows under the album header */
@@ -382,7 +383,7 @@ static void curve_rows(void){
     if(!g_list) return;
     if(library_wall_active())return;
     if(th_zune()){ zcurve_rows(); return; }
-    if(th_braun()){                                                  /* Braun: straight rows, restyled */
+    if(th_braun_family()){                                                  /* Braun: straight rows, restyled */
         for(uint32_t i = 0; i < lv_obj_get_child_count(g_list); i++){
             lv_obj_t *r = lv_obj_get_child(g_list, i);
             if(lv_obj_check_type(r, &lv_label_class) || lv_obj_has_flag(r, LV_OBJ_FLAG_IGNORE_LAYOUT)) continue;   /* every row (Ring curves only some) */
@@ -434,7 +435,7 @@ static void curve_rows(void){
 static lv_obj_t *g_pdot[N_PDOTS];
 static int g_pdot_cur = -2;
 static void pdots_update(void){
-    if(th_braun()) return;                                           /* Braun: no position dots */
+    if(th_braun_family()) return;                                           /* Braun: no position dots */
     if(th_zune()){ zscroll_update(); return; }                       /* Zune: a short arc on the rim + the letter dot */
     if(!g_pdot[0] || !g_list) return;
     lv_obj_update_layout(g_list);
@@ -1269,7 +1270,7 @@ static void hdr_btn(lv_obj_t *row, int x, const char *txt, lv_event_cb_t cb){
     lv_obj_remove_style_all(b);
     lv_obj_set_size(b, 128, 44); lv_obj_set_pos(b, x, 4);
     lv_obj_set_style_radius(b, 12, 0);
-    int br = th_braun();                                            /* Braun: flat off-white keys, dark type */
+    int br = th_braun_family();                                            /* Braun: flat off-white keys, dark type */
     lv_obj_set_style_bg_color(b, br ? TC(SURFACE) : TC(SURFACE), 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
     lv_obj_set_style_bg_color(b, br ? TC(SURFACE_PRESSED) : TC(SURFACE_RAISED), LV_STATE_PRESSED);
@@ -2235,7 +2236,7 @@ static void library_reload_inner(void){
             row_two(r, g_plnames[i], sub, NULL);                         /* the name, and how many songs under it */
         }
     }
-    if(th_braun() || th_zune() || curvelist_wheel()){ lv_obj_update_layout(g_list); curve_rows(); }   /* Braun: every view's rows get the Braun styling; Zune: the curve */
+    if(th_braun_family() || th_zune() || curvelist_wheel()){ lv_obj_update_layout(g_list); curve_rows(); }   /* Braun: every view's rows get the Braun styling; Zune: the curve */
 }
 
 /* Twelve session-local views, no flash writes on scrolling. Restore after rebuilding
@@ -2470,10 +2471,10 @@ void library_create(lv_obj_t *root){
     if(total < 0) total = mdb_song_count() > 256 ? mdb_song_count() : 256;   /* COUNT failed -> generous floor, don't undersize */
     lib_alloc_buffers(total);
     library_reload();
-    if(th_braun() && g_list){                                        /* Braun: the grille, the list on the lower segment */
+    if(th_braun_family() && g_list){                                        /* Braun: the grille, the list on the lower segment */
         br_face(root); lv_obj_update_layout(g_list);
         int y = lv_obj_get_y(g_list) - 6; if(y < 40) y = 40;
-        lv_obj_move_to_index(br_segment(root, y), 1);
+        if(!th_braun2())lv_obj_move_to_index(br_segment(root, y), 1);
         curvelist_braun_watch(g_list);
     }
 }

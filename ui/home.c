@@ -261,7 +261,7 @@ void home_set_settings_click_cb(home_settings_click_cb_t cb)
 
 void home_set_clock(const char *time_text, const char *sub_text)
 {
-    if(th_braun()){ bhome_set_clock(time_text, sub_text); return; }
+    if(th_braun_family()){ bhome_set_clock(time_text, sub_text); return; }
     if(th_zune()){ zhome_set_clock(time_text, sub_text); return; }
     if(th_null()){ null_home_clock(time_text); return; }
     if(th_disco_family()){ dhome_set_clock(time_text, sub_text); return; }
@@ -279,7 +279,7 @@ static void wx_short(const char *in, char *out, size_t cap){
 void home_set_weather(const char *text)
 {
     char s[96]; wx_short(text, s, sizeof s);
-    if(th_braun()){ const char *p = s; while(*p == ' ') p++; bhome_set_weather(p); return; }
+    if(th_braun_family()){ const char *p = s; while(*p == ' ') p++; bhome_set_weather(p); return; }
     if(th_zune()){ zhome_set_weather(s); return; }
     if(th_null()){ null_home_weather(s); return; }
     if(th_disco_family()){ dhome_set_weather(s); return; }
@@ -337,7 +337,7 @@ static void np_progress_tick(lv_timer_t *t){
 
 void home_set_status(int batt, int charging, int wifi, int bt)
 {
-    if(th_braun()){ bhome_set_status(batt, charging, wifi, bt); return; }
+    if(th_braun_family()){ bhome_set_status(batt, charging, wifi, bt); return; }
     if(th_zune()){ zhome_set_status(batt, charging, wifi, bt); return; }
     if(th_null()){ null_home_status(batt, charging, wifi, bt); return; }
     if(th_disco_family()){void dsaver_set_status(int,int,int,int);dsaver_set_status(batt,charging,wifi,bt);dhome_set_status(batt, charging, wifi, bt); return; }
@@ -362,7 +362,7 @@ static lv_obj_t *g_hb_lib, *g_hb_srch;   /* fork: Library / Search, recoloured w
 void home_set_now_playing(const char *title, const char *artist,
                           lv_color_t accent, bool playing)
 {
-    if(th_braun()){ bhome_set_now_playing(title, artist, playing); return; }
+    if(th_braun_family()){ bhome_set_now_playing(title, artist, playing); return; }
     if(th_zune()){ zhome_set_now_playing(title, artist, playing); return; }
     if(th_null()){ null_home_update(title,artist,playing);return; }
     if(th_disco_family()){ dhome_set_now_playing(title, artist, accent, playing); return; }
@@ -392,7 +392,7 @@ void home_set_now_playing(const char *title, const char *artist,
 void home_set_accent(lv_color_t accent)
 {
     if(th_zune()){home_shortcuts_refresh();return;}
-    if(th_braun()) return;                                  /* Braun: orange only */
+    if(th_braun_family()) return;                                  /* Braun: orange only */
     if(th_disco_family()){ dhome_set_accent(accent); return; }
     g_accent = accent;
     if (g_ring) lv_obj_set_style_arc_color(g_ring, accent, LV_PART_INDICATOR);
@@ -408,7 +408,7 @@ void home_set_art_enabled(int on){ g_art_on=on; if(!on && g_np_art_img) lv_obj_a
 void home_set_backdrop_enabled(int on){ g_home_bg_on=on; if(!on) home_set_backdrop(NULL); }
 void home_set_backdrop(const void *src)
 {
-    if(th_braun() || th_zune() || th_disco_family() || th_null()) return;
+    if(th_braun_family() || th_zune() || th_disco_family() || th_null()) return;
     if(!g_home_bg_on) src=NULL;
     if (g_home_bg) lv_image_set_src(g_home_bg, NULL);   /* same RAM buffer, new pixels: force a redraw */
     if (!g_home_bg || !g_home_scrim) return;
@@ -424,7 +424,7 @@ void home_set_backdrop(const void *src)
 
 void home_set_art_src(const void *src)
 {
-    if(th_braun() || th_zune() || th_disco_family() || th_null()) return;
+    if(th_braun_family() || th_zune() || th_disco_family() || th_null()) return;
     if (!g_np_art_img || !g_np_thumb_glyph) return;
 
     if (src && g_art_on) {

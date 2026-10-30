@@ -89,7 +89,7 @@ static int scrub_seek_calls,scrub_volume_calls,scrub_send_fail;
 static long scrub_last_seek;
 static int scrub_last_volume;
 int __real_ui_seek_to(long ms);int __real_ui_set_volume(int v);
-int __wrap_ui_seek_to(long ms){if(getenv("REVIEW_SCRUB")){scrub_seek_calls++;scrub_last_seek=ms;return scrub_send_fail?-1:0;}return __real_ui_seek_to(ms);}
+int __wrap_ui_seek_to(long ms){if(getenv("REVIEW_SCRUB")||getenv("REVIEW_BRAUN2")){scrub_seek_calls++;scrub_last_seek=ms;return scrub_send_fail?-1:0;}return __real_ui_seek_to(ms);}
 int __wrap_ui_set_volume(int v){if(getenv("REVIEW_SCRUB")||getenv("REVIEW_ZUNE_VOLUME")){scrub_volume_calls++;scrub_last_volume=v;return scrub_send_fail?-1:0;}return __real_ui_set_volume(v);}
 int __real_ui_is_playing(void);
 int __wrap_ui_is_playing(void){const char*p=getenv("NP_PLAYING");return p?atoi(p):__real_ui_is_playing();}
@@ -148,10 +148,10 @@ static void count_style_event(lv_event_t *e){(void)e;test_style_events++;}
 static void watch_styles(lv_obj_t *o){lv_obj_add_event_cb(o,count_style_event,LV_EVENT_STYLE_CHANGED,NULL);for(uint32_t i=0;i<lv_obj_get_child_count(o);i++)watch_styles(lv_obj_get_child(o,i));}
 static int fixture, send_result, send_count;static char last_sent[32];
 int __real_ui_local_playback_allowed(void);
-int __wrap_ui_local_playback_allowed(void){return (getenv("REVIEW_ZUNE")||getenv("REVIEW_ZUNE_BACK"))?1:__real_ui_local_playback_allowed();}
+int __wrap_ui_local_playback_allowed(void){return (getenv("REVIEW_BRAUN2")||getenv("REVIEW_ZUNE")||getenv("REVIEW_ZUNE_BACK"))?1:__real_ui_local_playback_allowed();}
 static int null_transport_calls;static char null_last_command[24];
 int __real_ui_transport_command(const char*);
-int __wrap_ui_transport_command(const char*cmd){if(getenv("REVIEW_ZQS_BANNER")||getenv("REVIEW_ZUNE")||getenv("REVIEW_ZUNE_BACK")||getenv("REVIEW_SHELF_PLAYER")||getenv("REVIEW_NULL")||getenv("REVIEW_NULL_GESTURES")||getenv("REVIEW_SQUASH_HOLD")||getenv("REVIEW_SIMPLE_PERF")||getenv("REVIEW_SIMPLE")){null_transport_calls++;snprintf(null_last_command,sizeof null_last_command,"%s",cmd);return 0;}return __real_ui_transport_command(cmd);}
+int __wrap_ui_transport_command(const char*cmd){if(getenv("REVIEW_BRAUN2")||getenv("REVIEW_ZQS_BANNER")||getenv("REVIEW_ZUNE")||getenv("REVIEW_ZUNE_BACK")||getenv("REVIEW_SHELF_PLAYER")||getenv("REVIEW_NULL")||getenv("REVIEW_NULL_GESTURES")||getenv("REVIEW_SQUASH_HOLD")||getenv("REVIEW_SIMPLE_PERF")||getenv("REVIEW_SIMPLE")){null_transport_calls++;snprintf(null_last_command,sizeof null_last_command,"%s",cmd);return 0;}return __real_ui_transport_command(cmd);}
 int __real_ipc_send_cmd(const char *frame);
 int __wrap_ipc_send_cmd(const char *frame){send_count++;snprintf(last_sent,sizeof last_sent,"%s",frame);return fixture?send_result:__real_ipc_send_cmd(frame);}
 int __real_fw_custom_peq_writable(void);
@@ -1267,7 +1267,7 @@ int main(int argc, char **argv){
         }
         cfg_set_int_deferred("online_lyrics",0);cfg_set_int_deferred("online_art",0);
         cfg_set_int_deferred("eq_preset",11);cfg_set_int_deferred("eq_last",11);cfg_set_str("eq_name11","Warm analogue");
-        if(getenv("QS_ITEMS"))simple_cfg_set_str_deferred(th_zune()?"zune_qs_items":th_null()?"null_qs_items":th_disco_family()?"disco_qs_items":"qs_items",getenv("QS_ITEMS"));
+        if(getenv("QS_ITEMS"))simple_cfg_set_str_deferred(th_braun2()?"braun2_qs_items":th_zune()?"zune_qs_items":th_null()?"null_qs_items":th_disco_family()?"disco_qs_items":"qs_items",getenv("QS_ITEMS"));
         if(getenv("ALBUM_VIEW"))cfg_set_int_deferred("album_view",atoi(getenv("ALBUM_VIEW")));
         if(getenv("DISCO_QS"))cfg_set_int_deferred("disco_qs_style",atoi(getenv("DISCO_QS")));
         if(getenv("DISCO_PROG"))cfg_set_int_deferred("disco_progress",atoi(getenv("DISCO_PROG")));
@@ -1390,7 +1390,7 @@ int main(int argc, char **argv){
         else if(!strcmp(page,"weather")){void weather_demo(void);scr=SCR_WEATHER;screen_show(scr);if(!getenv("WX_EMPTY"))weather_demo();if(getenv("WX_LOCATION")){lv_obj_t*l=find_text(screen_get_root(scr),"Amsterdam");assert(l);lv_label_set_text(l,getenv("WX_LOCATION"));assert(lv_obj_get_width(l)==272&&lv_label_get_long_mode(l)==LV_LABEL_LONG_DOT);}}
         else if(!strcmp(page,"low")){home_set_status(10,0,1,1);void usage_note_battery(int,int);usage_note_battery(10,0);}else if(!strcmp(page,"charging"))home_set_status(67,1,1,1);
         else if(!strncmp(page,"saver",5)){
-            cfg_set_int_deferred("saver_style",5);
+            cfg_set_int_deferred("saver_style",getenv("SAVER_STYLE")?atoi(getenv("SAVER_STYLE")):5);
             saver_set_track(st.title,st.artist,NULL,st.path);
             saver_set_clock("10:09","Saturday, 3 October");
             saver_set_weather("\xEF\x86\x85  18°C Clear");
@@ -1744,6 +1744,39 @@ int main(int argc, char **argv){
         if(getenv("REVIEW_NULL")){review_null();return 0;}
         if(getenv("REVIEW_NAV")){review_nav();return 0;}
         if(getenv("REVIEW_HINTS")){review_hints();return 0;}
+        if(getenv("REVIEW_BRAUN2")){
+            assert(th_braun2()&&theme_preset()==THEME_PRESET_BRAUN2);qs_wifi=qs_bt=0;
+            int items[QS_MAX_ITEMS];assert(quicksettings_items_load(items)==6);
+            assert(quicksettings_item_limit()==6);
+            lv_indev_t *in=lv_indev_create();lv_indev_set_type(in,LV_INDEV_TYPE_POINTER);lv_indev_set_read_cb(in,nav_read);lv_timer_set_period(lv_indev_get_read_timer(in),10);
+            screen_show(SCR_QUICK);nav_wait(150);
+            for(int i=0;i<6;i++){lv_obj_t*b=quicksettings_test_button(i);assert(b&&lv_obj_get_width(b)>=44&&lv_obj_get_height(b)>=44);}
+            /* Real LVGL hit testing: physical endpoints and midpoint on the LOWER rim. */
+            lv_obj_t *bright=ui_action_find("qs.brightness");assert(bright);
+            nav_touch((lv_point_t){66,294},300);int low=lv_arc_get_value(bright);
+            nav_touch((lv_point_t){180,341},300);int mid=lv_arc_get_value(bright);
+            nav_touch((lv_point_t){294,294},300);int high=lv_arc_get_value(bright);
+            fprintf(stderr,"BRAUN2 brightness endpoints: %d < %d < %d\n",low,mid,high);
+            assert(low<=6 && mid>=20 && mid<=24 && high>=38);
+            assert_visible_icon_glyphs(screen_get_root(SCR_QUICK));
+            /* Radio tap and hold still use shared actions. */
+            int before=qs_wifi_taps;nav_touch_object(quicksettings_test_button(0),70);assert(qs_wifi_taps==before+1);
+            lv_obj_send_event(quicksettings_test_button(0),LV_EVENT_LONG_PRESSED,NULL);assert(screen_current()==SCR_WIFI);
+            screen_show(SCR_NOWPLAYING);nav_wait(150);
+            before=send_count;nav_touch_object(ui_action_find("np.prev"),70);assert(send_count==before+1);assert(!strcmp(last_sent,"0201000C0002"));
+            before=scrub_seek_calls;assert(ui_np_seek_press(120,250));assert(ui_np_seek_move(238,250));assert(ui_np_seek_release(238,250));assert(scrub_seek_calls==before+1);assert(scrub_last_seek>150000&&scrub_last_seek<210000);
+            int original[6];memcpy(original,items,sizeof original);
+            for(int k=0;k<quicksettings_item_count();k+=6){int batch[6],n=0;for(int j=k;j<k+6&&j<quicksettings_item_count();j++)batch[n++]=j;
+                assert(!quicksettings_items_save(batch,n));quicksettings_build();screen_show(SCR_QUICK);nav_wait(30);assert_visible_icon_glyphs(screen_get_root(SCR_QUICK));}
+            assert(!quicksettings_items_save(original,6));quicksettings_build();
+            screen_show(SCR_SETTINGS);disco_qs_menu_open();qs_editor_click("Wi-Fi",LV_SYMBOL_DOWN);
+            assert(quicksettings_items_load(items)==6&&items[0]==1&&items[1]==0);
+            void disco_test_editor_close(void);disco_test_editor_close();screen_show(SCR_QUICK);nav_wait(150);
+            assert(quicksettings_test_button(5));
+            assert(quicksettings_items_save(items,0)==0);quicksettings_build();assert(!quicksettings_test_button(0));
+            assert(!strcmp(cfg_get_str("qs_items","untouched"),"untouched"));
+            lv_indev_delete(in);puts("PASS Braun 2.0: reverse brightness touch geometry, six keys, radio tap/hold, transport, dial seek, editor persistence and empty state");return 0;
+        }
         if(getenv("REVIEW_QS_PARITY")){
             void disco_test_editor_close(void);lv_obj_t *null_test_qs_field(int);int null_test_qs_item(int);
             const char *key=th_simple()?"simple_qs_items":th_null()?"null_qs_items":"disco_qs_items",*other=(th_null()||th_simple())?"disco_qs_items":"null_qs_items";
@@ -2437,8 +2470,8 @@ int main(int argc, char **argv){
             char saver_title[192];theme_upper(saver_title,sizeof saver_title,st.title);
             lv_obj_t *title=find_text(screen_get_root(scr),th_null()?saver_title:st.title), *artist=find_text(screen_get_root(scr),st.artist);
             assert(title && artist);
-            assert(lv_label_get_long_mode(title)==(th_simple()?LV_LABEL_LONG_DOT:LV_LABEL_LONG_SCROLL_CIRCULAR));
-            assert(lv_label_get_long_mode(artist)==(th_simple()?LV_LABEL_LONG_DOT:LV_LABEL_LONG_SCROLL_CIRCULAR));
+            assert(lv_label_get_long_mode(title)==((th_simple()||th_braun2())?LV_LABEL_LONG_DOT:LV_LABEL_LONG_SCROLL_CIRCULAR));
+            assert(lv_label_get_long_mode(artist)==((th_simple()||th_braun2())?LV_LABEL_LONG_DOT:LV_LABEL_LONG_SCROLL_CIRCULAR));
             int extra=atoi(page+5);
             for(int i=0;i<extra/10;i++){lv_tick_inc(10);lv_timer_handler();}
         }

@@ -167,7 +167,7 @@ static void open_menu(const char *title, const int *acts, int n){
     orbit_create(&g_orb, g_ov, it, g_nact, -90, pick);
     for(int i = 0; i < g_nact; i++){
         if(g_act[i] == A_FAV){ lv_obj_set_style_text_font(g_orb.icon[i], &font_theme_20, 0); orbit_set_on(&g_orb, i, g_fav, ui_current_accent()); }
-        if(g_act[i] == A_DELETE && !th_braun()) lv_obj_set_style_text_color(g_orb.icon[i], ui_current_accent(), 0);
+        if(g_act[i] == A_DELETE && !th_braun_family()) lv_obj_set_style_text_color(g_orb.icon[i], ui_current_accent(), 0);
     }
     if(library_lift() || g_song_ring) orbit_hub_create(&g_orb, g_ov, hub_cb, LV_SYMBOL_LEFT, "Back");   /* Back, not Cancel */
     else orbit_hub_create(&g_orb, g_ov, hub_cb, g_gcol[0] ? LV_SYMBOL_LIST : g_is_dir ? LV_SYMBOL_DIRECTORY : LV_SYMBOL_AUDIO, "Cancel");

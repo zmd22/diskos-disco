@@ -341,11 +341,12 @@ static const uint32_t DEFAULT_LIGHT[THEME_CLR_COUNT] = {
 #include "theme_presets.inc"   /* generated: tools/gen_theme_presets.py */
 
 typedef struct { const char *name; const uint32_t *dark, *light; } theme_preset_t;
-static uint32_t FORK_RING[2][THEME_CLR_COUNT], FORK_BRAUN[2][THEME_CLR_COUNT], FORK_DISCO[2][THEME_CLR_COUNT], FORK_NULL[2][THEME_CLR_COUNT], FORK_SIMPLE[2][THEME_CLR_COUNT], FORK_ZUNE[2][THEME_CLR_COUNT];
+static uint32_t FORK_BRAUN2[2][THEME_CLR_COUNT], FORK_RING[2][THEME_CLR_COUNT], FORK_BRAUN[2][THEME_CLR_COUNT], FORK_DISCO[2][THEME_CLR_COUNT], FORK_NULL[2][THEME_CLR_COUNT], FORK_SIMPLE[2][THEME_CLR_COUNT], FORK_ZUNE[2][THEME_CLR_COUNT];
 /* Sparse slots preserve every shipped theme ID; retired IDs are unavailable. */
 static const theme_preset_t PRESETS[THEME_PRESET_COUNT] = {
     THEME_PRESETS_GENERATED
     [THEME_PRESET_RING] = { "Ring", FORK_RING[0], FORK_RING[1] },
+    [THEME_PRESET_BRAUN2] = { "Braun 2.0", FORK_BRAUN2[0], FORK_BRAUN2[1] },
     [THEME_PRESET_BRAUN] = { "Braun", FORK_BRAUN[0], FORK_BRAUN[1] },
     [THEME_PRESET_DISCO] = { "Disco", FORK_DISCO[0], FORK_DISCO[1] },
     [THEME_PRESET_NULL] = { "Null", FORK_NULL[0], FORK_NULL[1] },
@@ -354,7 +355,7 @@ static const theme_preset_t PRESETS[THEME_PRESET_COUNT] = {
 };
 _Static_assert(sizeof PRESETS / sizeof PRESETS[0] == THEME_PRESET_COUNT, "THEME_PRESET_COUNT (theme.h) is stale");
 const char *const theme_preset_names[THEME_PRESET_COUNT] = { THEME_PRESET_NAMES_GENERATED,
- [THEME_PRESET_RING]="Ring",[THEME_PRESET_BRAUN]="Braun",[THEME_PRESET_DISCO]="Disco",[THEME_PRESET_NULL]="Null",[THEME_PRESET_SIMPLE]="Squash",[THEME_PRESET_ZUNE]="Zune" };
+ [THEME_PRESET_RING]="Ring",[THEME_PRESET_BRAUN]="Braun",[THEME_PRESET_BRAUN2]="Braun 2.0",[THEME_PRESET_DISCO]="Disco",[THEME_PRESET_NULL]="Null",[THEME_PRESET_SIMPLE]="Squash",[THEME_PRESET_ZUNE]="Zune" };
 int theme_preset_available(int preset){return preset>=0&&preset<THEME_PRESET_COUNT&&PRESETS[preset].name!=NULL;}
 static int g_preset;
 static uint32_t g_custom[2][THEME_CLR_COUNT];      /* the saved custom theme, fixed roles filled from Default */
@@ -548,6 +549,26 @@ static void fork_palettes_init(void){
 }
 /* Disco: the Ring palette re-tuned for text over the album cover (dark: white on a darkened cover; light: dark grey
  * on a lightened one). Surfaces are drawn translucent over the cover by disco.c; the accent defaults to cyan. */
+static void braun2_palettes_init(void){
+    for(int v=0;v<2;v++){
+        uint32_t *p=FORK_BRAUN2[v];memcpy(p,FORK_BRAUN[v],sizeof FORK_BRAUN2[v]);
+        p[THEME_CLR_CANVAS]=v?0xEEEAE2:0x1E1D1B;
+        p[THEME_CLR_SURFACE]=p[THEME_CLR_SURFACE_STRONG]=v?0xE2DCD1:0x2B2A27;
+        p[THEME_CLR_SURFACE_RAISED]=p[THEME_CLR_CONTROL_TRACK]=v?0xD6CFC3:0x363531;
+        p[THEME_CLR_BORDER]=v?0xC9C2B6:0x45433F;
+        p[THEME_CLR_DOT_GRID]=v?0xD3CDC2:0x2A2926;
+        p[THEME_CLR_TEXT_PRIMARY]=v?0x1C1B19:0xEEEAE2;
+        p[THEME_CLR_TEXT_SECONDARY]=p[THEME_CLR_TEXT_MUTED]=v?0x66625B:0xA8A39A;
+        p[THEME_CLR_TEXT_DISABLED]=v?0x9A958C:0x726E67;
+        p[THEME_CLR_CONTROL_KNOB]=v?0x2B2A27:0xE6E1D8;
+        p[THEME_CLR_ON_CONTROL]=v?0xF2EFE8:0x1E1D1B;
+        p[THEME_CLR_ACCENT_PRIMARY]=p[THEME_CLR_ACCENT_EMPHASIS]=p[THEME_CLR_ACCENT_IDLE]=p[THEME_CLR_SWITCH_ON]=v?0xE85A16:0xEF6A24;
+        p[THEME_CLR_ON_ACCENT]=0xFFFFFF;
+        p[THEME_CLR_SURFACE_SELECTED]=p[THEME_CLR_LIST_PRESSED]=p[THEME_CLR_SURFACE_STRONG];
+        p[THEME_CLR_PRIMARY_PRESSED]=v?0xC84C12:0xD85A18;
+        p[THEME_CLR_STATUS_SUCCESS]=p[THEME_CLR_STATUS_DANGER]=p[THEME_CLR_ACCENT_PRIMARY];
+    }
+}
 static void disco_palettes_init(void){
     for(int v=0;v<2;v++){
         memcpy(FORK_DISCO[v], FORK_RING[v], sizeof FORK_DISCO[v]);
@@ -662,7 +683,7 @@ static void fork_config_migrate(void){
 }
 
 void theme_init(void){
-    fork_palettes_init();
+    fork_palettes_init(); braun2_palettes_init();
     disco_palettes_init();
     null_palettes_init(); simple_palettes_init(); zune_palettes_init();
     fork_config_migrate();

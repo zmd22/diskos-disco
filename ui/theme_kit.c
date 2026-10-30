@@ -4,6 +4,7 @@
 #include "theme_kit.h"
 #include "simple_theme.h"
 #include "theme.h"
+#include "braun.h"
 #include "screens.h"
 #include <string.h>
 #include <stdlib.h>
@@ -218,6 +219,7 @@ void library_kit_done(lv_obj_t *root);
 /* sizes decide roles (a row is wide): lay out first, or content built this frame still measures 0 */
 void kit_pass(lv_obj_t *root){
     if(!root || !theme_kit()->style) return;
+    if(th_braun2()&&!on_top_layer(root))br_face(root);
     int force=0;
     if(th_ringlike())for(int i=0;i<SCR_COUNT;i++)if(root==screen_get_root(i)){
         force=screen_epoch[i]!=accent_epoch;screen_epoch[i]=accent_epoch;break;

@@ -633,7 +633,7 @@ static lv_obj_t *pill(const char *icon, const char *t, int x, int w, lv_event_cb
     lv_obj_remove_style_all(b);
     lv_obj_set_size(b, w, 44); lv_obj_set_pos(b, x, 68);
     lv_obj_set_style_radius(b, LV_RADIUS_CIRCLE, 0);
-    lv_color_t bg = accent ? (th_braun() ? TC(ACCENT_PRIMARY) : ui_current_accent()) : TC(SURFACE);
+    lv_color_t bg = accent ? (th_braun_family() ? TC(ACCENT_PRIMARY) : ui_current_accent()) : TC(SURFACE);
     if(accent) lv_obj_add_flag(b, LV_OBJ_FLAG_USER_2); /* keep contrast ink on the filled Play button */
     lv_obj_set_style_bg_color(b, bg, 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
@@ -666,9 +666,9 @@ void queue_create(lv_obj_t *root){
     lv_obj_t *ar = lv_label_create(hb); lv_label_set_text(ar, LV_SYMBOL_LEFT);
     lv_obj_set_style_text_color(ar, TC(TEXT_SECONDARY), 0); lv_obj_align(ar, LV_ALIGN_LEFT_MID, 12, 0);
     lv_obj_t *tt = lv_label_create(hb); lv_label_set_text(tt, "Queue");
-    if(th_braun()){ lv_obj_set_style_text_color(ar, TC(TEXT_SECONDARY), 0); }
-    lv_obj_set_style_text_font(tt, th_braun() ? br_font(18, 1) : TH_F_TITLE, 0); lv_obj_set_style_text_color(tt, th_braun() ? TC(TEXT_PRIMARY) : TC(TEXT_PRIMARY), 0); lv_obj_align(tt, LV_ALIGN_LEFT_MID, 34, 0);
-    g_sub = lv_label_create(root); lv_obj_set_style_text_font(g_sub, th_braun() ? br_font(14, 0) : ui_font_cjk(16), 0);   /* has the middle dot */ lv_obj_set_style_text_color(g_sub, TC(TEXT_SECONDARY), 0);
+    if(th_braun_family()){ lv_obj_set_style_text_color(ar, TC(TEXT_SECONDARY), 0); }
+    lv_obj_set_style_text_font(tt, th_braun_family() ? br_font(18, 1) : TH_F_TITLE, 0); lv_obj_set_style_text_color(tt, th_braun_family() ? TC(TEXT_PRIMARY) : TC(TEXT_PRIMARY), 0); lv_obj_align(tt, LV_ALIGN_LEFT_MID, 34, 0);
+    g_sub = lv_label_create(root); lv_obj_set_style_text_font(g_sub, th_braun_family() ? br_font(14, 0) : ui_font_cjk(16), 0);   /* has the middle dot */ lv_obj_set_style_text_color(g_sub, TC(TEXT_SECONDARY), 0);
     lv_obj_align(g_sub, LV_ALIGN_TOP_MID, 0, 44);
     g_play_btn = pill(LV_SYMBOL_PLAY, "Play", 44, 104, play_cb, 1);
     g_shuffle_btn = pill(LV_SYMBOL_SHUFFLE, NULL, 156, 48, shuffle_cb, 0);        /* Random: icon only */

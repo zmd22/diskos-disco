@@ -23,15 +23,18 @@ static int saturated(lv_color_t c){
     return mx - mn > 48;
 }
 void curvelist_braun_row(lv_obj_t *r){
+    /* Dashboard sections use the shared scroller but are not list pills. */
+    if(th_braun2()&&lv_obj_get_height(r)>100)return;
     int focus = 0, fresh = 0;          /* fresh: the list (re)coloured this row since our last pass */
     lv_color_t bg = lv_obj_get_style_bg_color(r, 0);
     uint32_t bgv = lv_color_to_u32(bg) & 0xFFFFFF;
     if(lv_obj_get_style_bg_opa(r, 0) > LV_OPA_50 && (bgv == TH_SURF2 || saturated(bg))) focus = 1;   /* lifted (the list's own "current") */
-    if(lv_obj_get_style_bg_opa(r, 0) != LV_OPA_TRANSP || lv_obj_get_style_border_width(r, 0) != 1){   /* first time for this row */
-        lv_obj_set_style_bg_opa(r, LV_OPA_TRANSP, 0);
+    if(lv_obj_get_style_bg_opa(r, 0) != (th_braun2()?LV_OPA_COVER:LV_OPA_TRANSP) || lv_obj_get_style_border_width(r, 0) != (th_braun2()?0:1)){   /* first time for this row */
+        lv_obj_set_style_bg_opa(r, th_braun2()?LV_OPA_COVER:LV_OPA_TRANSP, 0);
+        if(th_braun2())lv_obj_set_style_bg_color(r,TC(SURFACE_STRONG),0);
         lv_obj_set_style_bg_color(r, TC(SURFACE), LV_STATE_PRESSED); lv_obj_set_style_bg_opa(r, LV_OPA_COVER, LV_STATE_PRESSED);
-        lv_obj_set_style_radius(r, 6, 0);
-        lv_obj_set_style_border_side(r, LV_BORDER_SIDE_BOTTOM, 0); lv_obj_set_style_border_width(r, 1, 0);
+        lv_obj_set_style_radius(r, th_braun2()?28:6, 0);
+        lv_obj_set_style_border_side(r, LV_BORDER_SIDE_BOTTOM, 0); lv_obj_set_style_border_width(r, th_braun2()?0:1, 0);
         lv_obj_set_style_border_color(r, TC(BORDER), 0);
     }
     lv_obj_t *dot = NULL;
@@ -88,7 +91,7 @@ static void watch_cb(lv_timer_t *t){
 static void watch_del_cb(lv_event_t *e){ lv_obj_t *o = lv_event_get_target(e); for(int i = 0; i < g_nwatch; i++) if(g_watch[i] == o) g_watch[i] = NULL; }
 /* Braun: keep this list's visible rows styled, whenever and however the list fills them */
 void curvelist_braun_watch(lv_obj_t *list){
-    if(!th_braun() || !list) return;
+    if(!th_braun_family() || !list) return;
     for(int i = 0; i < g_nwatch; i++) if(g_watch[i] == list) return;
     int slot = -1; for(int i = 0; i < g_nwatch; i++) if(!g_watch[i]){ slot = i; break; }
     if(slot < 0){ if(g_nwatch >= WATCH_MAX) return; slot = g_nwatch++; }
@@ -276,7 +279,7 @@ static void curve(curvelist_t *c){
         }
         return;
     }
-    if(th_braun()){                                               /* Braun: straight rows, restyled */
+    if(th_braun_family()){                                               /* Braun: straight rows, restyled */
         uint32_t n = lv_obj_get_child_count(c->list);
         for(uint32_t i = 0; i < n; i++){
             lv_obj_t *r = lv_obj_get_child(c->list, i);
@@ -327,7 +330,7 @@ static void curve(curvelist_t *c){
     }
 }
 static void dots(curvelist_t *c){
-    if(th_braun()) return;                                       /* Braun: no position dots */
+    if(th_braun_family()) return;                                       /* Braun: no position dots */
     if(th_zune()){ if(c->cur != -3){ c->cur = -3; for(int k = 0; k < 11; k++) if(c->dot[k]) lv_obj_add_flag(c->dot[k], LV_OBJ_FLAG_HIDDEN); } return; }   /* Zune: none either (hidden once, not on every scroll step) */
     int32_t sy = lv_obj_get_scroll_y(c->list), sb = lv_obj_get_scroll_bottom(c->list), tot = sy + sb;
     if(th_null() && !c->disco_style){null_scroll_line(c->dot,11,sy,tot);return;}
@@ -462,12 +465,12 @@ void curvelist_edge_fade(lv_obj_t *list){
 void curvelist_attach(curvelist_t *c, lv_obj_t *list, lv_obj_t *root, int full_w){
     curvelist_edge_fade(list);
     c->list = list; c->full_w = full_w; c->cur = -2; c->disco_style=0;
-    if(th_braun()){                                                /* Braun: the grille, and the list on the lower segment */
+    if(th_braun_family()){                                                /* Braun: the grille, and the list on the lower segment */
         br_face(root);
         lv_obj_update_layout(list);
         int y = lv_obj_get_y(list) - 6; if(y < 40) y = 40;
-        lv_obj_t *seg = br_segment(root, y);
-        lv_obj_move_to_index(seg, 1);                            /* above the grille, below the list and the header */
+        if(!th_braun2()){lv_obj_t *seg = br_segment(root, y);
+        lv_obj_move_to_index(seg, 1);}                            /* above the grille, below the list and the header */
         curvelist_braun_watch(list);
     }
     lv_obj_set_flex_align(list, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);   /* narrowed rows stay centred */

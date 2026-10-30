@@ -614,7 +614,7 @@ void weather_app_create(lv_obj_t *root)
         lv_obj_set_style_text_font(g_wd_hint,zune_font(&font_zune_regular_14),0);lv_obj_set_width(g_wd_hint,230);lv_obj_align(g_wd_hint,LV_ALIGN_TOP_MID,0,304);lv_label_set_long_mode(g_wd_hint,LV_LABEL_LONG_DOT);
         lv_obj_t *labels[]={g_wd_loc,g_wd_ctemp,g_wd_cicon,g_wd_cond,g_wd_hl,g_wd_hint};for(unsigned k=0;k<sizeof labels/sizeof *labels;k++)kit_keep(labels[k]);
     }
-    if(th_braun()){                                               /* Braun: the grille, a panel under the dial, dark type */
+    if(th_braun_family()){                                               /* Braun: the grille, a panel under the dial, dark type */
         br_face(root); lv_obj_t *pd = br_disc(root, 180, 180, 104, BR_PANEL); lv_obj_move_to_index(pd, 1);
         lv_obj_set_style_text_color(g_wd_ctemp, TC(TEXT_PRIMARY), 0);
         lv_obj_set_style_text_color(g_wd_cond, TC(TEXT_SECONDARY), 0);

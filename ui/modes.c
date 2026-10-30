@@ -523,7 +523,7 @@ void modes_create(lv_obj_t *root){
     orbit_create(&g_orb, root, it, N_MODES, -60, row_cb);
     orbit_hub_create(&g_orb, root, hub_back_cb, LV_SYMBOL_SD_CARD, "Back");
     mark_selected();
-    if(th_braun()) br_face(root);                          /* Braun: the grille face (knobs come from orbit.c) */
+    if(th_braun_family()) br_face(root);                          /* Braun: the grille face (knobs come from orbit.c) */
 }
 
 
@@ -640,12 +640,12 @@ static lv_obj_t *mi_pill(lv_obj_t *root, const char *txt, int x, int primary, lv
     lv_obj_set_size(b, 104, 40); lv_obj_align(b, LV_ALIGN_CENTER, x, 128);
     lv_obj_set_ext_click_area(b, 4);
     lv_obj_set_style_radius(b, LV_RADIUS_CIRCLE, 0);
-    uint32_t bg = th_braun() ? (primary ? BR_ACC : BR_KNOB) : (primary ? TH_ACCENT : TH_SURF1);
+    uint32_t bg = th_braun_family() ? (primary ? BR_ACC : BR_KNOB) : (primary ? TH_ACCENT : TH_SURF1);
     lv_obj_set_style_bg_color(b, theme_color_from_rgb(bg), 0); lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
     lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *l = lv_label_create(b); lv_label_set_text(l, txt);
-    lv_obj_set_style_text_font(l, th_braun() ? br_font(14, 0) : TH_F_DETAIL, 0);
-    lv_obj_set_style_text_color(l, th_braun() ? TC(ON_CONTROL) : TC(TEXT_PRIMARY), 0);
+    lv_obj_set_style_text_font(l, th_braun_family() ? br_font(14, 0) : TH_F_DETAIL, 0);
+    lv_obj_set_style_text_color(l, th_braun_family() ? TC(ON_CONTROL) : TC(TEXT_PRIMARY), 0);
     lv_obj_center(l);
     return b;
 }
@@ -661,7 +661,7 @@ static lv_obj_t *mi_label(lv_obj_t *root, const lv_font_t *font, uint32_t col, i
 void modeinfo_create(lv_obj_t *root){
     lv_obj_set_style_bg_color(root, TC(CANVAS), 0);
     lv_obj_set_style_bg_opa(root, LV_OPA_COVER, 0);
-    int br = th_braun();
+    int br = th_braun_family();
     if(br) br_face(root);
     if(br){
         g_mi_knob = br_knob(root, 180, 104, 56, LV_SYMBOL_USB, TF(UI_48));

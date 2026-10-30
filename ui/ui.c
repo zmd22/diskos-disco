@@ -23,6 +23,7 @@
 #include <sys/stat.h>
 #include "theme_kit.h"
 #include "braun.h"
+#include "braun2.h"
 #include "theme.h"
 #include "onboarding.h"
 #include "anim.h"
@@ -273,9 +274,11 @@ int ui_seek_preview_active(void){return seek_preview&&!lv_obj_has_flag(seek_prev
 static int g_ring_cx = 180, g_ring_cy = 180, g_ring_r = ARC_D / 2;   /* Ring style: around the cover */
 static int g_tol_grab = 34, g_tol_wander = 48;                       /* band half-widths (px) */
 
-static lv_obj_t *g_seek_bar;
+static lv_obj_t *g_seek_bar,*g_br2_ticks[41];
+static int g_br2_tick_progress=-1;
 static int g_np_backdrop_on = 1, g_pp_filled;
 static void seek_show(int32_t v){
+    if(th_braun2()&&g_br2_ticks[0]){int k=v*40/1000;if(k!=g_br2_tick_progress){for(int i=0;i<=40;i++)lv_obj_set_style_line_color(g_br2_ticks[i],i<=k?TC(TEXT_PRIMARY):TC(TEXT_DISABLED),0);g_br2_tick_progress=k;}}
     if(ring) lv_arc_set_value(ring, v);
     if(g_seek_bar){
         if(lv_obj_check_type(g_seek_bar, &lv_slider_class)) lv_slider_set_value(g_seek_bar, v, LV_ANIM_OFF);
@@ -1290,8 +1293,8 @@ static void imm_controls_build(lv_obj_t *fs){
     lv_obj_remove_flag(g_zi_ctl, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
     lv_obj_t *heading=zi_label(g_zi_ctl,th_zune()?TF(UI_22):TF(UI_20),TC(FIXED_MEDIA_WHITE),230,th_null()?30:40);
     lv_label_set_text(heading,th_zune()?"now playing":th_null()?"NOW PLAYING":"Now playing");
-    const lv_font_t *ft=th_zune()?TF(UI_32):th_null()?imm_null_font(26):th_braun()?br_font(30,0):TF(UI_32);
-    const lv_font_t *fa=th_zune()?zune_font(&font_zune_light_28):th_null()?imm_null_font(22):th_braun()?br_font(26,0):TF(UI_28);
+    const lv_font_t *ft=th_zune()?TF(UI_32):th_null()?imm_null_font(26):th_braun_family()?br_font(30,0):TF(UI_32);
+    const lv_font_t *fa=th_zune()?zune_font(&font_zune_light_28):th_null()?imm_null_font(22):th_braun_family()?br_font(26,0):TF(UI_28);
     g_zi_title=zi_label(g_zi_ctl,ft,TC(FIXED_MEDIA_WHITE),280,th_null()?70:82);
     g_zi_artist=zi_label(g_zi_ctl,fa,TC(FIXED_MEDIA_WHITE),272,th_null()?128:132);
     lv_obj_set_height(g_zi_title,lv_font_get_line_height(ft));lv_obj_set_height(g_zi_artist,lv_font_get_line_height(fa));
@@ -1532,8 +1535,8 @@ int ui_accent_is_static(void);   /* fork: a colour picked in Accent wins over th
 static _Atomic int g_zart;       /* Zune: now playing takes its accent from the album art (cfg zune_accent_art) */
 void ui_zune_art_sync(void){ g_zart = cfg_get_int("zune_accent_art", 0) ? 1 : 0; }
 static lv_color_t np_col(void){ if(th_zune()) return (g_zart && np_acc_set) ? np_acc : TC(ACCENT_PRIMARY);
-                                if(th_braun()) return TC(ACCENT_PRIMARY); return ((g_np_poster || g_np_ring) && np_acc_set && !ui_accent_is_static()) ? np_acc : accent; }
-lv_color_t ui_media_accent(void){ if(th_zune()) return (g_zart && np_acc_set) ? np_acc : TC(ACCENT_PRIMARY); if(th_simple())return TC(ACCENT_PRIMARY); if(th_braun()) return TC(ACCENT_PRIMARY); return (np_acc_set && !ui_accent_is_static()) ? np_acc : accent; }   /* theme.h: media surfaces (Braun: orange) */
+                                if(th_braun_family()) return TC(ACCENT_PRIMARY); return ((g_np_poster || g_np_ring) && np_acc_set && !ui_accent_is_static()) ? np_acc : accent; }
+lv_color_t ui_media_accent(void){ if(th_zune()) return (g_zart && np_acc_set) ? np_acc : TC(ACCENT_PRIMARY); if(th_simple())return TC(ACCENT_PRIMARY); if(th_braun_family()) return TC(ACCENT_PRIMARY); return (np_acc_set && !ui_accent_is_static()) ? np_acc : accent; }   /* theme.h: media surfaces (Braun: orange) */
 static void apply_accent(void)
 {
     if(th_zune()){                                    /* Zune media follows the selected/album accent. */
@@ -1556,7 +1559,7 @@ static void apply_accent(void)
         lv_obj_set_style_bg_color(btn_pp, np_col(), 0);
         lv_obj_set_style_text_color(btn_pp, theme_on_color(np_col()), 0);
     } else if(btn_pp) {
-        lv_obj_set_style_text_color(btn_pp, th_braun() ? TC(ON_ACCENT) : th_zune() ? TC(TEXT_PRIMARY) : np_col(), LV_PART_MAIN);   /* Braun: white on the orange button */
+        lv_obj_set_style_text_color(btn_pp, th_braun_family() ? TC(ON_ACCENT) : th_zune() ? TC(TEXT_PRIMARY) : np_col(), LV_PART_MAIN);   /* Braun: white on the orange button */
     }
 
     if(fav_icon && g_np_fav) {
@@ -1595,7 +1598,7 @@ lv_color_t ui_disco_fit_accent(lv_color_t c){
     }
     return c;
 }
-lv_color_t ui_current_accent(void){ if(th_simple() || th_null() || th_zune())return TC(ACCENT_PRIMARY); return th_braun() ? TC(ACCENT_PRIMARY) : ui_disco_fit_accent(accent); }   /* Braun: orange everywhere */
+lv_color_t ui_current_accent(void){ if(th_simple() || th_null() || th_zune())return TC(ACCENT_PRIMARY); return th_braun_family() ? TC(ACCENT_PRIMARY) : ui_disco_fit_accent(accent); }   /* Braun: orange everywhere */
 
 /* ---- shared standard header (back chevron + centred title) ------------------------------------- */
 static void ui_header_home_cb(lv_event_t *e){ if(lv_event_get_code(e)==LV_EVENT_CLICKED && screen_press_was_long()) screen_home(); }
@@ -1698,7 +1701,7 @@ lv_obj_t *kit_default_header(lv_obj_t *root, const char *title, lv_event_cb_t ba
     lv_label_set_long_mode(t, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_style_text_font(t, ui_font_cjk(18), 0);   /* headers show folder/album/playlist names: chain (issue #3) */
     lv_obj_set_style_text_color(t, TC(TEXT_PRIMARY), 0);
-    if(th_braun()){                                           /* Braun: dark title, grey arrow, on the grille */
+    if(th_braun_family()){                                           /* Braun: dark title, grey arrow, on the grille */
         lv_obj_set_style_text_color(ic, TC(TEXT_SECONDARY), 0);
         lv_obj_set_style_bg_color(back, TC(SURFACE), LV_STATE_PRESSED);
         lv_obj_set_style_text_color(t, TC(TEXT_PRIMARY), 0); lv_obj_set_style_text_font(t, br_font(18, 1), 0);
@@ -1723,7 +1726,7 @@ static void fav_refresh(int on, int have)
     if(have && !th_zune()) lv_obj_remove_flag(btn_fav, LV_OBJ_FLAG_HIDDEN);   /* Zune: Favourite lives in the hub */
     else     lv_obj_add_flag(btn_fav, LV_OBJ_FLAG_HIDDEN);
     lv_label_set_text(fav_icon, HEART_FILLED);                     /* theme: solid, colour carries the state */
-    lv_obj_set_style_text_color(fav_icon, on ? np_col() : th_braun() ? TC(TEXT_SECONDARY) : (g_np_poster || g_np_ring) ? TC(TEXT_PRIMARY) : TC(TEXT_MUTED), LV_PART_MAIN);
+    lv_obj_set_style_text_color(fav_icon, on ? np_col() : th_braun_family() ? TC(TEXT_SECONDARY) : (g_np_poster || g_np_ring) ? TC(TEXT_PRIMARY) : TC(TEXT_MUTED), LV_PART_MAIN);
 }
 
 static void fav_click_cb(lv_event_t *e)
@@ -1767,7 +1770,7 @@ static void mode_refresh(int wm)
                      : (wm == 2 || wm == 3) ? LV_SYMBOL_LOOP
                      : MODE_ARROW;                       /* 0 and 4 use the arrow */
     lv_label_set_text(mode_icon, icon);
-    lv_obj_set_style_text_color(mode_icon, wm ? (th_braun() ? TC(ACCENT_PRIMARY) : accent) : th_braun() ? TC(TEXT_SECONDARY) : TC(TEXT_MUTED), LV_PART_MAIN);
+    lv_obj_set_style_text_color(mode_icon, wm ? (th_braun_family() ? TC(ACCENT_PRIMARY) : accent) : th_braun_family() ? TC(TEXT_SECONDARY) : TC(TEXT_MUTED), LV_PART_MAIN);
     if(wm == 2 || wm == 4) lv_obj_remove_flag(mode_one, LV_OBJ_FLAG_HIDDEN);
     else                   lv_obj_add_flag(mode_one, LV_OBJ_FLAG_HIDDEN);
 }
@@ -1845,7 +1848,7 @@ static void np_settle_cb(lv_timer_t *t){                  /* after 15 s: stop sc
  * redraws its strip ~30x/s for as long as the screen is on. */
 static void queue_click_cb(lv_event_t *e){ (void)e; queue_open(); }
 static void queue_long_cb(lv_event_t *e){ (void)e; if(simple_cfg_get_int("up_next",0)) screen_show(SCR_UPNEXT); else queue_open(); }
-static void np_queue_place(void){ if(btn_queue && btn_mode) lv_obj_align_to(btn_queue, btn_mode, th_zune() ? LV_ALIGN_OUT_RIGHT_MID : LV_ALIGN_OUT_BOTTOM_MID, 0, 0); }
+static void np_queue_place(void){ if(th_braun2()&&btn_queue){lv_obj_set_align(btn_queue,LV_ALIGN_TOP_LEFT);lv_obj_set_pos(btn_queue,42,151);return;}if(btn_queue && btn_mode) lv_obj_align_to(btn_queue, btn_mode, th_zune() ? LV_ALIGN_OUT_RIGHT_MID : LV_ALIGN_OUT_BOTTOM_MID, 0, 0); }
 void ui_queue_changed(void){                                  /* the badge: the queue's size, hidden when empty */
     if(!queue_badge) return;
     int n = queue_count();
@@ -1882,7 +1885,7 @@ void ui_set_np_style(int style)
         ui_vinyl_spin(0);                                  /* stop the spin */
         if(cover_img) lv_image_set_rotation(cover_img, 0); /* Cover must sit upright */
     }
-    if(th_braun()){ g_np_poster = 0; g_np_ring = 1; g_np_vinyl = 0; }   /* Braun: its own layout, built on Ring's structure */
+    if(th_braun_family()){ g_np_poster = 0; g_np_ring = 1; g_np_vinyl = 0; }   /* Braun: its own layout, built on Ring's structure */
     np_layout(g_np_poster);
     np_layout_ring(g_np_ring);
     if(theme_kit()->fork_np_layout) theme_kit()->fork_np_layout();
@@ -1951,7 +1954,7 @@ static void np_layout_ring(int on){
  * the lower segment holding the title, artist, times and controls (Previous / Next as flat discs, play in
  * orange). Everything else keeps its Ring position; colours follow the Braun palette. */
 void kit_fork_np_braun(void){
-    if(!th_braun() || !g_np_scr) return;
+    if(!th_braun_family() || !g_np_scr) return;
     if(!g_br_seg){
         br_face(g_np_scr);
         if(backdrop) lv_obj_add_flag(backdrop, LV_OBJ_FLAG_HIDDEN);
@@ -1988,6 +1991,55 @@ void kit_fork_np_braun(void){
     if(mode_icon && g_np_mode == 0) lv_obj_set_style_text_color(mode_icon, TC(TEXT_SECONDARY), 0);
     if(btn_queue){ for(uint32_t k = 0; k < lv_obj_get_child_count(btn_queue); k++){ lv_obj_t *c = lv_obj_get_child(btn_queue, k);
                      if(lv_obj_check_type(c, &lv_label_class) && lv_obj_get_child_count(c) == 0 && k == 0) lv_obj_set_style_text_color(c, TC(TEXT_SECONDARY), 0); } }
+}
+/* Type-first Music C uses the same transport, track popup and seek controller. */
+void kit_fork_np_braun2(void){
+    if(!th_braun2() || !g_np_scr)return;
+    kit_fork_np_braun();
+    static lv_obj_t *scale;
+    if(!scale){
+        scale=lv_slider_create(g_np_scr);lv_obj_remove_style_all(scale);
+        lv_obj_set_pos(scale,66,248);lv_obj_set_size(scale,228,4);
+        lv_obj_set_style_bg_opa(scale,LV_OPA_TRANSP,LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(scale,LV_OPA_TRANSP,LV_PART_INDICATOR);
+        lv_obj_set_style_bg_color(scale,TC(ACCENT_PRIMARY),LV_PART_KNOB);
+        lv_obj_set_style_bg_opa(scale,LV_OPA_COVER,LV_PART_KNOB);
+        lv_obj_set_style_pad_left(scale,0,LV_PART_KNOB);lv_obj_set_style_pad_right(scale,0,LV_PART_KNOB);
+        lv_obj_set_style_pad_top(scale,12,LV_PART_KNOB);lv_obj_set_style_pad_bottom(scale,12,LV_PART_KNOB);
+        lv_obj_set_style_radius(scale,2,LV_PART_KNOB);lv_obj_set_ext_click_area(scale,20);
+        static lv_point_precise_t pts[41][2];
+        for(int i=0;i<=40;i++){
+            int h=i%5?7:12;pts[i][0]=(lv_point_precise_t){66+i*228/40,250-h/2};pts[i][1]=(lv_point_precise_t){66+i*228/40,250+h/2};
+            lv_obj_t *l=lv_line_create(g_np_scr);g_br2_ticks[i]=l;lv_line_set_points(l,pts[i],2);lv_obj_set_style_line_color(l,TC(TEXT_SECONDARY),0);lv_obj_set_style_line_width(l,i%5?1:2,0);kit_keep(l);
+        }
+        lv_obj_move_to_index(scale,-1);kit_keep(scale);ui_np_seek_line(scale);
+    }
+    lv_obj_t *hidden[]={ring,cover,g_br_disc,backdrop,np_dots[0],np_dots[1]};
+    for(unsigned i=0;i<sizeof hidden/sizeof *hidden;i++)if(hidden[i])lv_obj_add_flag(hidden[i],LV_OBJ_FLAG_HIDDEN);
+    lv_obj_set_y(g_br_seg,276);lv_obj_set_height(g_br_seg,84);
+    if(title){lv_obj_set_size(title,280,42);lv_obj_set_style_text_font(title,TF(MUSIC_TITLE),0);lv_obj_align(title,LV_ALIGN_TOP_MID,0,86);lv_label_set_long_mode(title,LV_LABEL_LONG_DOT);kit_keep(title);}
+    if(artist){lv_obj_set_size(artist,260,28);lv_obj_align(artist,LV_ALIGN_TOP_MID,0,130);lv_label_set_long_mode(artist,LV_LABEL_LONG_DOT);kit_keep(artist);}
+    if(album){lv_obj_remove_flag(album,LV_OBJ_FLAG_HIDDEN);lv_obj_set_size(album,230,22);lv_obj_set_style_text_font(album,br_font(12,0),0);lv_obj_align(album,LV_ALIGN_TOP_MID,0,58);lv_label_set_long_mode(album,LV_LABEL_LONG_DOT);kit_keep(album);}
+    if(np_mid_btn){lv_obj_set_size(np_mid_btn,280,80);lv_obj_align(np_mid_btn,LV_ALIGN_TOP_MID,0,82);kit_keep(np_mid_btn);}
+    if(t_elapsed){lv_obj_set_style_text_font(t_elapsed,br_font(44,1),0);lv_obj_set_style_text_color(t_elapsed,TC(TEXT_PRIMARY),0);lv_obj_align(t_elapsed,LV_ALIGN_TOP_MID,0,164);kit_keep(t_elapsed);}
+    if(t_remain){lv_obj_set_style_text_font(t_remain,br_font(14,0),0);lv_obj_align(t_remain,LV_ALIGN_TOP_MID,0,218);kit_keep(t_remain);}
+    lv_obj_t *controls[]={btn_prev,btn_pp,btn_next};
+    for(int i=0;i<3;i++)if(controls[i]){
+        lv_obj_t *b=controls[i];int d=i==1?58:46;
+        lv_obj_set_size(b,d,d);lv_obj_set_style_pad_all(b,0,0);lv_obj_set_style_pad_top(b,(d-lv_font_get_line_height(TF(UI_24)))/2,0);
+        lv_obj_set_style_text_font(b,TF(UI_24),0);lv_obj_set_style_bg_color(b,i==1?TC(ACCENT_PRIMARY):TC(CONTROL_KNOB),0);
+        lv_obj_set_style_text_color(b,i==1?TC(ON_ACCENT):TC(ON_CONTROL),0);lv_obj_set_style_bg_opa(b,LV_OPA_COVER,0);
+        lv_obj_align(b,LV_ALIGN_TOP_MID,(i-1)*64,i==1?284:290);br2_keep_tree(b);
+    }
+    /* Existing toggles remain immediately reachable, with full-size hit areas. */
+    if(btn_fav){lv_obj_set_align(btn_fav,LV_ALIGN_TOP_LEFT);lv_obj_set_pos(btn_fav,42,200);lv_obj_set_size(btn_fav,44,44);}
+    if(btn_sleep){lv_obj_set_align(btn_sleep,LV_ALIGN_TOP_LEFT);lv_obj_set_pos(btn_sleep,274,200);lv_obj_set_size(btn_sleep,44,44);}
+    if(btn_mode){lv_obj_set_align(btn_mode,LV_ALIGN_TOP_LEFT);lv_obj_set_pos(btn_mode,274,151);lv_obj_set_size(btn_mode,44,44);}
+    lv_obj_t *utility[]={btn_fav,btn_sleep,btn_mode,btn_queue};
+    for(unsigned i=0;i<4;i++)if(utility[i]){lv_obj_set_style_bg_opa(utility[i],LV_OPA_TRANSP,0);lv_obj_set_style_border_width(utility[i],0,0);br2_keep_tree(utility[i]);}
+    if(fav_icon&&!g_np_fav)lv_obj_set_style_text_color(fav_icon,TC(TEXT_SECONDARY),0);
+    if(mode_icon)lv_obj_set_style_text_color(mode_icon,TC(TEXT_SECONDARY),0);
+    if(btn_queue){lv_obj_t *l=lv_obj_get_child(btn_queue,0);lv_obj_set_style_text_color(l,TC(TEXT_SECONDARY),0);}
 }
 /* Zune Now Playing: the cover as a square bleeding off the left edge, the track as a left-aligned column beside it
  * (SemiBold title, artist, album, times), the progress as a thin ring hugging the whole rim from 12 o'clock with a
@@ -2712,7 +2764,7 @@ static void apply_art(const art_req_t *job)
         lv_image_set_src(backdrop, backdrop_src);
         lv_obj_remove_flag(backdrop, LV_OBJ_FLAG_HIDDEN);
         lv_obj_move_background(backdrop);
-        if(g_np_poster || th_braun() || th_zune() || !g_np_backdrop_on) lv_obj_add_flag(backdrop, LV_OBJ_FLAG_HIDDEN);   /* the sharp poster replaces it; Braun: the grille */
+        if(g_np_poster || th_braun_family() || th_zune() || !g_np_backdrop_on) lv_obj_add_flag(backdrop, LV_OBJ_FLAG_HIDDEN);   /* the sharp poster replaces it; Braun: the grille */
     }
     if(job->pixels){
         g_sharp_valid = job->pixels->sharp_ok;
@@ -4143,9 +4195,9 @@ static lv_obj_t *g_vol_needle; static lv_point_precise_t g_vol_np[2];
 static void vol_needle(int v){                               /* Braun: an orange line across the band at the level */
     if(!g_vol_needle) return;
     if(v < 0) v = 0; if(v > VOL_MAX) v = VOL_MAX;
-    float an = (48.0f - 96.0f * v / VOL_MAX) * 0.0174533f;    /* 0 at the bottom end, 120 at the top (the scale's 48..-48 degrees) */
-    g_vol_np[0].x = 180 + 131 * cosf(an); g_vol_np[0].y = 180 + 131 * sinf(an);
-    g_vol_np[1].x = 180 + 169 * cosf(an); g_vol_np[1].y = 180 + 169 * sinf(an);
+    float an = (th_braun2() ? 135.0f + 270.0f * v / VOL_MAX : 48.0f - 96.0f * v / VOL_MAX) * 0.0174533f;    /* 0 at the bottom end, 120 at the top (the scale's 48..-48 degrees) */
+    g_vol_np[0].x = 180 + (th_braun2()?46:131) * cosf(an); g_vol_np[0].y = 180 + (th_braun2()?46:131) * sinf(an);
+    g_vol_np[1].x = 180 + (th_braun2()?82:169) * cosf(an); g_vol_np[1].y = 180 + (th_braun2()?82:169) * sinf(an);
     lv_line_set_points(g_vol_needle, g_vol_np, 2);
 }
 static void dvol_paint(int v);
@@ -4333,7 +4385,20 @@ void ui_show_volume(int vol)
         lv_obj_add_flag(mid, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_ADV_HITTEST);
         lv_obj_add_event_cb(mid, vol_tap_close_cb, LV_EVENT_CLICKED, NULL);
         lv_obj_move_to_index(mid, 0);                             /* under the arc and the badge */
-        if(th_braun()){
+        if(th_braun2()){
+            br_face(g_vol_panel);lv_obj_add_flag(g_vol_panel,LV_OBJ_FLAG_CLICKABLE);
+            lv_obj_set_size(badge,184,184);lv_obj_center(badge);lv_obj_set_style_radius(badge,LV_RADIUS_CIRCLE,0);
+            lv_obj_set_style_bg_color(badge,TC(CONTROL_KNOB),0);lv_obj_add_flag(spk,LV_OBJ_FLAG_HIDDEN);
+            lv_obj_set_style_text_font(g_vol_num,br_font(44,1),0);lv_obj_set_style_text_color(g_vol_num,TC(ON_CONTROL),0);
+            lv_obj_set_size(g_vol_arc,252,252);lv_obj_center(g_vol_arc);lv_arc_set_bg_angles(g_vol_arc,135,45);lv_arc_set_mode(g_vol_arc,LV_ARC_MODE_NORMAL);
+            lv_obj_set_style_arc_opa(g_vol_arc,LV_OPA_TRANSP,LV_PART_MAIN);lv_obj_set_style_arc_opa(g_vol_arc,LV_OPA_TRANSP,LV_PART_INDICATOR);lv_obj_set_style_bg_opa(g_vol_arc,LV_OPA_TRANSP,LV_PART_KNOB);lv_obj_set_style_border_width(g_vol_arc,0,LV_PART_KNOB);
+            static lv_point_precise_t marks[31][2];
+            for(int i=0;i<=30;i++){float a=(135+i*9)*0.017453293f;int r=i%5?119:112;marks[i][0]=(lv_point_precise_t){180+r*cosf(a),180+r*sinf(a)};marks[i][1]=(lv_point_precise_t){180+126*cosf(a),180+126*sinf(a)};
+                lv_obj_t *l=lv_line_create(g_vol_panel);lv_line_set_points(l,marks[i],2);lv_obj_set_style_line_color(l,TC(TEXT_SECONDARY),0);lv_obj_set_style_line_width(l,i%5?1:2,0);}
+            lv_obj_t *cap=br_label(g_vol_panel,"VOLUME",br_font(14,0),BR_TXT2);lv_obj_align(cap,LV_ALIGN_TOP_MID,0,300);
+            g_vol_needle=lv_line_create(g_vol_panel);lv_obj_set_style_line_color(g_vol_needle,TC(ACCENT_PRIMARY),0);lv_obj_set_style_line_width(g_vol_needle,5,0);lv_obj_set_style_line_rounded(g_vol_needle,true,0);
+            br2_keep_tree(g_vol_panel);lv_timer_set_period(g_vol_timer,1500);
+        }else if(th_braun_family()){
             /* Braun: a dark scale band along the right rim with light markings, an orange needle, and a
              * bigger dark number box. Same arc underneath, so dragging / auto-hide / tap-to-close are unchanged. */
             lv_obj_set_style_bg_color(g_vol_panel, TC(CANVAS), 0);
@@ -4434,7 +4499,7 @@ void ui_show_volume(int vol)
     if(th_zune() && !g_zvol_cap) zvol_build();
     int zvol_opening=th_zune()&&lv_obj_has_flag(g_vol_panel,LV_OBJ_FLAG_HIDDEN);
     if(th_zune()){zvol_paint();lv_obj_set_style_bg_color(g_zvol_mark,ui_current_accent(),0);}
-    if(!th_braun()){ lv_color_t acc = ui_current_accent();       /* follow an accent change (Braun: always orange) */
+    if(!th_braun_family()){ lv_color_t acc = ui_current_accent();       /* follow an accent change (Braun: always orange) */
       lv_obj_set_style_arc_color(g_vol_arc, acc, LV_PART_INDICATOR);
       lv_obj_set_style_bg_color(g_vol_arc, acc, LV_PART_KNOB);
       lv_obj_set_style_text_color(lv_obj_get_child(lv_obj_get_parent(g_vol_num), 0), acc, 0); }

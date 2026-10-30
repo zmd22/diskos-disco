@@ -1137,7 +1137,7 @@ void wifi_create(lv_obj_t *root){
     if(th_simple())simple_radio_skin(g_hring,g_hglyph,g_hname,g_hsub,g_sw,rb,g_list);
     if(th_null())null_radio_skin(root,"WI-FI",g_hring,g_hglyph,g_hname,g_hsub,g_sw,rb,g_list);
     if(th_zune())zune_radio_skin(root,"wi-fi","wi-fi on","scan again",g_hring,g_hglyph,g_hname,g_hsub,g_sw,rb,g_list);
-    if(th_braun()){
+    if(th_braun_family()){
         lv_obj_add_flag(g_hring, LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(g_hglyph, LV_OBJ_FLAG_HIDDEN);
         lv_obj_t *pd = br_disc(root, 180, 80, 44, BR_PANEL); (void)pd;
         g_hknob = br_knob(root, 180, 76, 30, LV_SYMBOL_WIFI, TF(UI_20));

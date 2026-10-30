@@ -127,11 +127,12 @@ void ui_set_balance(int v);
 
 static const char *squash_accent_reason = "Squash uses its own theme palette. This accent setting doesn't apply.";
 static const char *accent_disabled_reason(void){
+    if(th_braun2())return "Braun 2.0 uses a fixed orange accent for active controls.";
     return th_null() ? "Null uses fixed colour schemes. Choose a colour scheme in Appearance instead of a custom accent." : squash_accent_reason;
 }
 static void apply_open_colorpick(int v){
     (void)v;
-    if(th_simple() || th_null()){ui_toast(accent_disabled_reason());return;}
+    if(th_simple() || th_null() || th_braun2()){ui_toast(accent_disabled_reason());return;}
     colorpick_open();
 }   /* seed sliders from cfg + open */
 static void apply_debug_mode(int v){ (void)v; debug_open(); }           /* Settings -> System -> Debug Mode */
@@ -1340,7 +1341,7 @@ static void list_back_cb(lv_event_t *e);
 static lv_obj_t *make_list(lv_obj_t *root);
 /* Themes offered: Disco first; the other presets stay in the code and keep working if already selected, but are not
  * offered here for now (retired IDs have no name). Rows still carry the real preset index. */
-static const int THEME_SHOWN[] = { THEME_PRESET_DISCO, THEME_PRESET_NULL, THEME_PRESET_SIMPLE, THEME_PRESET_ZUNE, THEME_PRESET_RING, THEME_PRESET_BRAUN, THEME_PRESET_STONE };
+static const int THEME_SHOWN[] = { THEME_PRESET_DISCO, THEME_PRESET_NULL, THEME_PRESET_SIMPLE, THEME_PRESET_ZUNE, THEME_PRESET_RING, THEME_PRESET_BRAUN, THEME_PRESET_BRAUN2, THEME_PRESET_STONE };
 #define N_THEME_SHOWN ((int)(sizeof THEME_SHOWN / sizeof THEME_SHOWN[0]))
 static void zlower(char *o, size_t n, const char *s){
     size_t i = 0; for(; s && s[i] && i + 1 < n; i++) o[i] = (s[i] >= 'A' && s[i] <= 'Z') ? s[i] + 32 : s[i]; o[i] = 0;
@@ -1866,6 +1867,10 @@ static void settings_disco_list(lv_obj_t *root){          /* styled like the sub
 void settings_create(lv_obj_t *root){
     lv_obj_set_style_bg_color(root, TC(CANVAS), 0);
     lv_obj_set_style_bg_opa(root, LV_OPA_COVER, 0);
+    if(th_braun2()){ui_header(root,"Settings");lv_obj_t *list=make_list(root);static curvelist_t cl;curvelist_attach(&cl,list,root,288);
+        for(int g=0;g<N_GROUPS;g++){lv_obj_t *r=setting_card(list);ui_on(r,disco_cat_cb,LV_EVENT_CLICKED,(void*)(intptr_t)g,"settings.category",UI_CORE);
+            lv_obj_t *n=lv_label_create(r);lv_label_set_text(n,GROUPS[g]);lv_obj_set_pos(n,24,16);lv_obj_set_width(n,222);lv_label_set_long_mode(n,LV_LABEL_LONG_DOT);theme_list_row(r);}
+        curvelist_update(&cl);return;}
     if(th_disco_family() || th_null()){ settings_disco_list(root); return; }
     if(th_zune()) return;                                   /* Zune: the dial is built on every entry */
     /* The same seven categories, presented with this theme's circular controls. */
@@ -1873,7 +1878,7 @@ void settings_create(lv_obj_t *root){
     orbit_item_t it[N_GROUPS];
     for(int g = 0; g < N_GROUPS; g++){ it[g].glyph = GROUP_ICONS[g]; it[g].cap = GROUPS[g]; }
     orbit_create(&g_set_orb, root, it, N_GROUPS, -60, cat_pick);
-    orbit_cap_width(&g_set_orb, 96, th_braun()?br_font(12,0):TH_F_CAPTION);
+    orbit_cap_width(&g_set_orb, 96, th_braun_family()?br_font(12,0):TH_F_CAPTION);
     for(int g=0;g<N_GROUPS;g++)if(g_set_orb.cap[g]){
         lv_label_set_long_mode(g_set_orb.cap[g],LV_LABEL_LONG_WRAP);
         lv_obj_set_height(g_set_orb.cap[g],LV_SIZE_CONTENT);
@@ -1882,7 +1887,7 @@ void settings_create(lv_obj_t *root){
     for(int g = 0; g < N_GROUPS; g++)
         lv_obj_set_style_text_color(g_set_orb.icon[g], TC(ACCENT_PRIMARY), 0);
     orbit_hub_create(&g_set_orb, root, hub_cb, LV_SYMBOL_SETTINGS, "Back");
-    if(th_braun()){ br_face(root); orbit_braun_icons(&g_set_orb); }   /* Braun: the grille face; knob icons white */
+    if(th_braun_family()){ br_face(root); orbit_braun_icons(&g_set_orb); }   /* Braun: the grille face; knob icons white */
 }
 
 /* Category list is static; nothing to re-sync when SCR_SETTINGS is (re)shown. */

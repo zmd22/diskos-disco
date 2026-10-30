@@ -373,7 +373,7 @@ static int show_timed(const char *lrc)
         lv_obj_set_width(l, 280);
         lv_label_set_long_mode(l, LV_LABEL_LONG_WRAP);
         lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, 0);
-        lv_obj_set_style_text_font(l, th_braun() ? br_font(20,0) : ui_font_cjk(20), 0);
+        lv_obj_set_style_text_font(l, th_braun_family() ? br_font(20,0) : ui_font_cjk(20), 0);
         lv_obj_set_style_text_color(l, TC(TEXT_MUTED), 0);
         lv_label_set_text(l, g_ltext[g_ll[i].text] ? g_ltext + g_ll[i].text : " ");   /* an empty timed line is a pause */
     }
@@ -540,7 +540,7 @@ void lyrics_create(lv_obj_t *root)
     lv_obj_set_style_text_color(g_text, TC(TEXT_LYRICS), 0);
     lv_obj_set_style_text_line_space(g_text, 6, 0);
     lv_label_set_text(g_text, "");
-    if(th_braun()){                                              /* Braun: the lyrics on the off-white segment, dark Inter */
+    if(th_braun_family()){                                              /* Braun: the lyrics on the off-white segment, dark Inter */
         br_face(root);
         lv_obj_move_to_index(br_segment(root, 68), 1);
         lv_obj_set_style_text_font(g_text, br_font(20, 0), 0);
@@ -551,7 +551,7 @@ void lyrics_create(lv_obj_t *root)
     lv_obj_remove_style_all(g_lines_box);
     lv_obj_set_width(g_lines_box,280); lv_obj_set_height(g_lines_box,LV_SIZE_CONTENT);
     lv_obj_set_flex_flow(g_lines_box,LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_row(g_lines_box,th_braun() ? 8 : 6,0);
+    lv_obj_set_style_pad_row(g_lines_box,th_braun_family() ? 8 : 6,0);
     lv_obj_set_style_pad_top(g_lines_box,100,0);
     lv_obj_set_style_pad_bottom(g_lines_box,110,0);
     lv_obj_remove_flag(g_lines_box,LV_OBJ_FLAG_CLICKABLE);

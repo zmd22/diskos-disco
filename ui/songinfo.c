@@ -386,7 +386,7 @@ void songinfo_create(lv_obj_t *root)
             lv_obj_set_width(g_val[i],178);lv_obj_set_style_text_font(g_val[i],TF(UI_16),0);lv_label_set_long_mode(g_val[i],LV_LABEL_LONG_WRAP);
         }
     }
-    if(th_braun()){                                               /* Braun: the grille; details on the lower segment */
+    if(th_braun_family()){                                               /* Braun: the grille; details on the lower segment */
         br_face(root); lv_obj_move_to_index(br_segment(root, 186), 1);
         lv_obj_set_style_text_color(g_title, TC(TEXT_PRIMARY), 0); lv_obj_set_style_text_font(g_title, br_font(18, 1), 0);
         lv_obj_set_style_text_color(g_artist, TC(TEXT_SECONDARY), 0);

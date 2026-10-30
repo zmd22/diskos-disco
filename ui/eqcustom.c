@@ -346,7 +346,7 @@ static void paint_band(int b, uint32_t *fb){
 }
 /* repaint only what changed: bands whose level moved, the old/new selection, everything on a colour change */
 static void paint(void){
-    if(th_braun()){ braun_faders_paint(); return; }
+    if(th_braun_family()){ braun_faders_paint(); return; }
     if((th_disco_family() || th_null() || th_zune())){ disco_faders_paint(); return; }
     if(!g_canvas) return;
     geometry(); if(!g_px) return;
@@ -368,7 +368,7 @@ static void refresh_labels(void){
     for(int i = 0; i < NB; i++){                                    /* only labels that changed are touched */
         fmt_freq(b, sizeof b, g_f[i], 0);
         if(strcmp(lv_label_get_text(g_rim[i]), b)) lv_label_set_text(g_rim[i], b);
-        lv_color_t want = i == g_sel ? (th_null()?TC(TEXT_PRIMARY):ui_current_accent()) : (th_braun() || (th_disco_family() || th_null() || th_zune())) ? TC(TEXT_SECONDARY) : TC(TEXT_DISABLED);
+        lv_color_t want = i == g_sel ? (th_null()?TC(TEXT_PRIMARY):ui_current_accent()) : (th_braun_family() || (th_disco_family() || th_null() || th_zune())) ? TC(TEXT_SECONDARY) : TC(TEXT_DISABLED);
         if(!lv_color_eq(lv_obj_get_style_text_color(g_rim[i], 0), want)) lv_obj_set_style_text_color(g_rim[i], want, 0);
     }
     preset_name(g_preset, b, sizeof b);
@@ -380,7 +380,7 @@ static void refresh_labels(void){
     if(show_edit){
         fmt_freq(b, sizeof b, g_f[g_sel], 1); if(strcmp(lv_label_get_text(g_flbl), b)) lv_label_set_text(g_flbl, b);
         fmt_gain(b, sizeof b, clampi(g_t[g_sel], -GMAX, GMAX)); if(strcmp(lv_label_get_text(g_glbl), b)) lv_label_set_text(g_glbl, b);   /* old +-12 presets show at the edge */
-        int br = th_braun();                                        /* Braun: the big value in black, the other in grey */
+        int br = th_braun_family();                                        /* Braun: the big value in black, the other in grey */
         lv_obj_set_style_text_font(g_flbl, g_mode_freq ? (br ? br_font(22, 1) : TH_F_TITLE) : (br ? br_font(14, 0) : TF(UI_14)), 0);
         lv_obj_set_style_text_color(g_flbl, g_mode_freq ? (br ? TC(TEXT_PRIMARY) : (th_null()?TC(TEXT_PRIMARY):ui_current_accent())) : br ? TC(TEXT_SECONDARY) : TC(TEXT_SECONDARY), 0);
         lv_obj_set_style_text_font(g_glbl, g_mode_freq ? (br ? br_font(14, 0) : TF(UI_14)) : (br ? br_font(22, 1) : TH_F_TITLE), 0);
@@ -404,7 +404,7 @@ static void refresh_labels(void){
     const char *note = NULL;
     if(g_save_busy) note="Saving...";
     else if(g_loading)note="Loading profile...";
-    else if(!g_editable) note = g_preset == 0 ? "EQ off" : g_readfail ? "Couldn't read this preset" : g_parametric ? "Advanced preset" : g_preset >= USER_MIN ? "Custom editing unavailable" : th_braun() ? "Built-in preset" : "built-in preset";
+    else if(!g_editable) note = g_preset == 0 ? "EQ off" : g_readfail ? "Couldn't read this preset" : g_parametric ? "Advanced preset" : g_preset >= USER_MIN ? "Custom editing unavailable" : th_braun_family() ? "Built-in preset" : "built-in preset";
     else if(g_sel < 0) note = (th_disco_family() || th_null() || th_zune()) ? "Choose a band" : "tap a band";
     if(note && th_zune()){ snprintf(b, sizeof b, "%s", note); for(char *c = b; *c; c++) if(*c >= 'A' && *c <= 'Z') *c += 32; note = b; }
     if(th_zune()) lv_obj_add_flag(g_modecap, LV_OBJ_FLAG_HIDDEN);
@@ -469,7 +469,7 @@ static int hit_band(int x, int y, float *dist){
         if(dist) *dist = R0 + (DMID + o - y) / DKPX * ((RMAX - R0) / 6.0f);   /* the dial's distance for this height */
         return b;
     }
-    if(th_braun()){
+    if(th_braun_family()){
         if(y < FTOP - 16 || y > FBOT + 16 || x < FX0 - 14 || x > fx(NB - 1) + 14) return -1;
         int b = (int)lroundf((x - FX0) / FSTEP); b = clampi(b, 0, NB - 1);
         if(dist) *dist = R0 + (FMID - y) / FKPX * ((RMAX - R0) / 6.0f);        /* the dial's distance for this height */
@@ -744,7 +744,7 @@ void eqcustom_create(lv_obj_t *root){
     g_note = lv_label_create(root);
     lv_obj_set_style_text_font(g_note, TH_F_CAPTION, 0); lv_obj_set_style_text_color(g_note, TC(TEXT_DISABLED), 0);
     lv_obj_align(g_note, LV_ALIGN_CENTER, 0, 4);
-    if(th_braun()){
+    if(th_braun_family()){
         br_face(root); lv_obj_move_to_index(br_segment(root, 240), 1);
         if(g_canvas) lv_obj_add_flag(g_canvas, LV_OBJ_FLAG_HIDDEN);
         braun_faders_create(root);
@@ -756,7 +756,7 @@ void eqcustom_create(lv_obj_t *root){
             lv_obj_set_size(pm[k], 42, 42); lv_obj_align(pm[k], LV_ALIGN_TOP_MID, k ? 84 : -84, 262);
             lv_obj_set_style_bg_color(pm[k], TC(CONTROL_KNOB), 0); lv_obj_set_style_bg_opa(pm[k], LV_OPA_COVER, 0);
             lv_obj_set_style_border_color(pm[k], TC(CONTROL_FILL), 0); lv_obj_set_style_border_width(pm[k], 2, 0);
-            lv_obj_t *l = lv_obj_get_child(pm[k], 0); if(l) lv_obj_set_style_text_color(l, TC(TEXT_PRIMARY), 0);
+            lv_obj_t *l = lv_obj_get_child(pm[k], 0); if(l) lv_obj_set_style_text_color(l, th_braun2()?TC(ON_CONTROL):TC(TEXT_PRIMARY), 0);
         }
         lv_obj_set_style_text_font(g_modecap, br_font(12, 0), 0); lv_obj_set_style_text_color(g_modecap, TC(TEXT_DISABLED), 0);
         lv_obj_align(g_modecap, LV_ALIGN_TOP_MID, 0, 304);

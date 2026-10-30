@@ -74,7 +74,7 @@ static void upnext_cb(lv_event_t *e){
 }
 static lv_obj_t *shortcut(lv_obj_t *root, int cy, const char *glyph, const lv_font_t *font){
     lv_obj_t *b;
-    if(th_braun()) b = br_button(root, 328, cy, 20, glyph, font, 0);
+    if(th_braun_family()) b = br_button(root, 328, cy, 20, glyph, font, 0);
     else {
         b = lv_button_create(root);
         lv_obj_remove_style_all(b);

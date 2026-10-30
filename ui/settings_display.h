@@ -96,6 +96,7 @@ static const display_entry_t *display_entry(const setting_t *s){
     return NULL;
 }
 static int display_variant_hidden(const setting_t *s){
+    if(th_braun2()&&s->cfg_key&&(!strcmp(s->cfg_key,"np_style")||!strcmp(s->cfg_key,"disco_qs_style")))return 1;
     if(s->cfg_key&&th_zune()&&!strcmp(s->cfg_key,"saver_style"))return 1;
     if(s->apply==apply_grp_zune&&!th_zune())return 1;
     if(s->cfg_key&&th_zune()&&!strcmp(s->cfg_key,"np_style"))return 1;
@@ -118,7 +119,7 @@ static const char *display_disabled_reason(const setting_t *s){
     const char *k=s->cfg_key?s->cfg_key:"";
     if(!strcmp(k,"zune_nav_hold")&&!th_zune())return "This action belongs to the Zune main menu.";
     if(!strcmp(k,"imm_scrub_action")&&!simple_cfg_get_int("imm_scrub",0))return "Enable Circular control first.";
-    if(s->apply==apply_open_colorpick && (th_simple()||th_null()))return accent_disabled_reason();
+    if(s->apply==apply_open_colorpick && (th_simple()||th_null()||th_braun2()))return accent_disabled_reason();
     if(!strcmp(k,"disco_qs_style") && th_zune())return "Zune uses six circular quick actions. Choose and reorder them in Items.";
     if(!strcmp(k,"theme_variant") && th_null())return "Null uses a fixed dark appearance. Choose a colour scheme instead.";
     if(!strcmp(k,"null_side"))return "Null keeps its navigation on the right.";
@@ -160,6 +161,7 @@ static const char *settings_page_title(const char *page){
     if(th_simple())return "Squash settings";
     if(th_null())return "Null settings";
     if(th_zune())return "Zune settings";
+    if(th_braun2())return "Braun 2.0 settings";
     if(th_braun())return "Braun settings";
     if(theme_preset()==THEME_PRESET_RING)return "Ring settings";
     return theme_custom_active()?"Custom settings":"Stone settings";

@@ -1801,7 +1801,7 @@ void bt_create(lv_obj_t *root){
         lv_obj_set_style_text_font(g_hsub, TF(UI_18), 0);              /* Null keeps its layout; the hint a bit larger */
         lv_label_set_long_mode(g_hname, LV_LABEL_LONG_SCROLL_CIRCULAR); }
     if(th_zune())zune_radio_skin(root,"bluetooth","bluetooth on","scan for devices",g_hring,g_hglyph,g_hname,g_hsub,g_sw,rb,g_list);
-    if(th_braun()){
+    if(th_braun_family()){
         lv_obj_add_flag(g_hring, LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(g_hglyph, LV_OBJ_FLAG_HIDDEN);
         lv_obj_t *pd = br_disc(root, 180, 80, 44, BR_PANEL); (void)pd;
         g_hknob = br_knob(root, 180, 76, 30, LV_SYMBOL_BLUETOOTH, TF(UI_20));

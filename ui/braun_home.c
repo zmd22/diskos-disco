@@ -4,9 +4,10 @@
 /* Home in the Braun theme: a Braun wall clock on the grille (the face drawn once into a canvas; only the
  * hands move - the second hand once a second while Home is on screen), the weather in a window at 3
  * o'clock, the playing track and Library / play-pause / Search on the lower segment, the battery as a thin
- * black arc on the top rim. home.c forwards its setters here when th_braun(). */
+ * black arc on the top rim. home.c forwards its setters here when th_braun_family(). */
 #include "screens.h"
 #include "braun.h"
+#include "braun2.h"
 #include "theme.h"
 #include <math.h>
 #include <string.h>
@@ -19,8 +20,8 @@ extern const lv_font_t font_theme_20;
 
 extern const lv_font_t font_weather16;
 #define CX 180
-#define CY 138
-#define RD 104
+#define CY (th_braun2()?126:138)
+#define RD (th_braun2()?94:104)
 static lv_obj_t *g_canvas, *g_hh, *g_mm, *g_ss, *g_hub, *g_wx, *g_date, *g_title, *g_artist, *g_pp, *g_batt;
 static lv_point_precise_t g_hp[2], g_mp[2], g_sp[2];
 static lv_timer_t *g_tick;
@@ -54,7 +55,7 @@ static void wx_cb(lv_event_t *e){ (void)e; weather_app_open(); }
 void bhome_create(lv_obj_t *root){
     br_face(root);
     br_disc(root, CX, CY, RD + 6, BR_PANEL);                    /* the clock's solid surround */
-    g_canvas = br_clock_face(root, CX, CY, RD, 1);             /* drawn once; numerals, a gap at 3 for the weather */
+    g_canvas = br_clock_face(root, CX, CY, RD, th_braun2()?0:1);             /* drawn once; numerals, a gap at 3 for the weather */
     /* the weather window at 3 o'clock (tap: the Weather screen) */
     lv_obj_t *w = br_weather_window(root, CX + 44, CY - 13, &g_wx);
     lv_obj_add_flag(w, LV_OBJ_FLAG_CLICKABLE); lv_obj_set_ext_click_area(w, 8);
@@ -64,28 +65,35 @@ void bhome_create(lv_obj_t *root){
     g_hh = mkline(root, 6, BR_TXT); g_mm = mkline(root, 4, BR_TXT); g_ss = mkline(root, 2, BR_ACC);
     g_hub = br_disc(root, CX, CY, 5, BR_ACC);
     /* the lower segment: the track + Library / play-pause / Search */
-    lv_obj_t *seg = br_segment(root, 250);
+    lv_obj_t *seg = br_segment(root, th_braun2()?228:250);
     lv_obj_t *trk = lv_obj_create(root);
-    lv_obj_remove_style_all(trk); lv_obj_set_size(trk, 244, 52); lv_obj_align(trk, LV_ALIGN_TOP_MID, 0, 250);
+    lv_obj_remove_style_all(trk); lv_obj_set_size(trk, 244, th_braun2()?64:52); lv_obj_align(trk, LV_ALIGN_TOP_MID, 0, th_braun2()?228:250);
     lv_obj_add_flag(trk, LV_OBJ_FLAG_CLICKABLE); lv_obj_add_event_cb(trk, nav_cb, LV_EVENT_CLICKED, (void *)(intptr_t)SCR_NOWPLAYING);
-    g_title = br_label(trk, "Not Playing", br_font(22, 1), BR_TXT);
-    lv_obj_set_size(g_title, 244, 27); lv_label_set_long_mode(g_title, LV_LABEL_LONG_SCROLL_CIRCULAR); lv_obj_set_style_text_align(g_title, LV_TEXT_ALIGN_CENTER, 0);
+    g_title = br_label(trk, "Not Playing", br_font(th_braun2()?24:22, 1), BR_TXT);
+    lv_obj_set_size(g_title, 244, th_braun2()?32:27); lv_label_set_long_mode(g_title, LV_LABEL_LONG_SCROLL_CIRCULAR); lv_obj_set_style_text_align(g_title, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_align(g_title, LV_ALIGN_TOP_MID, 0, 2);
-    g_artist = br_label(trk, "", br_font(16, 0), BR_TXT2);
-    lv_obj_set_size(g_artist, 230, 20); lv_label_set_long_mode(g_artist, LV_LABEL_LONG_SCROLL_CIRCULAR); lv_obj_set_style_text_align(g_artist, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_align(g_artist, LV_ALIGN_TOP_MID, 0, 30);
+    g_artist = br_label(trk, "", br_font(th_braun2()?20:16, 0), BR_TXT2);
+    lv_obj_set_size(g_artist, 230, th_braun2()?28:20); lv_label_set_long_mode(g_artist, LV_LABEL_LONG_SCROLL_CIRCULAR); lv_obj_set_style_text_align(g_artist, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_align(g_artist, LV_ALIGN_TOP_MID, 0, th_braun2()?34:30);
     (void)seg;
     /* Library and Search (40 px) hang from the same top edge as the play disc (50 px), not centre-to-centre */
-    #define BH_TOP 302
-    lv_obj_t *lib = br_button(root, 125, BH_TOP + 20, 20, LV_SYMBOL_AUDIO, TF(UI_20), 0);
+    #define BH_TOP (th_braun2()?294:302)
+    lv_obj_t *lib = br_button(root, 125, BH_TOP + 22, th_braun2()?22:20, th_braun2()?LV_SYMBOL_LIST:LV_SYMBOL_AUDIO, TF(UI_20), 0);
     lv_obj_add_event_cb(lib, nav_cb, LV_EVENT_CLICKED, (void *)(intptr_t)SCR_LIBRARY);
-    g_pp = br_button(root, 180, BH_TOP + 25, 25, LV_SYMBOL_PLAY, TF(UI_26), 1);
+    g_pp = br_button(root, 180, BH_TOP + 26, th_braun2()?28:25, LV_SYMBOL_PLAY, TF(UI_26), 1);
     lv_obj_add_event_cb(g_pp, pp_cb, LV_EVENT_CLICKED, NULL);
-    lv_obj_t *srch = br_button(root, 235, BH_TOP + 20, 20, TH_IC_SEARCH, &font_theme_20, 0);
+    lv_obj_t *srch = br_button(root, 235, BH_TOP + 22, th_braun2()?22:20, TH_IC_SEARCH, &font_theme_20, 0);
     lv_obj_add_event_cb(srch, nav_cb, LV_EVENT_CLICKED, (void *)(intptr_t)SCR_SEARCH);
     #undef BH_TOP
     /* the battery: a thin black arc on the top rim */
     battery_arc_create(&g_battery,root,344,4,236,304,0);g_batt=g_battery.arc;
+    if(th_braun2()){
+        lv_obj_set_pos(w,130,166);lv_obj_set_size(w,100,28);lv_obj_set_style_bg_opa(w,LV_OPA_TRANSP,0);lv_obj_set_style_border_width(w,0,0);
+        lv_obj_set_style_text_font(g_wx,br_font(16,0),0);lv_obj_center(g_wx);
+        lv_obj_set_size(g_date,64,24);lv_obj_set_align(g_date,LV_ALIGN_TOP_LEFT);lv_obj_set_pos(g_date,204,115);lv_obj_set_style_text_font(g_date,br_font(14,1),0);lv_obj_set_style_text_color(g_date,TC(TEXT_PRIMARY),0);
+        lv_label_set_long_mode(g_title,LV_LABEL_LONG_DOT);lv_label_set_long_mode(g_artist,LV_LABEL_LONG_DOT);
+        br2_keep_tree(root);
+    }
     g_tick = lv_timer_create(tick_cb, 1000, NULL);
     tick_cb(NULL); { time_t now = time(NULL); struct tm tm; localtime_r(&now, &tm);   /* first paint even before Home shows */
         hand(g_hh, g_hp, (tm.tm_hour % 12 + tm.tm_min / 60.0f) * 30, 50, 0); hand(g_mm, g_mp, tm.tm_min * 6, 82, 0); hand(g_ss, g_sp, tm.tm_sec * 6, 92, 18); }
@@ -101,14 +109,19 @@ void bhome_set_clock(const char *t, const char *sub){
     if(d && *d){ int day = atoi(d); snprintf(out + n, sizeof out - n, " %d", day); }
     lv_label_set_text(g_date, out);
 }
-void bhome_set_weather(const char *s){ br_weather_text(g_wx, s); }
+void bhome_set_weather(const char *s){
+    if(th_braun2()){
+        const char *p=s;while(p&&*p&&!isdigit((unsigned char)*p)&&*p!='-')p++;
+        if(g_wx)lv_label_set_text(g_wx,p&&*p?p:"");
+    }else br_weather_text(g_wx,s);
+}
 void bhome_set_status(int batt, int charging, int wifi, int bt){
     (void)wifi; (void)bt;
     battery_arc_set(&g_battery,batt,charging);
 }
 void bhome_set_now_playing(const char *title, const char *artist, bool playing){
-    if(g_title){ const char *nt = title ? title : "Not Playing"; if(strcmp(lv_label_get_text(g_title), nt)){lv_label_set_text(g_title, nt);ui_music_scroll(g_title);ui_music_scroll(g_artist);}
+    if(g_title){ const char *nt = title ? title : "Not Playing"; if(strcmp(lv_label_get_text(g_title), nt)){lv_label_set_text(g_title, nt);if(!th_braun2()){ui_music_scroll(g_title);ui_music_scroll(g_artist);}}
                  lv_obj_set_style_text_color(g_title, title ? TC(TEXT_PRIMARY) : TC(TEXT_DISABLED), 0); }
-    if(g_artist && strcmp(lv_label_get_text(g_artist),artist?artist:"")){lv_label_set_text(g_artist,artist?artist:"");ui_music_scroll(g_artist);}
+    if(g_artist && strcmp(lv_label_get_text(g_artist),artist?artist:"")){lv_label_set_text(g_artist,artist?artist:"");if(!th_braun2())ui_music_scroll(g_artist);}
     if(g_pp){ lv_obj_t *l = lv_obj_get_child(g_pp, 0); if(l) lv_label_set_text(l, playing ? LV_SYMBOL_PAUSE : LV_SYMBOL_PLAY); }
 }

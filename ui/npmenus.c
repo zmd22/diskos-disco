@@ -161,7 +161,7 @@ static void npmenu_refresh_art_now(void){
         else lv_obj_add_flag(g_cover_img, LV_OBJ_FLAG_HIDDEN);
     }
     if(g_menu_bg){ const void *bd = ui_current_backdrop_img(); lv_image_set_src(g_menu_bg, NULL);
-        if(bd){ lv_image_set_src(g_menu_bg, bd); if(!th_braun()) lv_obj_remove_flag(g_menu_bg, LV_OBJ_FLAG_HIDDEN); } else lv_obj_add_flag(g_menu_bg, LV_OBJ_FLAG_HIDDEN); }
+        if(bd){ lv_image_set_src(g_menu_bg, bd); if(!th_braun_family()) lv_obj_remove_flag(g_menu_bg, LV_OBJ_FLAG_HIDDEN); } else lv_obj_add_flag(g_menu_bg, LV_OBJ_FLAG_HIDDEN); }
     if(g_orb.hub) lv_obj_set_style_bg_color(g_orb.hub, ui_media_accent(), 0);
 }
 /* ---- the options orbit: one design for the swipe menu (SCR_NPHUB) and the "..." menu (SCR_NPMENU) ----
@@ -472,7 +472,7 @@ static void build_menu(lv_obj_t *box){
     lv_obj_set_size(g_menu_bg, 360, 360); lv_obj_clear_flag(g_menu_bg, LV_OBJ_FLAG_CLICKABLE); lv_obj_add_flag(g_menu_bg, LV_OBJ_FLAG_HIDDEN);
     lv_obj_t *dim = lv_obj_create(box); lv_obj_remove_style_all(dim); lv_obj_set_size(dim, 360, 360);
     lv_obj_set_style_bg_color(dim, TC(CANVAS), 0); lv_obj_set_style_bg_opa(dim, 215, 0); lv_obj_clear_flag(dim, LV_OBJ_FLAG_CLICKABLE);
-    if(th_braun()){ lv_obj_add_flag(dim, LV_OBJ_FLAG_HIDDEN); br_face(box); }   /* Braun: the grille, no album wash */
+    if(th_braun_family()){ lv_obj_add_flag(dim, LV_OBJ_FLAG_HIDDEN); br_face(box); }   /* Braun: the grille, no album wash */
     g_menu_title = lv_label_create(box);
     lv_label_set_text(g_menu_title, "");
     lv_label_set_long_mode(g_menu_title, LV_LABEL_LONG_SCROLL_CIRCULAR);
@@ -529,7 +529,7 @@ static void build_menu(lv_obj_t *box){
     fav_refresh();
     npmenu_set(&st, 1, NULL);                                   /* title + ring right away */
     npmenu_refresh_art_now();
-    if(th_braun()){ orbit_braun_icons(&g_orb); if(g_menu_bg) lv_obj_add_flag(g_menu_bg, LV_OBJ_FLAG_HIDDEN);
+    if(th_braun_family()){ orbit_braun_icons(&g_orb); if(g_menu_bg) lv_obj_add_flag(g_menu_bg, LV_OBJ_FLAG_HIDDEN);
                     if(g_menu_title){ lv_obj_set_style_text_color(g_menu_title, TC(TEXT_PRIMARY), 0); lv_obj_set_style_text_font(g_menu_title, br_font(14, 0), 0); } }
 }
 void npmenu_create(lv_obj_t *root){

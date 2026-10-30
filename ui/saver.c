@@ -340,6 +340,8 @@ static void saver_anim_cb(lv_timer_t *t)
     (void)t;
     if (g_style != 1 || screen_current() != SCR_SAVER) return;
     time_t now = time(NULL); struct tm lt; localtime_r(&now, &lt);
+    static time_t br2_minute=-1;
+    if(th_braun2()){if(br2_minute==now/60)return;br2_minute=now/60;}
     set_hand(g_hour, g_hpts, (lt.tm_hour % 12) * 30.0 + lt.tm_min * 0.5, 70);
     set_hand(g_min,  g_mpts, lt.tm_min * 6.0, 104);
     set_hand(g_sec,  g_spts, lt.tm_sec * 6.0, 118);
@@ -463,6 +465,14 @@ static void relayout(int style)
                     lv_label_set_long_mode(g_artist, ring ? LV_LABEL_LONG_SCROLL_CIRCULAR : LV_LABEL_LONG_SCROLL_CIRCULAR);
                     lv_obj_set_style_text_color(g_artist, ring ? TC(SAVER_ARTIST) : TC(TEXT_MUTED), 0);
                     if (ring) lv_obj_align(g_artist, LV_ALIGN_TOP_MID, 0, 244); else lv_obj_align(g_artist, LV_ALIGN_TOP_MID, 0, 278); }
+    if(th_braun2()){
+        if(g_bg)lv_obj_add_flag(g_bg,LV_OBJ_FLAG_HIDDEN);
+        if(g_sec)lv_obj_add_flag(g_sec,LV_OBJ_FLAG_HIDDEN);
+        if(g_clock){lv_obj_set_style_text_font(g_clock,br_font(44,1),0);lv_obj_set_style_text_color(g_clock,TC(TEXT_SECONDARY),0);}
+        if(g_track){lv_label_set_long_mode(g_track,LV_LABEL_LONG_DOT);lv_obj_set_width(g_track,240);}
+        if(g_artist){lv_label_set_long_mode(g_artist,LV_LABEL_LONG_DOT);lv_obj_set_width(g_artist,220);}
+    }
+
 }
 
 void saver_create(lv_obj_t *root)
@@ -570,7 +580,7 @@ void saver_set_accent(lv_color_t c)
 {
     if(th_braun() || th_disco_family() || th_null() || th_zune()) return;
     if (g_rring) lv_obj_set_style_arc_color(g_rring, theme_color_mix(ui_media_accent(), TC(SCRIM), 120), LV_PART_INDICATOR);
-    if (g_track && g_style == 5) lv_obj_set_style_text_color(g_track, theme_color_mix(ui_media_accent(), TC(SCRIM), 150), 0);
+    if (g_track && g_style == 5) lv_obj_set_style_text_color(g_track, th_braun2()?TC(TEXT_SECONDARY):theme_color_mix(ui_media_accent(), TC(SCRIM), 150), 0);
     if (g_sec)    lv_obj_set_style_line_color(g_sec, c, 0);
     if (g_hub)    lv_obj_set_style_bg_color(g_hub, c, 0);
 }

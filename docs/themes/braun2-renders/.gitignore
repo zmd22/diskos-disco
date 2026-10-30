@@ -1,0 +1,8 @@
+*.png
+!core-comparison.png
+!overview-*.png
+!volume-*.png
+!38-eq_editor-*.png
+!42-stats-*.png
+!01-library-*.png
+!03-settings-*.png
