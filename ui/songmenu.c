@@ -182,8 +182,9 @@ static void open_menu(const char *title, const int *acts, int n){
     lv_label_set_long_mode(t, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_obj_set_width(t, 220);
     lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_text_font(t, ui_font_cjk(18), 0);
-    lv_obj_set_height(t, lv_font_get_line_height(ui_font_cjk(18)));     /* fork: one line + "...", never wraps into the orbit */
+    const lv_font_t *tf = th_braun2() ? br_font(16, 1) : ui_font_cjk(18);   /* Braun 2.0: Inter, international fallback kept */
+    lv_obj_set_style_text_font(t, tf, 0);
+    lv_obj_set_height(t, lv_font_get_line_height(tf));     /* fork: one line + "...", never wraps into the orbit */
     lv_obj_set_style_text_color(t, TC(TEXT_PRIMARY), 0);
     lv_obj_align(t, LV_ALIGN_TOP_MID, 0, 10);
     if(g_song_ring) lv_obj_add_flag(t, LV_OBJ_FLAG_HIDDEN);   /* the wider ring reaches the top: the cover says which song */
@@ -208,7 +209,7 @@ void songmenu_open_song(const char *path){                   /* Library */
     const char *sl = strrchr(path, '/'); snprintf(g_name, sizeof g_name, "%s", sl ? sl + 1 : path);
     static const int A[7] = { A_QUEUE, A_PLAYLIST, A_FAV, A_ALBUM, A_ARTIST, A_INFO, A_TAGS };
     static const int R[8] = { A_FAV, A_LYRICS, A_ALBUM, A_ARTIST, A_VQUEUE, A_INFO, A_QUEUE, A_PLAYLIST };   /* as the Music pop-up, clockwise from 12 */
-    g_song_ring = library_lift() > 0;
+    g_song_ring = library_lift() > 0 || th_braun2();   /* Braun 2.0: the full song set (Lyrics, View queue) as Squash / Disco / Null, in its own keys */
     open_menu(g_have_song && g_song.title[0] ? g_song.title : g_name, g_song_ring ? R : A, g_song_ring ? 8 : 7);
     g_song_ring = 0;
 }
