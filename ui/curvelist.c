@@ -33,7 +33,7 @@ void curvelist_braun_row(lv_obj_t *r){
         lv_obj_set_style_bg_opa(r, th_braun2()?LV_OPA_COVER:LV_OPA_TRANSP, 0);
         if(th_braun2())lv_obj_set_style_bg_color(r,TC(SURFACE_STRONG),0);
         lv_obj_set_style_bg_color(r, TC(SURFACE), LV_STATE_PRESSED); lv_obj_set_style_bg_opa(r, LV_OPA_COVER, LV_STATE_PRESSED);
-        lv_obj_set_style_radius(r, th_braun2()?28:6, 0);
+        lv_obj_set_style_radius(r, th_braun2()?14:6, 0);
         lv_obj_set_style_border_side(r, LV_BORDER_SIDE_BOTTOM, 0); lv_obj_set_style_border_width(r, th_braun2()?0:1, 0);
         lv_obj_set_style_border_color(r, TC(BORDER), 0);
     }

@@ -29,9 +29,9 @@ void br2_emboss(lv_obj_t *o,int raised){
 }
 /* The header title steps down 22 -> 18 -> 16 px to fit beside the back knob, then clips; it refits
  * whenever a screen changes the text (album and folder names). */
-#define BR2_HDR_Y 50      /* the knob's and the title's shared centre line, inside the circle */
-#define BR2_HDR_X 132
-#define BR2_HDR_W 160     /* inside the circle at that height */
+#define BR2_HDR_Y 46      /* the back key's and the title's shared centre line, inside the circle */
+#define BR2_HDR_X 150
+#define BR2_HDR_W 148     /* inside the circle at that height */
 static void br2_header_fit(lv_obj_t *l){
     const lv_font_t *steps[3]={br_font(22,1),br_font(18,1),br_font(16,1)},*f=steps[2];
     const char *t=lv_label_get_text(l);
@@ -47,7 +47,11 @@ static void br2_header_text_cb(lv_event_t *e){   /* a screen set new text: refit
 lv_obj_t *br2_header(lv_obj_t *root,const char *text,lv_event_cb_t cb){
     lv_obj_t *cap=lv_obj_create(root);lv_obj_remove_style_all(cap);lv_obj_set_size(cap,304,72);lv_obj_set_pos(cap,28,-4);
     lv_obj_set_style_radius(cap,28,0);lv_obj_set_style_bg_color(cap,TC(SURFACE_STRONG),0);lv_obj_set_style_bg_opa(cap,LV_OPA_COVER,0);lv_obj_remove_flag(cap,LV_OBJ_FLAG_CLICKABLE);br2_emboss(cap,1);
-    lv_obj_t *b=br_button(root,108,BR2_HDR_Y,18,LV_SYMBOL_LEFT,TF(UI_20),0);br2_depth(b,1);   /* edge at 168 px from the centre */ui_on(b,cb?cb:back,LV_EVENT_CLICKED,NULL,"nav.back",UI_CORE);lv_obj_set_ext_click_area(b,6);
+    lv_obj_t *b=lv_button_create(root);lv_obj_remove_style_all(b);   /* a QS-style squircle key, its top at the header's upper edge */
+    lv_obj_set_size(b,40,40);lv_obj_set_pos(b,100,BR2_HDR_Y-20);lv_obj_set_style_radius(b,12,0);
+    lv_obj_set_style_bg_color(b,TC(SURFACE_STRONG),0);lv_obj_set_style_bg_opa(b,LV_OPA_COVER,0);lv_obj_set_style_bg_color(b,TC(SURFACE_PRESSED),LV_STATE_PRESSED);
+    lv_obj_t *ic=lv_label_create(b);lv_label_set_text(ic,LV_SYMBOL_LEFT);lv_obj_set_style_text_font(ic,TF(UI_20),0);lv_obj_center(ic);
+    br2_depth(b,1);   /* shaded, orange arrow; corner 174 px from the centre */ui_on(b,cb?cb:back,LV_EVENT_CLICKED,NULL,"nav.back",UI_CORE);lv_obj_set_ext_click_area(b,6);
     lv_obj_t *l=br_label(root,text,br_font(22,1),BR_TXT);lv_obj_set_width(l,BR2_HDR_W);lv_obj_set_x(l,BR2_HDR_X);lv_label_set_long_mode(l,LV_LABEL_LONG_CLIP);   /* not DOT: it rewrites the text the refit measures */
     br2_header_fit(l);lv_obj_add_event_cb(l,br2_header_text_cb,LV_EVENT_DRAW_MAIN_BEGIN,NULL);
     br2_keep_tree(cap);br2_keep_tree(b);kit_keep(l);return l;
@@ -63,7 +67,7 @@ void br2_style(lv_obj_t *o,kit_role_t role){
         else if(lv_obj_get_style_radius(o,0)!=LV_RADIUS_CIRCLE){lv_obj_set_style_radius(o,24,0);lv_obj_set_style_bg_color(o,TC(SURFACE_STRONG),0);}   /* circles (artwork, discs) stay round */
         break;
     case KIT_ROW:
-        lv_obj_set_style_radius(o,28,0);lv_obj_set_style_border_width(o,0,0);
+        lv_obj_set_style_radius(o,14,0);   /* squircle rows */lv_obj_set_style_border_width(o,0,0);
         lv_obj_set_style_bg_color(o,TC(SURFACE_STRONG),0);
         lv_obj_set_style_bg_color(o,TC(SURFACE_PRESSED),LV_STATE_PRESSED);
         lv_obj_set_style_bg_opa(o,LV_OPA_COVER,LV_STATE_PRESSED);br2_emboss(o,0);break;
