@@ -2028,7 +2028,7 @@ void kit_fork_np_braun2(void){
         lv_obj_t *b=controls[i];int d=i==1?58:46;
         lv_obj_set_size(b,d,d);lv_obj_set_style_pad_all(b,0,0);
         for(uint32_t k=0;k<lv_obj_get_child_count(b);k++){lv_obj_t *c=lv_obj_get_child(b,k);   /* icon-only glyphs, centred in their knobs */
-            if(lv_obj_check_type(c,&lv_label_class))lv_obj_set_style_text_font(c,&lv_font_montserrat_24,0);lv_obj_center(c);}
+            if(lv_obj_check_type(c,&lv_label_class))lv_obj_set_style_text_font(c,theme_font_original(24),0);lv_obj_center(c);}
         lv_obj_set_style_text_font(b,TF(UI_24),0);lv_obj_set_style_bg_color(b,i==1?TC(ACCENT_PRIMARY):TC(CONTROL_KNOB),0);
         lv_obj_set_style_text_color(b,i==1?TC(ON_ACCENT):TC(ON_CONTROL),0);lv_obj_set_style_bg_opa(b,LV_OPA_COVER,0);
         lv_obj_align(b,LV_ALIGN_TOP_MID,(i-1)*64,i==1?284:290);br2_keep_tree(b);
