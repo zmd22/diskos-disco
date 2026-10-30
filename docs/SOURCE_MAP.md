@@ -2,7 +2,7 @@
 
 ## Baselines
 
-This documentation describes **Disco 3.3.0**, the release commit tagged `v3.3.0`. Its shipped mq_ui SHA-256 is `0c84a91c4272bccaa5e4858867b23b557fbcaa92e259816d4da69bf28a5a7b99`.
+This documentation describes **Disco 3.3.0**, the release commit tagged `v3.3.0`. Its shipped mq_ui SHA-256 is `4af9b27339279f8b6609fdc5523df8dbc9d99111ed83c3db895df35677673beb`.
 
 The main merge `bb389f6` (Zune Apps, Search and Settings fixes, pull request #22) is part of the 3.3.0 source and payload.
 

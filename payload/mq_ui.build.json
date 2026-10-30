@@ -1,17 +1,17 @@
 {
-  "version": "3.2.2",
-  "revision": "Default artwork, Wheel album/artist header under the screen header, quoted tags on Now Playing, Queue always starts and returns, Squash wheel pills, Zune fixes (PR #22)",
-  "baseline": "v3.2.1",
-  "source_commit": "the v3.2.2 release commit (ui source as hashed below)",
-  "ui_source_sha256": "82cc8f4fac0239931c5ef647dfaf315ebf98ad0b1aca22506d97b51b88c52a49",
+  "version": "3.3.0",
+  "revision": "Braun 2.0: a new light and dark theme (Home clock, Music layouts with a radio-dial scale, QS scales, classic volume dial with gain, Braun sliders, squircle menus and keys); 44 px colon and A-Z font fixes",
+  "baseline": "v3.2.2",
+  "source_commit": "the v3.3.0 release commit (ui source as hashed below)",
+  "ui_source_sha256": "448d3a1cfcbee6f1c825c29a7c53d29eaff92d2447d711b54dcdb002ce8a78cf",
   "ui_source_hash_recipe": "sorted tracked ui paths: path + NUL + file bytes + NUL",
   "compiler": "musl-cross-make GCC 11.2.0, musl 1.2.6; mipsel-linux-musl, -ffp-contract=off",
   "abi": "static little-endian MIPS32r2, o32, FP64, NaN2008",
-  "status": "Disco 3.2.2. Fresh static MIPS build of the release source; tested on the owner's Disc as 3.2.2-test4 (same binary).",
+  "status": "Disco 3.3.0. Fresh static MIPS build of the release source; the Braun 2.0 work was tried on the owner's Disc as 3.3.0-test1 to -test6, 3.3.0 and 3.3.1-test1.",
   "binary": {
-    "bytes": 7273272,
-    "sha256": "0c84a91c4272bccaa5e4858867b23b557fbcaa92e259816d4da69bf28a5a7b99",
-    "md5": "5be048029528090907626260b7701f5f"
+    "bytes": 7316620,
+    "sha256": "4af9b27339279f8b6609fdc5523df8dbc9d99111ed83c3db895df35677673beb",
+    "md5": "386dedb273ea62e2c1a4677010fc48c0"
   },
   "artwork_helper": {
     "bytes": 119424,
@@ -23,5 +23,5 @@
     "commit": "2bcb014b23a8c8cccf534eea8bda2fe5df453cfd",
     "license": "LGPL-2.1-or-later"
   },
-  "baseline_commit": "91a7151720d55583c766f7ebd2047ba6620921e1"
+  "baseline_commit": "458e4d44a6dba75767583711e05f30ca5c18d3ba"
 }
