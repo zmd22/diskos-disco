@@ -20,14 +20,15 @@ extern const lv_font_t font_theme_20;
 
 extern const lv_font_t font_weather16;
 #define CX 180
-#define CY (th_braun2()?126:138)
-#define RD (th_braun2()?90:104)
-#define HAND_H (th_braun2()?46:50)   /* Braun 2.0: hands fit its smaller face */
-#define HAND_M (th_braun2()?74:82)
-#define HAND_S (th_braun2()?82:92)
+#define CY (th_braun2()?118:138)
+#define RD (th_braun2()?102:104)   /* Braun 2.0: no battery arc, so the face grows to the rim */
+#define HAND_H (th_braun2()?52:50)
+#define HAND_M (th_braun2()?84:82)
+#define HAND_S (th_braun2()?94:92)
 static lv_obj_t *g_canvas, *g_hh, *g_mm, *g_ss, *g_hub, *g_wx, *g_date, *g_title, *g_artist, *g_pp, *g_batt;
 static lv_point_precise_t g_hp[2], g_mp[2], g_sp[2];
 static lv_timer_t *g_tick;
+static lv_obj_t *g_b2batt, *g_b2radio;   /* Braun 2.0: battery glyph at 9, Wi-Fi / Bluetooth at 12 */
 static battery_arc_t g_battery;
 
 static void hand(lv_obj_t *l, lv_point_precise_t *p, float deg, int len, int back){
@@ -89,8 +90,10 @@ void bhome_create(lv_obj_t *root){
     lv_obj_add_event_cb(srch, nav_cb, LV_EVENT_CLICKED, (void *)(intptr_t)SCR_SEARCH);
     #undef BH_TOP
     /* the battery: a thin black arc on the top rim */
-    battery_arc_create(&g_battery,root,344,4,236,304,0);g_batt=g_battery.arc;
+    if(!th_braun2()){ battery_arc_create(&g_battery,root,344,4,236,304,0);g_batt=g_battery.arc; }
     if(th_braun2()){
+        g_b2batt=br_label(root,LV_SYMBOL_BATTERY_FULL,theme_font_original(16),BR_TXT2);lv_obj_align(g_b2batt,LV_ALIGN_CENTER,-RD+44,CY-180);   /* inside the 9 o'clock tick */
+        g_b2radio=br_label(root,"",theme_font_original(16),BR_TXT2);lv_obj_set_style_text_letter_space(g_b2radio,6,0);lv_obj_align(g_b2radio,LV_ALIGN_TOP_MID,0,CY-RD+24);   /* under the 12 o'clock tick */
         lv_obj_set_pos(w,130,CY+22);lv_obj_set_size(w,100,24);lv_obj_set_style_bg_opa(w,LV_OPA_TRANSP,0);lv_obj_set_style_border_width(w,0,0);
         { static lv_font_t wxf; wxf=*br_font(14,0); wxf.fallback=&font_weather16; lv_obj_set_style_text_font(g_wx,&wxf,0); }   /* Inter + weather glyphs */lv_obj_set_style_text_color(g_wx,TC(TEXT_SECONDARY),0);lv_obj_center(g_wx);
         /* the date in a small window left of the 3 o'clock tick, as on Braun's wall clocks */
@@ -126,6 +129,13 @@ void bhome_set_weather(const char *s){
     }else br_weather_text(g_wx,s);
 }
 void bhome_set_status(int batt, int charging, int wifi, int bt){
+    if(th_braun2()){   /* glyphs only, no figures: the battery band at 9, the radios that are on at 12 */
+        if(g_b2batt){const char *g=charging?LV_SYMBOL_CHARGE:batt>=85?LV_SYMBOL_BATTERY_FULL:batt>=60?LV_SYMBOL_BATTERY_3:batt>=35?LV_SYMBOL_BATTERY_2:batt>=12?LV_SYMBOL_BATTERY_1:LV_SYMBOL_BATTERY_EMPTY;
+            if(strcmp(lv_label_get_text(g_b2batt),g))lv_label_set_text(g_b2batt,g);
+            lv_obj_set_style_text_color(g_b2batt,charging||(batt>=0&&batt<12)?TC(ACCENT_PRIMARY):TC(TEXT_SECONDARY),0);}
+        if(g_b2radio){char r[16];snprintf(r,sizeof r,"%s%s%s",wifi?LV_SYMBOL_WIFI:"",wifi&&bt?" ":"",bt?LV_SYMBOL_BLUETOOTH:"");if(strcmp(lv_label_get_text(g_b2radio),r))lv_label_set_text(g_b2radio,r);}
+        return;
+    }
     (void)wifi; (void)bt;
     battery_arc_set(&g_battery,batt,charging);
 }
