@@ -12,8 +12,8 @@ static void back(lv_event_t *e){(void)e;screen_back();}
  * and a little darker (pushed in). Optionally its icon glyphs turn orange. Call after the key's colour is set. */
 void br2_depth(lv_obj_t *o,int orange_icons){
     lv_color_t c=lv_obj_get_style_bg_color(o,0);
-    lv_obj_set_style_bg_color(o,theme_color_mix(TC(ON_ACCENT),c,34),0);
-    lv_obj_set_style_bg_grad_color(o,theme_color_mix(TC(FIXED_MEDIA_BLACK),c,46),0);lv_obj_set_style_bg_grad_dir(o,LV_GRAD_DIR_VER,0);
+    lv_obj_set_style_bg_color(o,theme_color_mix(TC(ON_ACCENT),c,18),0);   /* a gentle shade, not a gloss */
+    lv_obj_set_style_bg_grad_color(o,theme_color_mix(TC(FIXED_MEDIA_BLACK),c,24),0);lv_obj_set_style_bg_grad_dir(o,LV_GRAD_DIR_VER,0);
     lv_obj_set_style_bg_grad_dir(o,LV_GRAD_DIR_NONE,LV_STATE_PRESSED);
     br2_emboss(o,1);
     if(orange_icons)for(uint32_t i=0;i<lv_obj_get_child_count(o);i++){lv_obj_t *l=lv_obj_get_child(o,i);
@@ -24,8 +24,8 @@ void br2_depth(lv_obj_t *o,int orange_icons){
 void br2_emboss(lv_obj_t *o,int raised){
     int light=theme_variant()!=0;
     lv_obj_set_style_border_side(o,LV_BORDER_SIDE_TOP,0);lv_obj_set_style_border_width(o,1,0);
-    lv_obj_set_style_border_color(o,light?TC(ON_ACCENT):TC(TEXT_PRIMARY),0);lv_obj_set_style_border_opa(o,light?170:34,0);
-    if(raised){lv_obj_set_style_shadow_color(o,TC(FIXED_MEDIA_BLACK),0);lv_obj_set_style_shadow_width(o,8,0);lv_obj_set_style_shadow_offset_y(o,2,0);lv_obj_set_style_shadow_opa(o,light?34:90,0);}
+    lv_obj_set_style_border_color(o,light?TC(ON_ACCENT):TC(TEXT_PRIMARY),0);lv_obj_set_style_border_opa(o,light?120:26,0);
+    if(raised){lv_obj_set_style_shadow_color(o,TC(FIXED_MEDIA_BLACK),0);lv_obj_set_style_shadow_width(o,6,0);lv_obj_set_style_shadow_offset_y(o,2,0);lv_obj_set_style_shadow_opa(o,light?24:64,0);}
 }
 /* The header title steps down 22 -> 18 -> 16 px to fit beside the back knob, then clips; it refits
  * whenever a screen changes the text (album and folder names). */

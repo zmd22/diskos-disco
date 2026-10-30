@@ -170,15 +170,17 @@ static void zpiv_attach(void);
 int library_wall_active(void);
 static mp_host_t g_mp;
 static lv_obj_t *g_category_strip, *g_category_next;
-static int category_modern(void){return th_zune()||th_disco_family()||th_null();}
+static int category_modern(void){return th_zune()||th_disco_family()||th_null()||th_braun2();}
 static void category_click(lv_event_t *e){if(lv_event_get_code(e)==LV_EVENT_CLICKED)lv_async_call(zpiv_go,lv_event_get_user_data(e));}
 void library_category_nav(lv_obj_t *root,int index,lv_obj_t *original){
     static const char *const cats[]={"Songs","Albums","Artists","Genres"};
     if(category_modern()){
         int x=th_zune()?100:th_simple()?124:116;
         if(library_lift()&&g_arrow_edge>0&&g_arrow_edge<180)x=g_arrow_edge+4;   /* raised: just right of the back arrow */
-        const lv_font_t*f=th_zune()?zune_font(&font_zune_light_50):th_disco()?TF(UI_28):TF(HEADER);
-        lv_obj_t*clip=lv_obj_create(root);lv_obj_remove_style_all(clip);kit_keep(clip);lv_obj_set_pos(clip,x,32-library_lift());lv_obj_set_size(clip,360-x,lv_font_get_line_height(f)+4);lv_obj_remove_flag(clip,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
+        const lv_font_t*f=th_zune()?zune_font(&font_zune_light_50):th_disco()?TF(UI_28):th_braun2()?br_font(22,1):TF(HEADER);
+        int cy=32-library_lift();
+        if(th_braun2()){x=132;cy=50-lv_font_get_line_height(f)/2-2;}   /* Braun 2.0: on the header's own line, after the back knob */
+        lv_obj_t*clip=lv_obj_create(root);lv_obj_remove_style_all(clip);kit_keep(clip);lv_obj_set_pos(clip,x,cy);lv_obj_set_size(clip,360-x,lv_font_get_line_height(f)+4);lv_obj_remove_flag(clip,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_t*active=lv_label_create(clip);kit_keep(active);theme_title_text(active,cats[index]);lv_obj_set_style_text_font(active,f,0);lv_obj_set_style_text_color(active,TC(TEXT_PRIMARY),0);lv_obj_set_style_text_letter_space(active,th_zune()?-2:0,0);
         lv_point_t size;lv_text_get_size(&size,lv_label_get_text(active),f,th_zune()?-2:0,0,LV_COORD_MAX,LV_TEXT_FLAG_NONE);
         lv_obj_t*next=lv_label_create(clip);kit_keep(next);theme_title_text(next,cats[(index+1)%4]);lv_obj_set_style_text_font(next,f,0);lv_obj_set_style_text_color(next,TC(TEXT_PRIMARY),0);lv_obj_set_style_text_opa(next,LV_OPA_50,0);lv_obj_set_style_text_letter_space(next,th_zune()?-2:0,0);lv_obj_set_pos(next,size.x+24,0);lv_obj_add_flag(next,LV_OBJ_FLAG_CLICKABLE);

@@ -2020,7 +2020,9 @@ void kit_fork_np_braun(void){
 /* Type-first Music C uses the same transport, track popup and seek controller. */
 #define BR2_SCALE_Y 222   /* the tuning scale; the elapsed time sits under it */
 #define BR2_INFO_W (g_br2_circular ? 216 : 248)   /* the info lines' width: inside the circle, or inside the circular scale */
-#define BR2_INFO_TOP (g_br2_circular ? 80 : 40)   /* the highest the info block may climb */
+#define BR2_ART (g_br2_circular ? 70 : 80)        /* the squircle artwork above the text */
+#define BR2_ART_Y (g_br2_circular ? 64 : 36)
+#define BR2_INFO_TOP (BR2_ART_Y + BR2_ART + 8)      /* the highest the info block may climb: under the artwork */
 /* One info line: up to two wrapped lines in font f, ending in ... beyond that; returns its height (0 if empty). */
 static char g_br2_src[3][256];   /* the text last laid out (labels in "..." mode rewrite theirs) */
 const lv_anim_t *disco_scroll5(void);
@@ -2058,7 +2060,13 @@ static void br2_np_relayout_src(const char *t, const char *a, const char *al){
         }
         if(bottom - total >= BR2_INFO_TOP) break;
     }
-    if(step == 3) step = 2;
+    if(step == 3){   /* still too tall at the smallest step: album, then artist, then title to one line ("...") */
+        step = 2;
+        for(int k = 2; k >= 0 && bottom - total < BR2_INFO_TOP; k--){
+            int lh = lv_font_get_line_height(use[k]);
+            if(hh[k] > lh){ total -= hh[k] - lh; hh[k] = lh; sc[k] = 1; }   /* one line, scrolling when it is wider */
+        }
+    }
     int y = bottom - total; if(y < BR2_INFO_TOP) y = BR2_INFO_TOP;
     for(int k = 0; k < 3; k++){
         lv_label_set_long_mode(o[k], LV_LABEL_LONG_WRAP);   /* the full text back before restyling */
@@ -2160,7 +2168,20 @@ void kit_fork_np_braun2(void){
         ui_np_seek_line(NULL);
     } else { lv_obj_remove_flag(scale,LV_OBJ_FLAG_HIDDEN);lv_obj_add_flag(g_br2_cneedle,LV_OBJ_FLAG_HIDDEN);ui_np_seek_line(scale); }
     br2_np_gestures(gestures);
-    lv_obj_t *hidden[]={ring,cover,g_br_disc,backdrop,np_dots[0],np_dots[1]};
+    if(cover){   /* the artwork as a squircle tile above the text (tap: Song Info, as before) */
+        lv_obj_remove_flag(cover,LV_OBJ_FLAG_HIDDEN);lv_obj_set_size(cover,BR2_ART,BR2_ART);lv_obj_set_style_radius(cover,BR2_ART*22/100,0);
+        lv_obj_set_style_clip_corner(cover,true,0);lv_obj_align(cover,LV_ALIGN_TOP_MID,0,BR2_ART_Y);br2_emboss(cover,1);kit_keep(cover);
+        if(cover_img){lv_obj_set_size(cover_img,COVER_D,COVER_D);lv_obj_center(cover_img);lv_image_set_scale(cover_img,(uint32_t)(256*BR2_ART/COVER_D)+1);}
+        static lv_obj_t *led;   /* a tiny orange LED in the tile's upper-right corner, breathing at ~0.5 Hz */
+        if(!led){led=lv_obj_create(g_np_scr);lv_obj_remove_style_all(led);lv_obj_set_size(led,7,7);lv_obj_set_style_radius(led,LV_RADIUS_CIRCLE,0);
+            lv_obj_set_style_bg_color(led,TC(ACCENT_PRIMARY),0);lv_obj_set_style_bg_opa(led,LV_OPA_COVER,0);
+            lv_obj_set_style_shadow_color(led,TC(ACCENT_PRIMARY),0);lv_obj_set_style_shadow_width(led,10,0);lv_obj_set_style_shadow_spread(led,1,0);
+            lv_obj_clear_flag(led,LV_OBJ_FLAG_CLICKABLE);kit_keep(led);
+            lv_anim_t a;lv_anim_init(&a);lv_anim_set_var(&a,led);lv_anim_set_exec_cb(&a,br2_fx_opa);lv_anim_set_values(&a,70,255);
+            lv_anim_set_duration(&a,1000);lv_anim_set_playback_duration(&a,1000);lv_anim_set_repeat_count(&a,LV_ANIM_REPEAT_INFINITE);lv_anim_start(&a);}
+        lv_obj_align_to(led,cover,LV_ALIGN_TOP_RIGHT,-7,7);lv_obj_move_foreground(led);
+    }
+    lv_obj_t *hidden[]={ring,g_br_disc,backdrop,np_dots[0],np_dots[1]};
     for(unsigned i=0;i<sizeof hidden/sizeof *hidden;i++)if(hidden[i])lv_obj_add_flag(hidden[i],LV_OBJ_FLAG_HIDDEN);
     lv_obj_set_y(g_br_seg,276);lv_obj_set_height(g_br_seg,84);br2_emboss(g_br_seg,0);
     lv_obj_t *info[3]={title,artist,album};   /* wrapped, centred; br2_np_relayout() places them */

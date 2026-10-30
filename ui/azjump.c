@@ -17,6 +17,7 @@
 #include "config.h"
 #include "null_theme.h"
 #include "braun.h"
+#include "braun2.h"
 #include <stdlib.h>
 
 /* Letter wheel is allocated only while open. No per-song data or artwork. */
@@ -50,6 +51,7 @@ int azjump_owns_point(int x,int y){
 static int focus_x[27],focus_y[27],focus_positions_ready;
 static char wheel_glyph(char c){return th_zune()&&c>='A'&&c<='Z'?(char)(c+32):c;}
 static const lv_font_t *wheel_font(int big){
+    if(th_braun2())return big?TF(UI_36):TF(UI_22);   /* Braun 2.0: the wheel a third larger; Inter with letters at 36 */
     if(th_braun_family())return br_font(big?56:18,0);
     if(th_null())return big?TF(UI_36):TF(UI_16);
     if(th_zune()){
@@ -65,8 +67,9 @@ static void wheel_paint(azjump_t*a){
     if(!focus_positions_ready){
         for(int i=0;i<27;i++){
             float angle=(-90+i*360.0f/27)*3.14159265f/180;
-            focus_x[i]=166+(int)lroundf(134*cosf(angle));
-            focus_y[i]=166+(int)lroundf(134*sinf(angle));
+            int half=th_braun2()?18:14;   /* the letter cell's half size */
+            focus_x[i]=180-half+(int)lroundf(134*cosf(angle));
+            focus_y[i]=180-half+(int)lroundf(134*sinf(angle));
         }
         focus_positions_ready=1;
     }
@@ -227,31 +230,36 @@ static void wheel_open(azjump_t*a){
     for(int j=0;j<5;j++)wheel_arc(a->wheel,158-j,15-2*j,TC(ACCENT_PRIMARY),8+6*j,255,285);
     wheel_arc(a->wheel,112,1,TC(BORDER),60,0,360);
     a->focus=lv_obj_create(a->wheel);lv_obj_remove_style_all(a->focus);kit_keep(a->focus);
-    lv_obj_set_size(a->focus,34,34);lv_obj_set_pos(a->focus,163,29);
+    int b2=th_braun2(),cell=b2?36:28,fd=b2?44:34;
+    if(b2)br_face(a->wheel);   /* Braun 2.0: the grille behind, a shaded orange focus key */
+    lv_obj_set_size(a->focus,fd,fd);lv_obj_set_pos(a->focus,180-fd/2,46-fd/2);
     lv_obj_set_style_radius(a->focus,th_null()?3:LV_RADIUS_CIRCLE,0);
     lv_obj_set_style_bg_color(a->focus,TC(ACCENT_PRIMARY),0);lv_obj_set_style_bg_opa(a->focus,255,0);
     lv_obj_set_style_shadow_color(a->focus,TC(ACCENT_PRIMARY),0);
     lv_obj_set_style_shadow_width(a->focus,14,0);lv_obj_set_style_shadow_opa(a->focus,35,0);
     lv_obj_remove_flag(a->focus,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
+    if(b2){br2_depth(a->focus,0);lv_obj_t *ring=lv_obj_create(a->wheel);lv_obj_remove_style_all(ring);kit_keep(ring);   /* a raised panel disc under the big letter */
+        lv_obj_set_size(ring,110,110);lv_obj_set_pos(ring,125,125);lv_obj_set_style_radius(ring,LV_RADIUS_CIRCLE,0);lv_obj_set_style_bg_color(ring,TC(SURFACE_STRONG),0);lv_obj_set_style_bg_opa(ring,LV_OPA_COVER,0);
+        br2_depth(ring,0);lv_obj_remove_flag(ring,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);}
     const lv_font_t *small=wheel_font(0);
     for(int i=0;i<27;i++){
         char text[2]={wheel_glyph(wheel_letters[i]),0};
         lv_obj_t *l=wheel_text(a->wheel,text,small,TC(TEXT_SECONDARY));a->letter[i]=l;
-        lv_obj_set_size(l,28,28);lv_obj_set_style_text_align(l,LV_TEXT_ALIGN_CENTER,0);
-        lv_obj_set_style_pad_top(l,(28-lv_font_get_line_height(small))/2,0);
+        lv_obj_set_size(l,cell,cell);lv_obj_set_style_text_align(l,LV_TEXT_ALIGN_CENTER,0);
+        lv_obj_set_style_pad_top(l,(cell-lv_font_get_line_height(small))/2,0);
     }
     /* Keep a generous, transparent centre tap target. No heading above the letter. */
     lv_obj_t *hub=lv_button_create(a->wheel);lv_obj_remove_style_all(hub);kit_keep(hub);
-    lv_obj_set_size(hub,96,96);lv_obj_set_pos(hub,132,126);
+    lv_obj_set_size(hub,b2?124:96,b2?124:96);lv_obj_set_pos(hub,b2?118:132,b2?118:126);
     lv_obj_remove_flag(hub,LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_event_cb(hub,wheel_commit,LV_EVENT_SHORT_CLICKED,a);lv_obj_add_flag(hub,LV_OBJ_FLAG_EVENT_BUBBLE);
     a->selected=wheel_text(hub,"",wheel_font(1),TC(TEXT_PRIMARY));
     lv_obj_t *hint=wheel_text(a->wheel,th_zune()?"tap to jump":"TAP TO JUMP",TF(UI_12),TC(ACCENT_PRIMARY));
     lv_obj_set_size(hint,170,lv_font_get_line_height(TF(UI_12))+4);
     lv_obj_set_style_text_align(hint,LV_TEXT_ALIGN_CENTER,0);
-    lv_obj_set_pos(hint,95,234-(lv_font_get_line_height(TF(UI_12))+4)/2);
+    lv_obj_set_pos(hint,95,(b2?254:234)-(lv_font_get_line_height(TF(UI_12))+4)/2);
     lv_obj_t *line=lv_obj_create(a->wheel);lv_obj_remove_style_all(line);kit_keep(line);
-    lv_obj_set_size(line,32,2);lv_obj_set_pos(line,164,260);lv_obj_set_style_radius(line,1,0);
+    lv_obj_set_size(line,32,2);lv_obj_set_pos(line,164,b2?274:260);lv_obj_set_style_radius(line,1,0);
     lv_obj_set_style_bg_color(line,TC(ACCENT_PRIMARY),0);lv_obj_set_style_bg_opa(line,100,0);
     lv_obj_remove_flag(line,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
     a->activity=lv_tick_get();a->tracking=0;active_wheel=a;wheel_paint(a);
