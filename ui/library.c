@@ -285,7 +285,7 @@ static void pos_header(int pill_on){
     }
 }
 static void position_tick(void){
-    if(g_restoring || !g_position || g_count < 12 || th_zune()) return;
+    if(g_restoring || !g_position || g_count < 12 || th_zune() || th_braun2()) return;   /* Braun 2.0: no "12 / 340" readout while scrolling */
     int idx=(lv_obj_get_scroll_y(g_list)-g_hdr_extra_px)/(ROW_H+4)-g_has_header;
     if(library_wall_active())idx*=3;
     if(idx<0)idx=0; if(idx>=g_count)idx=g_count-1;
