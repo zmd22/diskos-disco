@@ -2096,6 +2096,7 @@ static int g_br2_gz_px,g_br2_gz_py;static uint32_t g_br2_gz_t0,g_br2_gz_last;
 static void br2_fx_opa(void *o,int32_t v){lv_obj_set_style_opa(o,(lv_opa_t)v,0);}
 static void br2_led_opa(void *o,int32_t v){   /* only redraws while Music is on a lit screen; otherwise the timer just ticks */
     if(screen_current()!=SCR_NOWPLAYING||ui_display_is_off())return;
+    if(!ui_is_playing())v=255;   /* paused: a steady light */
     lv_opa_t q=(lv_opa_t)(v&~7);if(lv_obj_get_style_opa(o,0)!=q)lv_obj_set_style_opa(o,q,0);   /* 8-step quantised: ~48 redraws per breath, not one per frame */
 }
 static void br2_gz_flash(const char *glyph){
@@ -2184,10 +2185,9 @@ void kit_fork_np_braun2(void){
     br2_np_gestures(gestures);
     if(cover){   /* the artwork as a squircle tile above the text (tap: Song Info, as before) */
         lv_obj_remove_flag(cover,LV_OBJ_FLAG_HIDDEN);lv_obj_set_style_clip_corner(cover,true,0);br2_emboss(cover,1);kit_keep(cover);   /* sized by br2_art_place() */
-        static lv_obj_t *led;   /* a tiny orange LED in the tile's upper-right corner, breathing at ~0.5 Hz */
+        static lv_obj_t *led;   /* a tiny orange LED in the tile's upper-right corner: breathing at ~0.5 Hz while playing, steady when paused; no glow */
         if(!led){led=lv_obj_create(g_np_scr);lv_obj_remove_style_all(led);lv_obj_set_size(led,7,7);lv_obj_set_style_radius(led,LV_RADIUS_CIRCLE,0);
             lv_obj_set_style_bg_color(led,TC(ACCENT_PRIMARY),0);lv_obj_set_style_bg_opa(led,LV_OPA_COVER,0);
-            lv_obj_set_style_shadow_color(led,TC(ACCENT_PRIMARY),0);lv_obj_set_style_shadow_width(led,10,0);lv_obj_set_style_shadow_spread(led,1,0);
             lv_obj_clear_flag(led,LV_OBJ_FLAG_CLICKABLE);kit_keep(led);
             g_br2_led=led;lv_anim_t a;lv_anim_init(&a);lv_anim_set_var(&a,led);lv_anim_set_exec_cb(&a,br2_led_opa);lv_anim_set_values(&a,70,255);
             lv_anim_set_duration(&a,1000);lv_anim_set_playback_duration(&a,1000);lv_anim_set_repeat_count(&a,LV_ANIM_REPEAT_INFINITE);lv_anim_start(&a);}
