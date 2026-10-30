@@ -258,6 +258,11 @@ void ui_seek_preview(long position,long duration,int on){
     lv_text_get_size(&whole_size,total,TF(UI_14),0,0,LV_COORD_MAX,0);
     lv_obj_set_size(seek_preview,fsart_on?(size.x>whole_size.x?size.x:whole_size.x)+20:232,fsart_on?size.y+whole_size.y+18:92);
     lv_obj_center(seek_preview);
+    if(th_braun2()){   /* Braun 2.0: a raised panel tile, Inter time with its real colon */
+        lv_obj_set_style_text_font(seek_preview_time,br_font(44,1),0);lv_obj_set_style_text_font(seek_preview_total,br_font(14,0),0);
+        lv_obj_set_style_radius(seek_preview,26,0);lv_obj_set_style_bg_color(seek_preview,TC(SURFACE_STRONG),0);lv_obj_set_style_bg_opa(seek_preview,LV_OPA_COVER,0);
+        br2_emboss(seek_preview,1);lv_obj_set_size(seek_preview,196,96);lv_obj_center(seek_preview);
+    }
     lv_obj_align(seek_preview_time,LV_ALIGN_TOP_MID,0,6);lv_obj_align(seek_preview_total,LV_ALIGN_BOTTOM_MID,0,-6);
     lv_obj_remove_flag(seek_preview,LV_OBJ_FLAG_HIDDEN);lv_obj_move_foreground(seek_preview);
 }
@@ -275,11 +280,15 @@ int ui_seek_preview_active(void){return seek_preview&&!lv_obj_has_flag(seek_prev
 static int g_ring_cx = 180, g_ring_cy = 180, g_ring_r = ARC_D / 2;   /* Ring style: around the cover */
 static int g_tol_grab = 34, g_tol_wander = 48;                       /* band half-widths (px) */
 
-static lv_obj_t *g_seek_bar,*g_br2_ticks[41];
-static int g_br2_tick_progress=-1;
+static lv_obj_t *g_seek_bar,*g_br2_ticks[41],*g_br2_cneedle;   /* Braun 2.0: the active scale's ticks; the circular needle */
+static lv_point_precise_t g_br2_cneedle_pts[2];
+static int g_br2_tick_progress=-1,g_br2_circular;
 static int g_np_backdrop_on = 1, g_pp_filled;
 static void seek_show(int32_t v){
     if(th_braun2()&&g_br2_ticks[0]){int k=v*40/1000;if(k!=g_br2_tick_progress){for(int i=0;i<=40;i++)lv_obj_set_style_line_color(g_br2_ticks[i],i<=k?TC(TEXT_PRIMARY):TC(TEXT_DISABLED),0);g_br2_tick_progress=k;}}
+    if(th_braun2()&&g_br2_circular&&g_br2_cneedle){float a=(135+270*v/1000.0f)*0.0174533f;   /* lower-left -> over the top -> lower-right */
+        g_br2_cneedle_pts[0]=(lv_point_precise_t){180+146*cosf(a),180+146*sinf(a)};g_br2_cneedle_pts[1]=(lv_point_precise_t){180+174*cosf(a),180+174*sinf(a)};
+        lv_line_set_points(g_br2_cneedle,g_br2_cneedle_pts,2);}
     if(ring) lv_arc_set_value(ring, v);
     if(g_seek_bar){
         if(lv_obj_check_type(g_seek_bar, &lv_slider_class)) lv_slider_set_value(g_seek_bar, v, LV_ANIM_OFF);
@@ -339,6 +348,7 @@ int ui_np_seek_press(int x, int y){
     if(ui_volume_overlay_visible()) return 0;       /* the volume dial owns the rim */
     if(y < 40 && !(th_zune() && zune_near_knob(x, y))) return 0;   /* top drawer zone (Zune: unless the press is on the dot) */
     if(g_track_dur <= 0) return 0;                /* nothing to seek */
+    if(th_braun2() && g_br2_circular && x < 64) return 0;   /* Braun 2.0 circular: the left edge belongs to the back swipe */
     if(!seek_on_band(x, y, g_tol_grab)) return 0;  /* not on the ring (grab band) */
     if(!g_seek_bar && seek_rel_angle(x, y) > g_arc_sweep) return 0;/* in the bottom gap (transport buttons), not the arc */
     g_seek_sx = x; g_seek_sy = y; g_seek_cand = 1;
@@ -350,7 +360,7 @@ int ui_np_seek_move(int x, int y){
     int dx = x - g_seek_sx, dy = y - g_seek_sy;
     int adx = dx<0?-dx:dx, ady = dy<0?-dy:dy;
     if(!seek_on_band(x, y, g_tol_wander)){         /* wandered off the ring -> a nav swipe */
-        if(g_seek_on){ g_seek_on = 0; g_scrubbing = 0; seek_show(shown_progress); }
+        if(g_seek_on){ g_seek_on = 0; g_scrubbing = 0; seek_show(shown_progress); if(th_braun2()) ui_seek_preview(0, 0, 0); }
         g_seek_cand = 0; return 0;
     }
     if(!g_seek_on){
@@ -380,6 +390,7 @@ int ui_np_seek_move(int x, int y){
             char b[12]; mmss(rel, b, sizeof b); set_label_text_changed(t_elapsed, b);
             char r[12]; mmss(span - rel, r, sizeof r);
             char rr[14]; snprintf(rr, sizeof rr, "-%s", r); set_label_text_changed(t_remain, rr);
+            if(th_braun2()) ui_seek_preview(rel, span, 1);   /* scrubbing: the big time, as the other themes */
         }
     }
     return 1;
@@ -388,6 +399,7 @@ int ui_np_seek_move(int x, int y){
 int ui_np_seek_release(int x, int y){
     (void)x; (void)y;
     int consumed = 0;
+    if(th_braun2()) ui_seek_preview(0, 0, 0);
     /* If the track changed while the finger was down, the drag was computed against the OLD track's
      * window - applying it to the NEW track would scramble its position and cancel its resume. Compare
      * against a FRESH player-state read (g_np_curpath is only a per-tick UI snapshot and can lag the
@@ -2006,9 +2018,10 @@ void kit_fork_np_braun(void){
 }
 /* Type-first Music C uses the same transport, track popup and seek controller. */
 #define BR2_SCALE_Y 222   /* the tuning scale; the elapsed time sits under it */
-#define BR2_INFO_W 248    /* the info lines' width, inside the circle up to y 40 */
-#define BR2_INFO_TOP 40   /* the highest the info block may climb */
+#define BR2_INFO_W (g_br2_circular ? 216 : 248)   /* the info lines' width: inside the circle, or inside the circular scale */
+#define BR2_INFO_TOP (g_br2_circular ? 80 : 40)   /* the highest the info block may climb */
 /* One info line: up to two wrapped lines in font f, ending in ... beyond that; returns its height (0 if empty). */
+static uint32_t g_br2_info_hash;
 static int br2_line_h(lv_obj_t *l, const lv_font_t *f){
     const char *t = lv_label_get_text(l); if(!t || !t[0]) return 0;
     lv_point_t sz; lv_text_get_size(&sz, t, f, 0, 0, BR2_INFO_W, LV_TEXT_FLAG_NONE);
@@ -2019,15 +2032,17 @@ static int br2_line_h(lv_obj_t *l, const lv_font_t *f){
  * the block climbs as it needs, and only if it would pass BR2_INFO_TOP do the fonts step down. Never overlaps. */
 static void br2_np_relayout(void){
     if(!th_braun2() || !title || !artist || !album) return;
-    static uint32_t last; uint32_t h = 2166136261u;
+    uint32_t h = 2166136261u ^ (uint32_t)g_br2_circular;
     lv_obj_t *o[3] = { title, artist, album };
+    for(int k = 0; k < 3; k++) lv_label_set_long_mode(o[k], LV_LABEL_LONG_WRAP);   /* "..." is written into the text: restore it to measure */
     for(int k = 0; k < 3; k++) for(const char *c = lv_label_get_text(o[k]); c && *c; c++) h = (h ^ (uint8_t)*c) * 16777619u;
-    if(h == last) return; last = h;
+    if(h == g_br2_info_hash){ for(int k = 0; k < 3; k++) lv_label_set_long_mode(o[k], LV_LABEL_LONG_DOT); return; }
+    g_br2_info_hash = h;
     const lv_font_t *F[3][3] = { { TF(MUSIC_TITLE), br_font(24, 1), br_font(22, 1) },
                                  { br_font(20, 0),  br_font(16, 0), br_font(16, 0) },
                                  { br_font(14, 0),  br_font(14, 0), br_font(12, 0) } };
     const int gap[3] = { 0, 4, 4 };
-    int hh[3] = { 0 }, step = 0, total = 0, bottom = BR2_SCALE_Y - 16;
+    int hh[3] = { 0 }, step = 0, total = 0, bottom = g_br2_circular ? BR2_SCALE_Y + 4 : BR2_SCALE_Y - 16;   /* circular: no straight scale above the time */
     for(; step < 3; step++){
         total = 0;
         for(int k = 0; k < 3; k++){ hh[k] = br2_line_h(o[k], F[k][step]); if(hh[k]) total += hh[k] + (total ? gap[k] : 0); }
@@ -2040,12 +2055,62 @@ static void br2_np_relayout(void){
         if(!hh[k]){ lv_obj_set_height(o[k], 0); continue; }
         lv_obj_set_size(o[k], BR2_INFO_W, hh[k]); lv_obj_align(o[k], LV_ALIGN_TOP_MID, 0, y); y += hh[k] + (k < 2 ? gap[k + 1] : 0);
     }
+    for(int k = 0; k < 3; k++) lv_label_set_long_mode(o[k], LV_LABEL_LONG_DOT);
     if(np_mid_btn){ lv_obj_set_size(np_mid_btn, BR2_INFO_W, (hh[0] + hh[1] + 4) > 44 ? hh[0] + hh[1] + 4 : 44); lv_obj_align_to(np_mid_btn, title, LV_ALIGN_TOP_MID, 0, 0); }
 }
+/* Braun 2.0 Music, Controls = Gestures: the lower panel is a touch zone instead of the buttons - double tap play/pause,
+ * swipe right next, left previous - with faint hints and a glyph that flashes for what was done (as Disco's). */
+static lv_obj_t *g_br2_gz,*g_br2_gz_hint[3],*g_br2_gz_fx,*g_br2_gz_dot[2];
+static int g_br2_gz_px,g_br2_gz_py;static uint32_t g_br2_gz_t0,g_br2_gz_last;
+static void br2_fx_opa(void *o,int32_t v){lv_obj_set_style_opa(o,(lv_opa_t)v,0);}
+static void br2_gz_flash(const char *glyph){
+    if(!g_br2_gz_fx)return;lv_label_set_text(g_br2_gz_fx,glyph);lv_obj_remove_flag(g_br2_gz_fx,LV_OBJ_FLAG_HIDDEN);lv_anim_delete(g_br2_gz_fx,br2_fx_opa);
+    lv_anim_t a;lv_anim_init(&a);lv_anim_set_var(&a,g_br2_gz_fx);lv_anim_set_exec_cb(&a,br2_fx_opa);lv_anim_set_values(&a,255,0);lv_anim_set_delay(&a,250);lv_anim_set_duration(&a,450);lv_anim_start(&a);
+}
+static void br2_gz_cb(lv_event_t *e){
+    lv_event_code_t c=lv_event_get_code(e);lv_indev_t *in=lv_indev_active();lv_point_t p={0,0};if(in)lv_indev_get_point(in,&p);
+    if(c==LV_EVENT_PRESSED){g_br2_gz_px=p.x;g_br2_gz_py=p.y;g_br2_gz_t0=lv_tick_get();return;}
+    if(c!=LV_EVENT_RELEASED)return;
+    int dx=p.x-g_br2_gz_px,dy=p.y-g_br2_gz_py,adx=dx<0?-dx:dx,ady=dy<0?-dy:dy;uint32_t now=lv_tick_get();
+    if(adx>=40&&adx>2*ady&&now-g_br2_gz_t0<700){g_br2_gz_last=0;   /* a swipe: right = next, left = previous */
+        if(dx>0){ui_transport_command("0201000C0001");br2_gz_flash(LV_SYMBOL_NEXT);}else{ui_transport_command("0201000C0002");br2_gz_flash(LV_SYMBOL_PREV);}return;}
+    if(adx>18||ady>18||now-g_br2_gz_t0>400)return;   /* not a tap */
+    if(g_br2_gz_last&&now-g_br2_gz_last<400){g_br2_gz_last=0;br2_gz_flash(ui_is_playing()?LV_SYMBOL_PAUSE:LV_SYMBOL_PLAY);ui_transport_command("0201000C0000");}
+    else g_br2_gz_last=now;
+}
+/* main.c asks at the press: is this the gesture zone's? (its swipes are skips, not back / hub) */
+int ui_np_gz_owns(int x,int y){
+    if(!g_br2_gz||!th_braun2()||screen_current()!=SCR_NOWPLAYING||lv_obj_has_flag(g_br2_gz,LV_OBJ_FLAG_HIDDEN))return 0;
+    lv_area_t a;lv_obj_get_coords(g_br2_gz,&a);return x>=a.x1&&x<=a.x2&&y>=a.y1&&y<=a.y2;
+}
+static void br2_np_gestures(int on){
+    if(on&&!g_br2_gz){
+        g_br2_gz=lv_obj_create(g_np_scr);lv_obj_remove_style_all(g_br2_gz);lv_obj_set_pos(g_br2_gz,64,278);lv_obj_set_size(g_br2_gz,232,76);
+        lv_obj_add_flag(g_br2_gz,LV_OBJ_FLAG_CLICKABLE);lv_obj_clear_flag(g_br2_gz,LV_OBJ_FLAG_SCROLLABLE|LV_OBJ_FLAG_GESTURE_BUBBLE);
+        lv_obj_add_event_cb(g_br2_gz,br2_gz_cb,LV_EVENT_ALL,NULL);kit_keep(g_br2_gz);
+        static const char *const H[3]={LV_SYMBOL_LEFT "  " LV_SYMBOL_PREV,LV_SYMBOL_PAUSE,LV_SYMBOL_NEXT "  " LV_SYMBOL_RIGHT};
+        static const int HX[3]={104,180,256},HY[3]={306,302,306};
+        for(int k=0;k<3;k++){lv_obj_t *l=g_br2_gz_hint[k]=lv_label_create(g_np_scr);lv_label_set_text(l,H[k]);
+            lv_obj_set_style_text_font(l,theme_font_original(16),0);lv_obj_set_style_text_color(l,TC(TEXT_SECONDARY),0);lv_obj_set_style_text_opa(l,150,0);
+            lv_obj_update_layout(l);lv_obj_set_pos(l,HX[k]-lv_obj_get_width(l)/2,HY[k]-lv_obj_get_height(l)/2);lv_obj_clear_flag(l,LV_OBJ_FLAG_CLICKABLE);kit_keep(l);}
+        for(int k=0;k<2;k++){lv_obj_t *d=lv_obj_create(g_np_scr);lv_obj_remove_style_all(d);lv_obj_set_size(d,5,5);lv_obj_set_pos(d,172+k*11,316);   /* two dots: tap twice */
+            lv_obj_set_style_radius(d,LV_RADIUS_CIRCLE,0);lv_obj_set_style_bg_color(d,TC(TEXT_SECONDARY),0);lv_obj_set_style_bg_opa(d,150,0);lv_obj_clear_flag(d,LV_OBJ_FLAG_CLICKABLE);kit_keep(d);g_br2_gz_dot[k]=d;}
+        g_br2_gz_fx=lv_label_create(g_np_scr);lv_obj_set_style_text_font(g_br2_gz_fx,theme_font_original(28),0);lv_obj_set_style_text_color(g_br2_gz_fx,TC(ACCENT_PRIMARY),0);
+        lv_obj_set_width(g_br2_gz_fx,80);lv_obj_set_style_text_align(g_br2_gz_fx,LV_TEXT_ALIGN_CENTER,0);lv_obj_set_pos(g_br2_gz_fx,140,330);
+        lv_obj_clear_flag(g_br2_gz_fx,LV_OBJ_FLAG_CLICKABLE);kit_keep(g_br2_gz_fx);lv_obj_add_flag(g_br2_gz_fx,LV_OBJ_FLAG_HIDDEN);
+    }
+    if(g_br2_gz){lv_obj_t *o[6]={g_br2_gz,g_br2_gz_hint[0],g_br2_gz_hint[1],g_br2_gz_hint[2],g_br2_gz_dot[0],g_br2_gz_dot[1]};
+        for(int i=0;i<6;i++){if(on)lv_obj_remove_flag(o[i],LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(o[i],LV_OBJ_FLAG_HIDDEN);}}
+    lv_obj_t *t[3]={btn_prev,btn_pp,btn_next};
+    for(int i=0;i<3;i++)if(t[i]){if(on)lv_obj_add_flag(t[i],LV_OBJ_FLAG_HIDDEN);else lv_obj_remove_flag(t[i],LV_OBJ_FLAG_HIDDEN);}
+}
+void ui_braun2_np_apply(void){ if(!th_braun2()||!g_np_scr)return; g_br2_info_hash=0; kit_fork_np_braun2(); }   /* Settings changed a Music option */
 void kit_fork_np_braun2(void){
     if(!th_braun2() || !g_np_scr)return;
     kit_fork_np_braun();
-    static lv_obj_t *scale;
+    static lv_obj_t *scale,*lin[41],*circ[41];
+    g_br2_circular=simple_cfg_get_int("braun2_progress",0)==1;
+    int gestures=simple_cfg_get_int("braun2_controls",0)==1;
     if(!scale){
         scale=lv_slider_create(g_np_scr);lv_obj_remove_style_all(scale);
         lv_obj_set_pos(scale,66,BR2_SCALE_Y-3);lv_obj_set_size(scale,228,6);
@@ -2059,10 +2124,29 @@ void kit_fork_np_braun2(void){
         static lv_point_precise_t pts[41][2];
         for(int i=0;i<=40;i++){
             int h=i%5?11:20;pts[i][0]=(lv_point_precise_t){66+i*228/40,BR2_SCALE_Y-h/2};pts[i][1]=(lv_point_precise_t){66+i*228/40,BR2_SCALE_Y+h/2};
-            lv_obj_t *l=lv_line_create(g_np_scr);g_br2_ticks[i]=l;lv_line_set_points(l,pts[i],2);lv_obj_set_style_line_color(l,TC(TEXT_SECONDARY),0);lv_obj_set_style_line_width(l,i%5?2:3,0);kit_keep(l);
+            lv_obj_t *l=lv_line_create(g_np_scr);lin[i]=l;lv_line_set_points(l,pts[i],2);lv_obj_set_style_line_color(l,TC(TEXT_SECONDARY),0);lv_obj_set_style_line_width(l,i%5?2:3,0);kit_keep(l);
         }
-        lv_obj_move_to_index(scale,-1);kit_keep(scale);ui_np_seek_line(scale);
+        static lv_point_precise_t cp[41][2];   /* the circular scale: the same 41 ticks along the rim, 135 deg -> 45 deg clockwise */
+        for(int i=0;i<=40;i++){
+            float a=(135+i*270/40.0f)*0.0174533f;int r0=i%5?162:154;
+            cp[i][0]=(lv_point_precise_t){180+r0*cosf(a),180+r0*sinf(a)};cp[i][1]=(lv_point_precise_t){180+172*cosf(a),180+172*sinf(a)};
+            lv_obj_t *l=lv_line_create(g_np_scr);circ[i]=l;lv_line_set_points(l,cp[i],2);lv_obj_set_style_line_color(l,TC(TEXT_SECONDARY),0);lv_obj_set_style_line_width(l,i%5?2:3,0);lv_obj_set_style_line_rounded(l,true,0);kit_keep(l);
+        }
+        g_br2_cneedle=lv_line_create(g_np_scr);lv_obj_set_style_line_color(g_br2_cneedle,TC(ACCENT_PRIMARY),0);lv_obj_set_style_line_width(g_br2_cneedle,6,0);lv_obj_set_style_line_rounded(g_br2_cneedle,true,0);kit_keep(g_br2_cneedle);
+        lv_obj_move_to_index(scale,-1);kit_keep(scale);
     }
+    for(int i=0;i<=40;i++){   /* show the chosen scale; the seek recognizer follows it */
+        if(g_br2_circular){lv_obj_add_flag(lin[i],LV_OBJ_FLAG_HIDDEN);lv_obj_remove_flag(circ[i],LV_OBJ_FLAG_HIDDEN);g_br2_ticks[i]=circ[i];}
+        else{lv_obj_add_flag(circ[i],LV_OBJ_FLAG_HIDDEN);lv_obj_remove_flag(lin[i],LV_OBJ_FLAG_HIDDEN);g_br2_ticks[i]=lin[i];}
+    }
+    g_br2_tick_progress=-1;
+    if(g_br2_circular){
+        lv_obj_add_flag(scale,LV_OBJ_FLAG_HIDDEN);lv_obj_remove_flag(g_br2_cneedle,LV_OBJ_FLAG_HIDDEN);
+        g_ring_cx=180;g_ring_cy=180;g_ring_r=164;g_tol_grab=22;g_tol_wander=40;g_arc_rot=135;g_arc_sweep=270;g_arc_rev=0;
+        if(ring)lv_arc_set_range(ring,0,1000);
+        ui_np_seek_line(NULL);
+    } else { lv_obj_remove_flag(scale,LV_OBJ_FLAG_HIDDEN);lv_obj_add_flag(g_br2_cneedle,LV_OBJ_FLAG_HIDDEN);ui_np_seek_line(scale); }
+    br2_np_gestures(gestures);
     lv_obj_t *hidden[]={ring,cover,g_br_disc,backdrop,np_dots[0],np_dots[1]};
     for(unsigned i=0;i<sizeof hidden/sizeof *hidden;i++)if(hidden[i])lv_obj_add_flag(hidden[i],LV_OBJ_FLAG_HIDDEN);
     lv_obj_set_y(g_br_seg,276);lv_obj_set_height(g_br_seg,84);br2_emboss(g_br_seg,0);

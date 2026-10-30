@@ -3796,7 +3796,8 @@ int main(int argc, char **argv){
                         /* On Now Playing a nav swipe must be a LONG, STRAIGHT,
                          * horizontal slide (so it's not confused with a seek drag
                          * along the ring): right = hub, left = back. */
-                        if(adx >= NP_NAV_DIST && adx > ady*NP_NAV_STRAIGHT && dt<900){
+                        int ui_np_gz_owns(int x, int y);   /* Braun 2.0's gesture zone: its swipes skip tracks */
+                        if(adx >= NP_NAV_DIST && adx > ady*NP_NAV_STRAIGHT && dt<900 && !ui_np_gz_owns(sx, sy)){
                             if(dx < 0) screen_show(SCR_NPHUB);
                             else       screen_back();
                         }

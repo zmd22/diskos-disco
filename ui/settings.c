@@ -431,6 +431,10 @@ static const char *OPT_DHOLD[] = { "Immersive", "Favourite", "Nothing" };
 static const char *OPT_DCTRL[] = { "Buttons", "Auto-hide", "Gestures" };
 void dhome_controls_apply(void);
 static void apply_disco_controls(int v){ (void)v; dhome_controls_apply(); }
+static const char *OPT_B2CTRL[] = { "Buttons", "Gestures" };
+static const char *OPT_B2PROG[] = { "Linear", "Circular" };
+void ui_braun2_np_apply(void);
+static void apply_braun2_np(int v){ (void)v; ui_braun2_np_apply(); }   /* Braun 2.0 Music: rebuilt live */
 void dhome_title_apply(void);
 static void apply_disco_title(int v){ (void)v; dhome_title_apply(); }
 static void apply_disco_hold(int v){ (void)v; }
@@ -940,6 +944,10 @@ static const setting_t TABLE[] = {
       "Where the title and artist sit on Music: centred, or from the left.", NULL },
     { "Music Screen", "Title Hold", ST_CYCLER, "disco_title_hold", 0,0,0, OPT_DHOLD, 3, NULL, apply_disco_hold, 0,
       "Hold the title for Immersive, favourite/unfavourite, or nothing. Tap still opens track actions.", NULL },
+    { "Music Screen", "Controls", ST_CYCLER, "braun2_controls", 0,0,0, OPT_B2CTRL, 2, NULL, apply_braun2_np, 0,
+      "Buttons, or Gestures at the bottom: double-tap play/pause; swipe right next, left previous.", NULL },
+    { "Music Screen", "Progress", ST_CYCLER, "braun2_progress", 0,0,0, OPT_B2PROG, 2, NULL, apply_braun2_np, 0,
+      "A straight tuning scale, or a circular one along the rim from lower left to lower right. Drag either to scrub.", NULL },
     { "Music Screen", "Controls", ST_CYCLER, "disco_controls", 0,0,0, OPT_DCTRL, 3, NULL, apply_disco_controls, 0,
       "Buttons, Auto-fade after 5 s (tap to reveal), or Gestures: double-tap play/pause; swipe right next, left previous.", NULL },
     { "Disco Colours", "Rim Sheen", ST_TOGGLE, "disco_sheen", 0,1,1, NULL,0, NULL, apply_disco_sheen, 1,

@@ -15,6 +15,8 @@ static const display_entry_t DISPLAY_ENTRIES[]={
     {"simple_background",NULL,"Music screen","Background"},
     {"null_music_background",NULL,"Music screen","Background"},
     {"disco_controls",NULL,"Music screen","Controls"},
+    {"braun2_controls",NULL,"Music screen","Controls"},
+    {"braun2_progress",NULL,"Music screen","Progress"},
     {"null_controls",NULL,"Music screen","Controls"},
     {"np_style",NULL,"Music screen","Now Playing style"},
     {"np_font",NULL,"Music text","Track font"},
@@ -98,6 +100,7 @@ static const display_entry_t *display_entry(const setting_t *s){
 static int display_variant_hidden(const setting_t *s){
     if(th_braun2()&&s->cfg_key&&(!strcmp(s->cfg_key,"np_style")||!strcmp(s->cfg_key,"disco_qs_style")))return 1;
     if(th_braun2()&&s->apply==apply_open_colorpick)return 1;   /* Braun 2.0: a fixed orange accent, so no picker */
+    if(s->cfg_key&&!strncmp(s->cfg_key,"braun2_",7)&&!th_braun2())return 1;   /* Braun 2.0 Music options, only there */
     if(s->cfg_key&&th_zune()&&!strcmp(s->cfg_key,"saver_style"))return 1;
     if(s->apply==apply_grp_zune&&!th_zune())return 1;
     if(s->cfg_key&&th_zune()&&!strcmp(s->cfg_key,"np_style"))return 1;
