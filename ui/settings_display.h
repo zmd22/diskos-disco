@@ -16,7 +16,7 @@ static const display_entry_t DISPLAY_ENTRIES[]={
     {"null_music_background",NULL,"Music screen","Background"},
     {"disco_controls",NULL,"Music screen","Controls"},
     {"braun2_controls",NULL,"Music screen","Controls"},
-    {"braun2_progress",NULL,"Music screen","Progress"},
+    {"braun2_layout",NULL,"Music screen","Layout"},
     {"null_controls",NULL,"Music screen","Controls"},
     {"np_style",NULL,"Music screen","Now Playing style"},
     {"np_font",NULL,"Music text","Track font"},

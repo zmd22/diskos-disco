@@ -2046,6 +2046,48 @@ static int br2_text_h(const char *t, const lv_font_t *f, int *scroll){
 /* Braun 2.0 Music info: title, artist, album stacked upward from the scale. Lines wrap to two; text that still does
  * not fit scrolls on one line five times after a song change, then rests. The block climbs as it needs, and the fonts
  * step down only if it would pass BR2_INFO_TOP. Runs only when the text (or the scale) changes. */
+/* Layout "Art left": the artwork at the 40 px safe edge, the text left-aligned beside it, both resting on the straight
+ * scale and kept below y 76, where the upper-left corner would leave the circle. Lines wrap (title three, artist and
+ * album two); longer text scrolls on one line; fonts step down before anything is dropped to one line. */
+static void br2_left_layout(const char *src[3], lv_obj_t *o[3]){
+    const int AX = 40, TOP = 76, BOT = BR2_SCALE_Y - 16, gap = 4, maxl[3] = { 3, 2, 2 };
+    int A = 110; if(A > BOT - TOP) A = BOT - TOP;
+    int tx = AX + A + 12, tw = 320 - tx;
+    const lv_font_t *F[3][3] = { { br_font(24, 1), br_font(22, 1), br_font(18, 1) },
+                                 { br_font(20, 0), br_font(16, 0), br_font(16, 0) },
+                                 { br_font(16, 0), br_font(14, 0), br_font(14, 0) } };
+    int hh[3] = { 0 }, sc[3] = { 0 }, total = 0, step = 0; const lv_font_t *use[3];
+    for(; step < 3; step++){
+        total = 0;
+        for(int k = 0; k < 3; k++){
+            hh[k] = 0; sc[k] = 0; use[k] = F[k][step]; if(!src[k] || !src[k][0]) continue;
+            for(int st = step; st < 3; st++){   /* wrap at this size or a smaller one before scrolling */
+                lv_point_t sz; lv_text_get_size(&sz, src[k], F[k][st], 0, 0, tw, LV_TEXT_FLAG_NONE);
+                int lh = lv_font_get_line_height(F[k][st]), n = (sz.y + lh - 1) / lh; if(n < 1) n = 1;
+                if(n <= maxl[k]){ use[k] = F[k][st]; hh[k] = n * lh; sc[k] = 0; break; }
+                if(st == step){ use[k] = F[k][step]; hh[k] = lh; sc[k] = 1; }   /* none fits: one scrolling line at this size */
+            }
+            total += hh[k] + (total ? gap : 0);
+        }
+        if(total <= BOT - TOP) break;
+    }
+    if(step == 3){ step = 2; for(int k = 2; k >= 0 && total > BOT - TOP; k--){ int lh = lv_font_get_line_height(use[k]); if(hh[k] > lh){ total -= hh[k] - lh; hh[k] = lh; sc[k] = 1; } } }
+    int y = BOT - total; if(y < TOP) y = TOP;
+    for(int k = 0; k < 3; k++){
+        lv_label_set_long_mode(o[k], LV_LABEL_LONG_WRAP); lv_obj_set_style_text_font(o[k], use[k], 0);
+        lv_obj_set_style_text_align(o[k], LV_TEXT_ALIGN_LEFT, 0);
+        if(!hh[k]){ lv_obj_set_height(o[k], 0); continue; }
+        lv_obj_set_size(o[k], tw, hh[k]); lv_obj_set_align(o[k], LV_ALIGN_TOP_LEFT); lv_obj_set_pos(o[k], tx, y); y += hh[k] + gap;
+        if(sc[k]){ lv_obj_set_style_anim(o[k], disco_scroll5(), 0); lv_label_set_long_mode(o[k], LV_LABEL_LONG_SCROLL_CIRCULAR); }
+        else lv_label_set_long_mode(o[k], LV_LABEL_LONG_DOT);
+    }
+    if(cover){
+        lv_obj_set_size(cover, A, A); lv_obj_set_style_radius(cover, A * 22 / 100, 0); lv_obj_set_align(cover, LV_ALIGN_TOP_LEFT); lv_obj_set_pos(cover, AX, BOT - A);
+        if(cover_img){ lv_obj_set_size(cover_img, COVER_D, COVER_D); lv_obj_center(cover_img); lv_image_set_scale(cover_img, (uint32_t)(256 * A / COVER_D) + 1); }
+        if(g_br2_led){ lv_obj_align_to(g_br2_led, cover, LV_ALIGN_TOP_RIGHT, -7, 7); lv_obj_move_foreground(g_br2_led); }
+    }
+    if(np_mid_btn){ int h = hh[0] + hh[1] + gap; lv_obj_set_size(np_mid_btn, tw, h > 44 ? h : 44); lv_obj_align_to(np_mid_btn, title, LV_ALIGN_TOP_LEFT, 0, 0); }
+}
 static void br2_np_relayout_src(const char *t, const char *a, const char *al){
     if(!th_braun2() || !title || !artist || !album) return;
     lv_obj_t *o[3] = { title, artist, album };
@@ -2054,6 +2096,7 @@ static void br2_np_relayout_src(const char *t, const char *a, const char *al){
     int same = 1; for(int k = 0; k < 3; k++) if(strncmp(g_br2_src[k], src[k], sizeof g_br2_src[k] - 1)) same = 0;
     if(same) return;
     for(int k = 0; k < 3; k++) snprintf(g_br2_src[k], sizeof g_br2_src[k], "%s", src[k]);
+    if(!g_br2_circular){ br2_left_layout(src, o); return; }
     const lv_font_t *F[3][3] = { { TF(MUSIC_TITLE), br_font(24, 1), br_font(22, 1) },   /* as large as the room allows */
                                  { TF(UI_24),       TF(UI_22),      br_font(20, 0) },
                                  { br_font(20, 0),  br_font(16, 0), br_font(16, 0) } };
@@ -2081,6 +2124,7 @@ static void br2_np_relayout_src(const char *t, const char *a, const char *al){
         lv_label_set_long_mode(o[k], LV_LABEL_LONG_WRAP);   /* the full text back before restyling */
         lv_obj_set_style_text_font(o[k], use[k], 0);
         if(!hh[k]){ lv_obj_set_height(o[k], 0); continue; }
+        lv_obj_set_style_text_align(o[k], LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_set_size(o[k], BR2_INFO_W, hh[k]); lv_obj_align(o[k], LV_ALIGN_TOP_MID, 0, y); y += hh[k] + (k < 2 ? gap[k + 1] : 0);
         if(sc[k]){ lv_obj_set_style_anim(o[k], disco_scroll5(), 0); lv_label_set_long_mode(o[k], LV_LABEL_LONG_SCROLL_CIRCULAR); }
         else lv_label_set_long_mode(o[k], LV_LABEL_LONG_DOT);
@@ -2145,11 +2189,11 @@ void kit_fork_np_braun2(void){
     if(!th_braun2() || !g_np_scr)return;
     kit_fork_np_braun();
     static lv_obj_t *scale,*lin[41],*circ[41];
-    g_br2_circular=simple_cfg_get_int("braun2_progress",0)==1;
+    g_br2_circular=simple_cfg_get_int("braun2_layout",simple_cfg_get_int("braun2_progress",0))==1;   /* 0 art left + straight scale, 1 art on top + circular (test builds stored the old key) */
     int gestures=simple_cfg_get_int("braun2_controls",0)==1;
     if(!scale){
         scale=lv_slider_create(g_np_scr);lv_obj_remove_style_all(scale);
-        lv_obj_set_pos(scale,66,BR2_SCALE_Y-3);lv_obj_set_size(scale,228,6);
+        lv_obj_set_pos(scale,40,BR2_SCALE_Y-3);lv_obj_set_size(scale,280,6);   /* 40 px from either edge */
         lv_obj_set_style_bg_opa(scale,LV_OPA_TRANSP,LV_PART_MAIN);
         lv_obj_set_style_bg_opa(scale,LV_OPA_TRANSP,LV_PART_INDICATOR);
         lv_obj_set_style_bg_color(scale,TC(ACCENT_PRIMARY),LV_PART_KNOB);
@@ -2159,7 +2203,7 @@ void kit_fork_np_braun2(void){
         lv_obj_set_style_radius(scale,3,LV_PART_KNOB);lv_obj_set_ext_click_area(scale,24);
         static lv_point_precise_t pts[41][2];
         for(int i=0;i<=40;i++){
-            int h=i%5?11:20;pts[i][0]=(lv_point_precise_t){66+i*228/40,BR2_SCALE_Y-h/2};pts[i][1]=(lv_point_precise_t){66+i*228/40,BR2_SCALE_Y+h/2};
+            int h=i%5?11:20;pts[i][0]=(lv_point_precise_t){40+i*7,BR2_SCALE_Y-h/2};pts[i][1]=(lv_point_precise_t){40+i*7,BR2_SCALE_Y+h/2};
             lv_obj_t *l=lv_line_create(g_np_scr);lin[i]=l;lv_line_set_points(l,pts[i],2);lv_obj_set_style_line_color(l,TC(TEXT_SECONDARY),0);lv_obj_set_style_line_width(l,i%5?2:3,0);kit_keep(l);
         }
         static lv_point_precise_t cp[41][2];   /* the circular scale: the same 41 ticks along the rim, 135 deg -> 45 deg clockwise */
