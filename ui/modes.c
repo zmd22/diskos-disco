@@ -3,6 +3,7 @@
 /* Copyright (C) 2026 diskOS contributors */
 #include "screens.h"
 #include "braun.h"
+#include "braun2.h"
 #include <string.h>
 #include "orbit.h"
 #include "theme.h"
@@ -304,7 +305,38 @@ static void disco_paint(int slot, int pending){
     }
 }
 static void zmodes_paint(int slot,int pending);
+/* Braun 2.0: the modes as Quick Settings keys - three a row, either side of the centre line - a lamp on the active
+ * one, its icon turning while it switches. */
+static lv_obj_t *g_b2key[N_MODES], *g_b2lamp[N_MODES], *g_b2ic[N_MODES];
+static void b2modes_paint(int slot, int pending){
+    for(int i = 0; i < N_MODES; i++){
+        if(!g_b2key[i]) continue;
+        int on = i == slot;
+        lv_obj_set_style_bg_color(g_b2lamp[i], on ? TC(ACCENT_PRIMARY) : TC(CONTROL_TRACK), 0);
+        icon_spin(g_b2ic[i], on && pending);
+        lv_obj_set_style_text_color(lv_obj_get_child(g_b2key[i], 2), on ? TC(TEXT_PRIMARY) : TC(TEXT_SECONDARY), 0);
+    }
+}
+static void b2modes_tap(lv_event_t *e);
+static void mark_selected(void);
+static void b2modes_create(lv_obj_t *root){
+    static const char *NM[N_MODES] = { "Playback", "USB DAC", "BT DAC", "BT stream", "AirPlay", "USB storage" };
+    br_face(root); ui_header(root, "Working mode");
+    for(int i = 0; i < N_MODES; i++){
+        int col = i % 3, x = 180 + (col - 1) * 96 - 44, y = i < 3 ? 96 : 184;
+        lv_obj_t *b = g_b2key[i] = lv_button_create(root); lv_obj_remove_style_all(b);
+        lv_obj_set_pos(b, x, y); lv_obj_set_size(b, 88, 80); lv_obj_set_style_radius(b, 22, 0);
+        lv_obj_set_style_bg_color(b, TC(SURFACE_STRONG), 0); lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
+        lv_obj_set_style_bg_color(b, TC(SURFACE_PRESSED), LV_STATE_PRESSED); br2_emboss(b, 1);
+        g_b2ic[i] = br_label(b, MODES[i].glyph, TF(QS_ICON_28), BR_TXT); lv_obj_align(g_b2ic[i], LV_ALIGN_CENTER, 0, -10);
+        g_b2lamp[i] = br_disc(b, 74, 12, 4, BR_SURF);
+        lv_obj_t *cap = br_label(b, NM[i], br_font(14, 0), BR_TXT2); lv_obj_align(cap, LV_ALIGN_BOTTOM_MID, 0, -8);
+        ui_on(b, b2modes_tap, LV_EVENT_CLICKED, (void *)(intptr_t)i, "modes.select", UI_CORE); br2_keep_tree(b);
+    }
+    mark_selected();
+}
 static void paint(int slot, const char *glyph){
+    if(th_braun2()){ b2modes_paint(slot, glyph && !strcmp(glyph, LV_SYMBOL_REFRESH)); return; }
     if(th_zune()){zmodes_paint(slot,glyph && !strcmp(glyph,LV_SYMBOL_REFRESH));return;}   /* slot = orbit index, or -1 for none */
     if((th_disco_family() || th_null())){ disco_paint(slot, glyph && !strcmp(glyph, LV_SYMBOL_REFRESH)); return; }
     int pending = (glyph && !strcmp(glyph, LV_SYMBOL_REFRESH));
@@ -405,6 +437,7 @@ void modes_open(void){
 }
 
 static void disco_row_cb(lv_event_t *e){ row_cb((int)(intptr_t)lv_event_get_user_data(e)); }
+static void b2modes_tap(lv_event_t *e){ row_cb((int)(intptr_t)lv_event_get_user_data(e)); }
 /* Match Shortcuts: five fixed pill rows, with a larger shared header. */
 static void squash_modes_create(lv_obj_t *root){
     disco_title(root,"Working mode");
@@ -461,6 +494,7 @@ void modes_create(lv_obj_t *root){
     /* back button (kept out of the clipped top-left corner) */
     /* no header: the wheel fills the panel and its hub is the way back */
 
+    if(th_braun2()){ b2modes_create(root); return; }
     if(th_simple() || th_null()){squash_modes_create(root);return;}
     if((th_disco_family() || th_null())){
         disco_title(root, "Working mode");

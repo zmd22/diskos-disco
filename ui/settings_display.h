@@ -97,6 +97,7 @@ static const display_entry_t *display_entry(const setting_t *s){
 }
 static int display_variant_hidden(const setting_t *s){
     if(th_braun2()&&s->cfg_key&&(!strcmp(s->cfg_key,"np_style")||!strcmp(s->cfg_key,"disco_qs_style")))return 1;
+    if(th_braun2()&&s->apply==apply_open_colorpick)return 1;   /* Braun 2.0: a fixed orange accent, so no picker */
     if(s->cfg_key&&th_zune()&&!strcmp(s->cfg_key,"saver_style"))return 1;
     if(s->apply==apply_grp_zune&&!th_zune())return 1;
     if(s->cfg_key&&th_zune()&&!strcmp(s->cfg_key,"np_style"))return 1;

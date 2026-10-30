@@ -12,6 +12,8 @@
 #include "screens.h"
 #include "theme.h"
 #include "theme_kit.h"
+#include "braun.h"
+#include "braun2.h"
 #include "ipc.h"
 #include "simple_theme.h"
 #include "musicdb.h"
@@ -212,6 +214,24 @@ void npshade_open(void){
     lv_label_set_text(g_hint, LV_SYMBOL_DOWN);
     { lv_obj_t *tap[] = { g_scrim, g_panel, g_cover, g_title, g_artist, g_btn[0], g_btn[2], g_handle };
       for(unsigned i = 0; i < sizeof tap / sizeof tap[0]; i++) if(tap[i]) lv_obj_add_event_cb(tap[i], down_ev, LV_EVENT_PRESSED, NULL); }
+    if(th_braun2()){   /* Braun 2.0: the warm canvas, dark knobs either side of a rounded tile, Inter type, a tuning bar */
+        lv_obj_set_style_bg_color(g_panel, TC(CANVAS), 0); lv_obj_set_style_bg_opa(g_panel, LV_OPA_COVER, 0);
+        lv_obj_set_style_radius(g_panel, 48, 0); lv_obj_set_style_shadow_color(g_panel, TC(ACTION_SHADOW), 0); lv_obj_set_style_shadow_width(g_panel, 20, 0);
+        lv_obj_set_style_text_font(g_clock, br_font(18, 1), 0); lv_obj_set_style_text_font(g_batt, br_font(18, 1), 0);
+        lv_obj_set_style_text_color(g_clock, TC(TEXT_PRIMARY), 0); lv_obj_set_style_text_color(g_batt, TC(TEXT_PRIMARY), 0);
+        lv_obj_set_width(g_clock, 64); lv_obj_set_width(g_batt, 50); lv_obj_align(g_clock, LV_ALIGN_TOP_MID, -30, 12); lv_obj_align(g_batt, LV_ALIGN_TOP_MID, 34, 12);
+        lv_obj_set_style_radius(g_cover, 20, 0); br2_emboss(g_panel, 0);
+        lv_obj_set_style_text_font(g_title, br_font(22, 1), 0); lv_obj_set_style_text_font(g_artist, br_font(16, 0), 0);
+        lv_obj_set_height(g_title, lv_font_get_line_height(br_font(22, 1))); lv_obj_set_height(g_artist, lv_font_get_line_height(br_font(16, 0)));
+        lv_obj_set_size(g_bar, 200, 6); lv_obj_set_style_radius(g_bar, 3, LV_PART_MAIN); lv_obj_set_style_radius(g_bar, 3, LV_PART_INDICATOR);
+        lv_obj_set_style_bg_color(g_bar, TC(SURFACE_RAISED), LV_PART_MAIN);
+        for(int k = 0; k < 3; k += 2) if(g_btn[k]){
+            lv_obj_set_style_bg_color(g_btn[k], TC(CONTROL_KNOB), 0); lv_obj_set_style_bg_opa(g_btn[k], LV_OPA_COVER, 0);
+            lv_obj_set_style_border_width(g_btn[k], 0, 0); lv_obj_set_style_text_color(g_btn_l[k], TC(ON_CONTROL), 0);
+            lv_obj_set_style_shadow_color(g_btn[k], TC(ACCENT_PRIMARY), 0); lv_obj_set_style_shadow_width(g_btn[k], 14, 0); lv_obj_set_style_shadow_opa(g_btn[k], 46, 0);
+        }
+        lv_obj_set_style_bg_color(g_handle, TC(SURFACE_RAISED), 0);
+    }
     refresh();
     g_tick = lv_timer_create(tick_cb, 1000, NULL);
     /* in: the shade slides down and the screen behind dims, together */

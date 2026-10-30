@@ -133,7 +133,7 @@ static void br2qs_paint(void);
 static void br2qs_build(void);
 static void br2qs_create(lv_obj_t *);
 static lv_obj_t *g_br2qs_btn[QS_MAX_ITEMS],*g_br2qs_status;
-static int g_br2qs_pct=-1;
+static int g_br2qs_pct=-1,g_br2qs_chg;
 static void zqs_paint(void);
 static void zqs_track(const char*,const char*,int);
 static void paint_radios(void){
@@ -560,7 +560,7 @@ void quicksettings_set_art(const void *cover_dsc, const void *backdrop_src)
 }
 void quicksettings_set_battery(int pct, int charging)
 {
-    if(th_braun2()&&pct>=0)g_br2qs_pct=pct>100?100:pct;
+    if(th_braun2()){if(pct>=0)g_br2qs_pct=pct>100?100:pct;g_br2qs_chg=charging;br2qs_paint();return;}
     if(th_simple()){simple_qs_battery(pct,charging);return;}
     if(th_null()){null_qs_battery(pct,charging);return;}
     if(!g_batt) return;
@@ -749,7 +749,8 @@ static lv_obj_t *zqs_test_button(int slot){return slot>=0&&slot<g_nitems?g_zq_hi
 
 /* Braun 2.0 eight-key panel (two rows of four either side of the centre line). Selection and all actions use the shared QS catalogue/editor. */
 static lv_obj_t *g_br2qs_items,*g_br2qs_lamp[QS_MAX_ITEMS],*g_br2qs_ic[QS_MAX_ITEMS],*g_br2qs_num,*g_br2qs_needle;
-static lv_point_precise_t g_br2qs_needle_pts[2];
+static lv_point_precise_t g_br2qs_needle_pts[2],g_br2qs_bneedle_pts[2];
+static lv_obj_t *g_br2qs_bneedle,*g_br2qs_bglyph;static int g_br2qs_bneedle_value=-2;
 static int g_br2qs_needle_value=-1;
 static void br2qs_brightness_label(void){
     if(!g_br2qs_num||!g_bright)return;char b[24];snprintf(b,sizeof b,"%d%%",(lv_arc_get_value(g_bright)-4)*100/36);if(strcmp(lv_label_get_text(g_br2qs_num),b))lv_label_set_text(g_br2qs_num,b);
@@ -760,7 +761,13 @@ static void br2qs_tap(lv_event_t *e){int i=(int)(intptr_t)lv_event_get_user_data
 static void br2qs_hold(lv_event_t *e){int i=(int)(intptr_t)lv_event_get_user_data(e);if(i>=0&&i<g_nitems)quicksettings_null_action(g_items[i],1);}
 static void br2qs_paint(void){
     if(!g_br2qs_items)return;
-    if(g_br2qs_status){time_t now=time(NULL);struct tm tm;localtime_r(&now,&tm);char b[40];if(g_br2qs_pct>=0)snprintf(b,sizeof b,"%02d:%02d  ·  %d%%",tm.tm_hour,tm.tm_min,g_br2qs_pct);else snprintf(b,sizeof b,"%02d:%02d",tm.tm_hour,tm.tm_min);if(strcmp(lv_label_get_text(g_br2qs_status),b))lv_label_set_text(g_br2qs_status,b);}
+    if(g_br2qs_status){time_t now=time(NULL);struct tm tm;localtime_r(&now,&tm);char b[40];if(g_br2qs_pct>=0)snprintf(b,sizeof b,"%d%%  ·  %02d:%02d",g_br2qs_pct,tm.tm_hour,tm.tm_min);else snprintf(b,sizeof b,"%02d:%02d",tm.tm_hour,tm.tm_min);if(strcmp(lv_label_get_text(g_br2qs_status),b))lv_label_set_text(g_br2qs_status,b);}
+    if(g_br2qs_bglyph){int p=g_br2qs_pct<0?0:g_br2qs_pct;const char *gl=g_br2qs_chg?LV_SYMBOL_CHARGE:p>=85?LV_SYMBOL_BATTERY_FULL:p>=60?LV_SYMBOL_BATTERY_3:p>=35?LV_SYMBOL_BATTERY_2:p>=12?LV_SYMBOL_BATTERY_1:LV_SYMBOL_BATTERY_EMPTY;
+        if(strcmp(lv_label_get_text(g_br2qs_bglyph),gl))lv_label_set_text(g_br2qs_bglyph,gl);lv_obj_set_style_text_color(g_br2qs_bglyph,g_br2qs_chg?TC(ACCENT_PRIMARY):TC(TEXT_PRIMARY),0);}
+    if(g_br2qs_bneedle&&g_br2qs_pct!=g_br2qs_bneedle_value){   /* the battery scale mirrors brightness on the top rim: 0 upper-left, 100 upper-right */
+        int p=g_br2qs_pct<0?0:g_br2qs_pct;float a=(225+p*0.9f)*0.017453293f;
+        g_br2qs_bneedle_pts[0]=(lv_point_precise_t){180+151*cosf(a),180+151*sinf(a)};g_br2qs_bneedle_pts[1]=(lv_point_precise_t){180+173*cosf(a),180+173*sinf(a)};
+        lv_line_set_points(g_br2qs_bneedle,g_br2qs_bneedle_pts,2);if(g_br2qs_pct<0)lv_obj_add_flag(g_br2qs_bneedle,LV_OBJ_FLAG_HIDDEN);else lv_obj_remove_flag(g_br2qs_bneedle,LV_OBJ_FLAG_HIDDEN);g_br2qs_bneedle_value=g_br2qs_pct;}
     for(int i=0;i<g_nitems;i++){
         int on=quicksettings_item_active(g_items[i]);lv_obj_set_style_bg_color(g_br2qs_lamp[i],on?TC(ACCENT_PRIMARY):TC(CONTROL_TRACK),0);
         lv_label_set_text(g_br2qs_ic[i],quicksettings_item_glyph(g_items[i]));
@@ -776,7 +783,7 @@ static void br2qs_build(void){
         int x=40+(i%4)*72,y=i<4?112:186;   /* rows meet 4 px either side of y 180 */
         lv_obj_t *b=lv_button_create(g_br2qs_items);g_br2qs_btn[i]=b;lv_obj_remove_style_all(b);lv_obj_set_pos(b,x,y);lv_obj_set_size(b,64,62);
         lv_obj_set_style_radius(b,20,0);lv_obj_set_style_bg_color(b,TC(SURFACE_STRONG),0);lv_obj_set_style_bg_opa(b,LV_OPA_COVER,0);
-        lv_obj_set_style_bg_color(b,TC(SURFACE_PRESSED),LV_STATE_PRESSED);
+        lv_obj_set_style_bg_color(b,TC(SURFACE_PRESSED),LV_STATE_PRESSED);br2_emboss(b,1);
         g_br2qs_ic[i]=br_label(b,quicksettings_item_glyph(g_items[i]),TF(QS_ICON_28),BR_TXT);lv_obj_center(g_br2qs_ic[i]);
         g_br2qs_lamp[i]=br_disc(b,52,10,4,BR_SURF);
         ui_on(b,br2qs_tap,LV_EVENT_SHORT_CLICKED,(void*)(intptr_t)i,"qs.item",UI_CORE);
@@ -786,8 +793,15 @@ static void br2qs_build(void){
 }
 static void br2qs_create(lv_obj_t *root){
     br_face(root);
-    battery_arc_create(&g_battery,root,344,4,236,304,0);g_batt=g_battery.arc;
-    lv_obj_t *status=br_label(root,"",br_font(22,1),BR_TXT);g_br2qs_status=status;lv_obj_align(status,LV_ALIGN_TOP_MID,0,44);kit_keep(status);
+    /* the battery: a tick scale on the top rim, the mirror of brightness below, its glyph and level under it */
+    static lv_point_precise_t bticks[31][2];
+    for(int i=0;i<=30;i++){float a=(225+i*3)*0.017453293f;int r=i%5?163:158;bticks[i][0]=(lv_point_precise_t){180+r*cosf(a),180+r*sinf(a)};bticks[i][1]=(lv_point_precise_t){180+170*cosf(a),180+170*sinf(a)};
+        lv_obj_t *l=lv_line_create(root);lv_line_set_points(l,bticks[i],2);lv_obj_set_style_line_width(l,i%5?1:2,0);lv_obj_set_style_line_color(l,TC(TEXT_SECONDARY),0);kit_keep(l);}
+    g_br2qs_bneedle=lv_line_create(root);lv_obj_set_style_line_width(g_br2qs_bneedle,4,0);lv_obj_set_style_line_color(g_br2qs_bneedle,TC(ACCENT_PRIMARY),0);lv_obj_set_style_line_rounded(g_br2qs_bneedle,true,0);kit_keep(g_br2qs_bneedle);g_br2qs_bneedle_value=-2;
+    { lv_obj_t *z=br_label(root,"0",br_font(12,0),BR_TXT2);lv_obj_set_pos(z,66,67);kit_keep(z);
+      lv_obj_t *m=br_label(root,"100",br_font(12,0),BR_TXT2);lv_obj_set_pos(m,269,67);kit_keep(m); }
+    g_br2qs_bglyph=br_label(root,LV_SYMBOL_BATTERY_FULL,theme_font_original(24),BR_TXT);lv_obj_set_pos(g_br2qs_bglyph,96,85);kit_keep(g_br2qs_bglyph);
+    lv_obj_t *status=br_label(root,"",br_font(22,1),BR_TXT);g_br2qs_status=status;lv_obj_set_pos(status,134,81);kit_keep(status);
     g_br2qs_items=lv_obj_create(root);lv_obj_remove_style_all(g_br2qs_items);lv_obj_set_size(g_br2qs_items,360,250);lv_obj_remove_flag(g_br2qs_items,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);kit_keep(g_br2qs_items);
     g_bright=lv_arc_create(root);lv_obj_set_size(g_bright,344,344);lv_obj_center(g_bright);lv_arc_set_rotation(g_bright,0);lv_arc_set_bg_angles(g_bright,45,135);lv_arc_set_mode(g_bright,LV_ARC_MODE_REVERSE);lv_arc_set_range(g_bright,4,40);
     lv_obj_set_style_arc_opa(g_bright,LV_OPA_TRANSP,LV_PART_MAIN);lv_obj_set_style_arc_opa(g_bright,LV_OPA_TRANSP,LV_PART_INDICATOR);

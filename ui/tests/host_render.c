@@ -1764,7 +1764,7 @@ int main(int argc, char **argv){
             lv_obj_send_event(quicksettings_test_button(0),LV_EVENT_LONG_PRESSED,NULL);assert(screen_current()==SCR_WIFI);
             screen_show(SCR_NOWPLAYING);nav_wait(150);
             before=send_count;nav_touch_object(ui_action_find("np.prev"),70);assert(send_count==before+1);assert(!strcmp(last_sent,"0201000C0002"));
-            before=scrub_seek_calls;assert(ui_np_seek_press(120,216));assert(ui_np_seek_move(238,216));assert(ui_np_seek_release(238,216));assert(scrub_seek_calls==before+1);assert(scrub_last_seek>150000&&scrub_last_seek<210000);
+            before=scrub_seek_calls;assert(ui_np_seek_press(120,222));assert(ui_np_seek_move(238,222));assert(ui_np_seek_release(238,222));assert(scrub_seek_calls==before+1);assert(scrub_last_seek>150000&&scrub_last_seek<210000);
             int original[8];memcpy(original,items,sizeof original);
             for(int k=0;k<quicksettings_item_count();k+=8){int batch[8],n=0;for(int j=k;j<k+8&&j<quicksettings_item_count();j++)batch[n++]=j;
                 assert(!quicksettings_items_save(batch,n));quicksettings_build();screen_show(SCR_QUICK);nav_wait(30);assert_visible_icon_glyphs(screen_get_root(SCR_QUICK));}

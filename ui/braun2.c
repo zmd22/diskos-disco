@@ -8,11 +8,18 @@
 void bhome_create(lv_obj_t *);
 void br2_keep_tree(lv_obj_t *o){kit_keep(o);for(uint32_t i=0;i<lv_obj_get_child_count(o);i++)br2_keep_tree(lv_obj_get_child(o,i));}
 static void back(lv_event_t *e){(void)e;screen_back();}
+/* A subtle emboss: a 1 px light edge along the top and, for raised parts, a soft drop below. */
+void br2_emboss(lv_obj_t *o,int raised){
+    int light=theme_variant()!=0;
+    lv_obj_set_style_border_side(o,LV_BORDER_SIDE_TOP,0);lv_obj_set_style_border_width(o,1,0);
+    lv_obj_set_style_border_color(o,light?TC(ON_ACCENT):TC(TEXT_PRIMARY),0);lv_obj_set_style_border_opa(o,light?170:34,0);
+    if(raised){lv_obj_set_style_shadow_color(o,TC(FIXED_MEDIA_BLACK),0);lv_obj_set_style_shadow_width(o,8,0);lv_obj_set_style_shadow_offset_y(o,2,0);lv_obj_set_style_shadow_opa(o,light?34:90,0);}
+}
 /* The header title steps down 22 -> 18 -> 16 px to fit beside the back knob, then ends in an ellipsis; it refits
  * whenever a screen changes the text (album and folder names). */
-#define BR2_HDR_Y 38      /* the knob's and the title's shared centre line */
-#define BR2_HDR_X 118
-#define BR2_HDR_W 166     /* inside the circle at that height */
+#define BR2_HDR_Y 50      /* the knob's and the title's shared centre line, inside the circle */
+#define BR2_HDR_X 132
+#define BR2_HDR_W 160     /* inside the circle at that height */
 static void br2_header_fit(lv_obj_t *l){
     const lv_font_t *steps[3]={br_font(22,1),br_font(18,1),br_font(16,1)},*f=steps[2];
     const char *t=lv_label_get_text(l);
@@ -26,9 +33,9 @@ static void br2_header_text_cb(lv_event_t *e){   /* a screen set new text: refit
     if((uint32_t)(uintptr_t)lv_obj_get_user_data(l)!=h){lv_obj_set_user_data(l,(void *)(uintptr_t)h);lv_async_call(br2_header_refit,l);}
 }
 lv_obj_t *br2_header(lv_obj_t *root,const char *text,lv_event_cb_t cb){
-    lv_obj_t *cap=lv_obj_create(root);lv_obj_remove_style_all(cap);lv_obj_set_size(cap,304,62);lv_obj_set_pos(cap,28,-4);
-    lv_obj_set_style_radius(cap,28,0);lv_obj_set_style_bg_color(cap,TC(SURFACE_STRONG),0);lv_obj_set_style_bg_opa(cap,LV_OPA_COVER,0);lv_obj_remove_flag(cap,LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_t *b=br_button(root,94,BR2_HDR_Y,19,LV_SYMBOL_LEFT,TF(UI_20),0);ui_on(b,cb?cb:back,LV_EVENT_CLICKED,NULL,"nav.back",UI_CORE);lv_obj_set_ext_click_area(b,6);
+    lv_obj_t *cap=lv_obj_create(root);lv_obj_remove_style_all(cap);lv_obj_set_size(cap,304,72);lv_obj_set_pos(cap,28,-4);
+    lv_obj_set_style_radius(cap,28,0);lv_obj_set_style_bg_color(cap,TC(SURFACE_STRONG),0);lv_obj_set_style_bg_opa(cap,LV_OPA_COVER,0);lv_obj_remove_flag(cap,LV_OBJ_FLAG_CLICKABLE);br2_emboss(cap,1);
+    lv_obj_t *b=br_button(root,108,BR2_HDR_Y,18,LV_SYMBOL_LEFT,TF(UI_20),0);   /* edge at 168 px from the centre */ui_on(b,cb?cb:back,LV_EVENT_CLICKED,NULL,"nav.back",UI_CORE);lv_obj_set_ext_click_area(b,6);
     lv_obj_t *l=br_label(root,text,br_font(22,1),BR_TXT);lv_obj_set_width(l,BR2_HDR_W);lv_obj_set_x(l,BR2_HDR_X);lv_label_set_long_mode(l,LV_LABEL_LONG_DOT);
     br2_header_fit(l);lv_obj_add_event_cb(l,br2_header_text_cb,LV_EVENT_DRAW_MAIN_BEGIN,NULL);
     br2_keep_tree(cap);br2_keep_tree(b);kit_keep(l);return l;
@@ -47,7 +54,7 @@ void br2_style(lv_obj_t *o,kit_role_t role){
         lv_obj_set_style_radius(o,28,0);lv_obj_set_style_border_width(o,0,0);
         lv_obj_set_style_bg_color(o,TC(SURFACE_STRONG),0);
         lv_obj_set_style_bg_color(o,TC(SURFACE_PRESSED),LV_STATE_PRESSED);
-        lv_obj_set_style_bg_opa(o,LV_OPA_COVER,LV_STATE_PRESSED);break;
+        lv_obj_set_style_bg_opa(o,LV_OPA_COVER,LV_STATE_PRESSED);br2_emboss(o,0);break;
     case KIT_ROW_TEXT:lv_obj_set_style_text_font(o,br_font(20,0),0);lv_obj_set_style_text_color(o,TC(TEXT_PRIMARY),0);break;
     case KIT_ROW_SUB:lv_obj_set_style_text_font(o,br_font(14,0),0);lv_obj_set_style_text_color(o,TC(TEXT_SECONDARY),0);break;
     case KIT_TOGGLE:br_style_switch(o);break;
@@ -73,7 +80,7 @@ void br2_style(lv_obj_t *o,kit_role_t role){
             lv_obj_set_style_text_color(c,icon?TC(ACCENT_PRIMARY):role==KIT_ICON_BUTTON?TC(ON_CONTROL):TC(TEXT_PRIMARY),0);
         }
         lv_obj_set_style_shadow_color(o,TC(ACCENT_PRIMARY),0);lv_obj_set_style_shadow_width(o,14,0);lv_obj_set_style_shadow_opa(o,46,0);
-        lv_obj_set_style_border_width(o,1,0);lv_obj_set_style_border_color(o,TC(BORDER),0);
+        br2_emboss(o,0);   /* the glow is its shadow; the light top edge gives the relief */
         lv_obj_set_style_bg_color(o,TC(SURFACE_PRESSED),LV_STATE_PRESSED);break;
     case KIT_POPUP:
         lv_obj_set_style_bg_color(o,TC(SURFACE_STRONG),0);lv_obj_set_style_bg_opa(o,LV_OPA_COVER,0);

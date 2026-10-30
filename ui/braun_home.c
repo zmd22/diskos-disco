@@ -92,7 +92,7 @@ void bhome_create(lv_obj_t *root){
     battery_arc_create(&g_battery,root,344,4,236,304,0);g_batt=g_battery.arc;
     if(th_braun2()){
         lv_obj_set_pos(w,130,CY+22);lv_obj_set_size(w,100,24);lv_obj_set_style_bg_opa(w,LV_OPA_TRANSP,0);lv_obj_set_style_border_width(w,0,0);
-        lv_obj_set_style_text_font(g_wx,br_font(14,0),0);lv_obj_set_style_text_color(g_wx,TC(TEXT_SECONDARY),0);lv_obj_center(g_wx);
+        { static lv_font_t wxf; wxf=*br_font(14,0); wxf.fallback=&font_weather16; lv_obj_set_style_text_font(g_wx,&wxf,0); }   /* Inter + weather glyphs */lv_obj_set_style_text_color(g_wx,TC(TEXT_SECONDARY),0);lv_obj_center(g_wx);
         /* the date in a small window left of the 3 o'clock tick, as on Braun's wall clocks */
         lv_obj_set_size(g_date,56,24);lv_obj_set_align(g_date,LV_ALIGN_TOP_LEFT);lv_obj_set_pos(g_date,CX+RD-76,CY-12);lv_obj_set_style_text_font(g_date,br_font(14,1),0);lv_obj_set_style_text_color(g_date,TC(TEXT_PRIMARY),0);
         lv_obj_set_style_text_align(g_date,LV_TEXT_ALIGN_CENTER,0);lv_obj_set_style_pad_top(g_date,3,0);lv_obj_set_style_radius(g_date,8,0);lv_obj_set_style_bg_color(g_date,TC(SURFACE_STRONG),0);lv_obj_set_style_bg_opa(g_date,LV_OPA_COVER,0);
@@ -116,8 +116,13 @@ void bhome_set_clock(const char *t, const char *sub){
 }
 void bhome_set_weather(const char *s){
     if(th_braun2()){
+        /* "<icon>  14°C  Sunny" -> "<icon> 14°C": the glyph when the feed has one, then the temperature */
         const char *p=s;while(p&&*p&&!isdigit((unsigned char)*p)&&*p!='-')p++;
-        if(g_wx)lv_label_set_text(g_wx,p&&*p?p:"");
+        char icon[16]="",temp[24]="";
+        if(s&&p>s){int n=0;for(const char *c=s;c<p&&n<15;c++)if(*c!=' ')icon[n++]=*c;icon[n]=0;}
+        if(p&&*p){int n=0;while(p[n]&&n<23&&!(p[n]==' '&&p[n+1]==' '))n++;memcpy(temp,p,(size_t)n);temp[n]=0;}
+        char out[48];snprintf(out,sizeof out,"%s%s%s",icon,icon[0]&&temp[0]?" ":"",temp);
+        if(g_wx)lv_label_set_text(g_wx,out);
     }else br_weather_text(g_wx,s);
 }
 void bhome_set_status(int batt, int charging, int wifi, int bt){

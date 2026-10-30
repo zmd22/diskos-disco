@@ -42,6 +42,7 @@ static void music_scroll_done(lv_anim_t *a){
 void ui_music_scroll(lv_obj_t *label){
     static lv_anim_t motion;static int ready;
     if(!label)return;
+    if(th_braun2()){lv_label_set_long_mode(label,LV_LABEL_LONG_DOT);return;}   /* Braun 2.0 wraps or truncates; nothing scrolls */
     /* Restore the saved alignment for a new title; short text remains centred. */
     if(th_simple())lv_obj_set_style_text_align(label,cfg_get_int("simple_title_al",0)==1?LV_TEXT_ALIGN_LEFT:LV_TEXT_ALIGN_CENTER,0);
     if(!ready){lv_anim_init(&motion);lv_anim_set_repeat_count(&motion,3);

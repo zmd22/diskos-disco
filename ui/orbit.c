@@ -4,6 +4,7 @@
 #include <string.h>
 #include "fork_theme.h"
 #include "braun.h"
+#include "braun2.h"
 #include "theme_kit.h"
 #include "theme.h"
 #include <math.h>
@@ -68,7 +69,7 @@ void orbit_create(orbit_t *o, lv_obj_t *root, const orbit_item_t *it, int n, int
         if(th_braun2()){                                                /* Braun 2.0: a QS-style squircle key, a corner lamp lit while pressed,
                                                                            * and a notch only for keys that show on / off (orbit_set_on) */
             lv_obj_set_style_radius(b, 18, 0);
-            lv_obj_set_style_bg_color(b, TC(SURFACE_STRONG), 0); lv_obj_set_style_bg_color(b, TC(SURFACE_PRESSED), LV_STATE_PRESSED);
+            lv_obj_set_style_bg_color(b, TC(SURFACE_STRONG), 0); lv_obj_set_style_bg_color(b, TC(SURFACE_PRESSED), LV_STATE_PRESSED); br2_emboss(b, 1);
             lv_obj_set_style_text_color(o->icon[i], TC(TEXT_PRIMARY), 0);
             lv_obj_t *lamp = lv_obj_create(b); lv_obj_remove_style_all(lamp);
             lv_obj_set_size(lamp, 8, 8); lv_obj_align(lamp, LV_ALIGN_TOP_RIGHT, -7, 7); lv_obj_set_style_radius(lamp, LV_RADIUS_CIRCLE, 0);
@@ -118,7 +119,7 @@ void orbit_create(orbit_t *o, lv_obj_t *root, const orbit_item_t *it, int n, int
 void orbit_popup_polish(orbit_t *o){
     for(int i = 0; i < o->n; i++){
         float a = orbit_deg(o, i) * 3.14159265f / 180.0f;
-        int rad = g_spread ? ORBIT_SPREAD_R : 108;
+        int rad = g_spread ? ORBIT_SPREAD_R : th_braun2() ? 120 : 108;   /* Braun 2.0: keys spread towards the rim */
         int cx = (int)lroundf(rad * cosf(a)), cy = (int)lroundf(rad * sinf(a));
         lv_obj_set_size(o->btn[i], 56, 56);
         lv_obj_align(o->btn[i], LV_ALIGN_CENTER, cx, cy - 8);
