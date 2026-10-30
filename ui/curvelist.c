@@ -24,7 +24,7 @@ static int saturated(lv_color_t c){
 }
 void curvelist_braun_row(lv_obj_t *r){
     /* Dashboard sections use the shared scroller but are not list pills. */
-    if(th_braun2()&&lv_obj_get_height(r)>100)return;
+    if(th_braun2()&&(lv_obj_get_height(r)>100||lv_obj_has_flag(r,LV_OBJ_FLAG_USER_4)))return;   /* key rows (Play / Shuffle) stay bare */
     int focus = 0, fresh = 0;          /* fresh: the list (re)coloured this row since our last pass */
     lv_color_t bg = lv_obj_get_style_bg_color(r, 0);
     uint32_t bgv = lv_color_to_u32(bg) & 0xFFFFFF;

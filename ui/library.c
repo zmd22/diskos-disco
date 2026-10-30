@@ -5,6 +5,7 @@
 #include "screens.h"
 #include "theme.h"
 #include "braun.h"
+#include "braun2.h"
 #include "curvelist.h"
 #include "theme_kit.h"
 #include "multipick.h"
@@ -1411,6 +1412,17 @@ static void add_album_cover_header(const char *album, const char *artist){
     }
 }
 
+static void add_plist_cb(lv_event_t *e);
+/* Braun 2.0: a square key, its centre at cx in the row - shaded, orange icon, a little glow (no text: the icons say it) */
+static void b2_key(lv_obj_t *row, int cx, const char *glyph, lv_event_cb_t cb){
+    lv_obj_t *b = lv_button_create(row); lv_obj_remove_style_all(b);
+    lv_obj_set_size(b, 52, 52); lv_obj_set_pos(b, cx - 26, 2); lv_obj_set_style_radius(b, 14, 0);
+    lv_obj_set_style_bg_color(b, TC(SURFACE_STRONG), 0); lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_color(b, TC(SURFACE_PRESSED), LV_STATE_PRESSED);
+    lv_obj_t *l = lv_label_create(b); lv_label_set_text(l, glyph); lv_obj_set_style_text_font(l, TF(UI_22), 0); lv_obj_center(l);
+    lv_obj_add_flag(b, LV_OBJ_FLAG_USER_4); br2_depth(b, 1); br2_keep_tree(b);
+    lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, NULL);
+}
 /* the first row of a song list: [ Play All ] [ Shuffle ]. centered=1 screen-centres the pair (used under
  * the album cover card, so it lines up with the centred cover instead of the left-aligned list rows). */
 static void add_play_header(int centered){
@@ -1426,11 +1438,13 @@ static void add_play_header(int centered){
         g_has_header = 1; return;
     }
     int base = centered ? 16 : 0;                 /* r-local 16 => screen-centre (list is at x30/w286) */
-    if(th_braun2()){                              /* centred on the screen, whatever the row's inset */
+    if(th_braun2()){                              /* Braun 2.0: separate square keys on no background, centred on the screen */
         lv_obj_update_layout(g_list); lv_area_t la; lv_obj_get_coords(r, &la);
-        int mid = 180 - la.x1;
-        hdr_btn(r, mid - 116, tr_sym(LV_SYMBOL_PLAY, "Play"), play_all_cb);
-        hdr_btn(r, mid + 4,   tr_sym(LV_SYMBOL_SHUFFLE, "Shuffle"), shuffle_all_cb);
+        lv_obj_add_flag(r, LV_OBJ_FLAG_USER_4);     /* the list's row pass leaves this row bare */
+        int n = g_view == VIEW_GROUP ? 3 : 2, mid = 180 - la.x1;
+        b2_key(r, mid - (n - 1) * 32, LV_SYMBOL_PLAY, play_all_cb);
+        b2_key(r, mid - (n - 1) * 32 + 64, LV_SYMBOL_SHUFFLE, shuffle_all_cb);
+        if(n == 3) b2_key(r, mid + 64, LV_SYMBOL_PLUS, add_plist_cb);   /* + Playlist on this row too */
         g_has_header = 1; return;
     }
     hdr_btn(r, base,       tr_sym(LV_SYMBOL_PLAY, "Play All"), play_all_cb);
@@ -1480,12 +1494,12 @@ static void add_plist_cb(lv_event_t *e){
 }
 
 static void add_plist_row(int centered){
+    if(th_braun2()) return;                      /* Braun 2.0: + Playlist sits beside Play / Shuffle */
     lv_obj_t *r = lv_obj_create(g_list);
     lv_obj_remove_style_all(r);
     lv_obj_set_size(r, centered ? 286 : 268, ROW_H);
     lv_obj_clear_flag(r, LV_OBJ_FLAG_SCROLLABLE);
-    if(th_braun2()){ lv_obj_update_layout(g_list); lv_area_t la; lv_obj_get_coords(r, &la); hdr_btn(r, 180 - la.x1 - 56, tr_sym(LV_SYMBOL_PLUS, "Playlist"), add_plist_cb); }
-    else hdr_btn(r, (centered ? 16 : 0) + 70, tr_sym(LV_SYMBOL_PLUS, "Playlist"), add_plist_cb);   /* centred under the pair above */
+    hdr_btn(r, (centered ? 16 : 0) + 70, tr_sym(LV_SYMBOL_PLUS, "Playlist"), add_plist_cb);   /* centred under the pair above */
     g_has_header = 2;                            /* Play All / Shuffle + this row */
 }
 
