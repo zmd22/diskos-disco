@@ -2020,9 +2020,18 @@ void kit_fork_np_braun(void){
 /* Type-first Music C uses the same transport, track popup and seek controller. */
 #define BR2_SCALE_Y 222   /* the tuning scale; the elapsed time sits under it */
 #define BR2_INFO_W (g_br2_circular ? 216 : 248)   /* the info lines' width: inside the circle, or inside the circular scale */
-#define BR2_ART (g_br2_circular ? 70 : 80)        /* the squircle artwork above the text */
-#define BR2_ART_Y (g_br2_circular ? 64 : 36)
-#define BR2_INFO_TOP (BR2_ART_Y + BR2_ART + 8)      /* the highest the info block may climb: under the artwork */
+#define BR2_ART_TOP (g_br2_circular ? 46 : 24)    /* the squircle artwork fills the room above the text, within these */
+#define BR2_ART_MIN (g_br2_circular ? 60 : 72)
+#define BR2_ART_MAX (g_br2_circular ? 96 : 128)
+#define BR2_INFO_TOP (BR2_ART_TOP + BR2_ART_MIN + 8)   /* the highest the info block may climb: the artwork keeps its minimum */
+static lv_obj_t *g_br2_led;
+static void br2_art_place(int top_of_text){   /* the artwork takes what the text leaves, up to its maximum */
+    if(!cover) return;
+    int sz = top_of_text - 8 - BR2_ART_TOP; if(sz > BR2_ART_MAX) sz = BR2_ART_MAX; if(sz < BR2_ART_MIN) sz = BR2_ART_MIN;
+    lv_obj_set_size(cover, sz, sz); lv_obj_set_style_radius(cover, sz * 22 / 100, 0); lv_obj_align(cover, LV_ALIGN_TOP_MID, 0, top_of_text - 8 - sz);
+    if(cover_img){ lv_obj_set_size(cover_img, COVER_D, COVER_D); lv_obj_center(cover_img); lv_image_set_scale(cover_img, (uint32_t)(256 * sz / COVER_D) + 1); }
+    if(g_br2_led){ lv_obj_align_to(g_br2_led, cover, LV_ALIGN_TOP_RIGHT, -7, 7); lv_obj_move_foreground(g_br2_led); }
+}
 /* One info line: up to two wrapped lines in font f, ending in ... beyond that; returns its height (0 if empty). */
 static char g_br2_src[3][256];   /* the text last laid out (labels in "..." mode rewrite theirs) */
 const lv_anim_t *disco_scroll5(void);
@@ -2045,9 +2054,9 @@ static void br2_np_relayout_src(const char *t, const char *a, const char *al){
     int same = 1; for(int k = 0; k < 3; k++) if(strncmp(g_br2_src[k], src[k], sizeof g_br2_src[k] - 1)) same = 0;
     if(same) return;
     for(int k = 0; k < 3; k++) snprintf(g_br2_src[k], sizeof g_br2_src[k], "%s", src[k]);
-    const lv_font_t *F[3][3] = { { br_font(24, 1), br_font(22, 1), br_font(18, 1) },
-                                 { TF(UI_22),       br_font(20, 0), br_font(16, 0) },
-                                 { br_font(16, 0),  br_font(16, 0), br_font(14, 0) } };
+    const lv_font_t *F[3][3] = { { TF(MUSIC_TITLE), br_font(24, 1), br_font(22, 1) },   /* as large as the room allows */
+                                 { TF(UI_24),       TF(UI_22),      br_font(20, 0) },
+                                 { br_font(20, 0),  br_font(16, 0), br_font(16, 0) } };
     const int gap[3] = { 0, 4, 4 };
     int hh[3] = { 0 }, sc[3] = { 0 }, step = 0, total = 0, bottom = g_br2_circular ? BR2_SCALE_Y + 4 : BR2_SCALE_Y - 16;   /* circular: no straight scale above the time */
     const lv_font_t *use[3];
@@ -2077,6 +2086,7 @@ static void br2_np_relayout_src(const char *t, const char *a, const char *al){
         else lv_label_set_long_mode(o[k], LV_LABEL_LONG_DOT);
     }
     if(np_mid_btn){ lv_obj_set_size(np_mid_btn, BR2_INFO_W, (hh[0] + hh[1] + 4) > 44 ? hh[0] + hh[1] + 4 : 44); lv_obj_align_to(np_mid_btn, title, LV_ALIGN_TOP_MID, 0, 0); }
+    br2_art_place(bottom - total < BR2_INFO_TOP ? BR2_INFO_TOP : bottom - total);
 }
 static void br2_np_relayout(void){ br2_np_relayout_src(NULL, NULL, NULL); }
 /* Braun 2.0 Music, Controls = Gestures: the lower panel is a touch zone instead of the buttons - double tap play/pause,
@@ -2084,6 +2094,10 @@ static void br2_np_relayout(void){ br2_np_relayout_src(NULL, NULL, NULL); }
 static lv_obj_t *g_br2_gz,*g_br2_gz_hint[3],*g_br2_gz_fx,*g_br2_gz_dot[2];
 static int g_br2_gz_px,g_br2_gz_py;static uint32_t g_br2_gz_t0,g_br2_gz_last;
 static void br2_fx_opa(void *o,int32_t v){lv_obj_set_style_opa(o,(lv_opa_t)v,0);}
+static void br2_led_opa(void *o,int32_t v){   /* only redraws while Music is on a lit screen; otherwise the timer just ticks */
+    if(screen_current()!=SCR_NOWPLAYING||ui_display_is_off())return;
+    lv_opa_t q=(lv_opa_t)(v&~7);if(lv_obj_get_style_opa(o,0)!=q)lv_obj_set_style_opa(o,q,0);   /* 8-step quantised: ~48 redraws per breath, not one per frame */
+}
 static void br2_gz_flash(const char *glyph){
     if(!g_br2_gz_fx)return;lv_label_set_text(g_br2_gz_fx,glyph);lv_obj_remove_flag(g_br2_gz_fx,LV_OBJ_FLAG_HIDDEN);lv_anim_delete(g_br2_gz_fx,br2_fx_opa);
     lv_anim_t a;lv_anim_init(&a);lv_anim_set_var(&a,g_br2_gz_fx);lv_anim_set_exec_cb(&a,br2_fx_opa);lv_anim_set_values(&a,255,0);lv_anim_set_delay(&a,250);lv_anim_set_duration(&a,450);lv_anim_start(&a);
@@ -2169,17 +2183,14 @@ void kit_fork_np_braun2(void){
     } else { lv_obj_remove_flag(scale,LV_OBJ_FLAG_HIDDEN);lv_obj_add_flag(g_br2_cneedle,LV_OBJ_FLAG_HIDDEN);ui_np_seek_line(scale); }
     br2_np_gestures(gestures);
     if(cover){   /* the artwork as a squircle tile above the text (tap: Song Info, as before) */
-        lv_obj_remove_flag(cover,LV_OBJ_FLAG_HIDDEN);lv_obj_set_size(cover,BR2_ART,BR2_ART);lv_obj_set_style_radius(cover,BR2_ART*22/100,0);
-        lv_obj_set_style_clip_corner(cover,true,0);lv_obj_align(cover,LV_ALIGN_TOP_MID,0,BR2_ART_Y);br2_emboss(cover,1);kit_keep(cover);
-        if(cover_img){lv_obj_set_size(cover_img,COVER_D,COVER_D);lv_obj_center(cover_img);lv_image_set_scale(cover_img,(uint32_t)(256*BR2_ART/COVER_D)+1);}
+        lv_obj_remove_flag(cover,LV_OBJ_FLAG_HIDDEN);lv_obj_set_style_clip_corner(cover,true,0);br2_emboss(cover,1);kit_keep(cover);   /* sized by br2_art_place() */
         static lv_obj_t *led;   /* a tiny orange LED in the tile's upper-right corner, breathing at ~0.5 Hz */
         if(!led){led=lv_obj_create(g_np_scr);lv_obj_remove_style_all(led);lv_obj_set_size(led,7,7);lv_obj_set_style_radius(led,LV_RADIUS_CIRCLE,0);
             lv_obj_set_style_bg_color(led,TC(ACCENT_PRIMARY),0);lv_obj_set_style_bg_opa(led,LV_OPA_COVER,0);
             lv_obj_set_style_shadow_color(led,TC(ACCENT_PRIMARY),0);lv_obj_set_style_shadow_width(led,10,0);lv_obj_set_style_shadow_spread(led,1,0);
             lv_obj_clear_flag(led,LV_OBJ_FLAG_CLICKABLE);kit_keep(led);
-            lv_anim_t a;lv_anim_init(&a);lv_anim_set_var(&a,led);lv_anim_set_exec_cb(&a,br2_fx_opa);lv_anim_set_values(&a,70,255);
+            g_br2_led=led;lv_anim_t a;lv_anim_init(&a);lv_anim_set_var(&a,led);lv_anim_set_exec_cb(&a,br2_led_opa);lv_anim_set_values(&a,70,255);
             lv_anim_set_duration(&a,1000);lv_anim_set_playback_duration(&a,1000);lv_anim_set_repeat_count(&a,LV_ANIM_REPEAT_INFINITE);lv_anim_start(&a);}
-        lv_obj_align_to(led,cover,LV_ALIGN_TOP_RIGHT,-7,7);lv_obj_move_foreground(led);
     }
     lv_obj_t *hidden[]={ring,g_br_disc,backdrop,np_dots[0],np_dots[1]};
     for(unsigned i=0;i<sizeof hidden/sizeof *hidden;i++)if(hidden[i])lv_obj_add_flag(hidden[i],LV_OBJ_FLAG_HIDDEN);
@@ -2189,7 +2200,7 @@ void kit_fork_np_braun2(void){
     if(artist)lv_obj_set_style_text_color(artist,TC(TEXT_SECONDARY),0);
     if(album)lv_obj_set_style_text_color(album,TC(TEXT_SECONDARY),0);
     if(np_mid_btn)kit_keep(np_mid_btn);
-    if(t_elapsed){lv_obj_set_width(t_elapsed,160);lv_obj_set_style_text_align(t_elapsed,LV_TEXT_ALIGN_CENTER,0);lv_obj_set_style_text_font(t_elapsed,br_font(20,0),0);lv_obj_set_style_text_color(t_elapsed,TC(TEXT_PRIMARY),0);lv_obj_align(t_elapsed,LV_ALIGN_TOP_MID,0,BR2_SCALE_Y+16);kit_keep(t_elapsed);}
+    if(t_elapsed){lv_obj_set_width(t_elapsed,160);lv_obj_set_style_text_align(t_elapsed,LV_TEXT_ALIGN_CENTER,0);lv_obj_set_style_text_font(t_elapsed,br_font(24,1),0);lv_obj_set_style_text_color(t_elapsed,TC(TEXT_PRIMARY),0);lv_obj_align(t_elapsed,LV_ALIGN_TOP_MID,0,BR2_SCALE_Y+16);kit_keep(t_elapsed);}
     if(t_remain){lv_obj_add_flag(t_remain,LV_OBJ_FLAG_HIDDEN);kit_keep(t_remain);}   /* no time remaining */
     if(t_sep)lv_obj_add_flag(t_sep,LV_OBJ_FLAG_HIDDEN);
     static int hold_cb; if(!hold_cb){ lv_obj_add_flag(g_np_scr,LV_OBJ_FLAG_CLICKABLE); lv_obj_add_event_cb(g_np_scr,br2_np_root_hold,LV_EVENT_LONG_PRESSED,NULL); hold_cb=1; }
