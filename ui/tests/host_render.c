@@ -1841,6 +1841,39 @@ int main(int argc, char **argv){
             }
             puts("PASS: Null idle timer pauses/resumes; no Music state reads while panel off; wake resumes updates");return 0;
         }
+        if(getenv("TEST_SETTINGS_MOTION")){
+            assert(th_disco_family() || th_null());
+            const char *key=th_null()?"null_scroll":"disco_scroll";
+            const int modes[]={3,1,3,2,3,0,3,1};
+            for(unsigned i=0;i<sizeof modes/sizeof modes[0];i++){
+                setlist_open("Display");nav_wait(80);
+                simple_cfg_set_int_deferred(key,modes[i]);
+                screen_show(SCR_SETTINGS);nav_wait(100);
+                lv_obj_t *root=screen_get_root(SCR_SETTINGS);
+                lv_obj_t *label=find_text(root,"Playback");assert(label);
+                lv_obj_t *row=lv_obj_get_parent(label),*list=lv_obj_get_parent(row);
+                assert(lv_obj_get_child_count(list)==7);
+                if(modes[i]==3){
+                    assert(lv_obj_get_scroll_snap_y(list)==LV_SCROLL_SNAP_START);
+                    assert(lv_obj_get_y(list)==50);
+                }else{
+                    assert(lv_obj_get_scroll_snap_y(list)==LV_SCROLL_SNAP_NONE);
+                    assert(lv_obj_get_y(list)==70);
+                    for(uint32_t j=0;j<lv_obj_get_child_count(list);j++){
+                        lv_obj_t *r=lv_obj_get_child(list,j);
+                        assert(lv_obj_get_style_transform_scale_x(r,0)==256);
+                        assert(lv_obj_get_style_transform_scale_y(r,0)==256);
+                        assert(lv_obj_get_style_translate_y(r,0)==0);
+                    }
+                }
+                /* An unchanged preference must keep the cached list and scroll position. */
+                lv_obj_scroll_to_y(list,40,LV_ANIM_OFF);nav_wait(80);
+                int scroll=lv_obj_get_scroll_y(list);
+                settings_refresh_list();
+                assert(lv_obj_is_valid(list)&&lv_obj_get_scroll_y(list)==scroll);
+            }
+            puts("PASS: Settings follows Wheel/Classic/Straight/Disco changes and retains unchanged lists");return 0;
+        }
         if(getenv("REVIEW_SETTINGS_ALIGNMENT")){
             extern void settings_test_manifest(void);
             extern int settings_back_consumed(void);
