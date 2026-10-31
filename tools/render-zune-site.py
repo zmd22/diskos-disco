@@ -3,7 +3,7 @@
 Run in a disposable Linux container only: the host harness replaces /usr/data/fiio/db/song.db.
 Build first: make -C ui CROSS= host-render
 """
-import argparse, json, math, os, shutil, sqlite3, subprocess, tempfile
+import argparse, json, math, os, re, shutil, sqlite3, subprocess, tempfile
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 ROOT = Path(__file__).resolve().parents[1]
@@ -93,7 +93,8 @@ with tempfile.TemporaryDirectory(prefix='disco-site-') as temp:
         ('wheel-artists',10,'preview-library',{'ZUNE_LIBRARY_FIXTURE':'1','DISCO_SCROLL':'3','SITE_ARTIST':'The Midnight','PREVIEW_SETTLE':'3200'},0),
         ('library-list',13,'preview-albums',{'ZUNE_LIBRARY_FIXTURE':'1','ALBUM_VIEW':'0','PREVIEW_SETTLE':'3200'},0),
         ('stats-overview',13,'statsapp',{},0),('stats-albums',13,'statsapp',{'STATS_WRAP':'1'},0),('stats-artists',13,'statsapp',{'STATS_WRAP':'0','STATS_PAGE':'1'},0),
+        ('braun2-home',14,'preview-home',{},0),('braun2-music',14,'preview-np',{},1),('braun2-quick',14,'preview-quick',{},1),
         ('help-howto',10,'preview-howto',{},0)]:
         capture(f'screens/{name}',theme,mode,extra,light)
     revision=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
-    (a.output/'captures.json').write_text(json.dumps({'release':'v3.2.2','source_commit':revision,'renderer':'LVGL host-render; production screen code with sample catalog and listening history','artwork':'Original geometric demo sleeves, not official album artwork','captures':manifest},indent=2)+'\n')
+    (a.output/'captures.json').write_text(json.dumps({'release':'v'+re.search(r'#define DISCO_VERSION\s+"([^"]+)"',(ROOT/'ui/version.h').read_text())[1],'source_commit':revision,'renderer':'LVGL host-render; production screen code with sample catalog and listening history','artwork':'Original geometric demo sleeves, not official album artwork','captures':manifest},indent=2)+'\n')

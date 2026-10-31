@@ -2,6 +2,7 @@
 """Package verified UI and independent apps, source, licenses and instructions."""
 from pathlib import Path
 import argparse,hashlib,json,re,shutil,subprocess,sys,tarfile,zipfile
+from urllib.parse import urlsplit, unquote
 root=Path(__file__).resolve().parents[1]
 p=argparse.ArgumentParser();p.add_argument('--output',type=Path,default=root/'dist');a=p.parse_args()
 subprocess.run([sys.executable,str(root/'tools/check-release.py')],check=True)
@@ -46,13 +47,44 @@ if (win/'diskOS-Disco.exe').is_file() and (win/'diskos-wsl.tar.gz').is_file():
 complete=out/f'diskos-disco-{version}-complete.zip'
 with zipfile.ZipFile(complete,'w',zipfile.ZIP_DEFLATED) as z:
     z.write(out/'mq_ui','mq_ui');z.write(out/'mq_ui.build.json','mq_ui.build.json')
-    z.write(root/'RELEASE_INSTALL.md','INSTALL.md');z.write(root/f'docs/releases/v{version}.md','RELEASE-NOTES.md')
-    for name in ['UPDATING.md','WINDOWS.md','MACOS.md','DISC_SHELF_INSTALL.md','ZUNE.md','RELEASE_3.0.0.md','RELEASE_3.0.1.md','RELEASE_3.1.0.md','themes/zune.md','IMMERSIVE_CONTROLS.md']:z.write(root/'docs'/name,'docs/'+name)
-    for name in ['LICENSE','NOTICE.md']:z.write(root/name,name)
+    def document(source, destination):
+        # Repository-relative links break when a document is moved into the ZIP or release page.
+        # Pin them to the release snapshot, keeping the original document's directory semantics.
+        def pin(match):
+            target=match[1]
+            if urlsplit(target).scheme or target.startswith(('#','//')):return match[0]
+            path,sep,fragment=target.partition('#')
+            resolved=(source.parent/unquote(path)).resolve()
+            rel=resolved.relative_to(root)
+            if not resolved.exists():raise SystemExit(f'Missing document target: {source}: {target}')
+            kind='tree' if resolved.is_dir() else 'blob'
+            return ']('+f'https://github.com/zmd22/diskos-disco/{kind}/v{version}/'+rel.as_posix()+(sep+fragment if sep else '')+')'
+        z.writestr(destination,re.sub(r'\]\(([^)\s]+)\)',pin,source.read_text()))
+    document(root/'RELEASE_INSTALL.md','INSTALL.md')
+    document(root/f'docs/releases/v{version}.md','RELEASE-NOTES.md')
+    document(root/'README.md','README.md')
+    for name in ['UPDATING.md','WINDOWS.md','MACOS.md','SWITCHING.md','ALBUM_ROULETTE_INSTALL.md','DISC_SHELF_INSTALL.md','DISPLAY_SETTINGS.md',f'RELEASE_{version}.md','themes/BRAUN2.md','themes/zune.md','IMMERSIVE_CONTROLS.md']:
+        document(root/'docs'/name,'docs/'+name)
+    z.write(root/'LICENSE','LICENSE')
+    document(root/'NOTICE.md','NOTICE.md')
+    document(root/'corresponding-source/README.md','corresponding-source/README.md')
+    for license_file in sorted((root/'licenses').rglob('*')):
+        if license_file.is_file():z.write(license_file,license_file.relative_to(root).as_posix())
     # Disc Shelf is native now; its standalone archive remains available for older builds.
     # Do not duplicate the executable in the complete firmware ZIP.
     for name,appver,archive,mode in apps:
         source=f'{name}-{appver}-source.tar.gz';z.write(out/source,'corresponding-source/'+source)
+# Validate archive-local Markdown links before publishing any checksum manifests.
+with zipfile.ZipFile(complete) as z:
+    names=set(z.namelist())
+    for name in names:
+        if not name.endswith('.md'):continue
+        for target in re.findall(r'\]\(([^)\s]+)\)',z.read(name).decode()):
+            if urlsplit(target).scheme or target.startswith(('#','//')):continue
+            target=unquote(target.split('#',1)[0])
+            import posixpath
+            resolved=posixpath.normpath(posixpath.join(posixpath.dirname(name),target))
+            if resolved not in names and not any(n.startswith(resolved.rstrip('/')+'/') for n in names):raise SystemExit(f'Broken package link: {name}: {target}')
 outputs.append(complete)
 for name,alg in [('SHA256SUMS','sha256'),('MD5SUMS','md5')]:
     (out/name).write_text(''.join(f'{hashlib.new(alg,f.read_bytes()).hexdigest()}  {f.name}\n' for f in outputs))

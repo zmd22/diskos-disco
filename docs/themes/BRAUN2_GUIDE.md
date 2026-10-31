@@ -1,3 +1,5 @@
+> Historical design brief: alternatives below are not a list of shipped settings. See [Braun 2.0](BRAUN2.md) for the Disco 3.3.0 interface.
+
 # Braun 2.0 — Theme Guide
 
 A complete brief for building Braun 2.0 in diskOS Disco: design tokens, components, every

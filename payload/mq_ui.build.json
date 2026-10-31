@@ -2,7 +2,6 @@
   "version": "3.3.0",
   "revision": "Braun 2.0: a new light and dark theme (Home clock, Music layouts with a radio-dial scale, QS scales, classic volume dial with gain, Braun sliders, squircle menus and keys); 44 px colon and A-Z font fixes",
   "baseline": "v3.2.2",
-  "source_commit": "the v3.3.0 release commit (ui source as hashed below)",
   "ui_source_sha256": "448d3a1cfcbee6f1c825c29a7c53d29eaff92d2447d711b54dcdb002ce8a78cf",
   "ui_source_hash_recipe": "sorted tracked ui paths: path + NUL + file bytes + NUL",
   "compiler": "musl-cross-make GCC 11.2.0, musl 1.2.6; mipsel-linux-musl, -ffp-contract=off",
@@ -23,5 +22,7 @@
     "commit": "2bcb014b23a8c8cccf534eea8bda2fe5df453cfd",
     "license": "LGPL-2.1-or-later"
   },
-  "baseline_commit": "458e4d44a6dba75767583711e05f30ca5c18d3ba"
+  "baseline_commit": "458e4d44a6dba75767583711e05f30ca5c18d3ba",
+  "source_identity": "ui_source_sha256 identifies the exact tracked UI source; release_tag locates the release snapshot. No compiler invocation commit SHA was recorded.",
+  "release_tag": "v3.3.0"
 }

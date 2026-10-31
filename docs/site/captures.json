@@ -476,5 +476,28 @@
       "scene": "preview-howto",
       "options": {}
     }
+  ],
+  "additional_captures": [
+    {
+      "file": "screens/braun2-home.webp",
+      "theme": 14,
+      "variant": 0,
+      "source_commit": null,
+      "provenance": "Existing Braun 2.0 host preview; original capture revision not recorded."
+    },
+    {
+      "file": "screens/braun2-music.webp",
+      "theme": 14,
+      "variant": 1,
+      "source_commit": null,
+      "provenance": "Existing Braun 2.0 host preview; original capture revision not recorded."
+    },
+    {
+      "file": "screens/braun2-quick.webp",
+      "theme": 14,
+      "variant": 1,
+      "source_commit": null,
+      "provenance": "Existing Braun 2.0 host preview; original capture revision not recorded."
+    }
   ]
 }
