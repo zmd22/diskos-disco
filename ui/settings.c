@@ -1849,6 +1849,7 @@ void setlist_open(const char *group){
 static void hub_cb(lv_event_t *e){ list_back_cb(e); }
 /* Disco: the categories as a curved list of rounded rows (as Quick Settings), clear of the navigation sliver */
 static void disco_cat_cb(lv_event_t *e){ if(lv_event_get_code(e) == LV_EVENT_CLICKED) cat_pick((int)(intptr_t)lv_event_get_user_data(e)); }
+static int g_settings_motion = -1;   /* cached category list must match the selected motion */
 static void settings_disco_list(lv_obj_t *root){          /* styled like the submenus: curved rows, 4 in view, scroll dots */
     lv_obj_t *t = lv_label_create(root); lv_label_set_text(t, th_null() ? "SETTINGS" : "Settings");   /* Null: titles in capitals */
     lv_obj_set_style_text_font(t, (th_simple()||th_null())?TF(HEADER):TF(UI_20), 0); lv_obj_set_style_text_color(t, th_simple()?TC(ACCENT_PRIMARY):TC(TEXT_PRIMARY), 0);
@@ -1871,6 +1872,7 @@ static void settings_disco_list(lv_obj_t *root){          /* styled like the sub
         theme_list_row(r);
     }
     curvelist_update(&cl);
+    g_settings_motion = curvelist_disco_scroll();
 }
 void settings_create(lv_obj_t *root){
     lv_obj_set_style_bg_color(root, TC(CANVAS), 0);
@@ -1898,8 +1900,17 @@ void settings_create(lv_obj_t *root){
     if(th_braun_family()){ br_face(root); orbit_braun_icons(&g_set_orb); }   /* Braun: the grille face; knob icons white */
 }
 
-/* Category list is static; nothing to re-sync when SCR_SETTINGS is (re)shown. */
-void settings_refresh_list(void){ if(th_zune()){ lv_obj_t *r = screen_get_root(SCR_SETTINGS); if(r) zsettings_root(r); } }
+/* Most themes cache the category list. Wheel changes geometry, transforms and snap settings,
+ * so rebuild on motion changes instead of leaving part of the old layout behind. */
+void settings_refresh_list(void){
+    lv_obj_t *r = screen_get_root(SCR_SETTINGS);
+    if(!r) return;
+    if(th_zune()){ zsettings_root(r); return; }
+    if((th_disco_family() || th_null()) && g_settings_motion != curvelist_disco_scroll()){
+        lv_obj_clean(r);
+        settings_disco_list(r);
+    }
+}
 static const char *row_value(const setting_t *s,char *buf,int n){
     if(display_disabled_reason(s)){snprintf(buf,n,"Disabled");return buf;}
     if(th_null() && s->cfg_key && !strcmp(s->cfg_key,"null_side")){snprintf(buf,n,"Disabled");return buf;}
