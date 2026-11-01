@@ -2,6 +2,12 @@
 
 User-facing changes in diskOS Disco!. Details of each release are in [docs/releases](docs/releases/); everything else is in the Git history. diskOS is beta software.
 
+## 3.3.1
+
+- Fixed main Settings retaining Wheel geometry after changing List motion in Squash, Disco and Null; ordinary returns preserve scroll position.
+- Corrected Braun 2.0/Disc Shelf documentation, package links and licences, and screenshot provenance.
+- Fresh matching MIPS UI build. [Release notes](docs/releases/v3.3.1.md)
+
 ## 3.3.0
 
 **Braun 2.0**, a new light and dark theme. [Release notes](docs/releases/v3.3.0.md)

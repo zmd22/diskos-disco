@@ -2,7 +2,7 @@
 
 > **Development builds on `dev` are experimental / in testing.** Use tagged releases for the published downloads. [Development notes](docs/DEV.md).
 
-**Disco! 3.3.0:** introducing **Braun 2.0**, a light and dark theme in the spirit of Dieter Rams. [Release notes](docs/releases/v3.3.0.md) · [Changelog](CHANGELOG.md)
+**Disco! 3.3.1:** fixes Settings list-motion changes in Squash, Disco and Null, with corrected documentation and packaging. Includes **Braun 2.0**, a light and dark theme in the spirit of Dieter Rams. [Release notes](docs/releases/v3.3.1.md) · [Changelog](CHANGELOG.md)
 
 <p align="center">
   <b>Your music. Your kind of Disco.</b><br>
@@ -82,7 +82,7 @@ Power the Disc off, hold **Volume Down** and plug in USB (the screen stays black
 **Windows:** the app's Update page does it ([how](docs/WINDOWS.md#step-4--update-from-the-sd-card)). **Linux:** download `mq_ui` from the [latest release](https://github.com/zmd22/diskos-disco/releases/latest) and sign it with the keys installed on this Disc:
 
 ```sh
-sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 3.3.0      # -> ./diskos-update/
+sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 3.3.1      # -> ./diskos-update/
 ```
 
 Copy the `diskos-update` folder to the SD card root, then on the Disc: **Settings › System › Maintenance › Update from SD Card › Update**, and restart. The new version runs as a trial: choose **Keep** when asked (or let confirmed playback accept it), or **Go back**. A failing trial rolls back. More in the [SD update guide](docs/UPDATING.md).

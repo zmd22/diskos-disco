@@ -1,6 +1,6 @@
-# Disco 3.3.0 documentation
+# Disco 3.3.1 documentation
 
-These guides describe the shipped 3.3.0 source and payload, the release commit tagged `v3.3.0`. Later branch changes are not part of this baseline.
+These guides describe the shipped 3.3.1 source and payload, the release commit tagged `v3.3.1`. Later branch changes are not part of this baseline.
 
 ## Use
 
@@ -22,6 +22,6 @@ These guides describe the shipped 3.3.0 source and payload, the release commit t
 
 ## Release and provenance
 
-- [3.3.0 changes](releases/v3.3.0.md), [binary record](RELEASE_3.3.0.md), [changelog](../CHANGELOG.md).
+- [3.3.1 changes](releases/v3.3.1.md), [binary record](RELEASE_3.3.1.md), [changelog](../CHANGELOG.md).
 - Earlier release notes are historical records, not current instructions.
 - [Licenses](../licenses/README.md), [third-party notice](../NOTICE.md), [SPL source](../SPL_SOURCE.md), [security](../SECURITY.md).

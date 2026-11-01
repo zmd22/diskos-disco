@@ -34,4 +34,4 @@ Keep source, version and payload metadata consistent. `tools/check-release.py` c
 
 Use [signed SD updates](UPDATING.md) for UI candidates on an install with the matching public key. Initial installation, boot-chain changes or root-key changes require the appropriate installer workflow. Never overwrite the active `/usr/data/mq_ui` hard link or force-kill the player/UI as a generic deployment procedure.
 
-Before releasing, record source revision, compiler/ABI, binary hash and size, validation performed and device-test status. Obtain maintainer approval before committing when requested, and before updating main or tags. The release workflow is triggered by `v*` tags, not an ordinary main push.
+Before releasing, record source revision, compiler/ABI, binary hash and size, validation performed and device-test status. Obtain maintainer approval before committing when requested, and before updating main or tags. The release workflow runs for `v*` tags and for main pushes that change `ui/version.h` or `payload/mq_ui.build.json`. Prepare and verify a matching payload before merging those files.

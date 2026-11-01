@@ -1,16 +1,16 @@
 {
-  "version": "3.3.0",
-  "revision": "Braun 2.0: a new light and dark theme (Home clock, Music layouts with a radio-dial scale, QS scales, classic volume dial with gain, Braun sliders, squircle menus and keys); 44 px colon and A-Z font fixes",
-  "baseline": "v3.2.2",
-  "ui_source_sha256": "448d3a1cfcbee6f1c825c29a7c53d29eaff92d2447d711b54dcdb002ce8a78cf",
+  "version": "3.3.1",
+  "revision": "Fix cached Settings list motion in Squash, Disco and Null; corrected documentation and packaging",
+  "baseline": "v3.3.0",
+  "ui_source_sha256": "677e4ccfbf145978c3444d6b618e6fc08115b352bcd06c1af642669d7b4c6938",
   "ui_source_hash_recipe": "sorted tracked ui paths: path + NUL + file bytes + NUL",
   "compiler": "musl-cross-make GCC 11.2.0, musl 1.2.6; mipsel-linux-musl, -ffp-contract=off",
   "abi": "static little-endian MIPS32r2, o32, FP64, NaN2008",
-  "status": "Disco 3.3.0. Fresh static MIPS build of the release source; the Braun 2.0 work was tried on the owner's Disc as 3.3.0-test1 to -test6, 3.3.0 and 3.3.1-test1.",
+  "status": "Fresh static MIPS build. Settings motion regression passed in Squash light/dark, Disco and Null; this binary has not been physically tested on a Disc.",
   "binary": {
-    "bytes": 7316620,
-    "sha256": "4af9b27339279f8b6609fdc5523df8dbc9d99111ed83c3db895df35677673beb",
-    "md5": "386dedb273ea62e2c1a4677010fc48c0"
+    "sha256": "6b4cb4d45abf1e784c8f5e7fb9b7cd3f5395e6b93cdf20a04ae566c750ca7879",
+    "md5": "1a367db7e98bcc62bc83f6de366f0874",
+    "bytes": 7316908
   },
   "artwork_helper": {
     "bytes": 119424,
@@ -22,7 +22,8 @@
     "commit": "2bcb014b23a8c8cccf534eea8bda2fe5df453cfd",
     "license": "LGPL-2.1-or-later"
   },
-  "baseline_commit": "458e4d44a6dba75767583711e05f30ca5c18d3ba",
-  "source_identity": "ui_source_sha256 identifies the exact tracked UI source; release_tag locates the release snapshot. No compiler invocation commit SHA was recorded.",
-  "release_tag": "v3.3.0"
+  "baseline_commit": "31bcd6cc8c58dde5d6d48fe358ab8d9854794b8a",
+  "source_identity": "Built from source_base_commit with DISCO_VERSION set to 3.3.1. ui_source_sha256 identifies the exact tracked UI snapshot.",
+  "release_tag": "v3.3.1",
+  "source_base_commit": "5ec6a096c641cbf3227b9a183f610fedbfa3434b"
 }

@@ -1,4 +1,4 @@
-# Disco 3.3.0 tour
+# Disco 3.3.1 tour
 
 A touch interface for the round Snowsky Disc. The stock player still plays the audio; Disco handles browsing, controls and its built-in apps. Exact menus are in [Settings](DISPLAY_SETTINGS.md).
 
@@ -8,7 +8,7 @@ Each theme has its own navigation: Disco's edge shard and navigation circle, Nul
 
 ## Make it yours
 
-Disco, Null, Squash and Zune each have a [guide](README.md). **Braun 2.0** (new in 3.3.0) is a light and dark theme in the spirit of Dieter Rams: a wall-clock Home, a radio-dial seek scale and shaded keys with orange icons. Ring, Braun and Stone remain available. Light and dark appearances, accents, fonts and shortcuts are under Settings › Display.
+Disco, Null, Squash and Zune each have a [guide](README.md). **Braun 2.0** (introduced in 3.3.0) is a light and dark theme in the spirit of Dieter Rams: a wall-clock Home, a radio-dial seek scale and shaded keys with orange icons. Ring, Braun and Stone remain available. Light and dark appearances, accents, fonts and shortcuts are under Settings › Display.
 
 ## Music and Immersive
 
