@@ -24,13 +24,14 @@
 > powering on to start Disco once, then set Settings > System > Controls > Default UI to **diskOS**.
 > More: [what stays and what goes when you flash or switch](SWITCHING.md).
 
-**Install diskOS Disco! on your Snowsky Disc from a Windows PC, by clicking through four pages.** No terminal, no
-Linux knowledge, no typing commands. The app checks your PC, sets everything up, flashes the Disc, and later puts new
+**Install diskOS Disco! on your Snowsky Disc from a Windows PC, with five tabs: Check, Setup, Install, Update and
+Restore.** Each tab works on its own at any time. No terminal, no Linux knowledge, no typing commands. The tabbed app
+is new in 3.4.0 and experimental; the screenshots below show the earlier page-by-page layout, with the same controls. The app checks your PC, sets everything up, flashes the Disc, and later puts new
 versions on your SD card, signed with your own keys.
 
 <p align="center">
-  <img src="windows/check.png" width="400" alt="Step 1: the PC check, all green">
-  <img src="windows/install.png" width="400" alt="Step 3: installing on the Disc">
+  <img src="windows/check.png" width="400" alt="Check: the PC check, all green">
+  <img src="windows/install.png" width="400" alt="Install: installing on the Disc">
 </p>
 
 **[Download diskOS-Disco-for-Windows.zip](https://github.com/zmd22/diskos-disco/releases/latest/download/diskOS-Disco-for-Windows.zip)**
@@ -77,7 +78,7 @@ The same installer and the same safety checks run as on Linux. Only the way you 
 The app itself needs no administrator rights. Windows asks for permission only for the few steps that need it
 (installing WSL, and sharing the Disc's USB connection the first time), and the app says beforehand when that's coming.
 
-## Step 1 · Check
+## Check
 
 The app looks for six things and shows a green tick or a button for each:
 
@@ -90,12 +91,12 @@ The app looks for six things and shows a green tick or a button for each:
 | **Free disk space** | Free up space until there's about 10 GB. |
 | **No restart waiting** | **Restart now** (often needed right after installing WSL). |
 
-Work from the top, then click **Check again**. When everything is green, click **Next**. **Copy report** copies the
+Work from the top, then click **Check again**. When everything is green, go to **Setup**. **Copy report** copies the
 results, handy if you ask for help.
 
-## Step 2 · Prepare
+## Setup
 
-<p align="center"><img src="windows/prepare.png" width="480" alt="Step 2: diskOS's own Linux environment, ready"></p>
+<p align="center"><img src="windows/prepare.png" width="480" alt="Setup: diskOS's own Linux environment, ready"></p>
 
 Click **Set up**. The app creates its own Linux environment called **diskOS-Disco** from `diskos-wsl.tar.gz`, then
 runs the installer's self-test inside it. That takes a minute or two. It's a minimal Ubuntu with the diskOS installer,
@@ -105,12 +106,12 @@ its tools and the newest Disco! interface. It runs only while the app needs it.
 - **Remove it** deletes the environment completely.
 - After an app update the page may say **Needs updating**: click **Set up again**.
 
-The backup of your Disc's original system (made in step 3) is always copied to a normal Windows folder, so removing or
+The backup of your Disc's original system (made by Install) is always copied to a normal Windows folder, so removing or
 replacing the environment never loses it.
 
-## Step 3 · Install
+## Install
 
-<p align="center"><img src="windows/install.png" width="480" alt="Step 3: firmware, version, keys, Disc connected"></p>
+<p align="center"><img src="windows/install.png" width="480" alt="Install: firmware, version, keys, Disc connected"></p>
 
 1. **Firmware:** click **Choose…** and pick FiiO's V2.57 ZIP.
 2. **Version:** **The latest release** (the default) is downloaded from GitHub when you click Install and checked
@@ -132,30 +133,37 @@ replacing the environment never loses it.
 > you can't make updates for your Disc (you'd have to flash again). Keep it private: anyone with `leaf.key` can update
 > your Disc.
 
-## Step 4 · Update from the SD card
+## Update from the SD card
 
-<p align="center"><img src="windows/update.png" width="480" alt="Step 4: a signed update for the SD card"></p>
+<p align="center"><img src="windows/update.png" width="480" alt="Update: a signed update for the SD card"></p>
 
-New versions don't need flashing. Open the app, go through to **Update** (the checks are quick once everything is set
-up), then:
+New versions don't need flashing. Open the app's **Update** tab. It works on its own, even if this PC never installed
+the Disc (you need the update keys the Disc was installed with), then:
 
 1. **Version:** **The latest release** downloads it from GitHub and checks it against the release's checksums. Or pick
    an `mq_ui` file you already have.
 2. **Your update keys:** the same folder you installed with (it's found automatically in Documents\diskOS Keys).
 3. **SD card:** put the Disc's card in your PC, or connect the Disc in USB storage mode, and pick it. **Save to a folder
    instead** works too, if you'd rather copy it yourself.
-4. Click **Make the update**. The app signs the version with your keys and writes a **diskos-update** folder to the card.
+4. Click **Make the update**. The app signs the version with your keys and writes the six files of a **diskos-update**
+   folder to the card, one by one.
 5. On the Disc: **Settings › System › Maintenance › Update from SD Card › Update**, then restart. Play some music for a
    few minutes and the new version is kept; if anything goes wrong, the Disc goes back to the previous one by itself.
 
 More about how SD updates and trials work: [Updating from the SD card](UPDATING.md).
 
+## Restore
+
+**Restore** puts FiiO's stock firmware back on the connected Disc (in flash mode, as for Install), from the backup made
+when you installed. Your music stays. Without flashing, **Settings › System › Controls › Default UI › Stock** on the
+Disc starts FiiO's interface instead.
+
 ## What it changes on your PC
 
-- **WSL** and **usbipd-win**, installed by you through Windows (step 1). Both are free, from Microsoft and from the
+- **WSL** and **usbipd-win**, installed by you through Windows (Check). Both are free, from Microsoft and from the
   usbipd-win project, and other apps can use them too. Uninstall them from Windows Settings › Apps if you no longer need
   them.
-- **The diskOS-Disco environment**, in `%LOCALAPPDATA%\diskOS-Disco\wsl`. Remove it in step 2.
+- **The diskOS-Disco environment**, in `%LOCALAPPDATA%\diskOS-Disco\wsl`. Remove it in Setup.
 - **The app's folder**, `%LOCALAPPDATA%\diskOS-Disco`: the backup of your Disc's original system (`backup`), the last
   SD update (`update`) and a small helper script. Delete it to remove everything; keep `backup` if you may want to go
   back to stock.
@@ -166,7 +174,7 @@ Nothing is installed system-wide by the app itself, and it doesn't start with Wi
 ## Privacy
 
 The app talks to the internet only when you ask it to: installing WSL or the USB bridge through Windows, and
-downloading the latest release from GitHub in steps 3 and 4. Your firmware, keys and music stay on your PC and your Disc. See
+downloading the latest release from GitHub in Install and Update. Your firmware, keys and music stay on your PC and your Disc. See
 [Privacy](PRIVACY.md).
 
 ## Troubleshooting
@@ -176,7 +184,7 @@ downloading the latest release from GitHub in steps 3 and 4. Your firmware, keys
 | "Windows protected your PC" | **More info › Run anyway.** The app isn't code-signed yet. |
 | Install WSL does nothing | Say **Yes** to the administrator question; then restart Windows and open the app again. |
 | Virtualization stays red | Turn on Intel VT-x / AMD-V (SVM) in the BIOS/UEFI, save and restart. |
-| Prepare: **Package missing** | Keep `diskos-wsl.tar.gz` in the same folder as the app (extract the whole ZIP). |
+| Setup: **Package missing** | Keep `diskos-wsl.tar.gz` in the same folder as the app (extract the whole ZIP). |
 | **No Disc found** | Turn the Disc off, hold Volume Down, then plug in. Use a data cable, straight into the PC (no hub). |
 | **Didn't reach diskOS** | Unplug, power off, Volume Down, plug in again, **Find my Disc**. The log shows the USB bridge's own message. |
 | The install stops | Nothing is lost: the original system isn't touched until the actual write, and you can always start again with Volume Down. **Copy report** and open an [issue](https://github.com/zmd22/diskos-disco/issues). |

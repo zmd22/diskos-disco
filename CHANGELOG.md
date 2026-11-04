@@ -2,6 +2,17 @@
 
 User-facing changes in diskOS Disco!. Details of each release are in [docs/releases](docs/releases/); everything else is in the Git history. diskOS is beta software.
 
+## 3.4.0
+
+**aptX and aptX HD on the Disc** (experimental). [Release notes](docs/releases/v3.4.0.md) · [Bluetooth guide](docs/BLUETOOTH.md)
+
+- aptX / aptX HD through Disco's own open-source BlueALSA build; Settings › Connectivity › aptX (experimental).
+- Bluetooth Codec: SBC, AAC or aptX/LDAC Mobile / Standard / High (LDAC → aptX HD → aptX → AAC → SBC, by what each pair has).
+- LDAC always on FiiO's Bluetooth audio; a pair is reconnected once when its best codec needs the other stack.
+- Codec badge in Song Info; crash guard; Quiet Wi-Fi for Bluetooth (fewer dropouts).
+- Fixed: headphones stuck on AAC after one slow codec switch.
+- New Linux app with Fedora and Arch packages; the Windows app redesigned with tabs (both experimental).
+
 ## 3.3.1
 
 - Fixed main Settings retaining Wheel geometry after changing List motion in Squash, Disco and Null; ordinary returns preserve scroll position.

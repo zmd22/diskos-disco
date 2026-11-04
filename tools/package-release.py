@@ -48,7 +48,7 @@ with zipfile.ZipFile(complete,'w',zipfile.ZIP_DEFLATED) as z:
     document(root/'RELEASE_INSTALL.md','INSTALL.md')
     document(root/f'docs/releases/v{version}.md','RELEASE-NOTES.md')
     document(root/'README.md','README.md')
-    for name in ['UPDATING.md','WINDOWS.md','MACOS.md','SWITCHING.md','ALBUM_ROULETTE_INSTALL.md','DISC_SHELF_INSTALL.md','DISPLAY_SETTINGS.md',f'RELEASE_{version}.md','themes/BRAUN2.md','themes/zune.md','IMMERSIVE_CONTROLS.md']:
+    for name in ['UPDATING.md','WINDOWS.md','LINUX.md','BLUETOOTH.md','MACOS.md','SWITCHING.md','ALBUM_ROULETTE_INSTALL.md','DISC_SHELF_INSTALL.md','DISPLAY_SETTINGS.md',f'RELEASE_{version}.md','themes/BRAUN2.md','themes/zune.md','IMMERSIVE_CONTROLS.md']:
         document(root/'docs'/name,'docs/'+name)
     z.write(root/'LICENSE','LICENSE')
     document(root/'NOTICE.md','NOTICE.md')

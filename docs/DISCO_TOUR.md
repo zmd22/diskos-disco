@@ -1,4 +1,4 @@
-# Disco 3.3.1 tour
+# Disco 3.4.0 tour
 
 A touch interface for the round Snowsky Disc. The stock player still plays the audio; Disco handles browsing, controls and its built-in apps. Exact menus are in [Settings](DISPLAY_SETTINGS.md).
 
@@ -24,7 +24,7 @@ Songs, artists, albums, genres, favourites, history, playlists and folders. Albu
 
 ## Sound and connections
 
-Equalizer presets and your own profiles, gain, filter, ReplayGain, balance and volume limit. Wi-Fi and Bluetooth screens; MA Sendspin is experimental.
+Equalizer presets and your own profiles, gain, filter, ReplayGain, balance and volume limit. Wi-Fi and Bluetooth screens. Bluetooth headphones get their best codec, including aptX / aptX HD with Settings › Connectivity › aptX ([experimental](BLUETOOTH.md)); Song Info shows the codec in use. MA Sendspin is experimental.
 
 ## Power
 

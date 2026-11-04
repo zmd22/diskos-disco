@@ -28,6 +28,8 @@ bundles. See `../NOTICE.md` for the component->license mapping and the static-li
 | QR Code generator, Nayuki (via LVGL, in `mq_ui`) | MIT | [`MIT-qrcodegen.txt`](MIT-qrcodegen.txt) (verbatim from the LVGL source header) |
 | TJpgDec, ChaN (via LVGL, in `mq_ui`) | BSD-style | [`LICENSE-TJpgDec.txt`](LICENSE-TJpgDec.txt) (verbatim from the LVGL source header) |
 | Montserrat font (via LVGL built-in fonts, in `mq_ui`) | OFL-1.1 | [`OFL-1.1-Montserrat.txt`](OFL-1.1-Montserrat.txt) |
+| BlueALSA 4.0.0 (optional aptX daemon, data inside `mq_ui`) | MIT | [`MIT-bluez-alsa.txt`](MIT-bluez-alsa.txt) (verbatim from bluez-alsa 4.0.0) |
+| libfreeaptx 0.1.1 (optional aptX encoder, data inside `mq_ui`) | LGPL-2.1-or-later | [`LGPL-2.1-libfreeaptx.txt`](LGPL-2.1-libfreeaptx.txt) (verbatim from libfreeaptx 0.1.1); source in `../ui/vendor/aptx/` |
 | Source Han Sans SC (CJK fallback font in `mq_ui`) | OFL-1.1 | [`OFL-1.1-SourceHanSans.txt`](OFL-1.1-SourceHanSans.txt) |
 | Noto Sans (Latin/Greek/Cyrillic and Vietnamese fallback fonts in `mq_ui`) and Noto Sans Thai (Thai fallback, tone marks repositioned) | OFL-1.1 | [`OFL-1.1-NotoSans.txt`](OFL-1.1-NotoSans.txt) |
 | Noto Sans CJK KR (Korean fallback, 2,350 syllables, in `mq_ui`) | OFL-1.1 | [`OFL-1.1-SourceHanSans.txt`](OFL-1.1-SourceHanSans.txt) |

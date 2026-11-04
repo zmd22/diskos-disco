@@ -2,7 +2,7 @@
 
 > **Development builds on `dev` are experimental / in testing.** Use tagged releases for the published downloads. [Development notes](docs/DEV.md).
 
-**Disco! 3.3.1:** fixes Settings list-motion changes in Squash, Disco and Null, with corrected documentation and packaging. Includes **Braun 2.0**, a light and dark theme in the spirit of Dieter Rams. [Release notes](docs/releases/v3.3.1.md) · [Changelog](CHANGELOG.md)
+**Disco! 3.4.0: aptX comes to the Disc** (experimental). aptX and aptX HD over Bluetooth, an aptX/LDAC codec choice that gives each pair its best codec, and Quiet Wi-Fi for fewer dropouts. Plus a new Linux app and a redesigned Windows app. [Release notes](docs/releases/v3.4.0.md) · [Bluetooth](docs/BLUETOOTH.md) · [Changelog](CHANGELOG.md)
 
 <p align="center">
   <b>Your music. Your kind of Disco.</b><br>
@@ -27,6 +27,8 @@
   <a href="https://github.com/zmd22/diskos-disco/releases/latest"><b>Download</b></a> ·
   <a href="#install">Install</a> ·
   <a href="docs/WINDOWS.md"><b>Windows</b></a> ·
+  <a href="docs/LINUX.md"><b>Linux</b></a> ·
+  <a href="docs/BLUETOOTH.md">Bluetooth</a> ·
   <a href="#updates-from-the-sd-card">SD updates</a> ·
   <a href="CHANGELOG.md">Changelog</a> ·
   <a href="https://zmd22.github.io/diskos-disco/">Website</a> ·
@@ -42,7 +44,7 @@
 
 ## What's in it
 
-Eight themes (Disco, Null, Squash, Zune, Braun 2.0, Ring, Braun, Stone), local music with playlists and a Queue, List/Wall/Coverflow and Wheel lists, and Immersive with lyrics. SongSphere, Listening Stats, Album Roulette, Boomshine and Disc Shelf are built in. See the [tour](docs/DISCO_TOUR.md) and [settings](docs/DISPLAY_SETTINGS.md).
+Eight themes (Disco, Null, Squash, Zune, Braun 2.0, Ring, Braun, Stone), local music with playlists and a Queue, List/Wall/Coverflow and Wheel lists, and Immersive with lyrics. SongSphere, Listening Stats, Album Roulette, Boomshine and Disc Shelf are built in. Bluetooth headphones with SBC, AAC, LDAC and, new in 3.4.0, aptX / aptX HD ([experimental](docs/BLUETOOTH.md)). See the [tour](docs/DISCO_TOUR.md) and [settings](docs/DISPLAY_SETTINGS.md).
 
 ## Install
 
@@ -54,7 +56,7 @@ You need a Disc on **FiiO firmware V2.57**, FiiO's V2.57 firmware ZIP and a good
 
 ### Windows
 
-Download **[diskOS-Disco-for-Windows.zip](https://github.com/zmd22/diskos-disco/releases/latest/download/diskOS-Disco-for-Windows.zip)**, extract it and run `diskOS-Disco.exe`. It handles installing, your update keys and SD updates. [Windows guide](docs/WINDOWS.md). Unsupported, but confirmed working by users. Used an older version? Click **Set up again** once.
+Download **[diskOS-Disco-for-Windows.zip](https://github.com/zmd22/diskos-disco/releases/latest/download/diskOS-Disco-for-Windows.zip)**, extract it and run `diskOS-Disco.exe`. Its tabs (Check, Setup, Install, Update, Restore) handle installing, your update keys and SD updates, each on its own. [Windows guide](docs/WINDOWS.md). Unsupported, but confirmed working by users; the redesigned app is experimental. Used an older version? Click **Set up again** once.
 
 ### macOS
 
@@ -62,7 +64,9 @@ Follow the [macOS guide](docs/MACOS.md).
 
 ### Linux
 
-Download the [latest release](https://github.com/zmd22/diskos-disco/releases/latest) source (or `git clone`); the interface is already in `payload/mq_ui`.
+**New in 3.4.0 (experimental): the Linux app.** Install the Fedora `.rpm` or Arch `.pkg.tar.zst` from the [latest release](https://github.com/zmd22/diskos-disco/releases/latest) and open **diskOS Disco!** from your applications menu, or run `./diskos-installer` from the source. [Linux guide](docs/LINUX.md).
+
+On the command line: download the [latest release](https://github.com/zmd22/diskos-disco/releases/latest) source (or `git clone`); the interface is already in `payload/mq_ui`.
 
 ```sh
 sh ui/tools/owner-keys/diskos-keys.sh          # once: update keys in ./diskos-keys/ (keep them safe; optional)
@@ -79,13 +83,13 @@ Power the Disc off, hold **Volume Down** and plug in USB (the screen stays black
 
 ## Updates from the SD card
 
-**Windows:** the app's Update page does it ([how](docs/WINDOWS.md#step-4--update-from-the-sd-card)). **Linux:** download `mq_ui` from the [latest release](https://github.com/zmd22/diskos-disco/releases/latest) and sign it with the keys installed on this Disc:
+**Windows:** the app's Update tab does it ([how](docs/WINDOWS.md#update-from-the-sd-card)). **Linux app:** its Update tab ([how](docs/LINUX.md)). **Linux:** download `mq_ui` from the [latest release](https://github.com/zmd22/diskos-disco/releases/latest) and sign it with the keys installed on this Disc:
 
 ```sh
-sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 3.3.1      # -> ./diskos-update/
+sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 3.4.0      # -> ./diskos-update/
 ```
 
-Copy the `diskos-update` folder to the SD card root, then on the Disc: **Settings › System › Maintenance › Update from SD Card › Update**, and restart. The new version runs as a trial: choose **Keep** when asked (or let confirmed playback accept it), or **Go back**. A failing trial rolls back. More in the [SD update guide](docs/UPDATING.md).
+Copy the six files in it one by one into `<SD>/diskos-update/` (overwriting the old ones), then on the Disc: **Settings › System › Maintenance › Update from SD Card › Update**, and restart. The new version runs as a trial: choose **Keep** when asked (or let confirmed playback accept it), or **Go back**. A failing trial rolls back. More in the [SD update guide](docs/UPDATING.md).
 
 ## Build it yourself
 
@@ -100,6 +104,7 @@ See the [UI guide](docs/UI.md) and [build workflow](docs/DEV_WORKFLOW.md).
 - **Suddenly see FiiO's interface?** Disco! stopped; restart. `/usr/data/diskos_boot.log` (Debug Mode SSH) says why.
 - **Languages:** Latin, Greek, Cyrillic, Thai, Korean, Japanese and common Chinese. No right-to-left or Indian scripts yet.
 - **Updates** come by signed SD update or a fresh install; no online updates.
+- **Bluetooth codecs and aptX are experimental.** After changing headphones, press Play again. aptX Adaptive/Lossless aren't supported. [More](docs/BLUETOOTH.md#known-limits)
 
 ## Going back
 
@@ -115,7 +120,8 @@ See the [UI guide](docs/UI.md) and [build workflow](docs/DEV_WORKFLOW.md).
 | [How-to](docs/HOWTO.md) | Everyday tasks |
 | [Updating](docs/UPDATING.md) | Keys, signing, troubleshooting |
 | [Flashing and switching](docs/SWITCHING.md) | What stays when you flash or switch |
-| [Windows](docs/WINDOWS.md) · [macOS](docs/MACOS.md) | Installing from a PC or Mac |
+| [Windows](docs/WINDOWS.md) · [Linux](docs/LINUX.md) · [macOS](docs/MACOS.md) | Installing from a PC or Mac |
+| [Bluetooth](docs/BLUETOOTH.md) | Codecs, aptX, Quiet Wi-Fi (experimental) |
 | [Changelog](CHANGELOG.md) | Every release, newest first |
 | [All docs](docs/README.md) | Apps, hardware notes, development, legal |
 

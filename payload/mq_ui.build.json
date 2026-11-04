@@ -1,16 +1,16 @@
 {
-  "version": "3.3.1",
-  "revision": "Fix cached Settings list motion in Squash, Disco and Null; corrected documentation and packaging",
-  "baseline": "v3.3.0",
-  "ui_source_sha256": "677e4ccfbf145978c3444d6b618e6fc08115b352bcd06c1af642669d7b4c6938",
+  "version": "3.4.0",
+  "revision": "aptX and aptX HD (experimental), aptX/LDAC codec choice, LDAC on FiiO's BlueALSA, no codec blacklisting, crash guard, Quiet Wi-Fi for Bluetooth, codec badge; Linux app and tabbed Windows app",
+  "baseline": "v3.3.1",
+  "ui_source_sha256": "644965c2ea67d7b42b3610903caa34cc6ffc54faa292a54a156fcec184b57482",
   "ui_source_hash_recipe": "sorted tracked ui paths: path + NUL + file bytes + NUL",
   "compiler": "musl-cross-make GCC 11.2.0, musl 1.2.6; mipsel-linux-musl, -ffp-contract=off",
   "abi": "static little-endian MIPS32r2, o32, FP64, NaN2008",
-  "status": "Fresh static MIPS build. Settings motion regression passed in Squash light/dark, Disco and Null; this binary has not been physically tested on a Disc.",
+  "status": "Fresh static MIPS build. Its source was tested on a Disc as signed test builds (test7-test9: LDAC on the FiiO EH11, aptX on the Sennheiser MTW4, BlueALSA switching, Quiet Wi-Fi); this exact binary differs from test9 only in the version label and the codec choice labels, and has not itself been physically tested.",
   "binary": {
-    "sha256": "6b4cb4d45abf1e784c8f5e7fb9b7cd3f5395e6b93cdf20a04ae566c750ca7879",
-    "md5": "1a367db7e98bcc62bc83f6de366f0874",
-    "bytes": 7316908
+    "sha256": "559afd09a05bd0c89c4fa5167753e26e19839a2129f5278b39331b69eca692ea",
+    "md5": "d422bdbc4ab473cf68e61d33c396168e",
+    "bytes": 7548060
   },
   "artwork_helper": {
     "bytes": 119424,
@@ -22,8 +22,12 @@
     "commit": "2bcb014b23a8c8cccf534eea8bda2fe5df453cfd",
     "license": "LGPL-2.1-or-later"
   },
-  "baseline_commit": "31bcd6cc8c58dde5d6d48fe358ab8d9854794b8a",
-  "source_identity": "Built from source_base_commit with DISCO_VERSION set to 3.3.1. ui_source_sha256 identifies the exact tracked UI snapshot.",
-  "release_tag": "v3.3.1",
-  "source_base_commit": "5ec6a096c641cbf3227b9a183f610fedbfa3434b"
+  "aptx_bluealsa": {
+    "bluealsa": "BlueALSA 4.0.0 (MIT) with build/bluealsa-aptx/patches/0001-0003, embedded in mq_ui",
+    "libfreeaptx": "0.1.1 (LGPL-2.1-or-later), embedded as a separate shared library; source in ui/vendor/aptx"
+  },
+  "baseline_commit": "57618cbcc06d81f4ee7f3d8e491c97355c70ae0f",
+  "source_identity": "Built from source_base_commit (DISCO_VERSION 3.4.0, empty test label). ui_source_sha256 identifies the exact tracked UI snapshot.",
+  "release_tag": "v3.4.0",
+  "source_base_commit": "7849f8fa2d0d194f2475092a6209ed4724c37ad4"
 }

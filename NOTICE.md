@@ -205,3 +205,19 @@ No SMB server, Kerberos or discovery utility is included in the firmware.
 Original theme by **namastecoconut-imagined**: https://github.com/namastecoconut-imagined/diskos-disco-zune, integrated from commit `13821d6d024d6dfc90d6ac505ca7e4af94f4e256`. Credit covers the original Metro-inspired visual direction and implementation, including typography, home menu, music and library presentation. zmd22’s subsequent work adapts it to Disco and polishes legibility, spacing and shared controls. Existing file copyrights and licences are retained; the UI remains GPL-3.0-or-later.
 
 Open Sans font sources and SIL Open Font License are retained under `ui/fonts/zune/` and `licenses/OpenSans-OFL.txt`. Website walkthrough artwork is generated geometric demo artwork from `tools/render-zune-site.py`; sample artist/album names illustrate the UI and do not imply endorsement. This unofficial fan theme is not affiliated with Microsoft.
+
+## aptX BlueALSA (Disco 3.4.0, experimental)
+
+`mq_ui` carries an optional Bluetooth audio daemon and encoder as plain data (`ui/aptx_blob.c`). They are written to
+`/usr/data/diskos-aptx/` on the Disc only when Settings › Connectivity › aptX (experimental) is turned on, and run there
+as separate programs:
+
+| Component | License | Source |
+|---|---|---|
+| **BlueALSA 4.0.0** (`bluealsa`), with Disco's patches | MIT, (c) 2016-2022 Arkadiusz Bokowy and contributors; `licenses/MIT-bluez-alsa.txt` | upstream https://github.com/arkq/bluez-alsa tag `v4.0.0`; Disco's patches and the build recipe in `build/bluealsa-aptx/` |
+| **libfreeaptx 0.1.1** (`libfreeaptx.so.0`), unmodified | LGPL-2.1-or-later; `licenses/LGPL-2.1-libfreeaptx.txt` | exact corresponding source `ui/vendor/aptx/libfreeaptx-0.1.1.tar.gz`; build recipe `build/bluealsa-aptx/build-in-container.sh` |
+
+libfreeaptx stays a separate shared library next to `bluealsa` (found through RPATH `$ORIGIN`), so it can be replaced
+with a modified build. Both license texts are also written to the Disc next to the files. The Disc's own libraries
+(GLib, BlueZ, SBC, fdk-aac, LDAC, ALSA) are used where they are and are not distributed. aptX is a trademark of
+Qualcomm; this is an independent open-source implementation, unaffiliated with Qualcomm.
