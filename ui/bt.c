@@ -343,6 +343,7 @@ __attribute__((unused)) static int bt_radio_on_legacy(void){
  * other choices start as before. Connecting to headphones not known to support it first restarts BlueALSA with the
  * normal settings (bt_codec_prepare_steps). Each headphone's codec list is remembered from its first connection. */
 int bt_codec_pick(int choice, unsigned avail, int avail_known);   /* below */
+static unsigned bt_codec_need(int v);                              /* below */
 /* Codec bits, as remembered per headphones and read from BlueALSA's "Available codecs" */
 #define BTC_SBC    1u           /* mandatory for every A2DP sink: a list without it is incomplete, never "full" */
 #define BTC_AAC    2u
@@ -377,28 +378,68 @@ static void bt_caps_add(const char *mac, unsigned bits){          /* seen workin
     int caps = bt_caps_get(mac); unsigned nb = (unsigned)(caps < 0 ? 0 : caps) | bits;
     if(caps < 0 || (unsigned)caps != nb){ char k[32]; bt_caps_key(mac, k, sizeof k); cfg_set_int(k, (int)nb); }
 }
-/* Known-good marks: a codec BlueALSA confirmed running on these headphones is good; one that never confirmed is bad
- * (until it confirms again), and is not insisted on at the next start. */
-static int bt_bad_get(const char *mac){ char k[32]; bt_mac_cfg_key("btbad_", mac, k, sizeof k); return cfg_get_int(k, 0); }
-static void bt_mark_codec(const char *mac, unsigned bit, int good){
+/* Known-good: a codec that has PLAYED on these headphones (about 20 s of music, see the crash guard below). Only a
+ * known-good codec is ever started on its own (born); anything else starts with the normal order and switches.
+ * A codec that merely didn't confirm in time is NOT remembered as bad any more: it only steps down for that one
+ * connection, and the next connection tries the best again (3.3.x's persistent "bad" marks kept pairs on AAC). */
+static int bt_good_get(const char *mac){ char k[32]; bt_mac_cfg_key("btgood_", mac, k, sizeof k); return cfg_get_int(k, 0); }
+static void bt_good_add(const char *mac, unsigned bit){
     if(!mac || !mac[0] || !bit) return;
-    char k[32]; bt_mac_cfg_key("btbad_", mac, k, sizeof k);   /* codecs that failed to confirm */
-    int bad = cfg_get_int(k, 0), nb = good ? (bad & ~(int)bit) : (bad | (int)bit);
-    if(nb != bad) cfg_set_int(k, nb);
-    if(good) bt_caps_add(mac, bit);
+    char k[32]; bt_mac_cfg_key("btgood_", mac, k, sizeof k);
+    int g = cfg_get_int(k, 0); if(!(g & (int)bit)) cfg_set_int(k, g | (int)bit);
+    bt_caps_add(mac, bit);
 }
-/* The codec BlueALSA should be born on for these headphones: 0 SBC (normal start), 1 AAC, 2 LDAC, 3 aptX, 4 aptX HD
- * (3 and 4 only with the aptX BlueALSA installed). */
+/* Skipped: a codec the Disc restarted on while it started playing on these headphones (the crash guard). Skipped
+ * until the user chooses Bluetooth Codec again (bt_skip_gen), so a reboot loop can't happen and nothing stays off
+ * for good. Stored as bits | generation << 8. */
+static unsigned bt_skip_get(const char *mac){
+    char k[32]; bt_mac_cfg_key("btskip_", mac, k, sizeof k);
+    int v = cfg_get_int(k, 0);
+    return (v >> 8) == cfg_get_int("bt_skip_gen", 0) ? (unsigned)(v & 0xff) : 0u;
+}
+static void bt_skip_add(const char *mac, unsigned bit){
+    char k[32]; bt_mac_cfg_key("btskip_", mac, k, sizeof k);
+    cfg_set_int(k, (int)((bt_skip_get(mac) | bit) & 0xff) | cfg_get_int("bt_skip_gen", 0) << 8);
+}
+/* Two BlueALSAs (with Settings > aptX on): FiiO's own (kind 0) for SBC, AAC and LDAC - LDAC ONLY ever runs on it -
+ * and Disco's aptX build (kind 1) for aptX / aptX HD, always started with LDAC off: LDAC audio through it hung the
+ * Disc until the watchdog rebooted it (Nov 2026). Its patched codec list still shows every codec a pair has, so a
+ * pair's whole list is learned on it. aptX off: FiiO's only, as 3.3.1. */
 static const char *bt_alsa_aptx_bin(void);   /* below: the aptX BlueALSA, NULL when not installed */
+/* The saved codec choice: 0 SBC, 1 AAC, 2-4 Best (LDAC / aptX HD / aptX, whichever the headphones have; the number is
+ * the LDAC quality). 5 and 6 (aptX / aptX HD, from 3.4.0 test builds) are no choice any more: read as Best, Standard. */
+static int bt_codec_choice(void){
+    int c = cfg_get_int("bt_codec", 0);
+    return c == 5 || c == 6 ? 3 : c < 0 || c > 6 ? 0 : c;
+}
+/* Codecs these headphones can be given: aptX only with the aptX BlueALSA, never one the crash guard skipped. */
+static unsigned bt_usable(const char *mac, unsigned caps){
+    if(!bt_alsa_aptx_bin()) caps &= ~(BTC_APTX | BTC_APTXHD);
+    return caps & ~bt_skip_get(mac);
+}
+/* What each BlueALSA can run: FiiO's no aptX, ours no LDAC. */
+static unsigned bt_kind_can(int kind){ return kind == 1 ? ~BTC_LDAC : ~(BTC_APTX | BTC_APTXHD); }
+static int bt_kind_for_v(int v){ return v == 5 || v == 6; }     /* the BlueALSA a codec value needs */
+/* The BlueALSA for these headphones: ours only when aptX is what they will get, or to learn their whole list. */
+static int bt_kind_for(const char *mac){
+    if(!bt_alsa_aptx_bin() || fw_os_ver() != 257) return 0;
+    int choice = bt_codec_choice();
+    if(choice < 2) return 0;                                       /* SBC / AAC chosen: FiiO's, as 3.3.1 */
+    int caps = bt_caps_get(mac);
+    if(caps >= 0 && (bt_usable(mac, (unsigned)caps) & BTC_LDAC)) return 0;   /* LDAC tops everything: FiiO's */
+    if(caps < 0 || bt_caps_full(mac) != BT_FULL_APTX || !(caps & BTC_SBC)) return 1;   /* list not whole: learn it */
+    return bt_kind_for_v(bt_codec_pick(choice, bt_usable(mac, (unsigned)caps), 1));
+}
+/* The codec BlueALSA should be born on for these headphones (0 normal start, 1 AAC, 2 LDAC, 3 aptX, 4 aptX HD): only
+ * a codec that has already played on them; anything else starts normally and switches after connecting. */
 static int bt_born_for(const char *mac){
     if(fw_os_ver() != 257) return 0;                   /* the codec setting only applies on V2.57 */
     int caps = bt_caps_get(mac); if(caps < 0) return 0;
-    /* aptX build only (stock behaves as 3.3.1): a list never seen whole, or saved without the mandatory SBC, is
-     * provably partial - learn it first with a normal start */
-    if(bt_alsa_aptx_bin() && (bt_caps_full(mac) != BT_FULL_APTX || !(caps & BTC_SBC))) return 0;
-    caps &= ~bt_bad_get(mac);                          /* never born on a codec that failed to confirm */
-    if(!bt_alsa_aptx_bin()) caps &= ~(int)(BTC_APTX | BTC_APTXHD);   /* aptX remembered, but its BlueALSA is gone */
-    int v = bt_codec_pick(cfg_get_int("bt_codec", 0), (unsigned)caps, 1);
+    int kind = bt_kind_for(mac);
+    if(kind == 1 && (bt_caps_full(mac) != BT_FULL_APTX || !(caps & BTC_SBC))) return 0;
+    int v = bt_codec_pick(bt_codec_choice(), bt_usable(mac, (unsigned)caps) & bt_kind_can(kind), 1);
+    unsigned bit = bt_codec_need(v);
+    if(!bit || !((unsigned)bt_good_get(mac) & bit)) return 0;
     return v == 1 ? 1 : v >= 2 && v <= 4 ? 2 : v == 5 ? 3 : v == 6 ? 4 : 0;
 }
 #ifndef BT_PROC_DIR
@@ -408,7 +449,7 @@ static int bt_born_for(const char *mac){
 #define BT_SYSBT_DIR "/sys/class/bluetooth"
 #endif
 static const char *bt_ldac_q(void){                    /* LDAC quality for the chosen LDAC level */
-    int c = cfg_get_int("bt_codec", 0); return c == 2 ? "mobile" : c == 4 ? "high" : "standard";
+    int c = bt_codec_choice(); return c == 2 ? "mobile" : c == 4 ? "high" : "standard";
 }
 /* ---- The aptX BlueALSA (opt-in) ----------------------------------------------------------------------------------
  * Stock BlueALSA 4.0.0 on the Disc is built with SBC, AAC and LDAC only. The aptX build is the same upstream 4.0.0
@@ -431,23 +472,21 @@ static const char *bt_alsa_aptx_bin(void){
 }
 static void bt_alsa_args_for(char *out, int cap, int born, int aptx){
     static const char *const stock[] = { "--codec=sbc", "--codec=-sbc --codec=-ldac", "--codec=-sbc" };
-    static const char *const ax[] = {
-        "--codec=sbc --codec=ldac --codec=aptX --codec=aptX-HD",                         /* 0 normal: all on */
+    static const char *const ax[] = {                                                    /* LDAC always off on ours */
+        "--codec=sbc --codec=-ldac --codec=aptX --codec=aptX-HD",                        /* 0 normal */
         "--codec=-sbc --codec=-ldac --codec=-aptX --codec=-aptX-HD",                     /* 1 AAC */
-        "--codec=-sbc --codec=ldac --codec=-aptX --codec=-aptX-HD",                      /* 2 LDAC */
+        "--codec=sbc --codec=-ldac --codec=aptX --codec=aptX-HD",                        /* (2 LDAC: never here) */
         "--codec=-sbc --codec=-aac --codec=-ldac --codec=aptX --codec=-aptX-HD",         /* 3 aptX */
         "--codec=-sbc --codec=-aac --codec=-ldac --codec=-aptX --codec=aptX-HD" };      /* 4 aptX HD */
-    if(born < 0 || born > 4 || (!aptx && born > 2)) born = 0;
+    if(born < 0 || born > 4 || (!aptx && born > 2) || (aptx && born == 2)) born = 0;
     snprintf(out, cap, "-S --device=hci0 --profile=a2dp-source --sbc-quality=medium --ldac-abr --ldac-quality=%s "
              "%s --initial-volume=48", bt_ldac_q(), aptx ? ax[born] : stock[born]);
 }
 static void bt_alsa_args(char *out, int cap, int born){ bt_alsa_args_for(out, cap, born, 0); }   /* stock BlueALSA */
-/* The shell command that starts BlueALSA born as `born` (output redirection is the caller's): stock BlueALSA exactly
- * as 3.3.1, or - with Settings > aptX (experimental) on and the files in place - the aptX build. No automatic fallback
- * to stock: a wrapper that restarts stock raced killall on quick restarts (review, Nov 2026). Turning the setting off
- * is the way back. */
-static void bt_alsa_cmd(char *out, int cap, int born){
-    char a[256]; const char *bin = bt_alsa_aptx_bin();
+/* The shell command that starts BlueALSA `kind` born as `born` (output redirection is the caller's): FiiO's exactly as
+ * 3.3.1, or the aptX build (kind 1, only with Settings > aptX (experimental) on and the files in place). */
+static void bt_alsa_cmd(char *out, int cap, int born, int kind){
+    char a[256]; const char *bin = kind == 1 ? bt_alsa_aptx_bin() : NULL;
     if(!bin){ bt_alsa_args(a, sizeof a, born); snprintf(out, cap, "bluealsa %s", a); return; }
     bt_alsa_args_for(a, sizeof a, born, 1);
     snprintf(out, cap, "%s %s", bin, a);
@@ -479,15 +518,11 @@ static int bt_alsa_actual(char *q, int qcap){
     closedir(d);
     return born;
 }
-/* Is the running BlueALSA started the way `want` asks (incl. the LDAC quality)? A missing daemon counts as "no". */
-/* Is the running BlueALSA the one Disco would start: the aptX build with aptX on, FiiO's otherwise? 1 yes, 0 no, -1
- * can't tell (none running, or its /proc exe unreadable) - "can't tell" never triggers anything. The stock player
- * starts FiiO's BlueALSA itself at boot; with aptX on, its codec list (no aptX) must not count as the headphones'
- * whole list, and it is replaced by the aptX build while nothing is connected (seen on the Disc, Nov 2026). */
-static int bt_alsa_exe_ok(void){
+/* Which BlueALSA is running: 1 the aptX build, 0 FiiO's, -1 can't tell (none running, or its /proc exe unreadable) -
+ * "can't tell" never triggers anything. The stock player starts FiiO's itself at boot. */
+static int bt_alsa_kind_running(void){
     DIR *d = opendir(BT_PROC_DIR); if(!d) return -1;
     struct dirent *e; int r = -1;
-    const char *want = bt_alsa_aptx_bin();
     while((e = readdir(d))){
         if(e->d_name[0] < '1' || e->d_name[0] > '9') continue;
         char p[320], comm[32] = ""; snprintf(p, sizeof p, BT_PROC_DIR "/%s/comm", e->d_name);
@@ -500,13 +535,14 @@ static int bt_alsa_exe_ok(void){
         if(n > 0){
             exe[n] = 0;
             char *del = strstr(exe, " (deleted)"); if(del) *del = 0;   /* replaced on disk while running: same binary */
-            r = want ? !strcmp(exe, want) : !strstr(exe, "aptx/bluealsa");
+            r = strstr(exe, "aptx/bluealsa") != NULL;
         }
         break;
     }
     closedir(d);
     return r;
 }
+/* Is the running BlueALSA started the way `want` asks (incl. the LDAC quality)? A missing daemon counts as "no". */
 static int bt_alsa_is(int want){
     char q[24]; int born = bt_alsa_actual(q, sizeof q);
     return born == want && (want != 2 || !strcmp(q, bt_ldac_q()));
@@ -522,26 +558,30 @@ static int bt_acl_links(void){
 }
 /* Shell steps that restart BlueALSA as `born` and wait (at most 3 s) until it answers, for use inside a background
  * script: the UI never waits for it (review finding 3). */
-static void bt_alsa_restart_steps(char *out, int cap, int born){
-    char a[768]; bt_alsa_cmd(a, sizeof a, born);
+static void bt_alsa_restart_steps(char *out, int cap, int born, int kind){
+    char a[768]; bt_alsa_cmd(a, sizeof a, born, kind);
     snprintf(out, cap, "killall bluealsa 2>/dev/null; sleep 0.3; (%s >/tmp/bluealsa.log 2>&1 &); "
              "i=0; while [ $i -lt 15 ] && ! bluealsa-cli list-pcms >/dev/null 2>&1; do sleep 0.2; i=$((i+1)); done; ", a);
 }
-static void bt_alsa_restart_async(int born, const char *why){
-    char steps[1024], cmd[1100]; bt_alsa_restart_steps(steps, sizeof steps, born);
+static void bt_alsa_restart_async(int born, int kind, const char *why){
+    char steps[1024], cmd[1100]; bt_alsa_restart_steps(steps, sizeof steps, born, kind);
     snprintf(cmd, sizeof cmd, "( %s) >/dev/null 2>&1 &", steps);
     system(cmd);
     static const char *const first[] = { "SBC", "AAC", "LDAC", "aptX", "aptX HD" };
-    fprintf(stderr, "bt codec: BlueALSA restarting (%s first): %s\n", first[born >= 0 && born <= 4 ? born : 0], why); fflush(stderr);
+    fprintf(stderr, "bt codec: %s BlueALSA restarting (%s first): %s\n", kind == 1 ? "aptX" : "FiiO's",
+            first[born >= 0 && born <= 4 ? born : 0], why); fflush(stderr);
 }
 static void bt_ensure_services(void){
+    const char *last = cfg_get_str("bt_last", "");
+    int kind = bt_kind_for(last);
     if(bt_alsa_actual(NULL, 0) >= 0){                    /* running: leave it, its real arguments are read when needed */
-        if(bt_alsa_exe_ok() == 0 && bt_acl_links() == 0)   /* ...unless it is the wrong binary and nothing is connected */
-            bt_alsa_restart_async(bt_born_for(cfg_get_str("bt_last", "")), "the BlueALSA for this aptX setting");
+        int kr = bt_alsa_kind_running();
+        if(kr >= 0 && kr != kind && bt_acl_links() == 0)   /* ...unless it is the other binary and nothing is connected */
+            bt_alsa_restart_async(bt_born_for(last), kind, "the BlueALSA for the usual headphones");
         return;
     }
     char a[768], cmd[900];
-    bt_alsa_cmd(a, sizeof a, bt_born_for(cfg_get_str("bt_last", "")));
+    bt_alsa_cmd(a, sizeof a, bt_born_for(last), kind);
     snprintf(cmd, sizeof cmd, "pidof bluealsa >/dev/null 2>&1 || %s >/tmp/bluealsa.log 2>&1 &", a);
     system(cmd);
 }
@@ -550,19 +590,19 @@ static void bt_ensure_services(void){
  * connection is born on the right codec. "Can't tell" never restarts anything (review findings 3 and 4). */
 static void bt_alsa_rearm_born(void){
     if(bt_acl_links() != 0) return;
-    int want = bt_born_for(cfg_get_str("bt_last", ""));
-    if(bt_alsa_actual(NULL, 0) < 0 || (bt_alsa_is(want) && bt_alsa_exe_ok() != 0)) return;
-    bt_alsa_restart_async(want, "ready for the usual headphones");
+    const char *last = cfg_get_str("bt_last", "");
+    int want = bt_born_for(last), kind = bt_kind_for(last), kr = bt_alsa_kind_running();
+    if(bt_alsa_actual(NULL, 0) < 0 || (bt_alsa_is(want) && (kr < 0 || kr == kind))) return;
+    bt_alsa_restart_async(want, kind, "ready for the usual headphones");
 }
-/* Before connecting to these headphones: if the running BlueALSA is restricted to a codec they aren't known to
- * support, the connect script first restarts it with the normal order and waits until it answers (fills `steps`,
- * returns 1). */
+/* Before connecting to these headphones: if the running BlueALSA is the other binary, or restricted to a codec that
+ * isn't theirs, the connect script first restarts the right one and waits until it answers (fills `steps`, returns 1). */
 static int bt_codec_prepare_steps(const char *mac, char *steps, int cap){
     if(cap > 0) steps[0] = 0;
-    int born = bt_alsa_actual(NULL, 0);
-    if(born < 0 || ((born == 0 || bt_born_for(mac) == born) && bt_alsa_exe_ok() != 0)) return 0;
-    bt_alsa_restart_steps(steps, cap, 0);
-    fprintf(stderr, "bt codec: BlueALSA back to the normal order before connecting %s\n", mac); fflush(stderr);
+    int born = bt_alsa_actual(NULL, 0), kind = bt_kind_for(mac), kr = bt_alsa_kind_running(), want = bt_born_for(mac);
+    if(born < 0 || ((born == 0 || want == born) && (kr < 0 || kr == kind))) return 0;
+    bt_alsa_restart_steps(steps, cap, want, kind);
+    fprintf(stderr, "bt codec: %s BlueALSA before connecting %s\n", kind == 1 ? "aptX" : "FiiO's", mac); fflush(stderr);
     return 1;
 }
 /* ---- A2DP codec choice (parity C17/C18) ----------------------------------------------------------------
@@ -572,44 +612,53 @@ static int bt_codec_prepare_steps(const char *mac, char *steps, int cap){
  * launches it - on the device its status advertises SBC AAC LDAC endpoints whatever --codec says - so a choice needs
  * no daemon restart, and this only ever sends the frame diskOS already sent, with another VALUE1. The choice is
  * read on the next route to a Bluetooth device (connect/reconnect), once BlueALSA has that device's PCM. DEVICE-UNVERIFIED with headphones. */
-/* Choices 5 and 6 (aptX, aptX HD) are not stock VALUE1s: mq_player has no aptX, so they are asked of BlueALSA
- * directly (bluealsa-cli codec: the same SelectCodec call mq_player makes) and need the aptX BlueALSA. */
-const char *const BT_CODEC_LABEL[BT_CODEC_N] = { "SBC", "AAC", "LDAC Mobile", "LDAC Standard", "LDAC High", "aptX", "aptX HD" };
+/* Settings offers SBC, AAC and Best (2-4, by LDAC quality): LDAC and aptX are never chosen between, both always beat
+ * AAC and SBC. Values 5 and 6 (aptX, aptX HD) are what Best applies on aptX headphones, never a choice: they are not
+ * stock VALUE1s (mq_player has no aptX), so they are asked of BlueALSA directly (bluealsa-cli codec: the same
+ * SelectCodec call mq_player makes) and need the aptX BlueALSA. */
+/* (plain ASCII: some themes' Settings fonts have no middle dot - it showed as a box) */
+const char *const BT_CODEC_LABEL[BT_CODEC_N] = { "SBC", "AAC", "Best (LDAC Mobile)", "Best (LDAC Standard)",
+                                                 "Best (LDAC High)", "aptX", "aptX HD" };
 static int bt_mac_valid(const char *mac);
 static int bt_codec_frame_value(const char *mac, int v, char *out, int cap);
 static unsigned bt_codec_need(int v){
     return v == 1 ? BTC_AAC : (v >= 2 && v <= 4) ? BTC_LDAC : v == 5 ? BTC_APTX : v == 6 ? BTC_APTXHD : 0u;
 }
-/* How many codec choices Settings offers: aptX and aptX HD (the last two) only with the aptX BlueALSA installed. */
-int bt_codec_choices(void){ return bt_alsa_aptx_bin() ? BT_CODEC_N : BT_CODEC_N - 2; }
+/* How many codec choices Settings offers: SBC, AAC and the three Best (aptX / aptX HD are applied, never chosen). */
+int bt_codec_choices(void){ return BT_CODEC_N - 2; }
 /* Settings' hint for a choice: what it ends up as, highest first (the same order as bt_codec_pick). */
 const char *bt_codec_hint(int v){
     static char b[160];
-    const char *aptx = "\n*aptX HD or aptX, with the aptX BlueALSA.";
-    if(v >= 2 && v <= 4 && !bt_alsa_aptx_bin()) snprintf(b, sizeof b, "Best effort: %s, then AAC, then SBC.", BT_CODEC_LABEL[v]);
-    else if(v >= 2 && v <= 4) snprintf(b, sizeof b, "Best effort: %s / aptX*, then AAC, then SBC.%s", BT_CODEC_LABEL[v], aptx);
-    else if(v == 6) snprintf(b, sizeof b, "Best effort: aptX HD / aptX*, then AAC, then SBC.%s", aptx);
-    else if(v == 5) snprintf(b, sizeof b, "Best effort: aptX*, then AAC, then SBC.\n*With the aptX BlueALSA.");
+    if(v == 5 || v == 6) v = 3;                                   /* old aptX choices: Best */
+    if(v >= 2 && v <= 4 && !bt_alsa_aptx_bin()) snprintf(b, sizeof b, "LDAC if the headphones have it, then AAC, then SBC.");
+    else if(v >= 2 && v <= 4) snprintf(b, sizeof b, "LDAC or aptX HD / aptX, whichever the headphones have, then AAC, then SBC.");
     else if(v == 1) snprintf(b, sizeof b, "Best effort: AAC, then SBC.");
     else snprintf(b, sizeof b, "SBC works with all headphones.");
     return b;
 }
 /* A choice's codec as BlueALSA spells it, upper case (as "Selected codec:" is compared), and its BTC_ bit. */
 static const char *bt_codec_word(int v){ return v == 1 ? "AAC" : (v >= 2 && v <= 4) ? "LDAC" : v == 5 ? "APTX" : v == 6 ? "APTX-HD" : "SBC"; }
-/* The choice to apply: the best codec the sink offers, at or below the saved one. Highest first:
- *   LDAC (the chosen quality) -> aptX HD -> aptX -> AAC -> SBC
- * so an LDAC choice gets aptX HD/aptX on headphones without LDAC, an aptX HD choice gets aptX, and every choice
- * ends at AAC, then SBC. SBC when the sink's list is unknown. aptX is only ever listed with the aptX BlueALSA. */
+/* The codec to apply: the best one the sink offers, never above the choice. Highest first:
+ *   Best:  LDAC (the chosen quality) -> aptX HD -> aptX -> AAC -> SBC
+ *   AAC:   AAC -> SBC          SBC: SBC
+ * so headphones with LDAC get LDAC and aptX headphones get aptX, whatever the LDAC quality, and neither ever ends on
+ * AAC while it has one of them. SBC when the sink's list is unknown. aptX is only listed with the aptX BlueALSA.
+ * 5 / 6 passed as the choice (a step down from aptX HD / aptX) count as Best. */
 int bt_codec_pick(int choice, unsigned avail, int avail_known){
-    if(choice < 0 || choice >= BT_CODEC_N) return 0;
-    unsigned need = bt_codec_need(choice);
-    if(!need) return choice;                                  /* SBC chosen */
+    if(choice <= 0 || choice >= BT_CODEC_N) return 0;         /* SBC chosen */
     if(!avail_known) return 0;                                /* unknown: SBC */
-    if(avail & need) return choice;                           /* offered as chosen */
-    if(need == BTC_LDAC && (avail & BTC_APTXHD)) return 6;    /* no LDAC: aptX HD */
-    if((need == BTC_LDAC || need == BTC_APTXHD) && (avail & BTC_APTX)) return 5;   /* then aptX */
-    if(need != BTC_AAC && (avail & BTC_AAC)) return 1;        /* then AAC */
-    return 0;                                                 /* nothing better: SBC */
+    if(choice >= 2){                                          /* Best: LDAC or aptX, whichever is there */
+        if(avail & BTC_LDAC) return choice <= 4 ? choice : 3;
+        if(avail & BTC_APTXHD) return 6;
+        if(avail & BTC_APTX) return 5;
+    }
+    return (avail & BTC_AAC) ? 1 : 0;                         /* then AAC, then SBC */
+}
+/* The codecs below v in that order: what is left to try once v did not get through. */
+static unsigned bt_codec_below(int v){
+    unsigned n = bt_codec_need(v);
+    return n == BTC_LDAC ? BTC_APTXHD | BTC_APTX | BTC_AAC | BTC_SBC : n == BTC_APTXHD ? BTC_APTX | BTC_AAC | BTC_SBC
+         : n == BTC_APTX ? BTC_AAC | BTC_SBC : n == BTC_AAC ? BTC_SBC : 0u;
 }
 /* Codecs a sink offers, from `bluealsa-cli info <pcm>`: the words on the "Available codecs:" line and on the lines
  * after it that carry no ':'. *known = 0 when that header is missing (unparseable/failed query). */
@@ -681,7 +730,9 @@ static int bt_probe_run(const char *cmd, char *out, int cap, int timeout_ms){
  * dropped if it is no longer current, so a stale answer can never trigger a codec switch on a later connection. */
 static struct { char mac[18]; int state; /* 0 idle, 1 running, 2 done */ int pcm, known; unsigned avail;
                 int choice, misses, armed, applied; unsigned gen;
-                int verifying, want_v, verify_tries; char sel[16]; char pcm_path[96]; } g_cq;   /* sel: BlueALSA's "Selected codec"; pcm_path: its PCM */
+                int verifying, want_v, verify_tries; char sel[16]; char pcm_path[96]; unsigned allow; } g_cq;
+    /* sel: BlueALSA's "Selected codec"; pcm_path: its PCM; allow: codecs still worth trying on this connection (a
+     * codec that did not get through, and everything above it, is dropped: no stepping back up) */
 #define BT_VERIFY_TRIES 8      /* after sending: probe ticks (0.7 s apart, ~5.6 s) for BlueALSA to report the codec */
 int ui_codec_switch_gate(const char *mac);   /* main.c: 1 = switch now (nothing playing, or held), 0 = wait */
 static int bt_info_prop(const char *buf, const char *key, char *out, int cap);   /* fwd */
@@ -727,8 +778,31 @@ static int bt_codec_frame_value(const char *mac, int v, char *out, int cap){
  * 06b3 sent while it is missing. So the route goes out with SBC as always (audio starts at once) and this then waits,
  * off the UI thread, for the PCM: when it shows and lists the chosen codec, the choice is sent as a second 06b3.
  * One step per call (UI timer tick); returns 1 when finished (sent, unavailable, gave up, or the route changed). */
-/* The codecs a sink lists that this BlueALSA can actually use: aptX only with the aptX build. */
-static unsigned bt_avail_usable(unsigned avail){ return bt_alsa_aptx_bin() ? avail : avail & ~(BTC_APTX | BTC_APTXHD); }
+/* Switching BlueALSA under connected headphones (their best codec needs the other one): disconnect, restart the right
+ * BlueALSA, reconnect, all in the background. The music is paused and stays paused (the hold is dropped, so nothing
+ * resumes on the Disc's own output while the link is down). Once per headphones per 2 minutes, so it can't loop. */
+#ifndef BT_SWITCH_MARK
+#define BT_SWITCH_MARK "/tmp/bt_switch_done"   /* left by the switch script once it reconnected: check the codec again */
+#endif
+static char g_sw_mac[18]; static uint32_t g_sw_at;
+static int bt_daemon_switch_allowed(const char *mac){
+    return strcmp(g_sw_mac, mac) || !g_sw_at || lv_tick_elaps(g_sw_at) > 120000;
+}
+static void bt_daemon_switch(const char *mac, int kind, int v){
+    snprintf(g_sw_mac, sizeof g_sw_mac, "%s", mac); g_sw_at = lv_tick_get() | 1;
+    char steps[1024], cmd[1400];
+    bt_alsa_restart_steps(steps, sizeof steps, 0, kind);       /* normal order: the connection then switches to v */
+    /* the reconnect can be too quick for the auto-route to see the link gone, so the script leaves BT_SWITCH_MARK when
+     * done and the auto-route then treats it as a new connection (the codec step runs again, on the right BlueALSA) */
+    unlink(BT_SWITCH_MARK);
+    snprintf(cmd, sizeof cmd, "( bluetoothctl disconnect %s; sleep 1; %s sleep 0.5; bluetoothctl connect %s; touch " BT_SWITCH_MARK
+             " ) >/dev/null 2>&1 &", mac, steps, mac);
+    void ui_route_hold_cancel(void); ui_route_hold_cancel();
+    system(cmd);
+    fprintf(stderr, "bt codec: %s needs %s BlueALSA: reconnecting %s\n", bt_codec_word(v), kind == 1 ? "the aptX" : "FiiO's", mac);
+    fflush(stderr);
+    ui_toast(kind == 1 ? "Reconnecting for aptX..." : "Reconnecting for LDAC...");
+}
 /* aptX / aptX HD: ask BlueALSA itself for the codec on the device's PCM (mq_player's 06b3 has no aptX value), in
  * the background. 1 = asked; the usual verify step then waits for "Selected codec" to say so. */
 static int bt_codec_select_direct(int v){
@@ -738,48 +812,122 @@ static int bt_codec_select_direct(int v){
     snprintf(cmd, sizeof cmd, "bluealsa-cli codec %s %s >/dev/null 2>&1 &", pcm, v == 6 ? "aptX-HD" : "aptX");
     return system(cmd) == 0;
 }
+/* ---- Crash guard ------------------------------------------------------------------------------------------------
+ * A codec that hasn't played on these headphones yet is noted ("bt_try", synced to flash) while music starts on it,
+ * and the note is cleared when the music stops or after 20 s of playing - then the codec is known-good for them. If
+ * the Disc restarts with the note still there, that codec froze it: it is skipped on those headphones (bt_skip_add)
+ * until Bluetooth Codec is chosen again, and a message says so. Nothing else ever takes a codec away. */
+#define BT_GUARD_SECS 20
+static char g_gd_mac[18]; static unsigned g_gd_bit; static int g_gd_secs, g_gd_armed; static lv_timer_t *g_gd_timer;
+static unsigned bt_word_bit(const char *w){
+    return !strcmp(w, "AAC") ? BTC_AAC : !strcmp(w, "LDAC") ? BTC_LDAC : !strcmp(w, "APTX") ? BTC_APTX
+         : !strcmp(w, "APTX-HD") ? BTC_APTXHD : 0u;
+}
+static void bt_guard_stop(void){
+    if(g_gd_armed){ cfg_set_str("bt_try", ""); g_gd_armed = 0; }
+    g_gd_bit = 0; g_gd_secs = 0;
+    if(g_gd_timer){ lv_timer_del(g_gd_timer); g_gd_timer = NULL; }
+}
+static void bt_guard_tick(lv_timer_t *t){
+    (void)t;
+    if(!g_gd_bit || strcmp(ui_route_mac(), g_gd_mac)){ bt_guard_stop(); return; }   /* routed away: no crash happened */
+    int playing = ui_is_playing();
+    if(playing && !g_gd_armed){
+        char v[40]; snprintf(v, sizeof v, "%s,%u", g_gd_mac, g_gd_bit);
+        cfg_set_str("bt_try", v); g_gd_armed = 1;
+    }
+    if(playing && ++g_gd_secs >= BT_GUARD_SECS){
+        bt_good_add(g_gd_mac, g_gd_bit);
+        fprintf(stderr, "bt codec: 0x%x known-good on %s\n", g_gd_bit, g_gd_mac); fflush(stderr);
+        bt_guard_stop();
+    }
+    else if(!playing && g_gd_armed){ cfg_set_str("bt_try", ""); g_gd_armed = 0; }
+}
+static void bt_guard_settled(const char *mac, const char *word){
+    unsigned bit = bt_word_bit(word);
+    if(!bit || ((unsigned)bt_good_get(mac) & bit)){ bt_guard_stop(); return; }   /* SBC, or played here before */
+    if(g_gd_bit == bit && !strcmp(g_gd_mac, mac)) return;
+    bt_guard_stop();
+    snprintf(g_gd_mac, sizeof g_gd_mac, "%s", mac); g_gd_bit = bit;
+    g_gd_timer = lv_timer_create(bt_guard_tick, 1000, NULL);
+}
+/* At start-up: a note left behind means the Disc restarted while that codec was starting to play. */
+static char g_gd_msg[160];
+static void bt_guard_msg_cb(lv_timer_t *t){ lv_timer_del(t); ui_toast(g_gd_msg); }
+static int bt_bad_key(const char *k){ return !strncmp(k, "btbad_", 6); }
+static void bt_guard_boot(void){
+    const char *t = cfg_get_str("bt_try", "");
+    if(t[0]){
+        char mac[18] = ""; unsigned bit = 0;
+        if(sscanf(t, "%17[0-9A-Fa-f:],%u", mac, &bit) == 2 && bt_mac_valid(mac) && bit && bit != BTC_SBC){
+            bt_skip_add(mac, bit);
+            static const struct { unsigned b; const char *n; } nm[] = { {BTC_AAC,"AAC"}, {BTC_LDAC,"LDAC"}, {BTC_APTX,"aptX"}, {BTC_APTXHD,"aptX HD"} };
+            const char *n = "A codec";
+            for(size_t i = 0; i < sizeof nm / sizeof *nm; i++) if(nm[i].b == bit) n = nm[i].n;
+            snprintf(g_gd_msg, sizeof g_gd_msg, "%s restarted the Disc with these headphones, so it's skipped for them.\n"
+                     "Choose Bluetooth Codec again to retry.", n);
+            fprintf(stderr, "bt codec: crash guard: 0x%x skipped on %s (the Disc restarted while it started playing)\n", bit, mac); fflush(stderr);
+            lv_timer_create(bt_guard_msg_cb, 12000, NULL);
+        }
+        cfg_set_str("bt_try", "");
+    }
+    cfg_remove_if(bt_bad_key);           /* 3.3.x's "failed to confirm" marks: no longer used, and they kept pairs on AAC */
+}
+/* Settings > Quiet Wi-Fi for Bluetooth changed: applied on the next auto-route poll (a few seconds). */
+/* Settings > Bluetooth Codec chosen (again): every skipped codec gets another chance. */
+void bt_codec_setting_changed(void){ cfg_set_int("bt_skip_gen", (cfg_get_int("bt_skip_gen", 0) + 1) & 0xffffff); }
 void ui_resume_guard_arm(int reason, const char *mac);
 int bt_codec_upgrade_step(void){
-    char mac[18], f[48], settled[16] = ""; int send = -1, done = 0, mark = 0; unsigned mark_bit = 0; struct bt_probe_arg *spawn = NULL;
+    char mac[18], f[48], settled[16] = ""; int send = -1, done = 0, switch_v = 0; struct bt_probe_arg *spawn = NULL;
     pthread_mutex_lock(&g_cq_mu);
     snprintf(mac, sizeof mac, "%s", g_cq.mac);
     if(!g_cq.armed || strcmp(ui_route_mac(), mac)) done = 1;                 /* cancelled or routed away: forget it */
     else if(g_cq.verifying && g_cq.state == 2){
         /* sent: wait for BlueALSA to report the new codec before calling it done (the playback hold waits on this) */
         const char *want = bt_codec_word(g_cq.want_v);
-        if(!strcmp(g_cq.sel, want)){ done = 1; g_cq.applied = 1; mark = 1; snprintf(settled, sizeof settled, "%s", want);
+        if(!strcmp(g_cq.sel, want)){ done = 1; g_cq.applied = 1; snprintf(settled, sizeof settled, "%s", want);
             fprintf(stderr, "bt codec: %s confirmed\n", want); fflush(stderr); }
         else if(++g_cq.verify_tries >= BT_VERIFY_TRIES){
-            mark = -1;
-            int next = g_cq.want_v >= 5 ? bt_codec_pick(g_cq.want_v, bt_avail_usable(g_cq.avail) & ~bt_codec_need(g_cq.want_v), 1) : 0;
-            if(next > 0){                                  /* aptX: try the next one down, as a failed send would */
-                g_cq.verifying = 0; g_cq.choice = next; g_cq.misses = 0;
+            /* not confirmed: the next one down for THIS connection only (nothing is remembered as bad). aptX off and
+             * LDAC: as 3.3.1 (it stays where it is) */
+            int kr = bt_alsa_kind_running();
+            int next = g_cq.want_v >= 5 || (g_cq.want_v >= 2 && bt_alsa_aptx_bin())
+                     ? bt_codec_pick(g_cq.choice, bt_usable(g_cq.mac, g_cq.avail) & g_cq.allow & bt_codec_below(g_cq.want_v)
+                                     & bt_kind_can(kr < 0 ? 0 : kr), 1) : 0;
+            if(next > 0){
+                g_cq.verifying = 0; g_cq.allow &= bt_codec_below(g_cq.want_v); g_cq.misses = 0;
                 fprintf(stderr, "bt codec: %s not confirmed, trying %s\n", want, bt_codec_word(next)); fflush(stderr);
-            } else {                                        /* SBC/AAC/LDAC: as 3.3.1 */
+            } else {                                        /* AAC, or LDAC on stock BlueALSA: as 3.3.1 */
                 done = 1; g_cq.applied = 1;
                 snprintf(settled, sizeof settled, "%s", g_cq.sel[0] ? g_cq.sel : "SBC");
                 fprintf(stderr, "bt codec: %s not confirmed (selected '%s'), going on\n", want, g_cq.sel); fflush(stderr);
             }
         }
-        mark_bit = bt_codec_need(g_cq.want_v);
         g_cq.state = 0;
     }
     else if(g_cq.verifying){ /* probe still running */ }
     else if(g_cq.state == 2){
+        int kr = bt_alsa_kind_running();
         if(g_cq.pcm && g_cq.known){                                      /* remember these headphones' codecs */
-            /* aptX build: the whole list only from a normal start AND with the mandatory SBC in it, else add only (never
-             * shrink). Stock BlueALSA: exactly 3.3.1's - the list as read replaces the memory. */
-            if(!bt_alsa_aptx_bin()) bt_caps_write(mac, g_cq.avail & ~BTC_SBC);
-            else if(bt_alsa_actual(NULL, 0) == 0 && bt_alsa_exe_ok() == 1 && (g_cq.avail & BTC_SBC)) bt_caps_set(mac, g_cq.avail);
+            /* The aptX build lists every codec the pair has (patched), so with the mandatory SBC in it the list is
+             * whole and replaces the memory. Anything else only adds: the memory never shrinks. */
+            if(kr == 1 && (g_cq.avail & BTC_SBC)) bt_caps_set(mac, g_cq.avail);
             else bt_caps_add(mac, g_cq.avail);
         }
         if(g_cq.pcm && g_cq.known){                                      /* the link is there and says what it can do */
-            int v = bt_codec_pick(g_cq.choice, bt_avail_usable(g_cq.avail), g_cq.known);   /* unlisted -> SBC: nothing to do */
+            int c = bt_caps_get(mac);
+            unsigned all = bt_usable(mac, g_cq.avail | (c > 0 ? (unsigned)c : 0u)) & g_cq.allow;
+            int v = bt_codec_pick(g_cq.choice, all, g_cq.known);         /* unlisted -> SBC: nothing to do */
+            if(v && kr >= 0 && !(bt_codec_need(v) & bt_kind_can(kr)) && bt_alsa_aptx_bin()){   /* this BlueALSA can't run their best */
+                if(bt_daemon_switch_allowed(mac)) switch_v = v;            /* (the gate is asked after unlocking) */
+                else v = bt_codec_pick(g_cq.choice, all & bt_kind_can(kr) & g_cq.avail, g_cq.known);   /* best on this one */
+            }
+            else if(v) v = bt_codec_pick(g_cq.choice, all & bt_kind_can(kr < 0 ? 0 : kr) & g_cq.avail, g_cq.known);
             const char *want = v ? bt_codec_word(v) : "";
-            if(v != 0 && !strcmp(g_cq.sel, want)){                       /* already on it: no switch, no pause */
+            if(switch_v){ /* decided below, outside the lock */ }
+            else if(v != 0 && !strcmp(g_cq.sel, want)){                  /* already on it: no switch, no pause */
                 done = 1; g_cq.applied = 1;
                 fprintf(stderr, "bt codec: already %s, nothing to switch\n", want); fflush(stderr);
-                mark = 1; mark_bit = bt_codec_need(v);               /* running = known-good (clears a bad mark) */
                 snprintf(settled, sizeof settled, "%s", want);
             }
             else if(v != 0) send = v;                                    /* applied only once confirmed (verifying) */
@@ -787,14 +935,21 @@ int bt_codec_upgrade_step(void){
         } else if(++g_cq.misses >= BT_PCM_TRIES){ done = 1; g_cq.applied = 1; }   /* no link, or its codecs never known */
         g_cq.state = 0;
     }
-    if(!done && g_cq.state == 0 && (spawn = malloc(sizeof *spawn)) != NULL){
+    if(!done && !switch_v && g_cq.state == 0 && (spawn = malloc(sizeof *spawn)) != NULL){
         spawn->gen = g_cq.gen; snprintf(spawn->mac, sizeof spawn->mac, "%s", mac); g_cq.state = 1;
     }
     if(done) g_cq.armed = 0;
     unsigned gen_now = g_cq.gen;
     pthread_mutex_unlock(&g_cq_mu);
-    if(mark) bt_mark_codec(mac, mark_bit, mark > 0);      /* known-good / bad for these headphones */
-    if(settled[0]) bt_announce(mac, settled);             /* "Connected: <name> - <codec>" */
+    if(settled[0]){ bt_announce(mac, settled); bt_guard_settled(mac, settled); }   /* "Connected: ..."; crash guard */
+    if(switch_v){
+        if(ui_codec_switch_gate(mac)){                                   /* nothing playing, or paused and held */
+            pthread_mutex_lock(&g_cq_mu); if(g_cq.gen == gen_now){ g_cq.armed = 0; g_cq.applied = 1; } pthread_mutex_unlock(&g_cq_mu);
+            bt_daemon_switch(mac, bt_kind_for_v(switch_v), switch_v);       /* the reconnect brings a fresh route */
+            return 1;
+        }
+        pthread_mutex_lock(&g_cq_mu); if(g_cq.gen == gen_now) g_cq.state = 0; pthread_mutex_unlock(&g_cq_mu);   /* a song is starting: next tick */
+    }
     if(send > 0 && !ui_codec_switch_gate(mac)){              /* a song is starting: switch once that settles */
         pthread_mutex_lock(&g_cq_mu); if(g_cq.gen == gen_now) g_cq.state = 0; pthread_mutex_unlock(&g_cq_mu);
         send = 0;
@@ -808,9 +963,11 @@ int bt_codec_upgrade_step(void){
                       fprintf(stderr, "bt codec: %s requested, waiting for it\n", bt_codec_word(send)); fflush(stderr); }
             else if(++g_cq.misses >= BT_PCM_TRIES){
                 /* this codec never got through: the next one down the same order (LDAC -> aptX HD -> aptX -> AAC) */
-                int next = bt_codec_pick(send, bt_avail_usable(g_cq.avail) & ~bt_codec_need(send), 1);
+                int kr = bt_alsa_kind_running();
+                int next = bt_codec_pick(g_cq.choice, bt_usable(mac, g_cq.avail) & g_cq.allow & bt_codec_below(send)
+                                         & bt_kind_can(kr < 0 ? 0 : kr), 1);
                 if(next > 0){
-                    g_cq.choice = next; g_cq.misses = 0;
+                    g_cq.allow &= bt_codec_below(send); g_cq.misses = 0;
                     fprintf(stderr, "bt codec: %s request failed, trying %s\n", bt_codec_word(send), bt_codec_word(next)); fflush(stderr);
                 } else { g_cq.armed = 0; g_cq.applied = 1; done = 1; }   /* gave up: SBC */
             }
@@ -845,14 +1002,14 @@ void ui_bt_codec_upgrade_cancel(void){
  * pending or finished upgrade as it is. SBC (the default) leaves nothing armed: no timer, probe or extra frame. */
 void ui_bt_codec_upgrade_arm(const char *mac, int fresh){
     if(!bt_mac_valid(mac)) return;
-    int choice = cfg_get_int("bt_codec", 0);
-    if(choice < 0 || choice >= BT_CODEC_N) choice = 0;
+    int choice = bt_codec_choice();
     if(fw_os_ver() != 257) choice = 0;   /* the 06b3 codec mapping is only decoded for V2.57: elsewhere stay on SBC */
     pthread_mutex_lock(&g_cq_mu);
     int same = !strcmp(g_cq.mac, mac) && (g_cq.armed || g_cq.applied);
     if(!fresh && (same || choice == 0)){ pthread_mutex_unlock(&g_cq_mu); return; }
     g_cq.gen++; g_cq.armed = 0; g_cq.applied = 0; g_cq.state = 0; g_cq.misses = 0; g_cq.verifying = 0; g_cq.pcm_path[0] = 0;
     snprintf(g_cq.mac, sizeof g_cq.mac, "%s", mac);
+    g_cq.allow = ~0u;
     if(choice > 0){ g_cq.choice = choice; g_cq.armed = 1; }
     pthread_mutex_unlock(&g_cq_mu);
     if(choice > 0 && !g_cq_timer) g_cq_timer = lv_timer_create(bt_codec_upgrade_cb, 700, NULL);   /* music may be waiting */
@@ -926,7 +1083,8 @@ static void bt_enable(void){
     unsigned tok = (unsigned)time(NULL) * 1000u + (++bt_gen % 1000u);
     { FILE *m = fopen("/tmp/bt_enabling", "w"); if(m){ fprintf(m, "%u\n", tok); fclose(m); } }
     char script[3584], alsa_args[768];
-    bt_alsa_cmd(alsa_args, sizeof alsa_args, bt_born_for(cfg_get_str("bt_last", "")));   /* born on the right codec */
+    bt_alsa_cmd(alsa_args, sizeof alsa_args, bt_born_for(cfg_get_str("bt_last", "")),
+                bt_kind_for(cfg_get_str("bt_last", "")));                                    /* born on the right codec */
     snprintf(script, sizeof script,
         "( A(){ [ \"$(cat /tmp/bt_enabling 2>/dev/null)\" = %u ]; }; "                 /* still the current bring-up? */
         "  T(){ \"$@\" & p=$!; ( sleep 6; kill -9 $p 2>/dev/null ) & w=$!; wait $p; kill $w 2>/dev/null; }; "   /* 6 s cap per bluetoothctl */
@@ -963,8 +1121,10 @@ static void bt_enable(void){
     /* NB: bluealsa is started INSIDE the subshell above (after hci0 is RUNNING +
      * bluetoothd), not here, so it never races the patchram attach. */
 }
+static void bt_wifi_quiet_tick(int off);   /* fwd */
 static void bt_disable(void){
     bt_announce_reset();   /* the next connection after Bluetooth comes back is announced ("Connected: ...") */
+    bt_wifi_quiet_tick(1);   /* Wi-Fi back to normal */
     scan_abort();          /* cancel any pending/active scan + the bt_open observer (covers the radio-timeout
                             * OFF path, which reaches here without a caller-side scan_abort). LVGL-touching,
                             * so it MUST stay on the main thread. */
@@ -1000,8 +1160,56 @@ static int bt_mac_valid(const char *mac){
 
 /* Route once per connected bluealsa A2DP sink. Keeping the MAC latched while the
  * PCM exists preserves a manual switch back to analog until the sink reconnects. */
+/* ---- Quiet Wi-Fi while listening over Bluetooth -------------------------------------------------------------------
+ * The Disc's AP6212 (BCM43438) does Wi-Fi and Bluetooth on ONE 2.4 GHz radio and antenna, taking turns. Stock leaves
+ * Wi-Fi power-save off (wl PM 0: awake and listening all the time), and an unconnected wpa_supplicant keeps searching
+ * for networks (off-channel scans) - both take airtime from the headphones (dropouts, LDAC first). While audio is
+ * routed to Bluetooth (Settings > Quiet Wi-Fi for Bluetooth, on by default):
+ *  - Wi-Fi power-save on (wl PM 2, "fast": it wakes for its own traffic, so downloads still run at full speed);
+ *  - not connected: wpa_supplicant's searching is paused (wpa_cli disconnect) - never while the Wi-Fi screen is open
+ *    or a connection is under way.
+ * Undone as soon as audio leaves Bluetooth, Bluetooth goes off or the setting is turned off. Each change leaves a
+ * marker in /tmp, so a restarted mq_ui undoes a leftover one (bt_wifi_quiet_boot). Runs in the background. */
+#ifndef BT_WQ_DIR
+#define BT_WQ_DIR "/tmp"
+#endif
+#define BT_WQ_PM     BT_WQ_DIR "/bt_wifi_pm"        /* the power-save mode before ours (restored after) */
+#define BT_WQ_PAUSED BT_WQ_DIR "/bt_wifi_paused"    /* searching paused by us */
+#define BT_WQ_EVERY  60000                          /* re-applied while routed: a Wi-Fi reconnect resets PM */
+static int g_wq_on; static uint32_t g_wq_at;
+static void bt_wifi_quiet_apply(int on, int may_pause){
+    char cmd[640];
+    if(on)
+        snprintf(cmd, sizeof cmd, "( [ -f " BT_WQ_PM " ] || { m=$(wl PM 2>/dev/null) && [ -n \"$m\" ] && echo \"$m\" > " BT_WQ_PM "; }; "
+                 "wl PM 2; %s ) >/dev/null 2>&1 &",
+                 may_pause ? "case \"$(wpa_cli -i wlan0 status 2>/dev/null | grep '^wpa_state=')\" in "
+                             "*=SCANNING|*=DISCONNECTED) wpa_cli -i wlan0 disconnect && touch " BT_WQ_PAUSED ";; esac" : ":");
+    else
+        snprintf(cmd, sizeof cmd, "( [ -f " BT_WQ_PM " ] && wl PM \"$(cat " BT_WQ_PM ")\"; rm -f " BT_WQ_PM "; "
+                 "[ -f " BT_WQ_PAUSED " ] && wpa_cli -i wlan0 reconnect; rm -f " BT_WQ_PAUSED " ) >/dev/null 2>&1 &");
+    system(cmd);
+}
+/* Called on every auto-route poll (and with off=1 when Bluetooth goes off). */
+static void bt_wifi_quiet_tick(int off){
+    int want = !off && cfg_get_int("bt_wifi_quiet", 1) && ui_route_mac()[0];
+    if(want){
+        if(!g_wq_on || lv_tick_elaps(g_wq_at) >= BT_WQ_EVERY){
+            bt_wifi_quiet_apply(1, screen_current() != SCR_WIFI && screen_current() != SCR_WIFI_INFO);
+            if(!g_wq_on){ fprintf(stderr, "bt: Wi-Fi quiet while on Bluetooth (power-save on, no searching)\n"); fflush(stderr); }
+            g_wq_on = 1; g_wq_at = lv_tick_get();
+        }
+    } else if(g_wq_on){
+        bt_wifi_quiet_apply(0, 0); g_wq_on = 0;
+        fprintf(stderr, "bt: Wi-Fi back to normal\n"); fflush(stderr);
+    }
+}
+/* Start-up: a previous mq_ui may have left Wi-Fi quiet. */
+static void bt_wifi_quiet_boot(void){
+    if(access(BT_WQ_PM, F_OK) == 0 || access(BT_WQ_PAUSED, F_OK) == 0) bt_wifi_quiet_apply(0, 0);
+}
 static void bt_autoroute_poll_cb(lv_timer_t *t){
     (void)t;
+    bt_wifi_quiet_tick(0);
     /* The post-restart settle guard lives in ui_route_bt (covers every routing path); this poll keeps
      * firing during the window and routes on the first tick past it (ui_route_bt returns "not routed"
      * meanwhile, so g_bt_autorouted is not latched and the retry stands). */
@@ -1048,7 +1256,8 @@ static void bt_autoroute_poll_cb(lv_timer_t *t){
          * (review finding 1). The usual headphones get their PCM within seconds and never trigger this. */
         if(bt_acl_links() > 0){
             int born = bt_alsa_actual(NULL, 0);
-            if(born > 0 && ++orphan >= 3){ orphan = 0; bt_alsa_restart_async(0, "a connection got no audio link"); }
+            if(born > 0 && ++orphan >= 3){ orphan = 0; int kr = bt_alsa_kind_running();
+                                           bt_alsa_restart_async(0, kr > 0 ? kr : 0, "a connection got no audio link"); }
             else if(born <= 0) orphan = 0;
         } else orphan = 0;
         if(missing == 3){
@@ -1059,6 +1268,7 @@ static void bt_autoroute_poll_cb(lv_timer_t *t){
         return;
     }
     int back = !seen || missing >= 2;                   /* a new connection, or a real return */
+    if(unlink(BT_SWITCH_MARK) == 0) back = 1;           /* reconnected through the other BlueALSA (bt_daemon_switch) */
     seen = 1; missing = 0; orphan = 0;
     if(back){
         ui_bt_codec_upgrade_arm(mac, 1);                 /* check its codec again */
@@ -1883,6 +2093,9 @@ void bt_aptx_setting_changed(int on){
     else ui_toast("aptX off - the stock Bluetooth is used from the next Bluetooth start");
 }
 void bt_init_intent(void){
+    { int c = cfg_get_int("bt_codec", 0); if(c == 5 || c == 6) cfg_set_int("bt_codec", 3); }   /* old aptX choice: Best */
+    bt_guard_boot();
+    bt_wifi_quiet_boot();                                 /* undo a Wi-Fi quiet a previous mq_ui left behind */
     bt_aptx_sync(0);                                       /* aptX on: make sure this mq_ui's files are in place */
     if(cfg_get_int("bt_on", -1) >= 0) return;             /* already owned by diskOS - keep the user's choice */
     /* Default OFF on a fresh diskOS: do NOT inherit stock's SYSCONFIG.BT_STATUS. BT on-by-default put

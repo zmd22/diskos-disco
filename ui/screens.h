@@ -200,12 +200,13 @@ enum { BT_OFF, BT_ON, BT_TURNING_ON };
 int  bt_state(void);          /* off / on / turning on: cheap (/proc + /sys), safe to poll every second */
 void bt_info_create(lv_obj_t *root);
 void bt_info_open(void);
-#define BT_CODEC_N 7                   /* A2DP codec choices (bt.c): SBC, AAC, LDAC Mobile/Standard/High, aptX, aptX HD */
+#define BT_CODEC_N 7                   /* A2DP codec values (bt.c): SBC, AAC, Best (LDAC Mobile/Standard/High), aptX, aptX HD (applied, not chosen) */
 extern const char *const BT_CODEC_LABEL[BT_CODEC_N];
 void bt_aptx_setting_changed(int on);           /* bt.c: Settings > aptX (experimental) changed */
 void bt_aptx_sync(int tell);                     /* bt.c: aptX on -> put mq_ui's aptX files in place (background) */
 int  bt_codec_choices(void);                    /* bt.c: codec choices Settings shows (aptX ones only when installed) */
 const char *bt_codec_hint(int v);               /* bt.c: Settings hint for a codec choice (fallback order) */
+void bt_codec_setting_changed(void);            /* bt.c: Bluetooth Codec chosen (again): skipped codecs get another chance */
 int  ui_bt_codec_frame(const char *mac, char *out, int cap);   /* the 06b3 frame that selects SBC for a route to mac */
 void ui_bt_codec_upgrade_arm(const char *mac, int fresh);   /* after a route to mac (fresh = full route sequence): SBC cancels any pending switch; AAC/LDAC arms one for once BlueALSA has the PCM */
 void ui_bt_codec_upgrade_cancel(void);           /* any route change / link loss: drop the pending switch and stale probe results */

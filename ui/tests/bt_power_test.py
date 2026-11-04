@@ -40,11 +40,13 @@ static int fake_system(const char *cmd){
 static void scan_abort(void){}
 static void bt_autoroute_stop(void){}
 static void bt_announce_reset(void){}
+static void bt_wifi_quiet_tick(int off){ (void)off; }
 static int g_born;
 static const char *cfg_get_str(const char *k, const char *d){ (void)k; return d; }
 static int bt_born_for(const char *mac){ (void)mac; return 0; }
 static void bt_alsa_args(char *out, int cap, int born){ (void)born; snprintf(out, cap, "-S --device=hci0 --profile=a2dp-source --codec=sbc"); }
-static void bt_alsa_cmd(char *out, int cap, int born){ char a[200]; bt_alsa_args(a, sizeof a, born); snprintf(out, cap, "bluealsa %s", a); }
+static int bt_kind_for(const char *mac){ (void)mac; return 0; }
+static void bt_alsa_cmd(char *out, int cap, int born, int kind){ (void)kind; char a[200]; bt_alsa_args(a, sizeof a, born); snprintf(out, cap, "bluealsa %s", a); }
 ''' + fn("static int bt_enabling(") + "\n" + fn("static void bt_enable(") + "\n" + fn("static void bt_disable(") + r'''
 int main(int argc, char **argv){
     unlink("/tmp/bt_enabling"); unlink("/tmp/bt_disabling");

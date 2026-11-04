@@ -197,6 +197,7 @@ static void apply_language(int v){ (void)v; theme_reload_or_revert("language"); 
 static void rescan_go(void){ ui_rescan_library(); }
 static void apply_autotag(int v){ (void)v; }
 static void apply_bt_aptx(int v){ bt_aptx_setting_changed(v); }   /* bt.c: puts the files in place / says it's off */
+static void apply_bt_codec(int v){ (void)v; bt_codec_setting_changed(); }   /* bt.c: skipped codecs get another chance */
 static void apply_grp_zune(int v);
 static void apply_zune_main(int v){(void)v;home_shortcuts_refresh();}
 static void apply_upnext(int v){ (void)v; home_shortcuts_refresh(); }
@@ -735,6 +736,7 @@ const char *ui_eq_name(int i){
 static const char *const OPT_DRE[]    = { "Off", "On" };
 static const char *const OPT_AUTOTAG[] = { "Off", "On" };
 static const char *const OPT_BTAPTX[] = { "Off", "On" };
+static const char *const OPT_BTWQ[] = { "Off", "On" };
 static const char *const OPT_REPLAYGAIN[] = { "Off", "Track", "Album" };
 static const char *const OPT_GAIN[]   = { "Low", "High" };
 static const char *const OPT_DFILTER[]= { "Fast LL","Slow LL","Slow PC","Fast PC","NOS","Wideband" };
@@ -1047,10 +1049,12 @@ static const setting_t TABLE[] = {
       "Sync speakers: positive milliseconds delay the Disc; negative values play it earlier.", NULL },
     { "Connectivity",  "Bluetooth", ST_ACTION, NULL, 0,0,0, NULL,0, LV_SYMBOL_RIGHT, apply_bluetooth_settings, 0,
       "Pair Bluetooth devices. Audio routes to connected headphones or speakers (SBC, beta).", NULL },
-    { "Connectivity",  "Bluetooth Codec", ST_CHOICE, "bt_codec", 0,0,0, BT_CODEC_LABEL, BT_CODEC_N, NULL, NULL, 0,
-      "Choose the best codec for the next connection; headphones that lack it get the next best (see the note in the list). AAC/LDAC may stutter.", NULL },
+    { "Connectivity",  "Bluetooth Codec", ST_CHOICE, "bt_codec", 0,0,0, BT_CODEC_LABEL, BT_CODEC_N, NULL, apply_bt_codec, 0,
+      "Best uses LDAC or aptX, whichever the headphones have, then AAC, then SBC. AAC caps at AAC. Applies from the next connection. AAC/LDAC may stutter.", NULL },
     { "Connectivity",  "aptX (experimental)", ST_CYCLER, "bt_aptx", 0,0,0, OPT_BTAPTX, 2, NULL, apply_bt_aptx, 0,
-      "Adds aptX and aptX HD to Bluetooth Codec, using an open-source aptX BlueALSA built into Disco. Takes effect when Bluetooth next starts; the first connection after that can still use SBC, the next ones use aptX. Off uses FiiO's Bluetooth, as before.", NULL },
+      "Lets Bluetooth Codec's Best use aptX HD and aptX on headphones without LDAC, using an open-source aptX BlueALSA built into Disco. Takes effect when Bluetooth next starts; the first connection after that can still use SBC, the next ones use aptX. Off uses FiiO's Bluetooth, as before.", NULL },
+    { "Connectivity",  "Quiet Wi-Fi for Bluetooth", ST_CYCLER, "bt_wifi_quiet", 0,0,0, OPT_BTWQ, 2, NULL, NULL, 1,
+      "Wi-Fi and Bluetooth share one radio. While you listen over Bluetooth, Wi-Fi saves power and stops searching for networks, so the headphones get more airtime (fewer dropouts). Wi-Fi still works.", NULL },
 };
 #define N_SETTINGS ((int)(sizeof(TABLE)/sizeof(TABLE[0])))
 

@@ -1,0 +1,39 @@
+List every codec the headphones offer; never select a codec this daemon was started without.
+
+Disco runs this aptX BlueALSA with LDAC turned off (--codec=-ldac): LDAC audio through it hung the Disc until the
+watchdog rebooted it (Nov 2026), so LDAC always runs on FiiO's own BlueALSA. Two changes make that safe and
+still let Disco learn a pair's whole codec list from this daemon:
+- GetCodecs ("Available codecs") reports every SEP of the device, not only the codecs enabled here. Upstream hides
+  disabled ones, so a daemon started on one codec reported a partial list.
+- SelectCodec refuses a codec that is not enabled. Upstream does not check, so a client (the stock player's codec
+  request, say) could still switch the link to LDAC.
+
+--- a/src/bluealsa-dbus.c
++++ b/src/bluealsa-dbus.c
+@@ -266,10 +266,9 @@
+ 	if ((codec = a2dp_codec_lookup(sep->codec_id, !sep->dir)) == NULL)
+ 		return false;
+ 
+-	/* Do not report SEP if corresponding codec is not enabled
+-	 * in BlueALSA - it will be not possible to use it. */
+-	if (!codec->enabled)
+-		return false;
++	/* (diskOS Disco: report every SEP the device has, also for codecs not enabled
++	 * here, so the device's whole codec list is known whatever this daemon was
++	 * started with. A disabled codec still can not be selected: see SelectCodec.) */
+ 
+ 	uint8_t caps[sizeof(sep->capabilities)];
+ 	size_t size = MIN(sep->capabilities_size, sizeof(caps));
+@@ -733,6 +732,12 @@
+ 			goto fail;
+ 		}
+ 
++		/* (diskOS Disco: never switch to a codec this daemon was started without.) */
++		if (!codec->enabled) {
++			errmsg = "SEP codec not enabled";
++			goto fail;
++		}
++
+ 		/* setup default codec configuration */
+ 		memcpy(&sep->configuration, &sep->capabilities, sep->capabilities_size);
+ 		if (a2dp_select_configuration(codec, &sep->configuration, sep->capabilities_size) == -1)

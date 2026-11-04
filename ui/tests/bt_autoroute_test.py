@@ -14,6 +14,8 @@ def fn(sig):
     return src[start:e]
 C = r'''
 #define _GNU_SOURCE
+#define BT_SWITCH_MARK "/tmp/bt_autoroute_test_switch_mark"
+#include <unistd.h>
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -42,11 +44,13 @@ static void bt_alsa_rearm_born(void){ borns++; }
 static int acl = 0, alsa_born = 0, async_restarts;
 static int bt_acl_links(void){ return acl; }
 static int bt_alsa_actual(char *q, int qcap){ (void)q; (void)qcap; return alsa_born; }
-static void bt_alsa_restart_async(int born, const char *why){ (void)born; (void)why; async_restarts++; }
+static void bt_alsa_restart_async(int born, int kind, const char *why){ (void)born; (void)kind; (void)why; async_restarts++; }
+static int bt_alsa_kind_running(void){ return 0; }
 static int upgrade_pending, announces, resets;
 int bt_codec_upgrade_pending(void){ return upgrade_pending; }
 static void bt_announce(const char *m, const char *c){ (void)m; (void)c; announces++; }
 static void bt_announce_reset(void){ resets++; }
+static void bt_wifi_quiet_tick(int off){ (void)off; }
 ''' + fn("static int run_cap_bounded(") + "\n" + fn("static int bt_mac_valid(") + "\n" + fn("static void bt_autoroute_poll_cb(") + r'''
 static void poll(int m, int n){ mode = m; for(int i = 0; i < n; i++){ bt_autoroute_poll_cb(NULL); now += 3000; } }
 int main(void){
@@ -71,6 +75,10 @@ int main(void){
     poll(0, 2); poll(1, 1); assert(rearms == 1);                                   /* off and on again: re-checked */
     borns = 0; poll(0, 3); assert(borns == 1); poll(0, 3); assert(borns == 1);    /* really gone: prepared once */
     puts("PASS a returning link re-checks its codec (not on a single blip); a real disconnect prepares BlueALSA once");
+    poll(1, 2); rearms = 0; { FILE *m = fopen(BT_SWITCH_MARK, "w"); if(m) fclose(m); }
+    poll(1, 1); assert(rearms == 1 && access(BT_SWITCH_MARK, F_OK) != 0);       /* switched BlueALSA, no gap seen: re-checked */
+    poll(1, 3); assert(rearms == 1);                                               /* once */
+    puts("PASS a reconnect through the other BlueALSA re-checks the codec even when the link never looked gone");
     upgrade_pending = 0; poll(1, 1); announces = 0; resets = 0; poll(0, 2); assert(resets >= 1);
     poll(1, 2); assert(announces == 1);                                            /* SBC link back: announced once */
     poll(0, 1); poll(1, 1); assert(announces == 1);                                /* blip: not again */
