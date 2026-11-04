@@ -5,6 +5,10 @@ when they are missing or different) and uses them from the next Bluetooth start.
 unused: BlueALSA is FiiO's stock one, exactly as in 3.3.1. They reach the Disc inside the signed `mq_ui`, so an SD
 update brings them: no reflash.
 
+With aptX on, Disco runs this BlueALSA only for aptX / aptX HD headphones (and to learn a new pair's codecs), always
+with LDAC off: LDAC audio through it froze the Disc in testing, so LDAC always runs on FiiO's own BlueALSA. Patch
+`0003` makes it list every codec a pair has, and refuse to switch to a codec it was started without.
+
 | File | What | License |
 |---|---|---|
 | `bluealsa` | BlueALSA 4.0.0 (upstream) with `build/bluealsa-aptx/patches/` | MIT (`LICENSE-bluez-alsa.txt`) |

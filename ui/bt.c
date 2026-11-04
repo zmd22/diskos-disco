@@ -406,8 +406,8 @@ static void bt_skip_add(const char *mac, unsigned bit){
  * Disc until the watchdog rebooted it (Nov 2026). Its patched codec list still shows every codec a pair has, so a
  * pair's whole list is learned on it. aptX off: FiiO's only, as 3.3.1. */
 static const char *bt_alsa_aptx_bin(void);   /* below: the aptX BlueALSA, NULL when not installed */
-/* The saved codec choice: 0 SBC, 1 AAC, 2-4 Best (LDAC / aptX HD / aptX, whichever the headphones have; the number is
- * the LDAC quality). 5 and 6 (aptX / aptX HD, from 3.4.0 test builds) are no choice any more: read as Best, Standard. */
+/* The saved codec choice: 0 SBC, 1 AAC, 2-4 aptX/LDAC (LDAC / aptX HD / aptX, whichever the headphones have; the number is
+ * the LDAC quality). 5 and 6 (aptX / aptX HD, from 3.4.0 test builds) are no choice any more: read as aptX/LDAC Standard. */
 static int bt_codec_choice(void){
     int c = cfg_get_int("bt_codec", 0);
     return c == 5 || c == 6 ? 3 : c < 0 || c > 6 ? 0 : c;
@@ -612,26 +612,29 @@ static int bt_codec_prepare_steps(const char *mac, char *steps, int cap){
  * launches it - on the device its status advertises SBC AAC LDAC endpoints whatever --codec says - so a choice needs
  * no daemon restart, and this only ever sends the frame diskOS already sent, with another VALUE1. The choice is
  * read on the next route to a Bluetooth device (connect/reconnect), once BlueALSA has that device's PCM. DEVICE-UNVERIFIED with headphones. */
-/* Settings offers SBC, AAC and Best (2-4, by LDAC quality): LDAC and aptX are never chosen between, both always beat
- * AAC and SBC. Values 5 and 6 (aptX, aptX HD) are what Best applies on aptX headphones, never a choice: they are not
+/* Settings offers SBC, AAC and aptX/LDAC (2-4, by LDAC quality): LDAC and aptX are never chosen between, both always beat
+ * AAC and SBC. Values 5 and 6 (aptX, aptX HD) are what aptX/LDAC applies on aptX headphones, never a choice: they are not
  * stock VALUE1s (mq_player has no aptX), so they are asked of BlueALSA directly (bluealsa-cli codec: the same
  * SelectCodec call mq_player makes) and need the aptX BlueALSA. */
-/* (plain ASCII: some themes' Settings fonts have no middle dot - it showed as a box) */
-const char *const BT_CODEC_LABEL[BT_CODEC_N] = { "SBC", "AAC", "Best (LDAC Mobile)", "Best (LDAC Standard)",
-                                                 "Best (LDAC High)", "aptX", "aptX HD" };
+/* "aptX/LDAC <quality>": the best of LDAC / aptX HD / aptX the headphones have; the quality is LDAC's (aptX has none).
+ * Plain ASCII: some themes' Settings fonts have no middle dot (it showed as a box). */
+const char *const BT_CODEC_LABEL[BT_CODEC_N] = { "SBC", "AAC", "aptX/LDAC Mobile", "aptX/LDAC Standard",
+                                                 "aptX/LDAC High", "aptX", "aptX HD" };
 static int bt_mac_valid(const char *mac);
 static int bt_codec_frame_value(const char *mac, int v, char *out, int cap);
 static unsigned bt_codec_need(int v){
     return v == 1 ? BTC_AAC : (v >= 2 && v <= 4) ? BTC_LDAC : v == 5 ? BTC_APTX : v == 6 ? BTC_APTXHD : 0u;
 }
-/* How many codec choices Settings offers: SBC, AAC and the three Best (aptX / aptX HD are applied, never chosen). */
+/* How many codec choices Settings offers: SBC, AAC and the three aptX/LDAC (aptX / aptX HD are applied, never chosen). */
 int bt_codec_choices(void){ return BT_CODEC_N - 2; }
 /* Settings' hint for a choice: what it ends up as, highest first (the same order as bt_codec_pick). */
 const char *bt_codec_hint(int v){
     static char b[160];
-    if(v == 5 || v == 6) v = 3;                                   /* old aptX choices: Best */
-    if(v >= 2 && v <= 4 && !bt_alsa_aptx_bin()) snprintf(b, sizeof b, "LDAC if the headphones have it, then AAC, then SBC.");
-    else if(v >= 2 && v <= 4) snprintf(b, sizeof b, "LDAC or aptX HD / aptX, whichever the headphones have, then AAC, then SBC.");
+    if(v == 5 || v == 6) v = 3;                                   /* old aptX choices: aptX/LDAC Standard */
+    if(v >= 2 && v <= 4 && !bt_alsa_aptx_bin())
+        snprintf(b, sizeof b, "LDAC if the headphones have it, then AAC, then SBC. aptX: turn on aptX (experimental).");
+    else if(v >= 2 && v <= 4)
+        snprintf(b, sizeof b, "LDAC or aptX HD / aptX, whichever the headphones have, then AAC, then SBC. The quality is LDAC's.");
     else if(v == 1) snprintf(b, sizeof b, "Best effort: AAC, then SBC.");
     else snprintf(b, sizeof b, "SBC works with all headphones.");
     return b;
@@ -639,15 +642,15 @@ const char *bt_codec_hint(int v){
 /* A choice's codec as BlueALSA spells it, upper case (as "Selected codec:" is compared), and its BTC_ bit. */
 static const char *bt_codec_word(int v){ return v == 1 ? "AAC" : (v >= 2 && v <= 4) ? "LDAC" : v == 5 ? "APTX" : v == 6 ? "APTX-HD" : "SBC"; }
 /* The codec to apply: the best one the sink offers, never above the choice. Highest first:
- *   Best:  LDAC (the chosen quality) -> aptX HD -> aptX -> AAC -> SBC
+ *   aptX/LDAC: LDAC (the chosen quality) -> aptX HD -> aptX -> AAC -> SBC
  *   AAC:   AAC -> SBC          SBC: SBC
  * so headphones with LDAC get LDAC and aptX headphones get aptX, whatever the LDAC quality, and neither ever ends on
  * AAC while it has one of them. SBC when the sink's list is unknown. aptX is only listed with the aptX BlueALSA.
- * 5 / 6 passed as the choice (a step down from aptX HD / aptX) count as Best. */
+ * 5 / 6 passed as the choice (a step down from aptX HD / aptX) count as aptX/LDAC. */
 int bt_codec_pick(int choice, unsigned avail, int avail_known){
     if(choice <= 0 || choice >= BT_CODEC_N) return 0;         /* SBC chosen */
     if(!avail_known) return 0;                                /* unknown: SBC */
-    if(choice >= 2){                                          /* Best: LDAC or aptX, whichever is there */
+    if(choice >= 2){                                          /* aptX/LDAC: LDAC or aptX, whichever is there */
         if(avail & BTC_LDAC) return choice <= 4 ? choice : 3;
         if(avail & BTC_APTXHD) return 6;
         if(avail & BTC_APTX) return 5;
@@ -2093,7 +2096,7 @@ void bt_aptx_setting_changed(int on){
     else ui_toast("aptX off - the stock Bluetooth is used from the next Bluetooth start");
 }
 void bt_init_intent(void){
-    { int c = cfg_get_int("bt_codec", 0); if(c == 5 || c == 6) cfg_set_int("bt_codec", 3); }   /* old aptX choice: Best */
+    { int c = cfg_get_int("bt_codec", 0); if(c == 5 || c == 6) cfg_set_int("bt_codec", 3); }   /* old aptX choice: aptX/LDAC Standard */
     bt_guard_boot();
     bt_wifi_quiet_boot();                                 /* undo a Wi-Fi quiet a previous mq_ui left behind */
     bt_aptx_sync(0);                                       /* aptX on: make sure this mq_ui's files are in place */

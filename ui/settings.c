@@ -1050,9 +1050,9 @@ static const setting_t TABLE[] = {
     { "Connectivity",  "Bluetooth", ST_ACTION, NULL, 0,0,0, NULL,0, LV_SYMBOL_RIGHT, apply_bluetooth_settings, 0,
       "Pair Bluetooth devices. Audio routes to connected headphones or speakers (SBC, beta).", NULL },
     { "Connectivity",  "Bluetooth Codec", ST_CHOICE, "bt_codec", 0,0,0, BT_CODEC_LABEL, BT_CODEC_N, NULL, apply_bt_codec, 0,
-      "Best uses LDAC or aptX, whichever the headphones have, then AAC, then SBC. AAC caps at AAC. Applies from the next connection. AAC/LDAC may stutter.", NULL },
+      "aptX/LDAC uses LDAC or aptX, whichever the headphones have, then AAC, then SBC (the quality is LDAC's). AAC caps at AAC. Applies from the next connection. Experimental.", NULL },
     { "Connectivity",  "aptX (experimental)", ST_CYCLER, "bt_aptx", 0,0,0, OPT_BTAPTX, 2, NULL, apply_bt_aptx, 0,
-      "Lets Bluetooth Codec's Best use aptX HD and aptX on headphones without LDAC, using an open-source aptX BlueALSA built into Disco. Takes effect when Bluetooth next starts; the first connection after that can still use SBC, the next ones use aptX. Off uses FiiO's Bluetooth, as before.", NULL },
+      "Lets Bluetooth Codec's aptX/LDAC choices use aptX HD and aptX on headphones without LDAC, using an open-source aptX BlueALSA built into Disco. Takes effect when Bluetooth next starts; the first connection after that can still use SBC, the next ones use aptX. Off uses FiiO's Bluetooth, as before.", NULL },
     { "Connectivity",  "Quiet Wi-Fi for Bluetooth", ST_CYCLER, "bt_wifi_quiet", 0,0,0, OPT_BTWQ, 2, NULL, NULL, 1,
       "Wi-Fi and Bluetooth share one radio. While you listen over Bluetooth, Wi-Fi saves power and stops searching for networks, so the headphones get more airtime (fewer dropouts). Wi-Fi still works.", NULL },
 };
