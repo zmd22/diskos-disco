@@ -39,6 +39,7 @@ static int fake_system(const char *cmd){
 #define system fake_system
 static void scan_abort(void){}
 static void bt_autoroute_stop(void){}
+static void bt_announce_reset(void){}
 static int g_born;
 static const char *cfg_get_str(const char *k, const char *d){ (void)k; return d; }
 static int bt_born_for(const char *mac){ (void)mac; return 0; }

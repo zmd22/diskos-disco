@@ -412,8 +412,9 @@ static const char *bt_ldac_q(void){                    /* LDAC quality for the c
 }
 /* ---- The aptX BlueALSA (opt-in) ----------------------------------------------------------------------------------
  * Stock BlueALSA 4.0.0 on the Disc is built with SBC, AAC and LDAC only. The aptX build is the same upstream 4.0.0
- * (MIT) with aptX and aptX HD enabled, linked against the Disc's own libaptx / libaptxHD / LDAC / fdk-aac. Disco ships
- * no codec library. The file is called "bluealsa" in its own folder, so killall/pidof and the /proc reading below treat
+ * (MIT) with aptX and aptX HD enabled through libfreeaptx (LGPL-2.1, shipped next to it as its own shared library;
+ * the Disc's libaptx / libaptxHD wrap FFmpeg, which has no aptX encoder there). LDAC and fdk-aac are the Disc's own.
+ * The file is called "bluealsa" in its own folder, so killall/pidof and the /proc reading below treat
  * it exactly like stock. Not installed -> everything below is byte-for-byte the stock behaviour. */
 #ifndef BT_APTX_BINS
 #define BT_APTX_BINS "/opt/diskos/libexec/aptx/bluealsa", "/usr/data/diskos-aptx/bluealsa"
