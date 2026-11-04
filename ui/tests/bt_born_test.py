@@ -32,6 +32,7 @@ with tempfile.TemporaryDirectory() as d:
 #define BTC_LDAC 4u
 #define BTC_APTX 8u
 #define BTC_APTXHD 16u
+#define BT_FULL_APTX 2
 #include <unistd.h>
 #define BT_APTX_BINS "%s/aptx/bluealsa"
 static const char *bt_alsa_aptx_bin(void);
@@ -52,6 +53,8 @@ static void daemon_(const char *args){   /* fake a running bluealsa with these a
     snprintf(p, sizeof p, "%%s/4242/cmdline", BT_PROC_DIR); f = fopen(p, "w");
     char a[512]; snprintf(a, sizeof a, "bluealsa %%s", args); for(char *x = a; *x; x++) fputc(*x == ' ' ? 0 : *x, f); fclose(f);
 }
+static void exe_(const char *target){   /* the fake daemon's /proc exe link (absent = can't tell) */
+    char p[512]; snprintf(p, sizeof p, "%%s/4242/exe", BT_PROC_DIR); unlink(p); if(target && symlink(target, p)){} }
 static void links(int n){ char p[256]; snprintf(p, sizeof p, "rm -rf %%s/*; mkdir -p %%s/hci0", BT_SYSBT_DIR, BT_SYSBT_DIR); if(real_system(p)){}
     for(int i = 0; i < n; i++){ snprintf(p, sizeof p, "mkdir -p %%s/hci0:%%d", BT_SYSBT_DIR, 11 + i); if(real_system(p)){} } restarts = 0; }
 ''' % (proc, sysbt, d, d) + fn("static unsigned bt_codec_need(") + "\n" + fn("int bt_codec_pick(") + "\n" + \
@@ -118,6 +121,19 @@ int main(void){
       bt_caps_add(tw, BTC_AAC); assert(bt_born_for(tw) == 3);          /* a later AAC-only list adds, never shrinks */
       bt_mark_codec(tw, BTC_AAC, 1); assert(bt_caps_get(tw) == (int)(BTC_SBC | BTC_AAC | BTC_APTX));
       bt_caps_set(tw, BTC_AAC); codec = 1; assert(bt_born_for(tw) == 0); }   /* "full" without SBC (the MTW4 memory): relearn */
+    /* Nov 2026: the stock player started FiiO's BlueALSA at boot with aptX on; its list (no aptX) became "complete" */
+    { const char *tw = "80:C3:BA:72:32:A9"; char ax[600]; codec = 5; snprintf(ax, sizeof ax, "%s/aptx/bluealsa", TD);
+      bt_alsa_args(a, sizeof a, 0); daemon_(a); exe_("/usr/bin/bluealsa"); links(0);
+      assert(bt_alsa_exe_ok() == 0);                                     /* aptX on, FiiO's running: wrong one */
+      bt_alsa_rearm_born(); assert(restarts == 1 && has(last_cmd, "/aptx/bluealsa"));   /* replaced (nothing connected) */
+      links(1); restarts = 0; bt_alsa_rearm_born(); assert(restarts == 0);   /* connected: left alone */
+      exe_(ax); assert(bt_alsa_exe_ok() == 1);
+      exe_(NULL); assert(bt_alsa_exe_ok() == -1);                         /* can't tell: never acts */
+      links(0); restarts = 0; bt_alsa_args_for(a, sizeof a, bt_born_for(last), 1); daemon_(a); bt_alsa_rearm_born(); assert(restarts == 0);
+      bt_caps_set(tw, BTC_SBC | BTC_AAC | BTC_APTX); assert(bt_caps_full(tw) == 2 && bt_born_for(tw) == 3);
+      cfg_set_int("btfull_80C3BA7232A9", 1); assert(bt_born_for(tw) == 0);   /* marked by the earlier rule: relearn */
+      cfg_set_int("bt_aptx", 0); exe_("/usr/bin/bluealsa"); assert(bt_alsa_exe_ok() == 1); cfg_set_int("bt_aptx", 1); }
+    puts("PASS which BlueALSA runs: FiiO's with aptX on is replaced when nothing is connected; only the aptX build's list is complete");
     puts("PASS codec memory: only a full list replaces it; partial lists add; an unproven memory gets a normal start");
     puts("PASS aptX BlueALSA: born on aptX / aptX HD only when installed; /proc reads every birth back; LDAC enabled explicitly; the switch off means stock");
     return 0;

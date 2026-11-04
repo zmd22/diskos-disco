@@ -362,6 +362,7 @@ static int bt_caps_get(const char *mac){              /* remembered codec bits (
 /* Whether these headphones' list was seen with every codec enabled (a normal start). A BlueALSA started on one codec
  * lists only what it allowed, so its list is partial: it may add to the memory but never replace it - otherwise one
  * AAC-only connection would remember "AAC only" and keep every later start on AAC (seen on the Disc, Nov 2026). */
+#define BT_FULL_APTX 2   /* the whole list, seen by the aptX build (1 = an earlier rule that also trusted stock's list) */
 static int bt_caps_full(const char *mac){ char k[32]; bt_mac_cfg_key("btfull_", mac, k, sizeof k); return cfg_get_int(k, 0); }
 static void bt_caps_write(const char *mac, unsigned avail){       /* 3.3.1's: replace the list as read */
     char k[32]; bt_caps_key(mac, k, sizeof k);
@@ -370,7 +371,7 @@ static void bt_caps_write(const char *mac, unsigned avail){       /* 3.3.1's: re
 static void bt_caps_set(const char *mac, unsigned avail){        /* the full list, from a normal start */
     char k[32]; bt_caps_write(mac, avail);
     bt_mac_cfg_key("btfull_", mac, k, sizeof k);
-    if(cfg_get_int(k, 0) != 1) cfg_set_int(k, 1);
+    if(cfg_get_int(k, 0) != BT_FULL_APTX) cfg_set_int(k, BT_FULL_APTX);
 }
 static void bt_caps_add(const char *mac, unsigned bits){          /* seen working or listed under a restricted start */
     int caps = bt_caps_get(mac); unsigned nb = (unsigned)(caps < 0 ? 0 : caps) | bits;
@@ -394,7 +395,7 @@ static int bt_born_for(const char *mac){
     int caps = bt_caps_get(mac); if(caps < 0) return 0;
     /* aptX build only (stock behaves as 3.3.1): a list never seen whole, or saved without the mandatory SBC, is
      * provably partial - learn it first with a normal start */
-    if(bt_alsa_aptx_bin() && (!bt_caps_full(mac) || !(caps & BTC_SBC))) return 0;
+    if(bt_alsa_aptx_bin() && (bt_caps_full(mac) != BT_FULL_APTX || !(caps & BTC_SBC))) return 0;
     caps &= ~bt_bad_get(mac);                          /* never born on a codec that failed to confirm */
     if(!bt_alsa_aptx_bin()) caps &= ~(int)(BTC_APTX | BTC_APTXHD);   /* aptX remembered, but its BlueALSA is gone */
     int v = bt_codec_pick(cfg_get_int("bt_codec", 0), (unsigned)caps, 1);
@@ -478,6 +479,33 @@ static int bt_alsa_actual(char *q, int qcap){
     return born;
 }
 /* Is the running BlueALSA started the way `want` asks (incl. the LDAC quality)? A missing daemon counts as "no". */
+/* Is the running BlueALSA the one Disco would start: the aptX build with aptX on, FiiO's otherwise? 1 yes, 0 no, -1
+ * can't tell (none running, or its /proc exe unreadable) - "can't tell" never triggers anything. The stock player
+ * starts FiiO's BlueALSA itself at boot; with aptX on, its codec list (no aptX) must not count as the headphones'
+ * whole list, and it is replaced by the aptX build while nothing is connected (seen on the Disc, Nov 2026). */
+static int bt_alsa_exe_ok(void){
+    DIR *d = opendir(BT_PROC_DIR); if(!d) return -1;
+    struct dirent *e; int r = -1;
+    const char *want = bt_alsa_aptx_bin();
+    while((e = readdir(d))){
+        if(e->d_name[0] < '1' || e->d_name[0] > '9') continue;
+        char p[320], comm[32] = ""; snprintf(p, sizeof p, BT_PROC_DIR "/%s/comm", e->d_name);
+        FILE *f = fopen(p, "r"); if(!f) continue;
+        if(!fgets(comm, sizeof comm, f)) comm[0] = 0;
+        fclose(f);
+        if(strncmp(comm, "bluealsa\n", 9) && strcmp(comm, "bluealsa")) continue;
+        char exe[256]; snprintf(p, sizeof p, BT_PROC_DIR "/%s/exe", e->d_name);
+        ssize_t n = readlink(p, exe, sizeof exe - 1);
+        if(n > 0){
+            exe[n] = 0;
+            char *del = strstr(exe, " (deleted)"); if(del) *del = 0;   /* replaced on disk while running: same binary */
+            r = want ? !strcmp(exe, want) : !strstr(exe, "aptx/bluealsa");
+        }
+        break;
+    }
+    closedir(d);
+    return r;
+}
 static int bt_alsa_is(int want){
     char q[24]; int born = bt_alsa_actual(q, sizeof q);
     return born == want && (want != 2 || !strcmp(q, bt_ldac_q()));
@@ -506,7 +534,11 @@ static void bt_alsa_restart_async(int born, const char *why){
     fprintf(stderr, "bt codec: BlueALSA restarting (%s first): %s\n", first[born >= 0 && born <= 4 ? born : 0], why); fflush(stderr);
 }
 static void bt_ensure_services(void){
-    if(bt_alsa_actual(NULL, 0) >= 0) return;             /* running: leave it, its real arguments are read when needed */
+    if(bt_alsa_actual(NULL, 0) >= 0){                    /* running: leave it, its real arguments are read when needed */
+        if(bt_alsa_exe_ok() == 0 && bt_acl_links() == 0)   /* ...unless it is the wrong binary and nothing is connected */
+            bt_alsa_restart_async(bt_born_for(cfg_get_str("bt_last", "")), "the BlueALSA for this aptX setting");
+        return;
+    }
     char a[768], cmd[900];
     bt_alsa_cmd(a, sizeof a, bt_born_for(cfg_get_str("bt_last", "")));
     snprintf(cmd, sizeof cmd, "pidof bluealsa >/dev/null 2>&1 || %s >/tmp/bluealsa.log 2>&1 &", a);
@@ -518,7 +550,7 @@ static void bt_ensure_services(void){
 static void bt_alsa_rearm_born(void){
     if(bt_acl_links() != 0) return;
     int want = bt_born_for(cfg_get_str("bt_last", ""));
-    if(bt_alsa_actual(NULL, 0) < 0 || bt_alsa_is(want)) return;
+    if(bt_alsa_actual(NULL, 0) < 0 || (bt_alsa_is(want) && bt_alsa_exe_ok() != 0)) return;
     bt_alsa_restart_async(want, "ready for the usual headphones");
 }
 /* Before connecting to these headphones: if the running BlueALSA is restricted to a codec they aren't known to
@@ -527,7 +559,7 @@ static void bt_alsa_rearm_born(void){
 static int bt_codec_prepare_steps(const char *mac, char *steps, int cap){
     if(cap > 0) steps[0] = 0;
     int born = bt_alsa_actual(NULL, 0);
-    if(born <= 0 || bt_born_for(mac) == born) return 0;
+    if(born < 0 || ((born == 0 || bt_born_for(mac) == born) && bt_alsa_exe_ok() != 0)) return 0;
     bt_alsa_restart_steps(steps, cap, 0);
     fprintf(stderr, "bt codec: BlueALSA back to the normal order before connecting %s\n", mac); fflush(stderr);
     return 1;
@@ -737,7 +769,7 @@ int bt_codec_upgrade_step(void){
             /* aptX build: the whole list only from a normal start AND with the mandatory SBC in it, else add only (never
              * shrink). Stock BlueALSA: exactly 3.3.1's - the list as read replaces the memory. */
             if(!bt_alsa_aptx_bin()) bt_caps_write(mac, g_cq.avail & ~BTC_SBC);
-            else if(bt_alsa_actual(NULL, 0) == 0 && (g_cq.avail & BTC_SBC)) bt_caps_set(mac, g_cq.avail);
+            else if(bt_alsa_actual(NULL, 0) == 0 && bt_alsa_exe_ok() == 1 && (g_cq.avail & BTC_SBC)) bt_caps_set(mac, g_cq.avail);
             else bt_caps_add(mac, g_cq.avail);
         }
         if(g_cq.pcm && g_cq.known){                                      /* the link is there and says what it can do */
