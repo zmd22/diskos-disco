@@ -1,0 +1,11 @@
+FROM docker.io/library/debian:12-slim
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential autoconf automake bison flex gawk \
+    help2man libtool libtool-bin libncurses-dev texinfo unzip wget xz-utils bzip2 git python3 python3-dev rsync file \
+    ca-certificates patch gettext pkg-config && rm -rf /var/lib/apt/lists/*
+RUN wget -q http://crosstool-ng.org/download/crosstool-ng/crosstool-ng-1.26.0.tar.xz && tar xf crosstool-ng-1.26.0.tar.xz \
+    && cd crosstool-ng-1.26.0 && ./configure --prefix=/usr/local && make -j$(nproc) && make install && cd / && rm -rf crosstool-ng-1.26.0*
+RUN useradd -m b
+USER b
+WORKDIR /home/b/w
+COPY --chown=b toolchain.defconfig defconfig
+RUN ct-ng defconfig && ct-ng build.$(nproc) || (tail -80 build.log; exit 1)

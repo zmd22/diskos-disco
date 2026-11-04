@@ -5,6 +5,8 @@ from pathlib import Path
 root=Path(__file__).resolve().parents[1]
 p=argparse.ArgumentParser();p.add_argument('--tag');a=p.parse_args()
 version=re.search(r'#define DISCO_VERSION\s+"([^"]+)"',(root/'ui/version.h').read_text())[1]
+_test=re.search(r'#define DISCO_TEST_LABEL\s+"([^"]*)"',(root/'ui/version.h').read_text())
+if _test and _test[1]:raise SystemExit(f'ui/version.h: DISCO_TEST_LABEL is "{_test[1]}" - empty it for a release')
 if a.tag and a.tag != 'v'+version: raise SystemExit(f'Tag {a.tag} does not match Disco {version}')
 meta=json.loads((root/'payload/mq_ui.build.json').read_text())
 assert meta['version']==version, 'payload version is stale'

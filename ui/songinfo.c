@@ -32,9 +32,9 @@ LV_FONT_DECLARE(font_zune_regular_16)
  * one DB lookup) so the UI thread never waits on the SD card; a row shows only once its value is known.
  * For an audiobook the page relabels to "Book details" and shows reading progress. */
 
-enum { F_TITLE, F_ARTIST, F_NARRATOR, F_ALBUM, F_GENRE, F_FORMAT, F_RATE, F_DEPTH, F_BITRATE, F_CHANNELS, F_DURATION, F_SIZE, F_FOLDER, F_FILE, F_COUNT };
-static const char *NULL_KEYS[F_COUNT]={"TITLE","ARTIST","VOICE","ALBUM","GENRE","FORMAT","RATE","DEPTH","BITRATE","CHANS","LENGTH","SIZE","FOLDER","FILE"};
-static const char *KEYS[F_COUNT] = { "Title","Artist","Narrated by","Album","Genre","Format","Sample Rate","Bit Depth","Bit Rate","Channels","Duration","File Size","Folder","File" };
+enum { F_TITLE, F_ARTIST, F_NARRATOR, F_ALBUM, F_GENRE, F_FORMAT, F_OUTPUT, F_RATE, F_DEPTH, F_BITRATE, F_CHANNELS, F_DURATION, F_SIZE, F_FOLDER, F_FILE, F_COUNT };
+static const char *NULL_KEYS[F_COUNT]={"TITLE","ARTIST","VOICE","ALBUM","GENRE","FORMAT","OUTPUT","RATE","DEPTH","BITRATE","CHANS","LENGTH","SIZE","FOLDER","FILE"};
+static const char *KEYS[F_COUNT] = { "Title","Artist","Narrated by","Album","Genre","Format","Output","Sample Rate","Bit Depth","Bit Rate","Channels","Duration","File Size","Folder","File" };
 static lv_obj_t *g_val[F_COUNT];
 static lv_obj_t *g_key[F_COUNT];
 static lv_obj_t *g_cell[F_COUNT];   /* whole rows, so a not-applicable one (e.g. Narrated by for music) can be hidden */
@@ -516,6 +516,26 @@ static void autotag_button(lv_obj_t *root, int y){
     lv_obj_set_style_text_font(l, TF(UI_16), 0); lv_obj_set_style_text_color(l, th_null() ? TC(TEXT_PRIMARY) : TC(TEXT_PRIMARY), 0);
     lv_obj_center(l);
 }
+/* Output row: "Bluetooth \xC2\xB7 LDAC" with the codec the headphones are really running (BlueALSA's word, read in the
+ * background by bt.c), plain "Bluetooth" until that is known; hidden for the Disc's own output. Called on every main
+ * loop pass while Song Info is visible, so the codec lands without a track change; the label is only touched when the
+ * text changes. */
+void songinfo_output_tick(void)
+{
+    if(!g_cell[F_OUTPUT]) return;
+    static char shown[40];
+    char codec[16], txt[40] = "";
+    if(ui_route_mac()[0]){
+        if(ui_bt_live_codec(codec, sizeof codec)) snprintf(txt, sizeof txt, "Bluetooth \xC2\xB7 %s", codec);
+        else snprintf(txt, sizeof txt, "Bluetooth");
+    }
+    int vis = !lv_obj_has_flag(g_cell[F_OUTPUT], LV_OBJ_FLAG_HIDDEN);
+    if(!strcmp(txt, shown) && vis == (txt[0] != 0)) return;
+    snprintf(shown, sizeof shown, "%s", txt);
+    if(txt[0]){ lv_label_set_text(g_val[F_OUTPUT], txt); lv_obj_remove_flag(g_cell[F_OUTPUT], LV_OBJ_FLAG_HIDDEN); }
+    else lv_obj_add_flag(g_cell[F_OUTPUT], LV_OBJ_FLAG_HIDDEN);
+    if(th_zune() && !g_zsi_pending){ g_zsi_pending = 1; lv_async_call(zsi_async, NULL); }   /* rows moved: re-curve them */
+}
 void songinfo_set(const track_state_t *st)
 {
     if(g_pinned && st && strcmp(st->path, g_pin_path)) return;   /* showing another song: ignore the live updates */
@@ -525,7 +545,7 @@ void songinfo_set(const track_state_t *st)
     if(!st || !st->have_track){
         for(int i=0;i<F_COUNT;i++) if(g_val[i]) lv_label_set_text(g_val[i], "-");
         if(g_cell[F_NARRATOR]) lv_obj_add_flag(g_cell[F_NARRATOR], LV_OBJ_FLAG_HIDDEN);
-        static const int optional[] = { F_GENRE, F_DEPTH, F_BITRATE, F_CHANNELS, F_SIZE, F_FOLDER };
+        static const int optional[] = { F_OUTPUT, F_GENRE, F_DEPTH, F_BITRATE, F_CHANNELS, F_SIZE, F_FOLDER };
         for(size_t i=0;i<sizeof optional/sizeof *optional;i++) if(g_cell[optional[i]]) lv_obj_add_flag(g_cell[optional[i]], LV_OBJ_FLAG_HIDDEN);
         return;
     }
@@ -551,6 +571,8 @@ void songinfo_set(const track_state_t *st)
 
     char fmt[16]; si_fmt_format(fmt, sizeof fmt, st->path, st->is_dsd, cur.dsd_hz, st->sample_rate);
     lv_label_set_text(g_val[F_FORMAT], fmt);
+
+    songinfo_output_tick();
 
     char rate[24];
     si_fmt_rate(rate, sizeof rate, (st->is_dsd && cur.dsd_hz > 0) ? cur.dsd_hz : st->sample_rate);

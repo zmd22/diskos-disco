@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 diskOS contributors
+# Arch Linux package of the diskOS Disco! Linux app. Built by build/linux-packages/build.sh (in an Arch container);
+# DISCO_REPO points at the repository and DISCO_VERSION is the interface version.
+pkgname=diskos-disco
+pkgver=${DISCO_VERSION:-0}
+pkgrel=1
+pkgdesc="Install diskOS Disco! on the Snowsky Disc and make SD-card updates"
+arch=('x86_64')
+url="https://github.com/zmd22/diskos-disco"
+license=('MIT' 'GPL-2.0-or-later' 'GPL-3.0-or-later')
+depends=('python>=3.8' 'tk' 'python-pyusb' 'python-pycryptodome' 'openssl' 'xdg-utils' 'polkit')
+options=('!strip' '!debug')          # the static flash tools and the Disc's MIPS mq_ui ship as built
+install=diskos-disco.install
+
+package() {
+    sh "$DISCO_REPO/build/linux-packages/stage.sh" "$DISCO_REPO" "$pkgdir"
+}

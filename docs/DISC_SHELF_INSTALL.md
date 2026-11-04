@@ -76,6 +76,6 @@ Configuration remains in internal storage. Private local-presence/ownership cata
 
 ## Older firmware
 
-The separate **Disc Shelf 1.0.4** release archive is the legacy Navidrome-only app. It does not contain SMB3. It remains available for older firmware; native Disco hides duplicate standalone menu entries. On 3.2.x, use the built-in app and preserve your existing configuration rather than reinstalling the standalone executable.
+The separate **Disc Shelf 1.0.4** archive is the legacy Navidrome-only app, without SMB3. It was last published with [3.3.1](https://github.com/zmd22/diskos-disco/releases/tag/v3.3.1) for older firmware; later releases don't include it. Native Disco hides duplicate standalone menu entries. On 3.2.x, use the built-in app and preserve your existing configuration rather than reinstalling the standalone executable.
 
 [Implementation and limits](../archive/docs/plans/disc-shelf-smb3.md) · [Validation notes](../archive/docs/performance/disc-shelf-native.md)

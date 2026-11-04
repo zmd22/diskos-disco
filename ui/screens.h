@@ -128,6 +128,7 @@ void quicksettings_set_battery(int pct, int charging);                          
 /* song info (songinfo.c) */
 void songinfo_create(lv_obj_t *root);
 void songinfo_set(const track_state_t *st);
+void songinfo_output_tick(void);                /* Output row (Bluetooth codec): refresh while Song Info is visible */
 /* Now Playing side menus (npmenus.c) + custom EQ (eqcustom.c) */
 void npmenu_create(lv_obj_t *root);
 void nphub_create(lv_obj_t *root);   /* right-swipe hub: Playback + Options buttons */
@@ -199,12 +200,18 @@ enum { BT_OFF, BT_ON, BT_TURNING_ON };
 int  bt_state(void);          /* off / on / turning on: cheap (/proc + /sys), safe to poll every second */
 void bt_info_create(lv_obj_t *root);
 void bt_info_open(void);
-#define BT_CODEC_N 5                   /* A2DP codec choices (bt.c): SBC, AAC, LDAC Mobile/Standard/High */
+#define BT_CODEC_N 7                   /* A2DP codec choices (bt.c): SBC, AAC, LDAC Mobile/Standard/High, aptX, aptX HD */
 extern const char *const BT_CODEC_LABEL[BT_CODEC_N];
+void bt_aptx_setting_changed(int on);           /* bt.c: Settings > aptX (experimental) changed */
+void bt_aptx_sync(int tell);                     /* bt.c: aptX on -> put mq_ui's aptX files in place (background) */
+int  bt_codec_choices(void);                    /* bt.c: codec choices Settings shows (aptX ones only when installed) */
+const char *bt_codec_hint(int v);               /* bt.c: Settings hint for a codec choice (fallback order) */
 int  ui_bt_codec_frame(const char *mac, char *out, int cap);   /* the 06b3 frame that selects SBC for a route to mac */
 void ui_bt_codec_upgrade_arm(const char *mac, int fresh);   /* after a route to mac (fresh = full route sequence): SBC cancels any pending switch; AAC/LDAC arms one for once BlueALSA has the PCM */
 void ui_bt_codec_upgrade_cancel(void);           /* any route change / link loss: drop the pending switch and stale probe results */
 const char *ui_route_mac(void);                  /* main.c: MAC the player is routed to, "" when local */
+int  ui_bt_live_codec(char *out, int cap);      /* bt.c: the routed headphones' running codec ("LDAC", "aptX HD"), 1 = known; may start a background read */
+const char *bt_codec_display(const char *sel);  /* bt.c: BlueALSA codec word -> display name */
 void bt_boot_restore(void);   /* at startup: re-enable BT + arm auto-route if it was on */
 void bt_notify_player_restart(void);   /* player restarted: forget stale auto-route so the poll re-routes */
 int  ui_player_settling(void);         /* 1 while the player is still in its post-restart late-init settle window */
@@ -305,7 +312,6 @@ void tune_refresh(void);      /* re-sync Tune panel Play Mode/EQ labels on show 
 void ui_set_dre(int on);
 void ui_set_gain(int high);
 void ui_set_output(int spdif);
-void bt_codec_apply_async(const char *mac);   /* check/apply the chosen BT codec for a routed speaker (own thread, fallback LDAC > AAC > SBC) */
 int  ui_route_bt(const char *mac);   /* route player audio to a connected BT speaker (by MAC) */
 int  ui_route_analog(void);          /* route player audio back to the local DAC */
 void ui_set_dac_filter(int idx);

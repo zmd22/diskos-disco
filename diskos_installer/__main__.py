@@ -212,6 +212,7 @@ def build_parser():
     sub = p.add_subparsers(dest="cmd", required=False)
 
     sub.add_parser("gui", help="launch the graphical installer (also the default with no arguments)")
+    sub.add_parser("desktop-entry", help="add diskOS Disco! to your applications menu (opens without a terminal)")
 
     d = sub.add_parser("doctor", help="report host, bundled tools, device, and state")
     d.set_defaults(func=cmd_doctor)
@@ -247,9 +248,13 @@ def main(argv=None):
     args = build_parser().parse_args(argv)
     # no subcommand, or 'gui' -> launch the graphical installer (under the lock)
     if getattr(args, "cmd", None) in (None, "gui"):
-        from diskos_installer import gui
+        from diskos_installer import app
         with _Lock():
-            return gui.main()
+            return app.main()
+    if args.cmd == "desktop-entry":
+        from diskos_installer import app
+        print("added: " + app.install_desktop_entry())
+        return 0
     try:
         if args.cmd == "doctor":            # doctor is read-only; no lock needed
             return args.func(args)

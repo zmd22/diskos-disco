@@ -126,8 +126,14 @@ else
     esac
 fi
 
+# Applications menu entry, so the graphical installer opens without a terminal (needs tkinter; harmless without).
+if "$PY" -c 'import tkinter' 2>/dev/null; then
+    "$HERE/diskos-installer" desktop-entry >/dev/null 2>&1 && echo "  added diskOS Disco! to your applications menu."
+fi
+
 echo
 echo "Setup complete. Run the installer with:"
 echo "    ./diskos-installer doctor      # check host + tools + device"
 echo "    ./diskos-installer gui         # graphical installer (needs tkinter)"
+echo "    ./diskos-installer desktop-entry  # add diskOS Disco! to your applications menu"
 echo "    ./diskos-installer --help      # all commands"

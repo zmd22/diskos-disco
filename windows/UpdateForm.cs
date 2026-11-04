@@ -10,13 +10,16 @@ using System.Windows.Forms;
 
 namespace DiskosDisco
 {
-    class UpdateForm : Form
+    class UpdateForm : Form, IPage
     {
-        public bool WentBack;
+        public bool Busy { get { return busy; } }
+        public void LetGo() { }
+        // The shell shows this tab: look for cards again (the Disc may have been switched to USB storage meanwhile).
+        internal void Arrived() { if (!busy) FindCards(); }
 
         readonly RadioButton latest, ownFile;
         readonly Label uiLabel, keysLabel, sdLabel, status;
-        readonly Button uiButton, keysButton, sdRefresh, sdOther, make, back;
+        readonly Button uiButton, keysButton, sdRefresh, sdOther, make;
         readonly ComboBox sd;
         readonly ProgressBar progress;
         readonly TextBox log;
@@ -32,13 +35,13 @@ namespace DiskosDisco
             for (int i = 0; i < 5; i++) root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            Controls.Add(new Header(4, "Update from the SD card"));
             Controls.Add(root); root.BringToFront();
 
             root.Controls.Add(new Label
             {
                 Text = "Once diskOS Disco! is on your Disc, new versions install from the SD card: no cable, no flashing. This page " +
-                       "signs a version with your keys and puts it on the card.",
+                       "signs a version with your keys and puts it on the card. It works for any Disc installed with these keys, " +
+                       "from this PC or another; it only needs diskOS's Linux environment (the Setup tab).",
                 AutoSize = true, ForeColor = Theme.Muted, MaximumSize = new Size(700, 0), Margin = new Padding(0, 0, 0, 14)
             }, 0, 0);
 
@@ -85,11 +88,9 @@ namespace DiskosDisco
             root.Controls.Add(log, 0, 5);
 
             var bar = new FlowLayoutPanel { FlowDirection = FlowDirection.RightToLeft, Dock = DockStyle.Fill, AutoSize = true, Margin = new Padding(0, 12, 0, 0) };
-            back = MainForm.MakeButton("Back", false);
-            back.Click += (s, e) => { WentBack = true; Close(); };
             var copy = MainForm.MakeButton("Copy report", false);
             copy.Click += (s, e) => { try { Clipboard.SetText("diskOS Disco! for Windows " + Program.Version + "\r\n" + status.Text + "\r\n\r\n" + log.Text); } catch { } };
-            bar.Controls.Add(back); bar.Controls.Add(copy);
+            bar.Controls.Add(copy);                                 // (no Back: the tabs move between pages)
             root.Controls.Add(bar, 0, 6);
 
             string def = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "diskOS Keys");
@@ -186,7 +187,6 @@ namespace DiskosDisco
             else if (KeysOk) { keysLabel.Text = "✔  " + keysDir; keysLabel.ForeColor = Theme.Green; }
             else { keysLabel.Text = "✖  " + keysDir + " doesn't have leaf.key, leafpub.pem, keyauthz and keyauthz.sig."; keysLabel.ForeColor = Theme.Red; }
             uiButton.Enabled = keysButton.Enabled = sdRefresh.Enabled = sdOther.Enabled = latest.Enabled = ownFile.Enabled = sd.Enabled = !busy;
-            back.Enabled = !busy;
             make.Enabled = !busy && KeysOk && sd.SelectedItem != null && (latest.Checked || uiFile != null);
             progress.Visible = busy;
         }
@@ -205,6 +205,14 @@ namespace DiskosDisco
 
         void Make()
         {
+            if (!Demo.On && !Env.Exists())
+            {
+                if (MessageBox.Show(this, "Signing runs in diskOS's own Linux environment, which isn't set up on this PC yet. " +
+                                    "Set it up now on the Setup tab? (No Disc needed; it takes a minute or two.)", Text,
+                                    MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes)
+                    Shell.Current.Go("setup");
+                return;
+            }
             var card = (Card)sd.SelectedItem;
             bool download = latest.Checked;
             string file = uiFile, keys = keysDir;
@@ -250,10 +258,20 @@ namespace DiskosDisco
             if (rc != 0) { end = "Signing didn't work (code " + rc + "). Copy report and send it."; return false; }
 
             Say("Copying to the card…", Theme.Text);
+            // The six files one by one, overwriting the previous run's (never the folder as a whole: on some cards
+            // deleting the old folder silently fails and the new one ends up nested inside it - docs/UPDATING.md).
             string dest = Path.Combine(target, "diskos-update");
-            if (Directory.Exists(dest)) Directory.Delete(dest, true);   // never mix files from two signing runs
             Directory.CreateDirectory(dest);
-            foreach (string f in Directory.GetFiles(outDir)) File.Copy(f, Path.Combine(dest, Path.GetFileName(f)), true);
+            foreach (string name in new[] { "mq_ui", "update.manifest", "update.manifest.sig", "leafpub.pem", "keyauthz", "keyauthz.sig" })
+            {
+                string src = Path.Combine(outDir, name), dst = Path.Combine(dest, name);
+                File.Copy(src, dst, true);
+                byte[] a = File.ReadAllBytes(src), b = File.ReadAllBytes(dst);
+                bool same = a.Length == b.Length;
+                for (int i = 0; same && i < a.Length; i++) same = a[i] == b[i];
+                if (!same) { end = name + " on the card doesn't match the signed file. Copy it again."; return false; }
+                Append("Copied " + name);
+            }
             Append("Wrote " + dest);
             end = "Done: the update is on the card.";
             return true;

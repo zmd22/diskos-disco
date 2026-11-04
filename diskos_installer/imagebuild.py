@@ -169,7 +169,10 @@ def _openssl_aes_decrypt(data, password):
     'Salted__' + 8-byte salt header, PBKDF2-HMAC-SHA256 (10000 iters) -> 32B key +
     16B IV, AES-256-CBC, PKCS7 padding."""
     import hashlib
-    from Crypto.Cipher import AES  # pycryptodome (bundled)
+    try:
+        from Crypto.Cipher import AES  # pycryptodome (pip / Arch python-pycryptodome)
+    except ImportError:
+        from Cryptodome.Cipher import AES  # pycryptodomex (Fedora python3-pycryptodomex): the same code, renamed
     if data[:8] != b"Salted__":
         raise BuildError("encrypted blob missing openssl 'Salted__' header (not a FiiO OTA chunk?)", code="E211")
     salt = data[8:16]

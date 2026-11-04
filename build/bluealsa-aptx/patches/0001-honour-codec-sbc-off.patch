@@ -1,0 +1,24 @@
+Honour --codec=-sbc for the A2DP source, as FiiO's stock BlueALSA 4.0.0 on the Disc does.
+
+Upstream forces SBC on ("mandatory codec"). Disco starts BlueALSA with only the chosen codec (LDAC, aptX, aptX HD)
+so a connection is born on it; with SBC forced on, the stock player's route-time SBC request (06b3, value 0) switches
+the headphones back to SBC under the music. SBC stays forced on when no other A2DP source codec is enabled, so the
+daemon can never end up offering nothing.
+
+--- a/src/main.c
++++ b/src/main.c
+@@ -560,7 +560,13 @@
+ #endif
+ 
+ 	/* Make sure that mandatory codecs are enabled. */
+-	a2dp_sbc_source.enabled = true;
++	/* (diskOS Disco: SBC as a source only when no other source codec is on.) */
++	bool other_source = false;
++	for (struct a2dp_codec * const *cc = a2dp_codecs; *cc != NULL; cc++)
++		if ((*cc)->dir == A2DP_SOURCE && *cc != &a2dp_sbc_source && (*cc)->enabled)
++			other_source = true;
++	if (!other_source)
++		a2dp_sbc_source.enabled = true;
+ 	a2dp_sbc_sink.enabled = true;
+ 	config.hfp.codecs.cvsd = true;
+ 

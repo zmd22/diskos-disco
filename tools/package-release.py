@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Package verified UI and independent apps, source, licenses and instructions."""
+"""Package the verified UI, source pointers, licenses and instructions.
+Disc Shelf is built into mq_ui (3.2.0+): the legacy standalone Disc-Shelf-1.0.4.tar and its source were last
+published with 3.3.1 and are no longer packaged. apps/disc-shelf and its corresponding source stay in the repository
+for anyone who received that binary."""
 from pathlib import Path
 import argparse,hashlib,json,re,shutil,subprocess,sys,tarfile,zipfile
 from urllib.parse import urlsplit, unquote
@@ -12,25 +15,7 @@ meta=json.loads((root/'payload/mq_ui.build.json').read_text())
 assert meta['version']==version
 assert hashlib.sha256((root/'payload/mq_ui').read_bytes()).hexdigest()==meta['binary']['sha256']
 assert (root/'payload/mq_ui').stat().st_size==meta['binary']['bytes']
-apps=[('disc-shelf','1.0.4','Disc-Shelf-1.0.4.tar','w')]
-allowed={'app','app.conf','shelf.conf.example','README.md','NOTICE.md','LICENSE','BUILD.json','CHANGELOG.md','HANDOFF.md'}
-entries=[];outputs=[]
-for name,appver,archive,mode in apps:
-    folder=root/'apps'/name;files=[]
-    for path in sorted(folder.rglob('*')):
-        rel=path.relative_to(folder)
-        if path.is_symlink():raise SystemExit('Refusing app symlink: '+str(rel))
-        if not path.is_file():continue
-        if not ((len(rel.parts)==1 and rel.name in allowed) or (len(rel.parts)==2 and rel.parts[0]=='licenses' and rel.suffix=='.txt')):raise SystemExit('Unexpected app file: '+str(rel))
-        files.append(path)
-    assert {'app','app.conf','README.md','NOTICE.md','LICENSE'}.issubset({f.name for f in files})
-    if name=='disc-shelf':
-        m=json.loads((folder/'BUILD.json').read_text());assert m['version']==appver
-        assert hashlib.sha256((folder/'app').read_bytes()).hexdigest()==m['binary']['sha256']
-    source=root/'corresponding-source'/f'{name}-{appver}-source.tar.gz';assert source.is_file()
-    with tarfile.open(out/archive,mode) as t:
-        for f in files:t.add(f,arcname=str(Path(name)/f.relative_to(folder)))
-    shutil.copy2(source,out/source.name);outputs.extend([out/archive,out/source.name]);entries.extend(files)
+outputs=[]
 for name in ['mq_ui','mq_ui.build.json']:
     shutil.copy2(root/'payload'/name,out/name);outputs.append(out/name)
 # Windows app (built by the release workflow: windows/build.sh and windows/wsl/build-env.sh). The name has no version, so
@@ -70,10 +55,6 @@ with zipfile.ZipFile(complete,'w',zipfile.ZIP_DEFLATED) as z:
     document(root/'corresponding-source/README.md','corresponding-source/README.md')
     for license_file in sorted((root/'licenses').rglob('*')):
         if license_file.is_file():z.write(license_file,license_file.relative_to(root).as_posix())
-    # Disc Shelf is native now; its standalone archive remains available for older builds.
-    # Do not duplicate the executable in the complete firmware ZIP.
-    for name,appver,archive,mode in apps:
-        source=f'{name}-{appver}-source.tar.gz';z.write(out/source,'corresponding-source/'+source)
 # Validate archive-local Markdown links before publishing any checksum manifests.
 with zipfile.ZipFile(complete) as z:
     names=set(z.namelist())

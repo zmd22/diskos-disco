@@ -16,9 +16,12 @@ C = r'''
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
-#define BT_CODEC_N 5
+#define BT_CODEC_N 7
+#define BTC_SBC  1u
 #define BTC_AAC  2u
 #define BTC_LDAC 4u
+#define BTC_APTX 8u
+#define BTC_APTXHD 16u
 ''' + fn("static unsigned bt_codec_need(") + "\n" + fn("int bt_codec_pick(") + "\n" + fn("unsigned bt_codec_parse_avail(") + r'''
 int main(void){
     int k; unsigned all = bt_codec_parse_avail("Available codecs: SBC AAC LDAC\n", &k); assert(k);
@@ -33,6 +36,23 @@ int main(void){
     assert(bt_codec_pick(1, aac, 1) == 1 && bt_codec_pick(1, sbc, 1) == 0);   /* AAC chosen: AAC or SBC */
     assert(bt_codec_pick(0, all, 1) == 0);                                    /* SBC chosen: SBC */
     puts("PASS codec choice: LDAC (any quality) -> AAC -> SBC by what the headphones offer; AAC -> SBC; unknown -> SBC");
+    unsigned ax = bt_codec_parse_avail("Available codecs: SBC AAC aptX aptX-HD LDAC\n", &k); assert(k);
+    assert(ax == (BTC_SBC | BTC_AAC | BTC_LDAC | BTC_APTX | BTC_APTXHD));
+    unsigned axo = bt_codec_parse_avail("Available codecs: SBC aptX\n", &k); assert(k && axo == (BTC_SBC | BTC_APTX));   /* "aptX" is not "aptX-HD" */
+    unsigned hdo = bt_codec_parse_avail("Available codecs: SBC aptX-HD\n", &k); assert(k && hdo == (BTC_SBC | BTC_APTXHD));
+    assert(bt_codec_pick(6, ax, 1) == 6 && bt_codec_pick(5, ax, 1) == 5);
+    assert(bt_codec_pick(6, axo | BTC_AAC, 1) == 5);   /* no aptX HD: aptX */
+    assert(bt_codec_pick(6, aac, 1) == 1 && bt_codec_pick(5, aac, 1) == 1);   /* no aptX: AAC */
+    assert(bt_codec_pick(6, sbc, 1) == 0 && bt_codec_pick(5, all, 0) == 0);   /* nothing / unknown: SBC */
+    for(int q = 2; q <= 4; q++){                                       /* LDAC: the best the headphones offer */
+        assert(bt_codec_pick(q, hdo | axo | BTC_AAC, 1) == 6);        /* no LDAC: aptX HD */
+        assert(bt_codec_pick(q, axo | BTC_AAC, 1) == 5);              /* no aptX HD: aptX */
+        assert(bt_codec_pick(q, hdo, 1) == 6 && bt_codec_pick(q, axo, 1) == 5);   /* aptX only: never down to SBC */
+        assert(bt_codec_pick(q, aac, 1) == 1 && bt_codec_pick(q, sbc, 1) == 0);
+    }
+    assert(bt_codec_pick(6, hdo | axo | BTC_LDAC, 1) == 6 && bt_codec_pick(5, ax, 1) == 5);   /* never steps UP to LDAC */
+    assert(bt_codec_pick(5, hdo | BTC_AAC, 1) == 1);                  /* aptX chosen, only aptX HD offered: AAC (no step up) */
+    puts("PASS order: LDAC -> aptX HD -> aptX -> AAC -> SBC; aptX HD -> aptX -> AAC -> SBC; aptX -> AAC -> SBC; never upward");
     return 0;
 }
 '''

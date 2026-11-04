@@ -30,12 +30,14 @@ namespace DiskosDisco
                 using (var d = new Disclaimer())
                     if (d.ShowDialog() != DialogResult.OK) return;
             }
-            Form first = new MainForm();
-            if (Array.IndexOf(args, "--prepare-page") >= 0) first = new PrepareForm { Size = first.Size };
-            else if (Array.IndexOf(args, "--install-page") >= 0) first = new InstallForm { Size = first.Size };
-            else if (Array.IndexOf(args, "--update-page") >= 0) first = new UpdateForm { Size = first.Size };
-            else if (Array.IndexOf(args, "--about") >= 0) first = new AboutForm();
-            Application.Run(first);
+            // one window with tabs; --prepare-page / --install-page / --update-page / --restore-page open that tab
+            string start = "check";
+            if (Array.IndexOf(args, "--prepare-page") >= 0) start = "setup";
+            else if (Array.IndexOf(args, "--install-page") >= 0) start = "install";
+            else if (Array.IndexOf(args, "--update-page") >= 0) start = "update";
+            else if (Array.IndexOf(args, "--restore-page") >= 0) start = "restore";
+            if (Array.IndexOf(args, "--about") >= 0) { Application.Run(new AboutForm()); return; }
+            Application.Run(new Shell(start));
         }
     }
 
@@ -47,8 +49,17 @@ namespace DiskosDisco
         public CheckResult Result;
     }
 
-    class MainForm : Form
+    class MainForm : Form, IPage
     {
+        public bool Busy { get { return false; } }     // checks can be left at any time
+        public void LetGo() { }
+        bool started;
+        // The shell shows this tab: check now (first visit), or again if something was missing (back from installing it).
+        internal void Recheck()
+        {
+            if (running != 0) return;
+            if (!started || rows.Exists(r => r.Result != null && r.Result.State == State.Missing)) { started = true; RunChecks(); }
+        }
         internal static readonly Color Ink = Theme.Text, Muted = Theme.Muted;
         internal static readonly Color Good = Theme.Green, Bad = Theme.Red, Warn = Theme.Orange, Accent = Theme.Cyan;
 
@@ -70,7 +81,6 @@ namespace DiskosDisco
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            Controls.Add(new Header(1, "Can this PC install diskOS?"));
             Controls.Add(root); root.BringToFront();
 
             var head = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, AutoSize = true, WrapContents = false, Dock = DockStyle.Fill };
@@ -97,12 +107,7 @@ namespace DiskosDisco
 
             var bar = new FlowLayoutPanel { FlowDirection = FlowDirection.RightToLeft, Dock = DockStyle.Fill, AutoSize = true };
             next = MakeButton("Next", true);
-            next.Click += (s, e) =>
-            {
-                var page = new PrepareForm { StartPosition = FormStartPosition.Manual, Location = Location, Size = Size };
-                page.FormClosed += (s2, e2) => { if (page.WentBack) { Location = page.Location; Size = page.Size; Show(); } else Close(); };
-                Hide(); page.Show();
-            };
+            next.Click += (s, e) => Shell.Current.Go("setup");
             recheck = MakeButton("Check again", false);
             recheck.Click += (s, e) => RunChecks();
             copy = MakeButton("Copy report", false);
@@ -112,7 +117,6 @@ namespace DiskosDisco
             root.Controls.Add(bar, 0, 3);
 
             Activated += (s, e) => { if (running == 0 && rows.Exists(r => r.Result != null && r.Result.State == State.Missing)) RunChecks(); };   // back from an installer
-            Shown += (s, e) => RunChecks();
         }
 
         internal static Button MakeButton(string text, bool primary)

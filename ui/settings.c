@@ -196,6 +196,7 @@ static void apply_language(int v){ (void)v; theme_reload_or_revert("language"); 
 
 static void rescan_go(void){ ui_rescan_library(); }
 static void apply_autotag(int v){ (void)v; }
+static void apply_bt_aptx(int v){ bt_aptx_setting_changed(v); }   /* bt.c: puts the files in place / says it's off */
 static void apply_grp_zune(int v);
 static void apply_zune_main(int v){(void)v;home_shortcuts_refresh();}
 static void apply_upnext(int v){ (void)v; home_shortcuts_refresh(); }
@@ -733,6 +734,7 @@ const char *ui_eq_name(int i){
 /* audio cluster cyclers - all use min=-1 so the value can be "System default" (unmanaged) */
 static const char *const OPT_DRE[]    = { "Off", "On" };
 static const char *const OPT_AUTOTAG[] = { "Off", "On" };
+static const char *const OPT_BTAPTX[] = { "Off", "On" };
 static const char *const OPT_REPLAYGAIN[] = { "Off", "Track", "Album" };
 static const char *const OPT_GAIN[]   = { "Low", "High" };
 static const char *const OPT_DFILTER[]= { "Fast LL","Slow LL","Slow PC","Fast PC","NOS","Wideband" };
@@ -1046,13 +1048,21 @@ static const setting_t TABLE[] = {
     { "Connectivity",  "Bluetooth", ST_ACTION, NULL, 0,0,0, NULL,0, LV_SYMBOL_RIGHT, apply_bluetooth_settings, 0,
       "Pair Bluetooth devices. Audio routes to connected headphones or speakers (SBC, beta).", NULL },
     { "Connectivity",  "Bluetooth Codec", ST_CHOICE, "bt_codec", 0,0,0, BT_CODEC_LABEL, BT_CODEC_N, NULL, NULL, 0,
-      "Choose the headphone codec for the next connection. If the headphones lack LDAC, AAC is used; SBC only if they lack both. AAC/LDAC may stutter.", NULL },
+      "Choose the best codec for the next connection; headphones that lack it get the next best (see the note in the list). AAC/LDAC may stutter.", NULL },
+    { "Connectivity",  "aptX (experimental)", ST_CYCLER, "bt_aptx", 0,0,0, OPT_BTAPTX, 2, NULL, apply_bt_aptx, 0,
+      "Adds aptX and aptX HD to Bluetooth Codec, using an open-source aptX BlueALSA built into Disco. Takes effect when Bluetooth next starts; the first connection after that can still use SBC, the next ones use aptX. Off uses FiiO's Bluetooth, as before.", NULL },
 };
 #define N_SETTINGS ((int)(sizeof(TABLE)/sizeof(TABLE[0])))
 
 #include "settings_display.h"
 #include "settings_order.h"
 
+/* Options a list offers: the Bluetooth codec list shows aptX / aptX HD only with the aptX BlueALSA installed.
+ * Value labels still use the full table (a saved aptX choice keeps its name; it falls back as described). */
+static int shown_opts(const setting_t *s){
+    if(s->cfg_key && !strcmp(s->cfg_key, "bt_codec")) return bt_codec_choices();
+    return s->nopts;
+}
 static int nav_setting(const setting_t *s){return s->cfg_key && (!strcmp(s->cfg_key,"disco_nav_double") || !strcmp(s->cfg_key,"disco_nav_hold"));}
 static const char *setting_key(const setting_t *s){
     if(th_simple()&&s->cfg_key&&!strcmp(s->cfg_key,"np_font"))return "simple_track_font";
@@ -1092,7 +1102,8 @@ static void read_about(char *buf, int n){
         }
         if(fd >= 0) close(fd);
     }
-    snprintf(buf, n, "Disco! %s (%s)", DISCO_VERSION, id);   /* "Disco! 0.9 (8c29ecbf)" - on diskOS DISKOS_VERSION */
+    if(DISCO_TEST_LABEL[0]) snprintf(buf, n, "Disco! %s %s (%s)", DISCO_VERSION, DISCO_TEST_LABEL, id);   /* test builds */
+    else snprintf(buf, n, "Disco! %s (%s)", DISCO_VERSION, id);   /* "Disco! 0.9 (8c29ecbf)" - on diskOS DISKOS_VERSION */
 }
 void settings_diskos_id(char *buf, int n){ read_about(buf, n); }   /* system.c About */
 void settings_restart_prompt(const char *note){ g_restart_note = note; apply_restart(0); }
@@ -1120,6 +1131,7 @@ static int setting_unavailable(const setting_t *s){
                        || (!strcmp(s->cfg_key, "artist_class") && !fw_artist_class_settable())
                        || (!strcmp(s->cfg_key, "folder_jump") && !fw_folder_jump_settable())
                        || (!strcmp(s->cfg_key, "bt_codec") && fw_os_ver() != 257)
+                       || (!strcmp(s->cfg_key, "bt_aptx") && fw_os_ver() != 257)
                        || (!strcmp(s->cfg_key, "ota_allow") && !ota_supported(&OTA_DEV))
                        || ((!strcmp(s->cfg_key, "idle_off_idx") || !strcmp(s->cfg_key, "charge_protect")
                             || !strcmp(s->cfg_key, "sleep_action")) && !power_supported())
@@ -1305,8 +1317,8 @@ static void detail_cycle_cb(lv_event_t *e){
     }
     int dir = (int)(uintptr_t)lv_event_get_user_data(e);
     int v = (nav_setting(g_active)?g_nav_pending:get_val(g_active)) + dir;
-    if(v < 0) v = g_active->nopts-1;
-    if(v >= g_active->nopts) v = 0;
+    if(v < 0) v = shown_opts(g_active)-1;
+    if(v >= shown_opts(g_active)) v = 0;
     if(nav_setting(g_active))g_nav_pending=v;else set_val(g_active,v);
     /* rebuild detail body to reflect new value */
     void setting_detail_refresh(void); setting_detail_refresh();
@@ -1497,7 +1509,7 @@ static int g_zdetail_theme;                                 /* the dial lists TH
 static void zdetail_pick(int i){
     const setting_t *s = g_active;
     if(g_zdetail_theme){ if(i < 0 || i >= N_THEME_SHOWN) return; i = THEME_SHOWN[i]; }
-    if(!s || display_blocked(s) || i < 0 || i >= s->nopts) return;
+    if(!s || display_blocked(s) || i < 0 || i >= shown_opts(s)) return;
     int is_theme = s->cfg_key && !strcmp(s->cfg_key, "theme_preset");
     if(is_theme && g_reload_tm) return;
     if(i != get_val(s) || (is_theme && i != theme_preset())) set_val(s, i);
@@ -1562,14 +1574,14 @@ static int zdetail(lv_obj_t *root){
         lv_obj_align(h, LV_ALIGN_TOP_MID, 0, 272);
         return 1;
     }
-    if((s->type == ST_CYCLER || s->type == ST_CHOICE) && !nav_setting(s) && s->nopts > 0 && s->nopts <= ZDIAL_MAX
+    if((s->type == ST_CYCLER || s->type == ST_CHOICE) && !nav_setting(s) && shown_opts(s) > 0 && shown_opts(s) <= ZDIAL_MAX
        && !(s->cfg_key && !strcmp(s->cfg_key, "disco_side_pick"))){
         lv_obj_clean(root);
         lv_obj_set_style_bg_color(root, TC(CANVAS), 0); lv_obj_set_style_bg_opa(root, LV_OPA_COVER, 0);
         lv_obj_remove_flag(root, LV_OBJ_FLAG_SCROLLABLE);
         static char names[ZDIAL_MAX][40]; const char *lb[ZDIAL_MAX];
         int is_theme = s->cfg_key && !strcmp(s->cfg_key, "theme_preset");
-        int n = is_theme ? N_THEME_SHOWN : s->nopts;            /* themes: only the offered presets, no nameless rows */
+        int n = is_theme ? N_THEME_SHOWN : shown_opts(s);       /* themes: only the offered presets, no nameless rows */
         g_zdetail_theme = is_theme;
         int v = get_val(s), f = 0;
         for(int r = 0; r < n; r++){
@@ -1632,7 +1644,7 @@ void setting_detail_refresh(void){
         lv_obj_t *list = make_list(g_detail_root);
         lv_obj_set_height(list,210);
         int is_theme = !strcmp(s->cfg_key, "theme_preset");
-        int nrows = is_theme ? N_THEME_SHOWN : s->nopts;
+        int nrows = is_theme ? N_THEME_SHOWN : shown_opts(s);
         for(int r = 0; r < nrows; r++){
             int i = is_theme ? THEME_SHOWN[r] : r;
             lv_obj_t *row = setting_card(list);
@@ -1722,7 +1734,7 @@ void setting_detail_refresh(void){
     const char *desc = s->desc;
     if(s->type==ST_CYCLER && s->opt_descs && v>=0 && v<s->nopts) desc = s->opt_descs[v];
     if(s->type == ST_CHOICE) desc = (s->opts == i18n_lang_names) ? "Screen redraws after selection."
-                                  : (s->cfg_key && !strcmp(s->cfg_key, "bt_codec")) ? "Best effort: LDAC falls back to AAC, then SBC." : NULL;
+                                  : (s->cfg_key && !strcmp(s->cfg_key, "bt_codec")) ? bt_codec_hint(v) : NULL;
     if(th_null() && s->cfg_key && !strcmp(s->cfg_key,"theme_variant"))desc="Null uses a fixed dark appearance.\nLight/Dark is unavailable in this theme.";
     if(th_null() && s->cfg_key && !strcmp(s->cfg_key,"null_side"))desc="Null is right-handed only. This option is disabled.";
     if(desc && desc[0]){

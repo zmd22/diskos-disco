@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
-// diskOS Disco! for Windows - step 3 page: firmware, update keys, connect the Disc, install.
+// diskOS Disco! for Windows - the Install tab (firmware, version, update keys, connect, install) and, in restore mode,
+// the Restore tab (connect, put FiiO's stock system back) - both need the same Disc connection.
 using System;
 using System.Diagnostics;
 using System.Drawing;
@@ -10,16 +11,21 @@ using System.Windows.Forms;
 
 namespace DiskosDisco
 {
-    class InstallForm : Form
+    class InstallForm : Form, IPage
     {
-        public bool WentBack;
+        readonly bool restore;
+        public bool Busy { get { return busy; } }
+        public void LetGo() { Release(); }
+
+        // Restore uses the saved backup of the Disc's original system (kept in a Windows folder at install time).
+        static bool HaveBackup { get { return Directory.Exists(Path.Combine(Env.BackupDir, "stock")); } }
 
         [DllImport("kernel32.dll")] static extern uint SetThreadExecutionState(uint flags);
         const uint ES_CONTINUOUS = 0x80000000, ES_SYSTEM_REQUIRED = 0x00000001;
 
         readonly Label fwLabel, uiLabel, keysLabel, discLabel, status;
         readonly RadioButton keysNew, keysOld, uiLatest, uiOwn;
-        readonly Button fwButton, uiButton, keysButton, findButton, installButton, back, openKeys, next;
+        readonly Button fwButton, uiButton, keysButton, findButton, installButton, openKeys, next;
         readonly ProgressBar progress;
         readonly TextBox log;
         string firmware, keysDir, busid, uiFile;
@@ -31,8 +37,9 @@ namespace DiskosDisco
             get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "diskOS Keys"); }
         }
 
-        public InstallForm()
+        public InstallForm(bool restore)
         {
+            this.restore = restore;
             Theme.Style(this);
             MinimumSize = new Size(680, 600);
 
@@ -40,7 +47,6 @@ namespace DiskosDisco
             for (int i = 0; i < 6; i++) root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            Controls.Add(new Header(3, "Install on your Disc"));
             Controls.Add(root); root.BringToFront();
 
             var head = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, AutoSize = true, WrapContents = false };
@@ -49,10 +55,15 @@ namespace DiskosDisco
             // 1. Firmware
             fwButton = MainForm.MakeButton("Choose…", false);
             fwButton.Click += (s, e) => ChooseFirmware();
-            fwLabel = Hint("FiiO's official update ZIP for firmware V2.57 (SNOWSKY_DISC_update_…_v257.zip). Your Disc's own " +
-                           "system is built from it; diskOS never shares or uploads it. Start with the Disc on stock V2.57, " +
-                           "not another diskOS build.");
-            root.Controls.Add(Section("1.  Firmware", fwLabel, fwButton), 0, 1);
+            fwLabel = Hint(restore
+                ? (HaveBackup ? "The backup of your Disc's original system, saved when you installed, is used. Choose a " +
+                                "firmware ZIP only to use that instead."
+                              : "No backup of your Disc's original system on this PC: choose FiiO's update ZIP for V2.57 " +
+                                "(SNOWSKY_DISC_update_…_v257.zip) to rebuild it.")
+                : "FiiO's official update ZIP for firmware V2.57 (SNOWSKY_DISC_update_…_v257.zip). Your Disc's own " +
+                  "system is built from it; diskOS never shares or uploads it. Start with the Disc on stock V2.57, " +
+                  "not another diskOS build.");
+            root.Controls.Add(Section(restore ? "1.  Stock system" : "1.  Firmware", fwLabel, fwButton), 0, 1);
 
             // 2. Version: the latest release from GitHub, unless the user picks an mq_ui file of their own
             uiLatest = new RadioButton { Text = "The latest release (downloaded from GitHub)", AutoSize = true, Checked = true };
@@ -65,7 +76,7 @@ namespace DiskosDisco
             uiRow.Controls.Add(uiLatest); uiRow.Controls.Add(uiOwn);
             var uiBox = new TableLayoutPanel { AutoSize = true, ColumnCount = 1, Margin = new Padding(0) };
             uiBox.Controls.Add(uiRow, 0, 0); uiBox.Controls.Add(uiLabel, 0, 1);
-            root.Controls.Add(Section("2.  Version", uiBox, uiButton), 0, 2);
+            if (!restore) root.Controls.Add(Section("2.  Version", uiBox, uiButton), 0, 2);
 
             // 3. Keys
             keysNew = new RadioButton { Text = "Create new update keys (first install)", AutoSize = true, Checked = true };
@@ -78,19 +89,19 @@ namespace DiskosDisco
             keyRow.Controls.Add(keysNew); keyRow.Controls.Add(keysOld);
             var keyBox = new TableLayoutPanel { AutoSize = true, ColumnCount = 1, Margin = new Padding(0) };
             keyBox.Controls.Add(keyRow, 0, 0); keyBox.Controls.Add(keysLabel, 0, 1);
-            root.Controls.Add(Section("3.  Update keys", keyBox, keysButton), 0, 3);
+            if (!restore) root.Controls.Add(Section("3.  Update keys", keyBox, keysButton), 0, 3);
 
             // 4. Connect
             findButton = MainForm.MakeButton("Find my Disc", false);
             findButton.Click += (s, e) => FindDisc();
             discLabel = Hint("Turn the Disc off. Hold Volume Down and connect it to this PC with a USB data cable, then " +
                              "click Find my Disc. The screen stays black: that's normal.");
-            root.Controls.Add(Section("4.  Connect the Disc", discLabel, findButton), 0, 4);
+            root.Controls.Add(Section(restore ? "2.  Connect the Disc" : "4.  Connect the Disc", discLabel, findButton), 0, 4);
 
             // Install
             var go = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = new Padding(0, 14, 0, 0) };
-            installButton = MainForm.MakeButton("Install", true);
-            installButton.Click += (s, e) => Install();
+            installButton = MainForm.MakeButton(restore ? "Restore stock" : "Install", true);
+            installButton.Click += (s, e) => { if (restore) Restore(); else Install(); };
             progress = new ProgressBar { Style = ProgressBarStyle.Marquee, Width = 180, Visible = false, Margin = new Padding(12, 12, 0, 0) };
             status = new Label { AutoSize = true, ForeColor = MainForm.Ink, Margin = new Padding(12, 11, 0, 0), MaximumSize = new Size(420, 0) };
             go.Controls.Add(installButton); go.Controls.Add(progress); go.Controls.Add(status);
@@ -100,20 +111,15 @@ namespace DiskosDisco
             root.Controls.Add(log, 0, 6);
 
             var bar = new FlowLayoutPanel { FlowDirection = FlowDirection.RightToLeft, Dock = DockStyle.Fill, AutoSize = true, Margin = new Padding(0, 12, 0, 0) };
-            back = MainForm.MakeButton("Back", false);
-            back.Click += (s, e) => { WentBack = true; Close(); };
             var copy = MainForm.MakeButton("Copy report", false);
             copy.Click += (s, e) => { try { Clipboard.SetText("diskOS Disco! for Windows " + Program.Version + "\r\n" + status.Text + "\r\n\r\n" + log.Text); } catch { } };
             openKeys = MainForm.MakeButton("Open keys folder", false);
             openKeys.Click += (s, e) => { if (keysDir != null && Directory.Exists(keysDir)) Sys.Open(keysDir); };
             next = MainForm.MakeButton("Next", true);
-            next.Click += (s, e) =>
-            {
-                var page = new UpdateForm { StartPosition = FormStartPosition.Manual, Location = Location, Size = Size };
-                page.FormClosed += (s2, e2) => { if (page.WentBack) { Location = page.Location; Size = page.Size; Show(); } else { WentBack = false; Close(); } };
-                Hide(); page.Show();
-            };
-            bar.Controls.Add(next); bar.Controls.Add(back); bar.Controls.Add(copy); bar.Controls.Add(openKeys);
+            next.Click += (s, e) => Shell.Current.Go("update");
+            if (!restore) bar.Controls.Add(next);
+            bar.Controls.Add(copy);                                 // (no Back: the tabs move between pages)
+            if (!restore) bar.Controls.Add(openKeys);
             root.Controls.Add(bar, 0, 7);
 
             // Keys made by an earlier run are found again.
@@ -127,16 +133,12 @@ namespace DiskosDisco
                 fwLabel.Text = "✔  " + Path.GetFileName(firmware); fwLabel.ForeColor = MainForm.Good;
                 keysDir = DefaultKeys; keysOld.Checked = true; keysLabel.Text = "✔  " + @"C:\Users\you\Documents\diskOS Keys"; keysLabel.ForeColor = MainForm.Good;
                 discReady = true; discLabel.Text = "✔  Disc connected and ready."; discLabel.ForeColor = MainForm.Good;
-                busy = true; UpdateButtons(); Say("Installing… about 20 minutes. Keep the Disc connected.", MainForm.Ink);
+                busy = true; UpdateButtons(); Say(restore ? "Restoring stock… keep the Disc connected." : "Installing… about 20 minutes. Keep the Disc connected.", MainForm.Ink);
                 foreach (string l in new[] { "Disc found on USB 2-1 (shared).", "usbipd: Using WSL distribution 'diskOS-Disco' to attach.",
                                              "Disc attached to diskOS's environment." }) Append(l);
             };
 
-            FormClosing += (s, e) =>
-            {
-                if (busy) { e.Cancel = true; MessageBox.Show(this, "Please wait until this step finishes. Don't unplug the Disc.", Text); return; }
-                Release();
-            };
+            // (closing is the shell's: it refuses while busy and calls LetGo, which releases the Disc)
         }
 
         Label Hint(string text)
@@ -176,8 +178,9 @@ namespace DiskosDisco
             bool uiOk = uiLatest.Checked || (uiFile != null && File.Exists(uiFile));
             fwButton.Enabled = keysButton.Enabled = findButton.Enabled = keysNew.Enabled = keysOld.Enabled = !busy;
             uiLatest.Enabled = uiOwn.Enabled = !busy; uiButton.Enabled = !busy && uiOwn.Checked;
-            back.Enabled = next.Enabled = !busy;
-            installButton.Enabled = !busy && firmware != null && uiOk && keysOk && discReady;
+            next.Enabled = !busy;
+            installButton.Enabled = restore ? !busy && discReady && (firmware != null || HaveBackup)
+                                            : !busy && firmware != null && uiOk && keysOk && discReady;
             openKeys.Visible = keysDir != null && Directory.Exists(keysDir);
             progress.Visible = busy;
         }
@@ -288,7 +291,8 @@ namespace DiskosDisco
         bool Connect(out string msg)
         {
             string usbipd = UsbBridgeCheck.Find(), o;
-            if (usbipd == null) { msg = "The USB bridge (usbipd-win) isn't installed. Go Back to step 1."; return false; }
+            if (usbipd == null) { msg = "The USB bridge (usbipd-win) isn't installed: see the Check tab."; return false; }
+            if (!Demo.On && !Env.Exists()) { msg = "diskOS's Linux environment isn't set up yet: see the Setup tab."; return false; }
             Sys.Run(usbipd, "list", out o);
             string line = null;
             foreach (string l in o.Split('\n')) if (l.ToLowerInvariant().Contains("a108:eaef")) { line = l.Trim(); break; }
@@ -334,6 +338,44 @@ namespace DiskosDisco
             string usbipd = UsbBridgeCheck.Find(), o;
             if (usbipd != null && busid != null) Sys.Run(usbipd, "detach --busid " + busid, out o);
             if (keepAlive != null) Env.Stop();                 // ends the background "sleep" and frees the memory
+        }
+
+        // Restore: the saved backup (or the chosen firmware ZIP) goes back on the Disc through diskos restore-stock.
+        void Restore()
+        {
+            string what = "Put FiiO's stock system back on the connected Disc?\n\n" +
+                          (firmware != null ? "From: " + Path.GetFileName(firmware) : "From: the backup saved when you installed") + "\n\n" +
+                          "Your music and the Disc's data folder stay. Keep the Disc connected and this PC on until it says Done.";
+            if (MessageBox.Show(this, what, Text, MessageBoxButtons.OKCancel, MessageBoxIcon.Question) != DialogResult.OK) return;
+            busy = true; UpdateButtons();
+            log.Clear();
+            SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED);
+            string fw = firmware != null ? Env.ToLinux(firmware) : null;
+            new Thread(() =>
+            {
+                bool ok = false; string end;
+                try
+                {
+                    string o;
+                    if (fw == null) { Say("Getting the backup ready…", MainForm.Ink); Env.RestoreBackup(out o); if (o.Length > 0) Append(o.Trim()); }
+                    Say("Restoring stock… keep the Disc connected.", MainForm.Ink);
+                    int rc = Env.Script("diskos restore-stock --yes" + (fw != null ? " --firmware " + Env.Q(fw) : ""), line =>
+                    {
+                        Append(line);
+                        string t = line.Trim();
+                        if (t.StartsWith("▶")) Say(t.TrimStart('▶', ' ') + "…", MainForm.Ink);
+                    });
+                    ok = rc == 0;
+                    end = ok ? "Done. Unplug the Disc and turn it on: it starts FiiO's system." :
+                          rc == 3 ? "Stopped before anything was written to the Disc." : "Restoring didn't finish (code " + rc + "). Copy report and send it.";
+                }
+                catch (Exception e) { end = "Something went wrong: " + e.Message; }
+                BeginInvoke(new Action(() =>
+                {
+                    SetThreadExecutionState(ES_CONTINUOUS);
+                    busy = false; Say(end, ok ? MainForm.Good : MainForm.Bad); UpdateButtons();
+                }));
+            }) { IsBackground = true }.Start();
         }
 
         void Install()

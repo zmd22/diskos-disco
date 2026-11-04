@@ -7,14 +7,15 @@ using System.Windows.Forms;
 
 namespace DiskosDisco
 {
-    class PrepareForm : Form
+    class PrepareForm : Form, IPage
     {
-        public bool WentBack;
+        public bool Busy { get { return busy; } }
+        public void LetGo() { }
 
         readonly Label status, detail;
         readonly ProgressBar progress;
         readonly TextBox log;
-        readonly Button prepare, test, remove, back, next;
+        readonly Button prepare, test, remove, next;
         bool busy;
 
         public PrepareForm()
@@ -28,7 +29,6 @@ namespace DiskosDisco
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            Controls.Add(new Header(2, "diskOS's own Linux environment"));
             Controls.Add(root); root.BringToFront();
 
             var head = new FlowLayoutPanel { FlowDirection = FlowDirection.TopDown, AutoSize = true, WrapContents = false, Dock = DockStyle.Fill };
@@ -64,17 +64,10 @@ namespace DiskosDisco
 
             var bar = new FlowLayoutPanel { FlowDirection = FlowDirection.RightToLeft, Dock = DockStyle.Fill, AutoSize = true, Margin = new Padding(0, 12, 0, 0) };
             next = MainForm.MakeButton("Next", true);
-            next.Click += (s, e) =>
-            {
-                var page = new InstallForm { StartPosition = FormStartPosition.Manual, Location = Location, Size = Size };
-                page.FormClosed += (s2, e2) => { if (page.WentBack) { Location = page.Location; Size = page.Size; Show(); } else { WentBack = false; Close(); } };
-                Hide(); page.Show();
-            };
-            back = MainForm.MakeButton("Back", false);
-            back.Click += (s, e) => { WentBack = true; Close(); };
+            next.Click += (s, e) => Shell.Current.Go("install");
             var copy = MainForm.MakeButton("Copy report", false);
             copy.Click += (s, e) => { try { Clipboard.SetText("diskOS Disco! for Windows " + Program.Version + "\r\n" + status.Text + "\r\n" + detail.Text + "\r\n\r\n" + log.Text); } catch { } };
-            bar.Controls.Add(next); bar.Controls.Add(back); bar.Controls.Add(copy);
+            bar.Controls.Add(next); bar.Controls.Add(copy);       // (no Back: the tabs move between pages)
             root.Controls.Add(bar, 0, 4);
 
             FormClosing += (s, e) => { if (busy) { e.Cancel = true; MessageBox.Show(this, "Please wait until this step finishes.", Text); } };
@@ -85,7 +78,7 @@ namespace DiskosDisco
         void Work(string doing, Func<string> job)
         {
             busy = true;
-            prepare.Enabled = test.Enabled = remove.Enabled = back.Enabled = next.Enabled = false;
+            prepare.Enabled = test.Enabled = remove.Enabled = next.Enabled = false;
             progress.Visible = true;
             status.Text = doing; status.ForeColor = MainForm.Ink;
             new Thread(() =>
@@ -106,7 +99,7 @@ namespace DiskosDisco
         void Look(string result)
         {
             Append(result);
-            prepare.Enabled = test.Enabled = remove.Enabled = false; back.Enabled = true; next.Enabled = false;
+            prepare.Enabled = test.Enabled = remove.Enabled = false; next.Enabled = false;
             status.Text = "Looking…"; detail.Text = "";
             busy = true;
             new Thread(() =>

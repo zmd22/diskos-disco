@@ -1,0 +1,83 @@
+Learn the stream end-points of devices BlueZ already knows, at start-up.
+
+Upstream 4.0.0 learns SEPs only from InterfacesAdded. After a restart (Disco restarts BlueALSA to start a
+connection on the chosen codec), an already-paired device's codec list then holds only what BlueZ announces
+again: the MTW4 (SBC, AAC, aptX) was listed as "AAC" only, and Disco learned that as the whole list.
+
+The start-up scan and an InterfacesAdded queued meanwhile can bring the same end-point twice: keep one entry
+per D-Bus path.
+
+--- a/src/bluez.c
++++ b/src/bluez.c
+@@ -995,6 +995,41 @@
+ 
+ /**
+  * Register to the BlueZ service. */
++static void bluez_signal_interfaces_added(GDBusConnection *conn, const char *sender,
++		const char *path, const char *interface_, const char *signal, GVariant *params,
++		void *userdata);
++
++/* (diskOS Disco) Stream end-points of devices BlueZ already knows. Upstream 4.0.0 learns SEPs only from
++ * InterfacesAdded, so after a restart the codec list of an already-paired device holds only what BlueZ happens
++ * to announce again (seen on the Disc: MTW4 offering SBC, AAC and aptX was listed as "AAC" only). Feed every
++ * existing MediaEndpoint1 object through the same handler, once the adapters exist. */
++static void bluez_register_existing_seps(void) {
++
++	GError *err = NULL;
++	GVariantIter *objects;
++	if ((objects = g_dbus_get_managed_objects(config.dbus, BLUEZ_SERVICE, "/", &err)) == NULL) {
++		warn("Couldn't get managed objects: %s", err->message);
++		g_error_free(err);
++		return;
++	}
++
++	const char *object_path;
++	GVariant *interfaces;
++	while (g_variant_iter_next(objects, "{&o@a{sa{sv}}}", &object_path, &interfaces)) {
++		GVariant *endpoint;
++		if ((endpoint = g_variant_lookup_value(interfaces, BLUEZ_IFACE_MEDIA_ENDPOINT, NULL)) != NULL) {
++			g_variant_unref(endpoint);
++			GVariant *params = g_variant_ref_sink(g_variant_new("(o@a{sa{sv}})", object_path, interfaces));
++			bluez_signal_interfaces_added(config.dbus, BLUEZ_SERVICE, "/",
++					DBUS_IFACE_OBJECT_MANAGER, "InterfacesAdded", params, NULL);
++			g_variant_unref(params);
++		}
++		g_variant_unref(interfaces);
++	}
++	g_variant_iter_free(objects);
++
++}
++
+ static void bluez_register(void) {
+ 
+ 	GError *err = NULL;
+@@ -1041,6 +1076,8 @@
+ 	/* HFP has to be registered globally */
+ 	bluez_register_hfp_all();
+ 
++	bluez_register_existing_seps();
++
+ }
+ 
+ static void bluez_signal_interfaces_added(GDBusConnection *conn, const char *sender,
+@@ -1142,9 +1179,17 @@
+ 		if (sep.codec_id == A2DP_CODEC_VENDOR)
+ 			sep.codec_id = a2dp_get_vendor_codec_id(&sep.capabilities, sep.capabilities_size);
+ 
+-		debug("Adding new Stream End-Point: %s: %s", batostr_(&addr),
+-				a2dp_codecs_codec_id_to_string(sep.codec_id));
+-		g_array_append_val(seps, sep);
++		/* (diskOS Disco) the same end-point can arrive twice: from the start-up scan and from an InterfacesAdded
++		 * queued meanwhile - keep one entry per D-Bus path */
++		bool known = false;
++		for (size_t k = 0; k < seps->len; k++)
++			if (strcmp(g_array_index(seps, struct a2dp_sep, k).bluez_dbus_path, sep.bluez_dbus_path) == 0)
++				known = true;
++		if (!known) {
++			debug("Adding new Stream End-Point: %s: %s", batostr_(&addr),
++					a2dp_codecs_codec_id_to_string(sep.codec_id));
++			g_array_append_val(seps, sep);
++		}
+ 
+ 	}
+ 

@@ -1,0 +1,7 @@
+post_install() {
+    udevadm control --reload-rules >/dev/null 2>&1 || true
+    udevadm trigger --subsystem-match=usb >/dev/null 2>&1 || true
+}
+post_upgrade() {
+    post_install
+}

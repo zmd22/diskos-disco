@@ -3614,6 +3614,7 @@ int main(int argc, char **argv){
             static unsigned info_seq; static int info_active;
             if(bl_state != 2 && screen_current() == SCR_SONGINFO){
                 if(!info_active || info_seq != st.seq){ songinfo_set(&st); info_seq = st.seq; }
+                else songinfo_output_tick();   /* the live BT codec lands between track updates */
                 info_active = 1;
             } else info_active = 0;
         }

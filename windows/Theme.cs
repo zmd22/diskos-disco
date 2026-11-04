@@ -180,18 +180,21 @@ namespace DiskosDisco
         }
     }
 
-    // The band across the top: disc, name, the four steps, and About.
+    // The band across the top: disc, name, the tabs, and About. Every tab is always clickable.
     class Header : Control
     {
-        static readonly string[] Steps = { "Check", "Prepare", "Install", "Update" };
-        readonly int step;
-        readonly string title;
-        readonly Bitmap disc = Theme.Disc(46);
+        readonly Bitmap disc = Theme.Disc(54);
         readonly LinkLabel about;
+        readonly RectangleF[] tabs = new RectangleF[Shell.Keys.Length];
+        string current;
+        int hover = -1;
+        public event Action<string> Go;
 
-        public Header(int step, string title)
+        public string Current { get { return current; } set { current = value; Invalidate(); } }
+
+        public Header(string current)
         {
-            this.step = step; this.title = title;
+            this.current = current;
             SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
             Dock = DockStyle.Top;
             Height = 150;
@@ -210,46 +213,69 @@ namespace DiskosDisco
             if (about != null) about.Location = new Point(Width - about.Width - 26, 22);   // (layout runs once before it exists)
         }
 
+        int HitTab(Point p)
+        {
+            for (int i = 0; i < tabs.Length; i++) if (tabs[i].Contains(p)) return i;
+            return -1;
+        }
+
+        protected override void OnMouseMove(MouseEventArgs e)
+        {
+            base.OnMouseMove(e);
+            int h = HitTab(e.Location);
+            Cursor = h >= 0 ? Cursors.Hand : Cursors.Default;
+            if (h != hover) { hover = h; Invalidate(); }
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            base.OnMouseLeave(e);
+            if (hover != -1) { hover = -1; Invalidate(); }
+        }
+
+        protected override void OnMouseClick(MouseEventArgs e)
+        {
+            base.OnMouseClick(e);
+            int h = HitTab(e.Location);
+            if (h >= 0 && Go != null) Go(Shell.Keys[h]);
+        }
+
         protected override void OnPaint(PaintEventArgs e)
         {
             var g = e.Graphics;
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
             using (var b = new LinearGradientBrush(ClientRectangle, Color.FromArgb(26, 16, 44), Theme.Bg, 90f)) g.FillRectangle(b, ClientRectangle);
-            using (var b = new LinearGradientBrush(new Rectangle(0, 0, Width + 1, 2), Theme.Pink, Theme.Violet, 0f))   // a thin rainbow rim
+            using (var b = new LinearGradientBrush(new Rectangle(0, 0, Width + 1, 3), Theme.Pink, Theme.Violet, 0f))   // the rainbow rim
             {
-                b.InterpolationColors = new ColorBlend { Colors = new[] { Theme.Pink, Theme.Orange, Theme.Cyan, Theme.Violet }, Positions = new[] { 0f, .35f, .7f, 1f } };
-                g.FillRectangle(b, 0, Height - 2, Width, 2);
+                b.InterpolationColors = new ColorBlend { Colors = new[] { Theme.Pink, Theme.Orange, Theme.Yellow, Theme.Green, Theme.Cyan, Theme.Blue, Theme.Violet },
+                                                         Positions = new[] { 0f, .17f, .33f, .5f, .67f, .83f, 1f } };
+                g.FillRectangle(b, 0, Height - 3, Width, 3);
             }
-            int pad = (disc.Width - 46) / 2;
-            g.DrawImage(disc, 22 - pad, 14 - pad);
-            using (var f = new Font("Segoe UI", 17f, FontStyle.Bold)) Theme.Wordmark(g, f, 84, 19);
-            using (var f = new Font("Segoe UI", 9.5f)) g.DrawString("for Windows", f, new SolidBrush(Theme.Muted), 85, 48);
+            int pad = (disc.Width - 54) / 2;
+            g.DrawImage(disc, 24 - pad, 14 - pad);
+            using (var f = new Font("Segoe UI", 18f, FontStyle.Bold)) Theme.Wordmark(g, f, 92, 17);
+            using (var f = new Font("Segoe UI", 9.5f)) g.DrawString("for Windows", f, new SolidBrush(Theme.Muted), 94, 50);
 
-            // the four steps: dots joined by a line, the current one lit
-            float x0 = 30, y = 96, gap = 118;
-            using (var p = new Pen(Theme.Line, 2)) g.DrawLine(p, x0, y, x0 + gap * (Steps.Length - 1), y);
-            if (step > 1) using (var b = Theme.Rainbow(new RectangleF(x0, y - 1, gap * (step - 1), 2))) g.FillRectangle(b, x0, y - 1, gap * (step - 1), 2);
-            for (int i = 0; i < Steps.Length; i++)
+            // the tabs: pills, the current one lit with its own colour dot
+            float x = 24, y = 96, h = 36;
+            for (int i = 0; i < Shell.Keys.Length; i++)
             {
-                float x = x0 + gap * i;
-                bool done = i + 1 < step, now = i + 1 == step;
-                float d = now ? 14 : 10;
-                if (now)
-                    using (var b = new SolidBrush(Color.FromArgb(60, Theme.Cyan))) g.FillEllipse(b, x - d, y - d, d * 2, d * 2);
-                using (var b = new SolidBrush(now ? Theme.IriAt(i / 4f + 0.55f) : done ? Theme.Muted : Theme.Line))
-                    g.FillEllipse(b, x - d / 2, y - d / 2, d, d);
-                using (var f = new Font("Segoe UI", 9f, now ? FontStyle.Bold : FontStyle.Regular))
+                bool on = Shell.Keys[i] == current, hot = i == hover && !on;
+                using (var f = new Font("Segoe UI", 10f, on ? FontStyle.Bold : FontStyle.Regular))
                 {
-                    var sz = g.MeasureString(Steps[i], f);
-                    g.DrawString(Steps[i], f, new SolidBrush(now ? Theme.Text : Theme.Faint), x - sz.Width / 2, y + 12);
+                    float w = g.MeasureString(Shell.Names[i], f).Width + 44;
+                    var r = new RectangleF(x, y, w, h);
+                    tabs[i] = r;
+                    using (var path = Theme.Pill(r))
+                    using (var b = new SolidBrush(on ? Color.FromArgb(34, 34, 47) : hot ? Color.FromArgb(28, 28, 39) : Theme.Bg2))
+                        g.FillPath(b, path);
+                    using (var b = new SolidBrush(on ? Theme.IriAt(i / (float)Shell.Keys.Length) : Theme.Faint))
+                        g.FillEllipse(b, x + 15, y + h / 2 - 3.5f, 7, 7);
+                    var sz = g.MeasureString(Shell.Names[i], f);
+                    g.DrawString(Shell.Names[i], f, new SolidBrush(on ? Theme.Text : hot ? Theme.Text : Theme.Muted), x + 28, y + (h - sz.Height) / 2);
+                    x += w + 8;
                 }
-            }
-            using (var f = new Font("Segoe UI Semibold", 13f))
-            {
-                var sz = g.MeasureString(title, f);
-                float tx = Math.Max(x0 + gap * (Steps.Length - 1) + 40, Width - sz.Width - 26);
-                if (tx + sz.Width < Width - 10) g.DrawString(title, f, new SolidBrush(Theme.Text), tx, y - sz.Height / 2);
             }
         }
     }

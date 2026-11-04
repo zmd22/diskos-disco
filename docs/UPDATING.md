@@ -24,6 +24,10 @@ boot scripts or separately installed legacy apps. A downloaded
 
 ## Before you start
 
+> [!TIP]
+> **3.4.0: no reflash.** It is an ordinary SD update, aptX included (the optional aptX files ride inside the signed
+> `mq_ui`; turn them on in Settings › Connectivity › aptX (experimental)).
+
 Update with the **same signing key** the Disc was flashed with; saved themes and preferences are kept. Each release's
 notes say what's new. The release `mq_ui` and `mq_ui.build.json` must match; the raw `mq_ui` is not a signed SD
 update until you sign it (step 3). If internal storage is tight, back up and remove unused source archives rather
@@ -100,9 +104,16 @@ Expect `OK component=mq_ui ...`. This proves the package is intact, not that the
 
 ## 4. Copy the folder to the card
 
-Copy the whole `diskos-update` folder to the top of the SD card, so the path is `<SD>/diskos-update/mq_ui` (not
-`diskos-update/diskos-update/...`). It holds six files from one signing run: `mq_ui`, `update.manifest` and
+Put the six files from one signing run in a `diskos-update` folder at the top of the SD card, so the path is
+`<SD>/diskos-update/mq_ui` (not `diskos-update/diskos-update/...`): `mq_ui`, `update.manifest` and
 `update.manifest.sig`, `leafpub.pem`, `keyauthz` and `keyauthz.sig`. Don't mix files from different runs.
+
+> [!IMPORTANT]
+> **Copy the six files one by one** into `<SD>/diskos-update/` (create the folder if it isn't there), overwriting
+> the old ones. Don't copy or move the folder as a whole over an existing one. On some cards (seen on the Disc's
+> exFAT card over SSH, Nov 2026) deleting the old folder silently does nothing, and the new folder ends up nested
+> inside the old one while the old package stays in place. Overwriting all six by name replaces every file of the
+> previous run. The Linux and Windows apps copy this way.
 
 Eject the card safely. If you used the Disc's USB storage mode, eject on the computer, then switch back to Playback.
 
