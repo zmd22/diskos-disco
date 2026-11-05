@@ -1,4 +1,4 @@
-# Disco 3.4.0 tour
+# Disco 3.4.1 tour
 
 A touch interface for the round Snowsky Disc. The stock player still plays the audio; Disco handles browsing, controls and its built-in apps. Exact menus are in [Settings](DISPLAY_SETTINGS.md).
 

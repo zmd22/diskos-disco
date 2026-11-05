@@ -25,8 +25,8 @@ boot scripts or separately installed legacy apps. A downloaded
 ## Before you start
 
 > [!TIP]
-> **3.4.0: no reflash.** It is an ordinary SD update, aptX included (the optional aptX files ride inside the signed
-> `mq_ui`; turn them on in Settings › Connectivity › aptX (experimental)).
+> **3.4.1: no reflash.** It is an ordinary SD update from 1.4.1 or later. After it, Music Assistant lists the Disc
+> once as a new Sendspin player (its ID is now its key): remove the old entry there.
 
 Update with the **same signing key** the Disc was flashed with; saved themes and preferences are kept. Each release's
 notes say what's new. The release `mq_ui` and `mq_ui.build.json` must match; the raw `mq_ui` is not a signed SD

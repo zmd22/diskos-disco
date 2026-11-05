@@ -1,6 +1,6 @@
-# Disco 3.4.0 documentation
+# Disco 3.4.1 documentation
 
-These guides describe the shipped 3.4.0 source and payload, the release commit tagged `v3.4.0`. Later branch changes are not part of this baseline.
+These guides describe the shipped 3.4.1 source and payload, the release commit tagged `v3.4.1`. Later branch changes are not part of this baseline.
 
 ## Use
 
@@ -23,6 +23,6 @@ These guides describe the shipped 3.4.0 source and payload, the release commit t
 
 ## Release and provenance
 
-- [3.4.0 changes](releases/v3.4.0.md), [binary record](RELEASE_3.4.0.md), [changelog](../CHANGELOG.md).
+- [3.4.1 changes](releases/v3.4.1.md), [binary record](RELEASE_3.4.1.md); [3.4.0 changes](releases/v3.4.0.md); [changelog](../CHANGELOG.md).
 - Earlier release notes are historical records, not current instructions.
 - [Licenses](../licenses/README.md), [third-party notice](../NOTICE.md), [SPL source](../SPL_SOURCE.md), [security](../SECURITY.md).

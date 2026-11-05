@@ -25,6 +25,8 @@ bundles. See `../NOTICE.md` for the component->license mapping and the static-li
 | Font Awesome Free glyphs (via LVGL `LV_SYMBOL_*`) | OFL-1.1 (fonts) + CC-BY-4.0 (icons) | [`OFL-1.1-FontAwesome.txt`](OFL-1.1-FontAwesome.txt) (Fonticons' own LICENSE.txt: full OFL-1.1 + MIT) + [`CC-BY-4.0.txt`](CC-BY-4.0.txt) |
 | musl libc (static in diskOS UI `mq_ui`) | MIT | [`MIT-musl.txt`](MIT-musl.txt) |
 | SQLite (amalgamation in `mq_ui`) | Public domain | https://sqlite.org/copyright.html (no license text required) |
+| Monocypher 4.0.2 (in `mq_ui`, MA Sendspin) | BSD-2-Clause or CC0-1.0 | [`BSD-2-Clause-CC0-Monocypher.txt`](BSD-2-Clause-CC0-Monocypher.txt) (verbatim LICENCE.md) |
+| dr_flac 0.13.4 (in `mq_ui`, MA Sendspin FLAC) | Public domain (Unlicense) or MIT-0 | text at the end of `../ui/vendor/dr_flac/dr_flac.h` |
 | QR Code generator, Nayuki (via LVGL, in `mq_ui`) | MIT | [`MIT-qrcodegen.txt`](MIT-qrcodegen.txt) (verbatim from the LVGL source header) |
 | TJpgDec, ChaN (via LVGL, in `mq_ui`) | BSD-style | [`LICENSE-TJpgDec.txt`](LICENSE-TJpgDec.txt) (verbatim from the LVGL source header) |
 | Montserrat font (via LVGL built-in fonts, in `mq_ui`) | OFL-1.1 | [`OFL-1.1-Montserrat.txt`](OFL-1.1-Montserrat.txt) |

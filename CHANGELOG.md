@@ -4,15 +4,19 @@ User-facing changes in diskOS Disco!. Details of each release are in [docs/relea
 
 ## 3.4.1
 
-**MA Sendspin speaks Sendspin 1.0** (experimental): needs Music Assistant 2.10.7 or newer.
+**MA Sendspin speaks Sendspin 1.0, with code pairing, album art and FLAC** (experimental; needs Music Assistant 2.10.7
+or newer). Fresh Bluetooth and Wi-Fi screens for Squash and Disco, and fixes for shuffle. [Release notes](docs/releases/v3.4.1.md)
 
-- End-to-end encrypted connection to Music Assistant (Noise; Monocypher).
-- Pairing: Music Assistant asks for the 6-digit code (or QR code) the Disc shows; or scan Settings › MA Sendspin › Pairing Token.
-- Settings › MA Sendspin: Allow Unpaired (on: Music Assistant can play once you approve the Disc there), Forget Servers.
-- Album artwork from Music Assistant in Music, at 360 × 360.
-- FLAC from Music Assistant (lossless, about half the Wi-Fi traffic of PCM); PCM still offered.
-- Sync Delay: 10 ms steps, − / + buttons, double-tap the slider to reset to 0.
-- Volume follows the Sendspin curve; Music Assistant lists the Disc once as a new player (its ID is now its key).
+- MA Sendspin: end-to-end encrypted (Noise; Monocypher); pairing with the 6-digit code or QR code the Disc shows, or the
+  Pairing Token QR in Settings; Allow Unpaired and Forget Servers; album artwork in Music; FLAC first, PCM still offered.
+- Sync Delay: 10 ms steps, − / + buttons, double-tap the slider for 0.
+- Squash and Disco: new Bluetooth and Wi-Fi screens (the icon's shade says on or off, a ring that spins while scanning,
+  big "Scanning…", taller rows). Disco Quick Settings bubbles sit on an oval.
+- A real AirPlay icon instead of the Wi-Fi fan; Working mode shows the same icons in every theme. Sendspin on the Zune
+  home dial.
+- Fixed: opening Up Next on a large shuffled queue froze the Disc (a 28,619-song shuffle took it down).
+- Fixed: Previous on shuffle played some other song: it now goes back to what played, and Next retraces it.
+- A stall reporter in the crash log, for hangs that never end.
 
 ## 3.4.0
 

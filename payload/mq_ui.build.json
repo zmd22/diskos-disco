@@ -1,16 +1,16 @@
 {
-  "version": "3.4.0",
-  "revision": "aptX and aptX HD (experimental), aptX/LDAC codec choice, LDAC on FiiO's BlueALSA, no codec blacklisting, crash guard, Quiet Wi-Fi for Bluetooth, codec badge; Linux app and tabbed Windows app",
-  "baseline": "v3.3.1",
-  "ui_source_sha256": "644965c2ea67d7b42b3610903caa34cc6ffc54faa292a54a156fcec184b57482",
+  "version": "3.4.1",
+  "revision": "MA Sendspin on Sendspin 1.0 (Noise encryption, code pairing, Pairing Token, album artwork, FLAC), Sync Delay steps; Squash/Disco Bluetooth and Wi-Fi screens, Disco Quick Settings oval, AirPlay icon, one Working mode icon set, Sendspin on the Zune dial; fixed Up Next freeze on large shuffles, Previous on shuffle goes back; stall reporter",
+  "baseline": "v3.4.0",
+  "ui_source_sha256": "7d372095ef07a6b7f809ba8de087fbc4610900a7737713f126d42ad0e726dad5",
   "ui_source_hash_recipe": "sorted tracked ui paths: path + NUL + file bytes + NUL",
   "compiler": "musl-cross-make GCC 11.2.0, musl 1.2.6; mipsel-linux-musl, -ffp-contract=off",
   "abi": "static little-endian MIPS32r2, o32, FP64, NaN2008",
-  "status": "Fresh static MIPS build. Its source was tested on a Disc as signed test builds (test7-test9: LDAC on the FiiO EH11, aptX on the Sennheiser MTW4, BlueALSA switching, Quiet Wi-Fi); this exact binary differs from test9 only in the version label and the codec choice labels, and has not itself been physically tested.",
+  "status": "Fresh static MIPS build. Its source was tested on a Disc as signed test builds (3.4.1 with the Sendspin, BT/Wi-Fi and Quick Settings work; 3.4.1-fixed with the Up Next and shuffle Previous fixes); this exact binary differs from 3.4.1-fixed only in the empty test label and has not itself been physically tested.",
   "binary": {
-    "sha256": "559afd09a05bd0c89c4fa5167753e26e19839a2129f5278b39331b69eca692ea",
-    "md5": "d422bdbc4ab473cf68e61d33c396168e",
-    "bytes": 7548060
+    "sha256": "4f986897e5c081bb727a0d0ec43f9a285e296d65ea00d5dd708db0b85e4a0d96",
+    "md5": "59dfb3e57bf937b5f7b0a196ec3ffdbf",
+    "bytes": 7703164
   },
   "artwork_helper": {
     "bytes": 119424,
@@ -26,8 +26,10 @@
     "bluealsa": "BlueALSA 4.0.0 (MIT) with build/bluealsa-aptx/patches/0001-0003, embedded in mq_ui",
     "libfreeaptx": "0.1.1 (LGPL-2.1-or-later), embedded as a separate shared library; source in ui/vendor/aptx"
   },
-  "baseline_commit": "57618cbcc06d81f4ee7f3d8e491c97355c70ae0f",
-  "source_identity": "Built from source_base_commit (DISCO_VERSION 3.4.0, empty test label). ui_source_sha256 identifies the exact tracked UI snapshot.",
-  "release_tag": "v3.4.0",
-  "source_base_commit": "7849f8fa2d0d194f2475092a6209ed4724c37ad4"
+  "baseline_commit": "f35c9ddd6aa46953e2dfeb535cb29ff530c96b17",
+  "source_identity": "Built from source_base_commit (DISCO_VERSION 3.4.1, empty test label). ui_source_sha256 identifies the exact tracked UI snapshot.",
+  "release_tag": "v3.4.1",
+  "source_base_commit": "7d8e66b0feb0c53932af8b52e570d00fac84acc3",
+  "crypto": "Monocypher 4.0.2 (BSD-2-Clause or CC0-1.0), unmodified, in ui/vendor/monocypher",
+  "flac": "dr_flac 0.13.4 (Unlicense or MIT-0), unmodified, in ui/vendor/dr_flac"
 }

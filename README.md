@@ -2,7 +2,7 @@
 
 > **Development builds on `dev` are experimental / in testing.** Use tagged releases for the published downloads. [Development notes](docs/DEV.md).
 
-**Disco! 3.4.0: aptX comes to the Disc** (experimental). aptX and aptX HD over Bluetooth, an aptX/LDAC codec choice that gives each pair its best codec, and Quiet Wi-Fi for fewer dropouts. Plus a new Linux app and a redesigned Windows app. [Release notes](docs/releases/v3.4.0.md) · [Bluetooth](docs/BLUETOOTH.md) · [Changelog](CHANGELOG.md)
+**Disco! 3.4.1: Sendspin 1.0 and shuffle fixes.** MA Sendspin gets end-to-end encryption, code pairing, album art and FLAC (experimental); Squash and Disco get new Bluetooth and Wi-Fi screens; Up Next no longer freezes on big shuffles and Previous on shuffle goes back to what played. 3.4.0 brought aptX (experimental). [Release notes](docs/releases/v3.4.1.md) · [Bluetooth](docs/BLUETOOTH.md) · [Changelog](CHANGELOG.md)
 
 <p align="center">
   <b>Your music. Your kind of Disco.</b><br>
@@ -86,7 +86,7 @@ Power the Disc off, hold **Volume Down** and plug in USB (the screen stays black
 **Windows:** the app's Update tab does it ([how](docs/WINDOWS.md#update-from-the-sd-card)). **Linux app:** its Update tab ([how](docs/LINUX.md)). **Linux:** download `mq_ui` from the [latest release](https://github.com/zmd22/diskos-disco/releases/latest) and sign it with the keys installed on this Disc:
 
 ```sh
-sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 3.4.0      # -> ./diskos-update/
+sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 3.4.1      # -> ./diskos-update/
 ```
 
 Copy the six files in it one by one into `<SD>/diskos-update/` (overwriting the old ones), then on the Disc: **Settings › System › Maintenance › Update from SD Card › Update**, and restart. The new version runs as a trial: choose **Keep** when asked (or let confirmed playback accept it), or **Go back**. A failing trial rolls back. More in the [SD update guide](docs/UPDATING.md).
