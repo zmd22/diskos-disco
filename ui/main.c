@@ -3540,6 +3540,7 @@ int main(int argc, char **argv){
         }
         if(playing) g_play_sent_gen = ipc_generation();   /* playback observed this generation (any start, incl. hardware keys): its one-shot is moot */
         queue_tick(&st, playing);
+        { void ui_shufhist_tick(const track_state_t *); ui_shufhist_tick(&st); }   /* Previous on shuffle: what played */
         {void zthumb_tick(void);zthumb_tick();} if(th_zune()){void zune_ui_tick(void);zune_ui_tick();}
         discshelf_tick();
         play_defer_tick();           /* a play waiting for the codec switch */

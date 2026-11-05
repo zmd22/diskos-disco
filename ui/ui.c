@@ -19,6 +19,7 @@
 #include "config.h"
 #include "fwcaps.h"
 #include "screens.h"
+#include "shufhist.h"
 #include "ma.h"
 #include "modes.h"
 #include <sys/stat.h>
@@ -476,6 +477,12 @@ void ui_perf_note(const char *stage){
 #define SKIP_GAP_MS 300
 #define SKIP_PENDING_MAX 8
 static int transport_now(const char *cmd);
+/* shuffle history (shufhist.c): fed with what plays, used by Previous/Next on shuffle */
+static uint32_t g_sh_jump_at;                              /* a history jump was sent (0 = none on its way) */
+void ui_shufhist_tick(const track_state_t *st){
+    if(g_sh_jump_at && lv_tick_elaps(g_sh_jump_at) > 6000){ sh_cancel(); g_sh_jump_at = 0; }   /* it never arrived */
+    if(st && st->have_track && ui_get_source_mode() == 0) sh_observe(st->pos_id, st->path);
+}
 static uint32_t g_skip_last; static int g_skip_pending; static lv_timer_t *g_skip_timer;
 static void skip_pace_cb(lv_timer_t *t){
     (void)t;
@@ -554,6 +561,23 @@ static int transport_now(const char *cmd)
         int q=queue_next();
         if(q<0){ ui_toast("Couldn't start queued song - try again"); return -1; }
         if(q>0){ ui_perf_note("queued-track-accepted"); ui_cancel_book_resume(); ui_disarm_book_eoc(); return 0; }
+    }
+    if((is_prev || is_next) && ui_play_mode_now() == 1){   /* shuffle: Previous goes back to what played (FiiO's player
+                                                            * picks another song), Next retraces that before shuffling on */
+        int id = 0; char p[256];
+        if(is_prev ? sh_back(&id, p, sizeof p) : sh_forward(&id, p, sizeof p)){
+            int ord = id > 0 ? mdb_queue_ord(id, p) : 0;
+            if(ord > 0 && ui_queue_jump(ord) == 0){
+                g_sh_jump_at = lv_tick_get() | 1;
+                ui_perf_note("transport-accepted");
+                if(is_prev) queue_note_prev();
+                ui_cancel_book_resume(); ui_disarm_book_eoc();
+                return 0;
+            }
+            sh_cancel();
+            if(ord == 0) sh_reset();                           /* the queue changed under it: start over */
+            else if(ord < 0){ ui_toast("Player busy - try again"); return -1; }
+        }                                                      /* nothing to go back to: the player's own */
     }
     ui_note_transport_sent();
     /* (the hold and guard were already handled at the top: Play/Pause ends the hold, a skip makes it follow) */

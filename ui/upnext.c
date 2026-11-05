@@ -59,10 +59,10 @@ static void un_row_cb(lv_event_t *e){
     if(i == 0){ screen_show(SCR_NOWPLAYING); return; }             /* the current song */
     if(!un_still_current()){ un_rebuild(); ui_toast("Queue changed"); return; }   /* never jump from a stale list */
     /* and the target row itself must still be that song at that position (a rebuild can keep the current song) */
-    int v = mdb_queue_row_valid(g_un_rows[i].base_id, g_un_rows[i].ord, g_un_rows[i].path);
-    if(v < 0){ ui_toast("Queue is busy - try again"); return; }
-    if(v == 0){ un_rebuild(); ui_toast("Queue changed"); return; }
-    if(ui_queue_jump(g_un_rows[i].ord) == 0) screen_show(SCR_NOWPLAYING);
+    int ord = mdb_queue_ord(g_un_rows[i].base_id, g_un_rows[i].path);       /* shuffle rows get theirs only now */
+    if(ord < 0){ ui_toast("Queue is busy - try again"); return; }
+    if(ord == 0 || (g_un_rows[i].ord && ord != g_un_rows[i].ord)){ un_rebuild(); ui_toast("Queue changed"); return; }
+    if(ui_queue_jump(ord) == 0) screen_show(SCR_NOWPLAYING);
 }
 
 static void un_add_row(int i){

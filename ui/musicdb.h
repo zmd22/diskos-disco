@@ -105,7 +105,7 @@ int  mdb_subtrack_plan(const char *const *paths, int npaths, mdb_plan_t *plan); 
  * its 1-based position in LIST_SONG_0 ID order - what a type-0 jump takes, in shuffle too (device-verified). */
 typedef struct {
     int  base_id;            /* LIST_SONG_0.ID */
-    int  ord;                /* 1-based position in LIST_SONG_0 ID order (the type-0 jump index + 1) */
+    int  ord;                /* 1-based position in LIST_SONG_0 ID order (the type-0 jump index + 1); 0 in shuffle (mdb_queue_ord on tap) */
     int  dur_ms;
     char title[MDB_STR];     /* TITLE, else the file NAME */
     char artist[MDB_STR];
@@ -121,6 +121,7 @@ typedef struct {
  * Returns the number of rows (>0) or one of the MDB_UPNEXT_* codes above. */
 int mdb_upnext(int shuffle, int cur_pos_id, const char *cur_path, mdb_qrow_t *out, int cap, int *more);
 int mdb_queue_row_valid(int base_id, int ord, const char *path);   /* re-check a jump target right before sending: 1/0/-1 */
+int mdb_queue_ord(int base_id, const char *path);   /* 1-based position of a still-matching queue row, 0 gone, -1 unknown */
 int mdb_sysconfig_play_mode(void);                                 /* the player's saved PLAY_MODE 0..4, -1 unreadable */
 int  ui_play_plan(mdb_plan_t *plan, int song_id);   /* main.c: play song_id through the plan (1 = sent) */
 int  mdb_artist_class_type(void);                          /* player Artist grouping: 0 ARTIST, 1 album artist, -1 unknown */

@@ -20,7 +20,9 @@
 #include <fcntl.h>
 
 #ifndef DB_PATH
+#ifndef DB_PATH
 #define DB_PATH "/usr/data/fiio/db/song.db"
+#endif
 #endif
 
 /* The whole library is held in a dynamically-sized array (no fixed cap): sized to
@@ -3386,83 +3388,106 @@ static sqlite3 *qdb(void){
 }
 static int q_busy(int rc){ rc &= 0xFF; return rc == SQLITE_BUSY || rc == SQLITE_LOCKED; }
 
+/* Up Next, bounded: only the rows it shows are read, whatever the queue size. (It used to number the whole queue
+ * with a window function and join it - on a 28,619-song shuffle that took the Disc down.) Every query here is a
+ * rowid lookup or a rowid range with LIMIT; the one scan is the shuffle list's POS_ID search (ints, no temp table). */
+static int q_int(sqlite3 *d, const char *sql, int a, const char *s, int *out){   /* 1 row, 0 none, -1 busy/error */
+    sqlite3_stmt *q = NULL;
+    if(sqlite3_prepare_v2(d, sql, -1, &q, NULL) != SQLITE_OK){ int b = q_busy(sqlite3_extended_errcode(d)); if(q) sqlite3_finalize(q); return b ? -2 : -1; }
+    sqlite3_bind_int(q, 1, a);
+    if(s) sqlite3_bind_text(q, 2, s, -1, SQLITE_TRANSIENT);
+    int rc = sqlite3_step(q), r;
+    if(rc == SQLITE_ROW){ *out = sqlite3_column_int(q, 0); r = 1; }
+    else if(rc == SQLITE_DONE) r = 0;
+    else r = q_busy(sqlite3_extended_errcode(d)) ? -2 : -1;
+    sqlite3_finalize(q);
+    return r;
+}
+/* 1-based position of LIST_SONG_0 row `base_id` in ID order (what a type-0 jump takes), if it is still `path`:
+ * >0 the position, 0 the row is gone or now another song, -1 couldn't tell (busy/error). */
+int mdb_queue_ord(int base_id, const char *path){
+    sqlite3 *d = qdb(); if(!d || !path || base_id <= 0) return -1;
+    int same = 0, ord = 0;
+    int r = q_int(d, "SELECT PATH=?2 FROM LIST_SONG_0 WHERE ID=?1;", base_id, path, &same);
+    if(r < 0) return -1;
+    if(r == 0 || !same) return 0;
+    if(q_int(d, "SELECT COUNT(*) FROM LIST_SONG_0 WHERE ID<=?1;", base_id, NULL, &ord) != 1) return -1;
+    return ord;
+}
 int mdb_upnext(int shuffle, int cur_pos_id, const char *cur_path, mdb_qrow_t *out, int cap, int *more){
     if(more) *more = 0;
     if(!out || cap < 1) return MDB_UPNEXT_ERROR;
     sqlite3 *d = qdb(); if(!d) return MDB_UPNEXT_ERROR;
-    const char *sql = shuffle
-        ? "WITH B AS (SELECT ID,ROW_NUMBER() OVER (ORDER BY ID) AS ORD,TITLE,NAME,ARTIST,PATH,DURATION FROM LIST_SONG_0),"
-          "C AS (SELECT (SELECT COUNT(*) FROM LIST_SONG_0) AS N0,(SELECT COUNT(*) FROM LIST_SONG_3) AS N3,"
-          "(SELECT COUNT(DISTINCT POS_ID) FROM LIST_SONG_3) AS ND,"
-          "CASE WHEN ?1>0 THEN ?1 ELSE (SELECT CASE WHEN COUNT(*)=1 THEN MAX(ID) END FROM LIST_SONG_0 WHERE PATH=?2) END AS TID),"
-          "X AS (SELECT R.ID AS RID,B.ID AS BID,B.ORD,B.TITLE,B.NAME,B.ARTIST,B.PATH,B.DURATION FROM LIST_SONG_3 R LEFT JOIN B ON B.ID=R.POS_ID) "
-          "SELECT C.N0,C.N3,C.ND,C.TID,X.RID,X.BID,X.ORD,X.TITLE,X.NAME,X.ARTIST,X.PATH,X.DURATION FROM C LEFT JOIN X ON 1 ORDER BY X.RID;"
-        : "WITH B AS (SELECT ID,ROW_NUMBER() OVER (ORDER BY ID) AS ORD,TITLE,NAME,ARTIST,PATH,DURATION FROM LIST_SONG_0),"
-          "C AS (SELECT (SELECT COUNT(*) FROM LIST_SONG_0) AS N0,"
-          "CASE WHEN ?1>0 THEN ?1 ELSE (SELECT CASE WHEN COUNT(*)=1 THEN MAX(ID) END FROM LIST_SONG_0 WHERE PATH=?2) END AS TID) "
-          "SELECT C.N0,C.N0,C.N0,C.TID,B.ID,B.ID,B.ORD,B.TITLE,B.NAME,B.ARTIST,B.PATH,B.DURATION FROM C LEFT JOIN B ON 1 ORDER BY B.ID;";
+    #define QI(sql, a, s, outp) do { int _r = q_int(d, sql, a, s, outp); if(_r == -2) return MDB_UPNEXT_BUSY; if(_r < 0) return MDB_UPNEXT_ERROR; got = _r; } while(0)
+    int got = 0, n0 = 0, n3 = 0, tid = 0, start = 0, left = 0;
+    QI("SELECT COUNT(*) FROM LIST_SONG_0;", 0, NULL, &n0);
+    if(n0 == 0) return MDB_UPNEXT_EMPTY;
+    /* the current song: the a2 pos_id, else the path when exactly one queue row has it */
+    if(cur_pos_id > 0) tid = cur_pos_id;
+    else if(cur_path && cur_path[0]){
+        int c = 0; QI("SELECT COUNT(*) FROM (SELECT 1 FROM LIST_SONG_0 WHERE PATH=?2 LIMIT 2) WHERE ?1=?1;", 0, cur_path, &c);
+        if(c != 1) return MDB_UPNEXT_NOTFOUND;
+        QI("SELECT ID FROM LIST_SONG_0 WHERE PATH=?2 AND ?1=?1;", 0, cur_path, &tid);
+    }
+    if(tid <= 0) return MDB_UPNEXT_NOTFOUND;
+    const char *rows_sql;
+    if(shuffle){
+        QI("SELECT COUNT(*) FROM LIST_SONG_3;", 0, NULL, &n3);
+        if(n3 == 0 || n3 != n0) return MDB_UPNEXT_NOTFOUND;                       /* not built yet / being rebuilt */
+        int c = 0; QI("SELECT COUNT(*) FROM (SELECT 1 FROM LIST_SONG_3 WHERE POS_ID=?1 LIMIT 2);", tid, NULL, &c);
+        if(c != 1) return MDB_UPNEXT_NOTFOUND;                                       /* not an exact permutation here */
+        QI("SELECT ID FROM LIST_SONG_3 WHERE POS_ID=?1 LIMIT 1;", tid, NULL, &start);
+        QI("SELECT COUNT(*) FROM LIST_SONG_3 WHERE ID>=?1;", start, NULL, &left);
+        /* LIST_SONG_3 holds only the order (POS_ID): the song itself is a rowid lookup in LIST_SONG_0 per row */
+        rows_sql = "SELECT R.POS_ID,S.TITLE,S.NAME,S.ARTIST,S.PATH,S.DURATION,S.ID FROM LIST_SONG_3 R "
+                   "LEFT JOIN LIST_SONG_0 S ON S.ID=R.POS_ID WHERE R.ID>=?1 ORDER BY R.ID LIMIT ?2;";
+    } else {
+        QI("SELECT COUNT(*) FROM LIST_SONG_0 WHERE ID=?1;", tid, NULL, &got);
+        if(!got) return MDB_UPNEXT_NOTFOUND;
+        start = tid;
+        QI("SELECT COUNT(*) FROM LIST_SONG_0 WHERE ID>=?1;", start, NULL, &left);
+        rows_sql = "SELECT ID,TITLE,NAME,ARTIST,PATH,DURATION,ID FROM LIST_SONG_0 WHERE ID>=?1 ORDER BY ID LIMIT ?2;";
+    }
+    #undef QI
+    (void)got;
     sqlite3_stmt *q = NULL;
-    int rc = sqlite3_prepare_v2(d, sql, -1, &q, NULL);
-    if(rc != SQLITE_OK){ int b = q_busy(sqlite3_extended_errcode(d)); if(q) sqlite3_finalize(q); return b ? MDB_UPNEXT_BUSY : MDB_UPNEXT_ERROR; }
-    sqlite3_bind_int(q, 1, cur_pos_id > 0 ? cur_pos_id : 0);
-    if(cur_path && cur_path[0]) sqlite3_bind_text(q, 2, cur_path, -1, SQLITE_TRANSIENT); else sqlite3_bind_null(q, 2);
-    int n = 0, found = 0, first = 1, status = 0, have_status = 0, target = 0, extra = 0;   /* MDB_UPNEXT_EMPTY is 0 */
-    while((rc = sqlite3_step(q)) == SQLITE_ROW){
-        if(first){
-            first = 0;
-            int n0 = sqlite3_column_int(q, 0), n3 = sqlite3_column_int(q, 1), nd = sqlite3_column_int(q, 2);
-            if(sqlite3_column_type(q, 4) == SQLITE_NULL){                 /* no queue rows in this order */
-                status = n0 == 0 ? MDB_UPNEXT_EMPTY : MDB_UPNEXT_NOTFOUND; /* shuffle list not built yet */
-                have_status = 1; break;
-            }
-            if(n3 != n0 || nd != n0){ status = MDB_UPNEXT_NOTFOUND; have_status = 1; break; }   /* not an exact permutation */
-            if(sqlite3_column_type(q, 3) == SQLITE_NULL){ status = MDB_UPNEXT_NOTFOUND; have_status = 1; break; }   /* current unknown/ambiguous */
-            target = sqlite3_column_int(q, 3);
-        }
-        if(sqlite3_column_type(q, 5) == SQLITE_NULL){ status = MDB_UPNEXT_NOTFOUND; have_status = 1; break; }   /* shuffle row -> no base row */
-        int id = sqlite3_column_int(q, 5);
-        if(!found){ if(id != target) continue; found = 1; }
-        if(n >= cap){ extra++; continue; }
-        mdb_qrow_t *r = &out[n++];
+    if(sqlite3_prepare_v2(d, rows_sql, -1, &q, NULL) != SQLITE_OK){ int b = q_busy(sqlite3_extended_errcode(d)); if(q) sqlite3_finalize(q); return b ? MDB_UPNEXT_BUSY : MDB_UPNEXT_ERROR; }
+    sqlite3_bind_int(q, 1, start); sqlite3_bind_int(q, 2, cap);
+    int n = 0, rc, first_ord = 0;
+    while((rc = sqlite3_step(q)) == SQLITE_ROW && n < cap){
+        mdb_qrow_t *r = &out[n];
         memset(r, 0, sizeof *r);
-        r->base_id = id;
-        r->ord = sqlite3_column_int(q, 6);
-        const char *t = (const char *)sqlite3_column_text(q, 7);
-        if(!t || !t[0]) t = (const char *)sqlite3_column_text(q, 8);
-        const char *p = (const char *)sqlite3_column_text(q, 10);
+        r->base_id = sqlite3_column_int(q, 0);
+        if((n == 0 && r->base_id != tid) || sqlite3_column_type(q, 6) == SQLITE_NULL){ sqlite3_finalize(q); return MDB_UPNEXT_NOTFOUND; }   /* a shuffle row with no song: being rebuilt */
+        const char *t = (const char *)sqlite3_column_text(q, 1);
+        if(!t || !t[0]) t = (const char *)sqlite3_column_text(q, 2);
+        const char *p = (const char *)sqlite3_column_text(q, 4);
         if(!t || !t[0]){ const char *sl = p ? strrchr(p, '/') : NULL; t = sl ? sl + 1 : p; }
         snprintf(r->title, sizeof r->title, "%s", t ? t : "");
-        const char *ar = (const char *)sqlite3_column_text(q, 9);
+        const char *ar = (const char *)sqlite3_column_text(q, 3);
         snprintf(r->artist, sizeof r->artist, "%s", ar ? ar : "");
         snprintf(r->path, sizeof r->path, "%s", p ? p : "");
-        sqlite3_int64 dm = sqlite3_column_int64(q, 11);           /* copied from SONG by the player at queue build */
+        sqlite3_int64 dm = sqlite3_column_int64(q, 5);
         r->dur_ms = (dm > 0 && dm <= 2147483647) ? (int)dm : 0;
+        n++;
     }
     int busy = (rc != SQLITE_ROW && rc != SQLITE_DONE) && q_busy(sqlite3_extended_errcode(d));
     sqlite3_finalize(q);
-    if(have_status) return status;
-    if(rc != SQLITE_DONE) return busy ? MDB_UPNEXT_BUSY : MDB_UPNEXT_ERROR;
-    if(first) return MDB_UPNEXT_ERROR;                                   /* C always yields a row */
-    if(!found) return MDB_UPNEXT_NOTFOUND;
-    if(more) *more = extra;
+    if(rc != SQLITE_ROW && rc != SQLITE_DONE) return busy ? MDB_UPNEXT_BUSY : MDB_UPNEXT_ERROR;
+    if(n == 0) return MDB_UPNEXT_NOTFOUND;
+    /* sequential: positions are consecutive from the current one (IDs ascend); shuffle: found when tapped
+     * (mdb_queue_ord), so the list never pays for a count per row */
+    if(!shuffle){
+        if(q_int(d, "SELECT COUNT(*) FROM LIST_SONG_0 WHERE ID<=?1;", tid, NULL, &first_ord) != 1) return MDB_UPNEXT_BUSY;
+        for(int i = 0; i < n; i++) out[i].ord = first_ord + i;
+    }
+    if(more) *more = left > n ? left - n : 0;
     return n;
 }
-
-/* Is (base_id, ord, path) still exactly that row of the live queue? Checked right before a jump, so a list read
- * before a queue rebuild can never jump to a different song. 1 = yes, 0 = no, -1 = couldn't tell (busy/error). */
+/* Is (base_id, ord, path) still exactly that row of the live queue? 1 = yes, 0 = no, -1 = couldn't tell. */
 int mdb_queue_row_valid(int base_id, int ord, const char *path){
-    sqlite3 *d = qdb(); if(!d || !path) return -1;
-    sqlite3_stmt *q = NULL;
-    if(sqlite3_prepare_v2(d, "SELECT ORD,PATH FROM (SELECT ID,ROW_NUMBER() OVER (ORDER BY ID) AS ORD,PATH FROM LIST_SONG_0) "
-                             "WHERE ID=?1;", -1, &q, NULL) != SQLITE_OK){ if(q) sqlite3_finalize(q); return -1; }
-    sqlite3_bind_int(q, 1, base_id);
-    int v, rc = sqlite3_step(q);
-    if(rc == SQLITE_ROW){
-        const char *p = (const char *)sqlite3_column_text(q, 1);
-        v = sqlite3_column_int(q, 0) == ord && p && !strcmp(p, path);
-    } else v = rc == SQLITE_DONE ? 0 : -1;
-    sqlite3_finalize(q);
-    return v;
+    int o = mdb_queue_ord(base_id, path);
+    return o < 0 ? -1 : o == ord;
 }
 
 /* The player's own saved play mode (SYSCONFIG.PLAY_MODE, 0..4), -1 if unreadable. Only meaningful while diskOS has
