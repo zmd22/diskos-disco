@@ -35,6 +35,8 @@ const lv_font_t *theme_font(theme_font_role_t role);
 const lv_font_t *theme_font_default(theme_font_role_t role);
 int theme_font_size(void);   /* 0 Small, 1 Medium (default), 2 Large: cfg "font_size", read once */
 #define TF(role) theme_font(THEME_FONT_##role)
+/* the AirPlay mark (U+E800, font_airplay_glyph.c): every theme font carries it behind its own face */
+#define DISKOS_SYMBOL_AIRPLAY "\xEE\xA0\x80"
 
 void        theme_init(void);
 int         theme_variant(void);                    /* 0 dark, 1 light (the active one) */

@@ -1033,7 +1033,22 @@ static const lv_font_t *font_for_role(theme_font_role_t role,int themed){
     }
 }
 
-const lv_font_t *theme_font(theme_font_role_t role){return font_for_role(role,1);}
+/* Every themed font gets the AirPlay glyph (U+E800, the matching size) right behind its own face, ahead of the rest of
+ * its fallback chain. Stable per-role copies, refreshed when the role's font changes (theme switch). */
+const lv_font_t *airplay_glyph_font(int px);
+static const lv_font_t *with_airplay(theme_font_role_t role, const lv_font_t *f){
+    static lv_font_t face[THEME_FONT_COUNT], ap[THEME_FONT_COUNT], seen[THEME_FONT_COUNT];
+    static const lv_font_t *src[THEME_FONT_COUNT];
+    if(!f || role < 0 || role >= THEME_FONT_COUNT) return f;
+    if(src[role] != f || memcmp(&seen[role], f, sizeof *f)){
+        src[role] = f; seen[role] = *f;
+        ap[role] = *airplay_glyph_font(role_px(role) ? role_px(role) : f->line_height);
+        ap[role].fallback = f->fallback;
+        face[role] = *f; face[role].fallback = &ap[role];
+    }
+    return &face[role];
+}
+const lv_font_t *theme_font(theme_font_role_t role){return with_airplay(role,font_for_role(role,1));}
 const lv_font_t *theme_font_default(theme_font_role_t role){return font_for_role(role,0);}
 
 /* WCAG 2 relative luminance / contrast */

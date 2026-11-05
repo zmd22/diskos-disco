@@ -8,6 +8,7 @@
  * device-unverified; the internal route keeps the original playback preamble. */
 enum { OUT_INTERNAL = 0, OUT_SPDIF = 1, OUT_USB = 2 };
 
+const char *modes_glyph(int mode);     /* the working mode's icon, the same in every theme */
 void modes_usb_poll(void);             /* retry disconnected USB output fallback on the status poll */
 int  modes_output_route(void);          /* the route diskOS last set THIS player generation (else OUT_INTERNAL) */
 int  modes_output_switch(int target);   /* Settings SPDIF toggle: pause -> silent -> 0666 -> 0657 8 -> resume; 0 = started, -1 = refused */

@@ -55,6 +55,7 @@ void kit_accent_changed(void); /* defer Ring recolouring until a screen becomes 
 void kit_media_scope(lv_obj_t *root); /* keep the immersive subtree independent of appearance */
 void kit_restyle(lv_obj_t *root);       /* style root's tree again (content rebuilt in place) */
 void kit_install(void);                 /* screens_init: start the styling pass (no-op for Default) */
+void kit_bare(lv_obj_t *obj);   /* the kit leaves this object and its children alone, always */
 void kit_keep(lv_obj_t *obj);           /* a layout hook styled obj itself: the pass leaves it (not its children) */
 
 /* Home's parts, as built by home.c, for a theme that lays Home out its own way. It may move, resize and restyle any

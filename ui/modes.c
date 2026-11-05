@@ -34,10 +34,12 @@ static const modeinfo_t MODES[] = {
     { "USB",     "DAC",       LV_SYMBOL_USB,        1 },
     { "BT",      "DAC",       LV_SYMBOL_BLUETOOTH,  2 },
     { "BT",      "streaming", LV_SYMBOL_VOLUME_MAX, 4 },
-    { "AirPlay", "",          LV_SYMBOL_WIFI,       5 },
+    { "AirPlay", "",          DISKOS_SYMBOL_AIRPLAY, 5 },
     { "USB",     "storage",   LV_SYMBOL_DRIVE,      3 },
 };
 #define N_MODES ((int)(sizeof(MODES)/sizeof(MODES[0])))
+/* the one icon per working mode, used by every theme's Working mode screen and the Quick Settings Mode toggle */
+const char *modes_glyph(int mode){ for(int i = 0; i < N_MODES; i++) if(MODES[i].mode == mode) return MODES[i].glyph; return MODES[0].glyph; }
 #define ROW_USB_AUDIO 100 /* legacy test-only route ID; not 4 (= BT streaming's mode) */
 
 /* OUTPUT-ROUTE-BEGIN */

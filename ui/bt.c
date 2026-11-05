@@ -92,8 +92,15 @@ static void scan_proc_stop(void){                 /* end our device search: its 
  * a freed object). scan_stop() is called at the top of every g_list-clearing path. */
 static lv_obj_t *g_scan_icon;
 static void spin_anim_cb(void *o, int32_t v){ lv_obj_set_style_transform_rotation((lv_obj_t*)o, v, 0); }
+/* Squash and Disco ("B2" header): the icon on a disc, its shade says on (the theme's ink) or off (grey); the ring
+ * around the disc is a faint track that spins an ink arc while Bluetooth turns on or scans. No state text. */
+static int g_b2, g_b2_scanning, g_hstate;
+static lv_obj_t *g_cdisc;
+static void b2_ring(void);
+static lv_color_t b2_accent(void){ return th_simple() ? TC(ACCENT_PRIMARY) : ui_current_accent(); }   /* Squash orange / Disco's accent */
 static void scan_stop(void){
     if(g_scan_icon){ lv_anim_delete(g_scan_icon, spin_anim_cb); g_scan_icon = NULL; }
+    if(g_b2 && g_b2_scanning){ g_b2_scanning = 0; b2_ring(); }
 }
 
 /* ---- header helpers (local copies) -------------------------------------- */
@@ -169,8 +176,28 @@ static int run_cap(const char *cmd, char *out, int cap){ int n = run_cap_to(cmd,
 /* ---- the state header: the ring says it at a glance - grey = off, a short spinning arc = turning on, a full
  * accent ring = on - with the connected device (or the state) under it ---------------------------------- */
 static void hring_spin_exec(void *var, int32_t v){ lv_arc_set_rotation((lv_obj_t *)var, v % 360); }
+static void b2_ring(void){
+    if(!g_b2 || !g_hring) return;
+    int spin = g_hstate == BT_TURNING_ON || g_b2_scanning;
+    lv_anim_delete(g_hring, hring_spin_exec);
+    lv_obj_set_style_arc_color(g_hring, b2_accent(), LV_PART_INDICATOR);
+    lv_arc_set_rotation(g_hring, 270); lv_arc_set_value(g_hring, spin ? 220 : 0);
+    if(spin){
+        lv_anim_t a; lv_anim_init(&a); lv_anim_set_var(&a, g_hring); lv_anim_set_exec_cb(&a, hring_spin_exec);
+        lv_anim_set_values(&a, 270, 270 + 360); lv_anim_set_duration(&a, 1100);
+        lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE); lv_anim_start(&a);
+    }
+}
 static void hdr_set(int state, const char *name, const char *sub){
     if(!g_hring) return;
+    g_hstate = state;
+    if(g_b2){
+        lv_obj_set_style_text_color(g_hglyph, state == BT_ON ? TC(TEXT_PRIMARY) : TC(TEXT_DISABLED), 0);
+        if(g_cdisc) lv_obj_set_style_bg_color(g_cdisc, state == BT_OFF ? TC(SURFACE) : TC(SURFACE_RAISED), 0);
+        lv_label_set_text(g_hname, ""); lv_label_set_text(g_hsub, (sub && state == BT_OFF) ? sub : "");   /* only an error line */
+        b2_ring();
+        return;
+    }
     if(g_hknob){                                                   /* Braun: the knob's pointer + lamp say it */
         br_knob_set_on(g_hknob, state == BT_ON);
         lv_label_set_text(g_hname, name ? name : ""); lv_label_set_text(g_hsub, sub ? sub : "");
@@ -214,7 +241,8 @@ static void list_msg(const char *m){
     lv_obj_t *e = lv_label_create(g_list);
     lv_label_set_text(e, m);
     lv_obj_set_style_text_color(e, TC(TEXT_MUTED), 0);
-    lv_obj_set_style_text_font(e, TF(UI_14), 0);
+    lv_obj_set_style_text_font(e, g_b2 ? TF(UI_18) : TF(UI_14), 0);
+    if(g_b2){ lv_label_set_long_mode(e, LV_LABEL_LONG_WRAP); lv_obj_set_width(e, 240); lv_obj_set_style_text_align(e, LV_TEXT_ALIGN_CENTER, 0); }
 }
 /* "Scanning" + a spinning refresh glyph, centered in the list area */
 static void list_msg_scanning(void){
@@ -222,6 +250,14 @@ static void list_msg_scanning(void){
     scan_stop();
     lv_obj_clean(g_list);
     lv_obj_set_flex_align(g_list, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    if(g_b2){                                                   /* the ring spins; one large word in the middle */
+        lv_obj_t *t = lv_label_create(g_list);
+        lv_label_set_text(t, "Scanning...");
+        lv_obj_set_style_text_color(t, TC(TEXT_SECONDARY), 0);
+        lv_obj_set_style_text_font(t, TF(UI_28), 0);
+        g_b2_scanning = 1; b2_ring();
+        return;
+    }
     lv_obj_t *row = lv_obj_create(g_list);
     lv_obj_remove_style_all(row);
     lv_obj_set_size(row, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
@@ -1679,7 +1715,7 @@ static void dev_cb(lv_event_t *e){
 static void add_dev_row(const char *mac, const char *name, int connected, const char *codec){
     lv_obj_t *r = lv_button_create(g_list);
     lv_obj_remove_style_all(r);
-    lv_obj_set_size(r, BROW_W, 64);                       /* taller rows */
+    lv_obj_set_size(r, g_b2 ? 280 : BROW_W, g_b2 ? 66 : 64);                       /* taller rows */
     lv_obj_add_flag(r, LV_OBJ_FLAG_USER_1);                 /* curves with the circle */
     lv_obj_set_style_radius(r, TH_R_ROW, 0);
     lv_obj_set_style_bg_color(r, connected ? TC(SURFACE_RAISED) : TC(SURFACE), 0);
@@ -1695,7 +1731,7 @@ static void add_dev_row(const char *mac, const char *name, int connected, const 
     lv_label_set_text(ic, LV_SYMBOL_AUDIO);
     lv_obj_set_pos(ic, 14, 22);
     lv_obj_set_style_text_font(ic, TF(UI_16), 0);
-    lv_obj_set_style_text_color(ic, connected ? (th_null()?TC(TEXT_PRIMARY):ui_current_accent()) : TC(TEXT_SECONDARY), 0);
+    lv_obj_set_style_text_color(ic, connected ? (th_null()?TC(TEXT_PRIMARY):g_b2?b2_accent():ui_current_accent()) : TC(TEXT_SECONDARY), 0);
     lv_obj_t *t = lv_label_create(r);
     lv_label_set_text(t, name);
     lv_label_set_long_mode(t, LV_LABEL_LONG_SCROLL_CIRCULAR);
@@ -1707,7 +1743,8 @@ static void add_dev_row(const char *mac, const char *name, int connected, const 
     lv_label_set_text(sl, connected ? st : "Tap to connect");
     lv_obj_set_pos(sl, 42, 37);
     lv_obj_set_style_text_font(sl, TF(UI_18), 0);           /* the hint line, a bit larger (was 16) */
-    lv_obj_set_style_text_color(sl, connected ? (th_null()?TC(TEXT_PRIMARY):ui_current_accent()) : TC(TEXT_SECONDARY), 0);
+    lv_obj_set_style_text_color(sl, connected ? (th_null()?TC(TEXT_PRIMARY):g_b2?b2_accent():ui_current_accent()) : TC(TEXT_SECONDARY), 0);
+    if(g_b2){ lv_obj_set_pos(ic, 14, 23); lv_obj_set_pos(t, 42, 6); lv_obj_set_width(t, 280 - 42 - (connected ? 40 : 16)); lv_obj_set_pos(sl, 42, 36); }
     if(connected){ lv_obj_t *ch = lv_label_create(r); lv_label_set_text(ch, LV_SYMBOL_RIGHT);   /* opens its details */
                    lv_obj_align(ch, LV_ALIGN_RIGHT_MID, -16, 0); lv_obj_set_style_text_color(ch, TC(TEXT_DISABLED), 0); }
 }
@@ -2218,6 +2255,42 @@ void bt_create(lv_obj_t *root){
         lv_obj_set_style_text_font(g_hsub, TF(UI_18), 0);              /* Null keeps its layout; the hint a bit larger */
         lv_label_set_long_mode(g_hname, LV_LABEL_LONG_SCROLL_CIRCULAR); }
     if(th_zune())zune_radio_skin(root,"bluetooth","bluetooth on","scan for devices",g_hring,g_hglyph,g_hname,g_hsub,g_sw,rb,g_list);
+    g_b2 = th_simple() || th_disco();
+    if(g_b2){                                                  /* Squash / Disco: the B2 header (see b2_ring) */
+        const int cy = 52;                                       /* the control row's centre */
+        lv_obj_add_flag(g_hname, LV_OBJ_FLAG_HIDDEN);
+        g_cdisc = lv_obj_create(root); lv_obj_remove_style_all(g_cdisc); kit_keep(g_cdisc);
+        lv_obj_set_size(g_cdisc, 72, 72); lv_obj_set_style_radius(g_cdisc, LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_style_bg_opa(g_cdisc, LV_OPA_COVER, 0); lv_obj_remove_flag(g_cdisc, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_align(g_cdisc, LV_ALIGN_TOP_MID, 0, cy - 36); lv_obj_move_to_index(g_cdisc, 0);
+        lv_obj_set_size(g_hring, 86, 86); lv_obj_align(g_hring, LV_ALIGN_TOP_MID, 0, cy - 43);
+        lv_obj_set_style_arc_width(g_hring, 3, LV_PART_MAIN); lv_obj_set_style_arc_width(g_hring, 3, LV_PART_INDICATOR);
+        lv_obj_set_style_arc_color(g_hring, TC(SURFACE_RAISED), LV_PART_MAIN);
+        lv_obj_set_style_text_font(g_hglyph, TF(UI_40), 0); lv_obj_set_size(g_hglyph, 60, LV_SIZE_CONTENT);
+        lv_obj_set_style_pad_top(g_hglyph, 0, 0); lv_obj_set_style_text_align(g_hglyph, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_update_layout(g_hglyph); lv_obj_align(g_hglyph, LV_ALIGN_TOP_MID, 0, cy - lv_obj_get_height(g_hglyph) / 2);
+        /* refresh: a bare grey icon. A plain object, not a button, so the theme kit doesn't dress it up again */
+        lv_obj_add_flag(rb, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_t *rx = lv_obj_create(root); lv_obj_remove_style_all(rx); kit_bare(rx);
+        lv_obj_set_size(rx, 40, 40); lv_obj_align(rx, LV_ALIGN_TOP_MID, -88, cy - 20);
+        lv_obj_add_flag(rx, LV_OBJ_FLAG_CLICKABLE); lv_obj_set_ext_click_area(rx, 10); lv_obj_remove_flag(rx, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_set_style_radius(rx, LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_style_bg_color(rx, TC(SURFACE), LV_STATE_PRESSED); lv_obj_set_style_bg_opa(rx, LV_OPA_COVER, LV_STATE_PRESSED);
+        lv_obj_add_event_cb(rx, rescan_cb, LV_EVENT_CLICKED, NULL);
+        lv_obj_t *rxl = lv_label_create(rx); kit_keep(rxl); lv_label_set_text(rxl, LV_SYMBOL_REFRESH);
+        lv_obj_set_style_text_font(rxl, TF(UI_18), 0); lv_obj_set_style_text_color(rxl, TC(TEXT_DISABLED), 0); lv_obj_center(rxl);
+        /* the switch: smaller, a soft track; on = the theme's accent */
+        lv_obj_set_size(g_sw, 42, 22); lv_obj_align(g_sw, LV_ALIGN_TOP_MID, 88, cy - 11); lv_obj_set_ext_click_area(g_sw, 14);
+        lv_obj_set_style_bg_color(g_sw, TC(SURFACE_RAISED), LV_PART_MAIN);
+        lv_obj_set_style_bg_color(g_sw, b2_accent(), (lv_style_selector_t)LV_PART_INDICATOR | LV_STATE_CHECKED);
+        lv_obj_set_style_bg_color(g_sw, TC(TEXT_DISABLED), LV_PART_KNOB);
+        lv_obj_set_style_bg_color(g_sw, TC(TEXT_PRIMARY), (lv_style_selector_t)LV_PART_KNOB | LV_STATE_CHECKED);
+        kit_keep(g_sw);
+        lv_obj_set_style_text_font(g_hsub, TF(UI_16), 0); lv_obj_align(g_hsub, LV_ALIGN_TOP_MID, 0, 102);
+        lv_obj_set_pos(g_list, (360 - 280) / 2, 94); lv_obj_set_size(g_list, 280, 254);
+        lv_obj_set_style_pad_bottom(g_list, 24, 0); lv_obj_set_style_pad_row(g_list, 6, 0);
+        hdr_set(BT_OFF, "", "");
+    }
     if(th_braun_family()){
         lv_obj_add_flag(g_hring, LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(g_hglyph, LV_OBJ_FLAG_HIDDEN);
         lv_obj_t *pd = br_disc(root, 180, 80, 44, BR_PANEL); (void)pd;
@@ -2259,7 +2332,7 @@ static void scanwait_poll_cb(lv_timer_t *t){
 }
 
 void bt_open(void){
-    if(g_sw) lv_obj_set_style_bg_color(g_sw, ui_current_accent(), (lv_style_selector_t)LV_PART_INDICATOR | LV_STATE_CHECKED);   /* follow an accent change */
+    if(g_sw) lv_obj_set_style_bg_color(g_sw, g_b2 ? b2_accent() : ui_current_accent(), (lv_style_selector_t)LV_PART_INDICATOR | LV_STATE_CHECKED);   /* follow an accent change */
     /* "should BT be on" = the intent OR the live radio. Intent is the reliable signal right after a QS
      * toggle, because bt_enable() rfkill-blocks-then-unblocks, so bt_radio_on() reads 0 for a moment. */
     int want = cfg_get_int("bt_on", 0) || bt_radio_on();
@@ -2294,4 +2367,7 @@ void bt_open(void){
 }
 
 /* Host preview fixture: not called by device code. */
-void bt_preview_null(void){lv_obj_clean(g_list);hdr_set(BT_ON,getenv("BT_PREVIEW_HDR")?getenv("BT_PREVIEW_HDR"):"Connected to FiiO EH11 - LDAC","");lv_obj_add_state(g_sw,LV_STATE_CHECKED);add_dev_row("00:11:22:33:44:55","FiiO EH11",1,"LDAC");add_dev_row("00:11:22:33:44:66","Living room",0,"");add_dev_row("00:11:22:33:44:77","Studio headphones",0,"");curvelist_update(&g_bcl);}
+void bt_preview_null(void){
+    if(getenv("BT_PREVIEW_OFF")){ hdr_set(BT_OFF,"Bluetooth is off",""); lv_obj_clear_state(g_sw,LV_STATE_CHECKED); list_msg("Switch it on to find devices"); return; }
+    if(getenv("BT_PREVIEW_SCAN")){ hdr_set(BT_ON,"Bluetooth is on",""); lv_obj_add_state(g_sw,LV_STATE_CHECKED); list_msg_scanning(); return; }
+    lv_obj_clean(g_list);hdr_set(BT_ON,getenv("BT_PREVIEW_HDR")?getenv("BT_PREVIEW_HDR"):"Connected to FiiO EH11 - LDAC","");lv_obj_add_state(g_sw,LV_STATE_CHECKED);add_dev_row("00:11:22:33:44:55","FiiO EH11",1,"LDAC");add_dev_row("00:11:22:33:44:66","Living room",0,"");add_dev_row("00:11:22:33:44:77","Studio headphones",0,"");curvelist_update(&g_bcl);}

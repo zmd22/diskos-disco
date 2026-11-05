@@ -30,6 +30,7 @@ static void go_search(void){ screen_show(SCR_SEARCH); }
 static void go_queue(void){ queue_open(); }
 static void go_eq(void){ screen_show(SCR_EQ); }
 static void go_modes(void){ modes_open(); }
+static void go_ma(void){ screen_show(SCR_MA); }          /* MA Sendspin, as in the other themes' navigation */
 static void go_bt(void){ bt_open(); }
 static void go_wifi(void){ wifi_open(); }
 static void go_weather(void){ weather_app_open(); }
@@ -43,6 +44,7 @@ static const zitem_t ITEMS[] = {
     { "search",      "home.zune.search",     go_search },
     { "equalizer",   "home.zune.eq",         go_eq },
     { "modes",       "home.zune.modes",      go_modes },
+    { "sendspin",    "home.zune.sendspin",   go_ma },
     { "bluetooth",   "home.zune.bt",         go_bt },
     { "wi-fi",       "home.zune.wifi",       go_wifi },
     { "weather",     "home.zune.weather",    go_weather },
@@ -51,7 +53,7 @@ static const zitem_t ITEMS[] = {
 };
 #define ZN ((int)(sizeof ITEMS / sizeof ITEMS[0]))
 #define NP_IDX 0
-#define WX_IDX 8
+#define WX_IDX 9
 
 /* the dial loops: three copies of the list, and when a scroll settles outside the middle copy it jumps by one copy
  * (an identical picture), so it never runs out either way */

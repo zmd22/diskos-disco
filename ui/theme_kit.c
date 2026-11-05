@@ -162,8 +162,9 @@ static void press_polish(lv_obj_t *o, kit_role_t r){
 }
 static lv_obj_t *media_scope;
 void kit_media_scope(lv_obj_t *root){ media_scope=root; }
+static const char kit_bare_tag;   /* defined with kit_bare() below */
 static void pass(lv_obj_t *o, kit_role_t parent_role, int is_root, int on_top, int force){
-    if(o == media_scope) return;
+    if(o == media_scope || lv_obj_get_user_data(o) == (void *)&kit_bare_tag) return;
     if(th_null()&&(o==screen_get_root(SCR_BT)||o==screen_get_root(SCR_WIFI)||o==screen_get_root(SCR_SONGINFO)||o==screen_get_root(SCR_STATS)||o==screen_get_root(SCR_SPHERE)||o==screen_get_root(SCR_ROULETTE)||o==screen_get_root(SCR_ROULETTE_SPIN)))return;
     void (*style)(lv_obj_t *, kit_role_t) = theme_kit()->style;
     kit_role_t r = classify(o, parent_role, is_root, on_top);
@@ -236,6 +237,9 @@ void kit_restyle(lv_obj_t *root){
 }
 
 void kit_keep(lv_obj_t *obj){ if(obj) lv_obj_add_flag(obj, KIT_DONE); }
+/* an object styled entirely by its screen: the kit never touches it or its children, even on a forced restyle */
+static const char kit_bare_tag = 0;
+void kit_bare(lv_obj_t *obj){ if(obj) lv_obj_set_user_data(obj, (void *)&kit_bare_tag); }
 
 /* content can be built after a screen is shown (lists fill asynchronously, popups open on the top layer): before
  * each redraw, style whatever is new on the visible screen and the top layer. Styled widgets are skipped, and nothing

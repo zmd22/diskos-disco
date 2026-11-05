@@ -10,6 +10,7 @@
 #include "theme.h"
 #include "theme_kit.h"
 #include "screens.h"
+#include "modes.h"
 #include "braun.h"
 #include "braun2.h"
 #include "theme.h"
@@ -118,16 +119,7 @@ static void pp_cb(lv_event_t *e){ (void)e; if(ui_transport_command("0201000C0000
 static void home_cb(lv_event_t *e){ (void)e; screen_show(SCR_HOME); }            /* the cover leads Home */
 
 /* the Mode toggle wears the icon of the mode the player is actually in (same set as Working Mode) */
-static const char *mode_glyph(void){
-    switch(ui_get_source_mode()){
-        case 1:  return LV_SYMBOL_USB;
-        case 2:  return LV_SYMBOL_BLUETOOTH;
-        case 3:  return LV_SYMBOL_DRIVE;
-        case 4:  return LV_SYMBOL_VOLUME_MAX;
-        case 5:  return LV_SYMBOL_WIFI;
-        default: return LV_SYMBOL_SD_CARD;
-    }
-}
+static const char *mode_glyph(void){ return modes_glyph(ui_get_source_mode()); }
 const char *quicksettings_item_glyph(int id){const qs_item_t *item=quicksettings_item(id);return id==Q_PLAYBACK?playback_glyph():id==T_MODE?mode_glyph():item?item->icon:LV_SYMBOL_SETTINGS;}
 static void br2qs_paint(void);
 static void br2qs_build(void);
