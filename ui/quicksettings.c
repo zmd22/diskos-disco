@@ -268,11 +268,12 @@ static const lv_font_t *row_font_list(const char *text,int width,int height){   
 }
 /* Arc: 76 px circles; six on a circle round the screen's centre (the rim's curve, inside the brightness and battery
  * arcs), from upper right (285 degrees) round the left to lower right (75), and one in the middle beside the music */
-#define RING_D 76
-#define RING_R 113
-#define RING_A0 75
-#define RING_A1 285
-#define RING_CX 150
+#define RING_D 74
+#define RING_RX 126   /* an oval, wider than tall: the left bubbles sit out by the rim, Wi-Fi gets room */
+#define RING_RY 118
+#define RING_A0 72
+#define RING_A1 288
+#define RING_CX 158
 static void controls_build(lv_obj_t *root){
     if(g_controls){lv_obj_delete(g_controls);g_controls=NULL;}
     memset(g_dq_row,0,sizeof g_dq_row);memset(g_dq_ico,0,sizeof g_dq_ico);memset(g_dq_val,0,sizeof g_dq_val);
@@ -311,7 +312,7 @@ static void controls_build(lv_obj_t *root){
             w=h=RING_D;
             if(slot==centre){x=RING_CX-RING_D/2;y=180-RING_D/2;}
             else{float a=(no<2?RING_A1:RING_A1-(RING_A1-RING_A0)*(float)arcpos[slot]/(no-1))*0.0174533f;   /* even, both ends pinned */
-                 x=180+(int)lroundf(RING_R*cosf(a))-RING_D/2;y=180+(int)lroundf(RING_R*sinf(a))-RING_D/2;}
+                 x=180+(int)lroundf(RING_RX*cosf(a))-RING_D/2;y=180+(int)lroundf(RING_RY*sinf(a))-RING_D/2;}
             x=disco_mx(x,w);
         }
         else{

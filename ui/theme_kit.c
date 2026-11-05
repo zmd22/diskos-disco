@@ -2,6 +2,7 @@
 /* Copyright (C) 2026 diskOS contributors */
 /* theme_kit.c - the action registry and the active kit (see theme_kit.h). */
 #include "theme_kit.h"
+#include "crashlog.h"
 #include "simple_theme.h"
 #include "theme.h"
 #include "braun.h"
@@ -71,6 +72,7 @@ static void click_swipe_guard(lv_event_t *e){
     if((dx > dy ? dx : dy) > UI_CLICK_SLOP) lv_event_stop_processing(e);
 }
 
+static void where_cb(lv_event_t *e){ crashlog_where((const char *)lv_event_get_user_data(e)); }
 void ui_on(lv_obj_t *obj, lv_event_cb_t cb, lv_event_code_t code, void *user_data, const char *action, ui_tier_t tier){
     if(!obj) return;
     if(action && !strcmp(action,"nav.back"))lv_obj_add_flag(obj,LV_OBJ_FLAG_USER_2);
@@ -78,6 +80,7 @@ void ui_on(lv_obj_t *obj, lv_event_cb_t cb, lv_event_code_t code, void *user_dat
         lv_obj_add_event_cb(obj, click_origin_cb, LV_EVENT_PRESSED, NULL);
         lv_obj_add_event_cb(obj, click_swipe_guard, code, NULL);       /* before the handler: see above */
     }
+    if(action) lv_obj_add_event_cb(obj, where_cb, code, (void *)action);   /* the stall reporter's "after" */
     lv_obj_add_event_cb(obj, cb, code, user_data);
 #ifdef DISKOS_HOST
     if(action) act_add(obj, action, (int)tier);

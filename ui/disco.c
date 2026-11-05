@@ -16,6 +16,7 @@
  *     Hidden on full-screen tools (EQ, Search, keyboard, Quick Settings, saver, Now Playing...).
  * Music itself (the sharp cover, clock, transport) is disco_home.c. */
 #include "screens.h"
+#include "crashlog.h"
 #include "discshelf.h"
 #include "orbit.h"
 #include "theme.h"
@@ -541,6 +542,7 @@ static void go_section(int idx, int dir){
     idx = (idx % g_nmenu + g_nmenu) % g_nmenu;
     g_cur = idx; picker_paint();
     const dsec_t section=menu_section(g_menu[idx]);const dsec_t *s=&section;
+    { char w[64]; snprintf(w, sizeof w, "menu %s", s->name ? s->name : "?"); crashlog_where(w); }
     if(g_menu[idx] >= NSEC){                                         /* an installed app: its landing page, never a straight launch */
         const menu_app_t *app=menu_apps_get(g_menu[idx]-NSEC);
         if(!app){ ui_toast("That app is not installed"); return; }

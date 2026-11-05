@@ -58,8 +58,17 @@ static void start_scan(void);     /* fwd */
  * a freed object). scan_stop() is called at the top of every g_list-clearing path. */
 static lv_obj_t *g_scan_icon;
 static void spin_anim_cb(void *o, int32_t v){ lv_obj_set_style_transform_rotation((lv_obj_t*)o, v, 0); }
+/* Squash and Disco ("B2" header, as on the BT screen): the icon on a disc, grey off / the theme's ink on; the ring
+ * round it fills with the signal in the accent while connected and spins an accent arc while turning on or scanning.
+ * No state text: the connected network's row says it. */
+static int g_b2, g_b2_scanning, g_hstate, g_hsig;
+static lv_obj_t *g_cdisc;
+static char g_cur_ip[32];
+static void b2_ring(void);
+static lv_color_t b2_accent(void){ return th_simple() ? TC(ACCENT_PRIMARY) : ui_current_accent(); }
 static void scan_stop(void){
     if(g_scan_icon){ lv_anim_delete(g_scan_icon, spin_anim_cb); g_scan_icon = NULL; }
+    if(g_b2 && g_b2_scanning){ g_b2_scanning = 0; b2_ring(); }
 }
 
 /* ---- tiny local copies of settings.c's header helpers ------------------- */
@@ -393,8 +402,30 @@ void wifi_supervise(void){
  * that fills with the signal strength once connected), the network name and a line under it ----------- */
 static void hring_spin_exec(void *var, int32_t v){ lv_arc_set_rotation((lv_obj_t *)var, v % 360); }
 enum { WS_OFF, WS_TURNING, WS_IDLE, WS_CONNECTED };
+static int sig_fill(int dbm){ return dbm >= -45 ? 1000 : dbm <= -90 ? 150 : 150 + (dbm + 90) * 850 / 45; }   /* -90..-45 dBm -> 15..100% */
+static void b2_ring(void){
+    if(!g_b2 || !g_hring) return;
+    int spin = g_hstate == WS_TURNING || g_b2_scanning;
+    lv_anim_delete(g_hring, hring_spin_exec);
+    lv_obj_set_style_arc_color(g_hring, b2_accent(), LV_PART_INDICATOR);
+    lv_arc_set_rotation(g_hring, 270);
+    lv_arc_set_value(g_hring, spin ? 220 : g_hstate == WS_CONNECTED ? sig_fill(g_hsig) : 0);
+    if(spin){
+        lv_anim_t a; lv_anim_init(&a); lv_anim_set_var(&a, g_hring); lv_anim_set_exec_cb(&a, hring_spin_exec);
+        lv_anim_set_values(&a, 270, 270 + 360); lv_anim_set_duration(&a, 1100);
+        lv_anim_set_repeat_count(&a, LV_ANIM_REPEAT_INFINITE); lv_anim_start(&a);
+    }
+}
 static void hdr_set(int state, const char *name, const char *sub, int sig_dbm){
     if(!g_hring) return;
+    g_hstate = state; g_hsig = sig_dbm;
+    if(g_b2){
+        lv_obj_set_style_text_color(g_hglyph, state == WS_OFF || state == WS_TURNING ? TC(TEXT_DISABLED) : TC(TEXT_PRIMARY), 0);
+        if(g_cdisc) lv_obj_set_style_bg_color(g_cdisc, state == WS_OFF ? TC(SURFACE) : TC(SURFACE_RAISED), 0);
+        lv_label_set_text(g_hname, ""); lv_label_set_text(g_hsub, (sub && state == WS_OFF) ? sub : "");   /* only an error line */
+        b2_ring();
+        return;
+    }
     if(g_hknob){                                                   /* Braun: the knob's pointer + lamp say it */
         br_knob_set_on(g_hknob, state == WS_CONNECTED);
         lv_label_set_text(g_hname, name ? name : ""); lv_label_set_text(g_hsub, sub ? sub : "");
@@ -427,7 +458,8 @@ static void list_msg(const char *m){
     lv_obj_t *e = lv_label_create(g_list);
     lv_label_set_text(e, m);
     lv_obj_set_style_text_color(e, TC(TEXT_MUTED), 0);
-    lv_obj_set_style_text_font(e, TF(UI_14), 0);
+    lv_obj_set_style_text_font(e, g_b2 ? TF(UI_18) : TF(UI_14), 0);
+    if(g_b2){ lv_label_set_long_mode(e, LV_LABEL_LONG_WRAP); lv_obj_set_width(e, 240); lv_obj_set_style_text_align(e, LV_TEXT_ALIGN_CENTER, 0); }
 }
 /* "Scanning" + a spinning refresh glyph, centered in the list area */
 static void list_msg_scanning(void){
@@ -435,6 +467,14 @@ static void list_msg_scanning(void){
     scan_stop();
     lv_obj_clean(g_list);
     lv_obj_set_flex_align(g_list, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    if(g_b2){                                                   /* the ring spins; one large word in the middle */
+        lv_obj_t *t = lv_label_create(g_list);
+        lv_label_set_text(t, "Scanning...");
+        lv_obj_set_style_text_color(t, TC(TEXT_SECONDARY), 0);
+        lv_obj_set_style_text_font(t, TF(UI_28), 0);
+        g_b2_scanning = 1; b2_ring();
+        return;
+    }
     lv_obj_t *row = lv_obj_create(g_list);
     lv_obj_remove_style_all(row);
     lv_obj_set_size(row, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
@@ -828,7 +868,7 @@ static void add_signal_bars(lv_obj_t *parent, int x, int y, int sig){
 static void add_net_row(const char *ssid, int signal, int secured, int connected){
     lv_obj_t *r = lv_button_create(g_list);
     lv_obj_remove_style_all(r);
-    lv_obj_set_size(r, WROW_W, 50);
+    lv_obj_set_size(r, g_b2 ? 280 : WROW_W, g_b2 ? 66 : 50);
     lv_obj_add_flag(r, LV_OBJ_FLAG_USER_1);                 /* curves with the circle */
     lv_obj_set_style_radius(r, TH_R_ROW, 0);
     lv_obj_set_style_bg_color(r, connected ? TC(SURFACE_RAISED) : TC(SURFACE), 0);
@@ -875,6 +915,28 @@ static void add_net_row(const char *ssid, int signal, int secured, int connected
         lv_obj_set_style_bg_opa(body, LV_OPA_COVER, 0);
     }
     add_signal_bars(r, 232, 14, signal);
+    if(g_b2){                                                   /* two lines like the BT rows: the name, then its state */
+        lv_obj_set_pos(t, 16, 6); lv_obj_set_size(t, 280 - 16 - 62, 28);
+        lv_obj_set_style_text_font(t, th_simple()?TF(UI_22):ui_font_cjk(20), 0);
+        lv_obj_t *sl = lv_label_create(r);
+        char st[64];
+        if(connected) snprintf(st, sizeof st, "Connected%s%s", g_cur_ip[0] ? " - " : "", g_cur_ip);
+        else snprintf(st, sizeof st, "%s", secured ? "Secured" : "Open");
+        lv_label_set_text(sl, st);
+        lv_label_set_long_mode(sl, LV_LABEL_LONG_DOT); lv_obj_set_size(sl, lv_pct(88), lv_font_get_line_height(TF(UI_18)));
+        lv_obj_set_pos(sl, 16, 36);
+        lv_obj_set_style_text_font(sl, TF(UI_18), 0);
+        lv_obj_set_style_text_color(sl, connected ? b2_accent() : TC(TEXT_SECONDARY), 0);
+        uint32_t n = lv_obj_get_child_count(r);
+        for(uint32_t k = 0; k < n; k++){                        /* the check mark goes (the state line says it); padlock + bars move right */
+            lv_obj_t *o = lv_obj_get_child(r, (int32_t)k);
+            if(o == t || o == sl) continue;
+            if(lv_obj_check_type(o, &lv_label_class) && !strcmp(lv_label_get_text(o), LV_SYMBOL_OK)){ lv_obj_add_flag(o, LV_OBJ_FLAG_HIDDEN); continue; }
+            /* anchored to the row's right end on the name line, so a row the curve narrows keeps them */
+            int32_t ox = lv_obj_get_style_x(o, 0), ow = lv_obj_get_style_width(o, 0), oy = lv_obj_get_style_y(o, 0);
+            lv_obj_align(o, LV_ALIGN_TOP_RIGHT, -(WROW_W - ox - ow) - 4, oy - 2);
+        }
+    }
 }
 
 /* one de-duplicated network of a scan */
@@ -969,6 +1031,7 @@ static void scan_fill(void){
     char cs[64], cip[32];
     if(!(wifi_radio_on() && wifi_status(cs, sizeof cs, cip, sizeof cip))) cs[0]=0;
     snprintf(g_cur_ssid, sizeof g_cur_ssid, "%s", cs);
+    snprintf(g_cur_ip, sizeof g_cur_ip, "%s", cs[0] ? cip : "");
     g_cur_sig = -100;
 
     char *buf = run_cap_all(WCLI "scan_results 2>/dev/null", 1 << 20);
@@ -1137,6 +1200,40 @@ void wifi_create(lv_obj_t *root){
     if(th_simple())simple_radio_skin(g_hring,g_hglyph,g_hname,g_hsub,g_sw,rb,g_list);
     if(th_null())null_radio_skin(root,"WI-FI",g_hring,g_hglyph,g_hname,g_hsub,g_sw,rb,g_list);
     if(th_zune())zune_radio_skin(root,"wi-fi","wi-fi on","scan again",g_hring,g_hglyph,g_hname,g_hsub,g_sw,rb,g_list);
+    g_b2 = th_simple() || th_disco();
+    if(g_b2){                                                  /* Squash / Disco: the B2 header (see b2_ring), as on BT */
+        const int cy = 52;
+        lv_obj_add_flag(g_hname, LV_OBJ_FLAG_HIDDEN);
+        g_cdisc = lv_obj_create(root); lv_obj_remove_style_all(g_cdisc); kit_keep(g_cdisc);
+        lv_obj_set_size(g_cdisc, 72, 72); lv_obj_set_style_radius(g_cdisc, LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_style_bg_opa(g_cdisc, LV_OPA_COVER, 0); lv_obj_remove_flag(g_cdisc, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_align(g_cdisc, LV_ALIGN_TOP_MID, 0, cy - 36); lv_obj_move_to_index(g_cdisc, 0);
+        lv_obj_set_size(g_hring, 86, 86); lv_obj_align(g_hring, LV_ALIGN_TOP_MID, 0, cy - 43);
+        lv_obj_set_style_arc_width(g_hring, 3, LV_PART_MAIN); lv_obj_set_style_arc_width(g_hring, 3, LV_PART_INDICATOR);
+        lv_obj_set_style_arc_color(g_hring, TC(SURFACE_RAISED), LV_PART_MAIN);
+        lv_obj_set_style_text_font(g_hglyph, TF(UI_36), 0); lv_obj_set_size(g_hglyph, 64, LV_SIZE_CONTENT);
+        lv_obj_set_style_pad_top(g_hglyph, 0, 0); lv_obj_set_style_text_align(g_hglyph, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_update_layout(g_hglyph); lv_obj_align(g_hglyph, LV_ALIGN_TOP_MID, 0, cy - lv_obj_get_height(g_hglyph) / 2);
+        lv_obj_add_flag(rb, LV_OBJ_FLAG_HIDDEN);              /* refresh: a bare grey icon the theme kit leaves alone */
+        lv_obj_t *rx = lv_obj_create(root); lv_obj_remove_style_all(rx); kit_bare(rx);
+        lv_obj_set_size(rx, 40, 40); lv_obj_align(rx, LV_ALIGN_TOP_MID, -88, cy - 20);
+        lv_obj_add_flag(rx, LV_OBJ_FLAG_CLICKABLE); lv_obj_set_ext_click_area(rx, 10); lv_obj_remove_flag(rx, LV_OBJ_FLAG_SCROLLABLE);
+        lv_obj_set_style_radius(rx, LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_style_bg_color(rx, TC(SURFACE), LV_STATE_PRESSED); lv_obj_set_style_bg_opa(rx, LV_OPA_COVER, LV_STATE_PRESSED);
+        lv_obj_add_event_cb(rx, rescan_cb, LV_EVENT_CLICKED, NULL);
+        lv_obj_t *rxl = lv_label_create(rx); lv_label_set_text(rxl, LV_SYMBOL_REFRESH);
+        lv_obj_set_style_text_font(rxl, TF(UI_18), 0); lv_obj_set_style_text_color(rxl, TC(TEXT_DISABLED), 0); lv_obj_center(rxl);
+        lv_obj_set_size(g_sw, 42, 22); lv_obj_align(g_sw, LV_ALIGN_TOP_MID, 88, cy - 11); lv_obj_set_ext_click_area(g_sw, 14);
+        lv_obj_set_style_bg_color(g_sw, TC(SURFACE_RAISED), LV_PART_MAIN);
+        lv_obj_set_style_bg_color(g_sw, b2_accent(), (lv_style_selector_t)LV_PART_INDICATOR | LV_STATE_CHECKED);
+        lv_obj_set_style_bg_color(g_sw, TC(TEXT_DISABLED), LV_PART_KNOB);
+        lv_obj_set_style_bg_color(g_sw, TC(TEXT_PRIMARY), (lv_style_selector_t)LV_PART_KNOB | LV_STATE_CHECKED);
+        kit_keep(g_sw);
+        lv_obj_set_style_text_font(g_hsub, TF(UI_16), 0); lv_obj_align(g_hsub, LV_ALIGN_TOP_MID, 0, 102);
+        lv_obj_set_pos(g_list, (360 - 280) / 2, 94); lv_obj_set_size(g_list, 280, 254);
+        lv_obj_set_style_pad_bottom(g_list, 24, 0); lv_obj_set_style_pad_row(g_list, 6, 0);
+        hdr_set(WS_OFF, "", "", 0);
+    }
     if(th_braun_family()){
         lv_obj_add_flag(g_hring, LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(g_hglyph, LV_OBJ_FLAG_HIDDEN);
         lv_obj_t *pd = br_disc(root, 180, 80, 44, BR_PANEL); (void)pd;
@@ -1157,7 +1254,7 @@ void wifi_create(lv_obj_t *root){
 
 /* called from settings when the Wi-Fi row is tapped */
 void wifi_open(void){
-    if(g_sw) lv_obj_set_style_bg_color(g_sw, ui_current_accent(), (lv_style_selector_t)LV_PART_INDICATOR | LV_STATE_CHECKED);   /* follow an accent change */
+    if(g_sw) lv_obj_set_style_bg_color(g_sw, g_b2 ? b2_accent() : ui_current_accent(), (lv_style_selector_t)LV_PART_INDICATOR | LV_STATE_CHECKED);   /* follow an accent change */
     if(g_sw){
         if(wifi_radio_on()) lv_obj_add_state(g_sw, LV_STATE_CHECKED);
         else                lv_obj_clear_state(g_sw, LV_STATE_CHECKED);
@@ -1172,4 +1269,8 @@ void wifi_open(void){
 }
 
 /* Host preview fixture: not called by device code. */
-void wifi_preview_null(void){lv_obj_clean(g_list);hdr_set(WS_CONNECTED,"Disco Home","CONNECTED / -48 dBm",-48);lv_obj_add_state(g_sw,LV_STATE_CHECKED);add_net_row("Disco Home",-48,1,1);add_net_row("Guest network",-65,1,0);add_net_row("Studio",-75,1,0);curvelist_update(&g_wcl);}
+void wifi_preview_null(void){
+    if(getenv("WIFI_PREVIEW_OFF")){ hdr_set(WS_OFF,"Wi-Fi is off","",0); lv_obj_clear_state(g_sw,LV_STATE_CHECKED); list_msg("Switch it on to see networks"); return; }
+    if(getenv("WIFI_PREVIEW_SCAN")){ hdr_set(WS_CONNECTED,"Disco Home","",-48); lv_obj_add_state(g_sw,LV_STATE_CHECKED); list_msg_scanning(); return; }
+    snprintf(g_cur_ip,sizeof g_cur_ip,"192.168.1.42");
+    lv_obj_clean(g_list);hdr_set(WS_CONNECTED,"Disco Home","CONNECTED / -48 dBm",-48);lv_obj_add_state(g_sw,LV_STATE_CHECKED);add_net_row("Disco Home",-48,1,1);add_net_row("Guest network",-65,1,0);add_net_row("Studio",-75,1,0);curvelist_update(&g_wcl);}

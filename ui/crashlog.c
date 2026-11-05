@@ -3,6 +3,7 @@
 #include "crashlog.h"
 #include "version.h"
 #include <errno.h>
+#include <pthread.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <stdarg.h>
@@ -80,6 +81,44 @@ static void on_crash(int sig, siginfo_t *si, void *ucv){
      * process exactly as before (abort() raises again by itself). The watchdog then does what it always did. */
 }
 static char g_altstack[16384];                            /* a crash from a stack overflow still gets recorded */
+/* ---- stall reporter: a watchdog thread notes a main loop that has been stuck for STALL_MS, while it is stuck,
+ * with the screen and the last thing the UI was asked to do. Async-signal-safe formatting only (no stdio, no
+ * malloc): the stuck main thread may be holding the allocator's lock. */
+#define STALL_MS 3000
+static volatile long g_tick_ms;                           /* the main loop's last pass (monotonic ms), 0 = not yet */
+static volatile int g_scr = -1;
+static char g_where[96];
+static volatile unsigned g_where_seq;
+static long mono_ms(void);
+void crashlog_where(const char *what){
+    if(!what) return;
+    size_t n = strlen(what); if(n > sizeof g_where - 1) n = sizeof g_where - 1;
+    memcpy(g_where, what, n); g_where[n] = 0; g_where_seq++;
+}
+void crashlog_screen(int scr){ g_scr = scr; }
+static void *stall_thread(void *arg){
+    (void)arg;
+    prctl(PR_SET_NAME, (unsigned long)"stallwatch", 0, 0, 0);
+    long reported = 0;                                    /* the stall length last written for this stall */
+    for(;;){
+        struct timespec ts = { 0, 500 * 1000000L }; nanosleep(&ts, NULL);
+        long last = g_tick_ms, now = mono_ms();
+        if(!last){ continue; }
+        long stuck = now - last;
+        if(stuck < STALL_MS){ reported = 0; continue; }
+        if(reported && stuck < reported * 3) continue;    /* 3 s, then 9 s, 27 s ... */
+        reported = stuck;
+        char where[sizeof g_where]; memcpy(where, g_where, sizeof where); where[sizeof where - 1] = 0;
+        struct timespec up; clock_gettime(CLOCK_MONOTONIC, &up);
+        line_t l = { .n = 0 };
+        put(&l, "STALL v="); put(&l, DISCO_VERSION);
+        put(&l, " stuck="); dec(&l, stuck); put(&l, "ms screen="); dec(&l, g_scr);
+        put(&l, " after=\""); put(&l, where[0] ? where : "?"); put(&l, "\" uptime="); dec(&l, (long)up.tv_sec);
+        put(&l, "\n");
+        write_line(&l);
+    }
+    return NULL;
+}
 static void mem_read(long *avail, long *total, long *rss);
 void crashlog_install(void){
     stack_t ss = { .ss_sp = g_altstack, .ss_size = sizeof g_altstack, .ss_flags = 0 };
@@ -93,6 +132,10 @@ void crashlog_install(void){
     struct timespec up; clock_gettime(CLOCK_MONOTONIC, &up);
     long avail = 0, total = 0, rss = 0; mem_read(&avail, &total, &rss);
     crashlog_note("start v=%s uptime=%ld mem_free=%ldK of %ldK", DISCO_VERSION, (long)up.tv_sec, avail, total);
+    pthread_t th; pthread_attr_t at; pthread_attr_init(&at); pthread_attr_setstacksize(&at, 64 * 1024);
+    pthread_attr_setdetachstate(&at, PTHREAD_CREATE_DETACHED);
+    if(pthread_create(&th, &at, stall_thread, NULL) != 0) crashlog_note("stall reporter: no thread");
+    pthread_attr_destroy(&at);
 }
 /* ---- diagnosis in the main loop (no behaviour change) ----
  * Freeze detector: the main loop normally comes round every few to 200 ms. A gap over FREEZE_MS means something held
@@ -118,6 +161,7 @@ static void mem_read(long *avail, long *total, long *rss){
 void crashlog_tick(void){
     static long last, last_freeze_note = -60000, last_mem_check, last_mem_note = -60000;
     long now = mono_ms();
+    g_tick_ms = now;                                        /* for the stall reporter */
     if(last && now - last > FREEZE_MS && now - last_freeze_note > 60000){
         crashlog_note("main loop stalled %ld ms", now - last); last_freeze_note = now;
     }

@@ -3543,7 +3543,7 @@ int main(int argc, char **argv){
         {void zthumb_tick(void);zthumb_tick();} if(th_zune()){void zune_ui_tick(void);zune_ui_tick();}
         discshelf_tick();
         play_defer_tick();           /* a play waiting for the codec switch */
-        crashlog_tick();             /* freeze detector + memory watch (log only) */
+        crashlog_tick(); crashlog_screen(screen_current());   /* freeze detector + memory watch; the stall reporter's screen (log only) */
         {   /* the player restarted underneath us: worth a line in the crash log (who went down first?) */
             static unsigned seen_gen; unsigned gen = ipc_generation();
             if(seen_gen && gen != seen_gen) crashlog_note("player restarted (connection %u -> %u)", seen_gen, gen);
