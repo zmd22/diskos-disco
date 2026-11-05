@@ -3,7 +3,9 @@
  * The sendspin-disc helper talks to Music Assistant and hands the audio to the Disc's own AirPlay receiver (mq_player
  * owns the audio hardware). This file is the UI side: the on/off switch, the screen that shows the connection while
  * nothing plays (SCR_MA), and Settings > Network > Music Assistant. While music plays, Music shows it like any song.
- * Status from the helper: /tmp/ma/status, "key=value" lines (state=off|connecting|ready|playing|error, server=, msg=). */
+ * Status from the helper: /tmp/ma/status, "key=value" lines (state=off|connecting|waiting|ready|playing|error, server=, msg=,
+ * paired=, pair=digits:<code>|qr:<token> while a pairing code is shown, pair_note=). Sendspin 1.0 pairing: the code is
+ * shown here on top of everything (the screen wakes), the Pairing PSK token lives in Settings > MA Sendspin. */
 #include "screens.h"
 #include "theme.h"
 #include "config.h"
@@ -14,6 +16,7 @@
 #include <strings.h>
 #include "theme_kit.h"
 #include "ipc.h"
+#include "sendspin_crypto.h"
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -23,21 +26,29 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 
-enum { MA_OFF, MA_CONNECTING, MA_READY, MA_PLAYING, MA_ERROR };
+enum { MA_OFF, MA_CONNECTING, MA_READY, MA_PLAYING, MA_ERROR, MA_WAITING };
 static int g_state = MA_OFF;
 static char g_server_seen[64];                             /* the server the helper is connected to */
 static char g_msg[96];
 static int g_test = -1;                                    /* host renders force a state */
+static char g_pair_show[160], g_pair_note[96];             /* the pairing code / token on screen; a short note */
+static int g_paired;                                       /* the connection runs on a pairing */
+static void pair_overlay_sync(void);
 
 /* ---------------------------------------------------------------- settings values (Settings > Network > Music Assistant) */
 char g_ma_server_lbl[48] = "Auto";
 char g_ma_name_lbl[48] = "Snowsky Disc";
+char g_ma_pairs_lbl[24] = "None";
 
 static void labels_load(void){
     const char *b = cfg_get_str("ma_server", "");
     snprintf(g_ma_server_lbl, sizeof g_ma_server_lbl, "%s", b && b[0] ? b : "Auto");
     b = cfg_get_str("ma_name", "");
     snprintf(g_ma_name_lbl, sizeof g_ma_name_lbl, "%s", b && b[0] ? b : "Snowsky Disc");
+}
+static void pairs_label(void){                              /* Settings > MA Sendspin > Forget Servers: how many pairings */
+    ssc_keys k; int n = ssc_keys_load(&k, 0) == 0 ? k.nrec : 0; ssc_wipe(&k, sizeof k);
+    if(n) snprintf(g_ma_pairs_lbl, sizeof g_ma_pairs_lbl, "%d paired", n); else snprintf(g_ma_pairs_lbl, sizeof g_ma_pairs_lbl, "None");
 }
 int ma_is_on(void){ return cfg_get_int("ma_on", 0); }
 
@@ -72,12 +83,14 @@ static void helper_kill_stale(void){                       /* a helper left over
 static void helper_start(void){
     if(g_pid > 0) return;
     labels_load();
-    char srv[64], name[48], id[48], delay[16];
+    char srv[64], name[48], id[48], delay[16], unp[4];
     snprintf(srv, sizeof srv, "%s", strcmp(g_ma_server_lbl, "Auto") ? g_ma_server_lbl : "auto");
     snprintf(name, sizeof name, "%s", g_ma_name_lbl);
     client_id(id, sizeof id);
     snprintf(delay, sizeof delay, "%d", cfg_get_int("ma_delay_ms", 0));
-    char *argv[] = { "ma-sendspin", "--sendspin", srv, name, id, delay, NULL };
+    snprintf(unp, sizeof unp, "%d", cfg_get_int("ma_unpaired", 1) ? 1 : 0);
+    /* id: unused since Sendspin 1.0 (the client_id is the Disc's key, made by the helper); 2000 / 5000: AirPlay latency, port */
+    char *argv[] = { "ma-sendspin", "--sendspin", srv, name, id, delay, "2000", "5000", unp, NULL };
     pid_t pid = 0;
     /* the running binary itself: the OTA launcher runs mq_ui from a private in-RAM copy, so its path ("/memfd:...
      * (deleted)") can't be opened by name - /proc/self/exe can (in the spawned child it is still this binary) */
@@ -111,7 +124,7 @@ static void helper_stop(void){
     }
     unlink("/tmp/ma/status");
     ipc_clear_external();
-    g_mt[0] = 0;
+    g_mt[0] = 0; g_pair_show[0] = 0; pair_overlay_sync();
 }
 static void helper_watch(void){                            /* reap / restart; called from the timer */
     if(g_dying > 0){
@@ -144,13 +157,18 @@ static void status_read(void){
     if(g_test >= 0){ g_state = g_test; return; }
     if(!ma_is_on()){ g_state = MA_OFF; return; }
     FILE *f = fopen("/tmp/ma/status", "r");
-    if(!f){ g_state = MA_CONNECTING; return; }
+    if(!f){ g_state = MA_CONNECTING; g_pair_show[0] = 0; return; }
     char line[300]; int have = 0;
-    g_mt[0] = g_martist[0] = g_malbum[0] = g_track[0] = 0; g_msg[0] = 0;
+    char note[96] = "";
+    g_mt[0] = g_martist[0] = g_malbum[0] = g_track[0] = 0; g_msg[0] = 0; g_pair_show[0] = 0; g_paired = 0;
     while(fgets(line, sizeof line, f)){
         line[strcspn(line, "\r\n")] = 0;
         char *v = strchr(line, '='); if(!v) continue; *v++ = 0;
-        if(!strcmp(line, "state")) g_state = !strcmp(v, "ready") ? MA_READY : !strcmp(v, "playing") ? MA_PLAYING : !strcmp(v, "error") ? MA_ERROR : MA_CONNECTING;
+        if(!strcmp(line, "state")) g_state = !strcmp(v, "ready") ? MA_READY : !strcmp(v, "playing") ? MA_PLAYING : !strcmp(v, "error") ? MA_ERROR
+                                           : !strcmp(v, "waiting") ? MA_WAITING : MA_CONNECTING;
+        else if(!strcmp(line, "pair")) snprintf(g_pair_show, sizeof g_pair_show, "%s", v);
+        else if(!strcmp(line, "pair_note")) snprintf(note, sizeof note, "%s", v);
+        else if(!strcmp(line, "paired")) g_paired = atoi(v);
         else if(!strcmp(line, "server")) snprintf(g_server_seen, sizeof g_server_seen, "%s", v);
         else if(!strcmp(line, "msg")) snprintf(g_msg, sizeof g_msg, "%s", v);
         else if(!strcmp(line, "title")){ snprintf(g_mt, sizeof g_mt, "%s", v); have = 1; }
@@ -163,6 +181,7 @@ static void status_read(void){
         else if(!strcmp(line, "speed")) g_speed = atoi(v);
     }
     fclose(f);
+    if(strcmp(note, g_pair_note)){ snprintf(g_pair_note, sizeof g_pair_note, "%s", note); if(note[0]) ui_toast(note); }
     /* the track goes to Music while the helper is connected and knows one */
     if(have && g_mt[0] && (g_state == MA_READY || g_state == MA_PLAYING))
         ipc_set_external(g_mt, g_martist, g_malbum, g_track, g_dur, g_prog, g_prog_at, g_state == MA_PLAYING ? g_speed : 0);
@@ -256,12 +275,17 @@ void ma_refresh(void){
             snprintf(st, sizeof st, "Looking for Music Assistant");
             snprintf(d1, sizeof d1, "%s", srv[0] ? srv : "On your network");
             break;
+        case MA_WAITING:
+            snprintf(st, sizeof st, "Connected");
+            snprintf(d1, sizeof d1, "Approve or pair %s", g_ma_name_lbl);
+            snprintf(d2, sizeof d2, "in %s", srv[0] ? srv : "Music Assistant");
+            break;
         case MA_READY: case MA_PLAYING:
             if(g_mt[0]){                                     /* a track: what it is (Music shows it in full) */
                 snprintf(st, sizeof st, g_state == MA_PLAYING ? "Playing" : "Paused");
                 snprintf(d1, sizeof d1, "%s", g_mt); snprintf(d2, sizeof d2, "%s", g_martist);
             } else {
-                snprintf(st, sizeof st, "Ready");
+                snprintf(st, sizeof st, g_paired ? "Ready, paired" : "Ready");
                 snprintf(d1, sizeof d1, "Pick %s there", g_ma_name_lbl);
                 snprintf(d2, sizeof d2, "%s", srv[0] ? srv : "Music Assistant");
             }
@@ -275,13 +299,13 @@ void ma_refresh(void){
             break;
     }
     txt(g_status, st); txt(g_d1, d1); txt(g_d2, d2);
-    set_spin(g_state == MA_CONNECTING, g_state >= MA_READY && g_state != MA_ERROR);
+    set_spin(g_state == MA_CONNECTING, (g_state >= MA_READY && g_state != MA_ERROR) || g_state == MA_WAITING);
     int on = g_state != MA_OFF;
     txt(g_pill_lbl, on ? "Turn off" : "Turn on");
     lv_obj_set_style_bg_color(g_pill, theme_color_from_rgb(on ? TH_SURF1 : TH_ACCENT), 0);
 }
 void ma_test_state(int s){ g_test = s; ma_refresh(); }      /* host renders */
-static void tick(lv_timer_t *t){ (void)t; helper_watch(); if(screen_current() == SCR_MA) ma_refresh(); else status_read(); }
+static void tick(lv_timer_t *t){ (void)t; helper_watch(); if(screen_current() == SCR_MA) ma_refresh(); else status_read(); pair_overlay_sync(); }
 /* playing through Music Assistant: keeps the Disc from its idle power-off (main.c -> power_tick) */
 int ma_playing(void){ return ma_is_on() && g_state == MA_PLAYING; }
 static void pill_cb(lv_event_t *e){ if(lv_event_get_code(e) == LV_EVENT_CLICKED) ma_set_on(!ma_is_on()); }
@@ -322,7 +346,7 @@ void ma_create(lv_obj_t *root){
     lv_obj_set_style_text_color(g_pill_lbl, TC(TEXT_PRIMARY), 0);
     lv_label_set_text(g_pill_lbl, "Turn on");
     lv_obj_center(g_pill_lbl);
-    g_timer = lv_timer_create(tick, 2000, NULL);
+    g_timer = lv_timer_create(tick, 500, NULL);              /* a pairing code shows within half a second */
     ma_refresh();
 }
 
@@ -337,4 +361,106 @@ static void name_done(const char *t){
 }
 void ma_edit_server(void){ kbinput_open("Server (empty = Auto)", strcmp(g_ma_server_lbl, "Auto") ? g_ma_server_lbl : "", server_done); }
 void ma_edit_name(void){ kbinput_open("Player name", g_ma_name_lbl, name_done); }
-void ma_settings_load(void){ labels_load(); }
+void ma_settings_load(void){ labels_load(); pairs_label(); }
+void ma_unpaired_changed(void){ ma_restart(); }            /* the helper advertises it in client/hello */
+
+/* ---------------------------------------------------------------- pairing: the code on screen, the token, forgetting */
+static lv_obj_t *g_pov;                                    /* the pairing overlay (top layer) */
+static char g_pov_for[160];                                /* what it shows */
+static int g_pov_token;                                    /* it is the Settings token view, not a code */
+static char g_pov_cancelled[160];                          /* a code cancelled here: not shown again while the helper ends it */
+static void pov_close(void){ if(g_pov){ lv_obj_delete(g_pov); g_pov = NULL; } g_pov_for[0] = 0; g_pov_token = 0; }
+static void pov_cancel_cb(lv_event_t *e){ (void)e; if(!g_pov_token){ snprintf(g_pov_cancelled, sizeof g_pov_cancelled, "%s", g_pov_for); ma_send("pair-cancel"); } pov_close(); }
+static lv_obj_t *pov_label(lv_obj_t *p, const char *t, const lv_font_t *f, lv_color_t c, int y, int w){
+    lv_obj_t *l = lv_label_create(p);
+    lv_label_set_text(l, t);
+    lv_label_set_long_mode(l, LV_LABEL_LONG_WRAP);
+    lv_obj_set_width(l, w);
+    lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_style_text_font(l, f, 0);
+    lv_obj_set_style_text_color(l, c, 0);
+    lv_obj_align(l, LV_ALIGN_CENTER, 0, y);
+    return l;
+}
+static void pov_qr(lv_obj_t *p, const char *text, int size, int y){
+    lv_obj_t *qr = lv_qrcode_create(p);
+    lv_qrcode_set_size(qr, size);
+    lv_qrcode_set_dark_color(qr, TC(FIXED_QR_DARK));
+    lv_qrcode_set_light_color(qr, TC(FIXED_QR_LIGHT));
+    lv_qrcode_update(qr, text, (uint32_t)strlen(text));
+    lv_obj_set_style_border_width(qr, 5, 0);
+    lv_obj_set_style_border_color(qr, TC(FIXED_QR_LIGHT), 0);
+    lv_obj_align(qr, LV_ALIGN_CENTER, 0, y);
+}
+static void pov_button(lv_obj_t *p, const char *txt, int y){
+    lv_obj_t *b = lv_button_create(p);
+    lv_obj_remove_style_all(b);
+    lv_obj_set_size(b, 120, 44); lv_obj_align(b, LV_ALIGN_CENTER, 0, y);
+    lv_obj_set_ext_click_area(b, 6);
+    lv_obj_set_style_radius(b, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(b, theme_color_from_rgb(TH_SURF1), 0);
+    lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
+    lv_obj_add_event_cb(b, pov_cancel_cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *l = lv_label_create(b); lv_label_set_text(l, txt);
+    lv_obj_set_style_text_font(l, TH_F_DETAIL, 0); lv_obj_set_style_text_color(l, TC(TEXT_PRIMARY), 0); lv_obj_center(l);
+}
+static lv_obj_t *pov_open(void){
+    pov_close();
+    g_pov = lv_obj_create(lv_layer_top());
+    lv_obj_remove_style_all(g_pov);
+    lv_obj_set_size(g_pov, 360, 360);
+    lv_obj_set_style_bg_color(g_pov, TC(CANVAS), 0);
+    lv_obj_set_style_bg_opa(g_pov, LV_OPA_COVER, 0);
+    lv_obj_add_flag(g_pov, LV_OBJ_FLAG_CLICKABLE);          /* swallow taps behind it */
+    lv_obj_remove_flag(g_pov, LV_OBJ_FLAG_SCROLLABLE);
+    return g_pov;
+}
+/* a pairing code from the helper: shown over everything, the screen woken, until it is used or cancelled */
+static void pair_overlay_sync(void){
+    if(g_pov_token) return;                                  /* the token view stays until closed */
+    if(!g_pair_show[0]){ g_pov_cancelled[0] = 0; if(g_pov) pov_close(); return; }
+    if(!strcmp(g_pair_show, g_pov_cancelled)) return;
+    if(g_pov && !strcmp(g_pov_for, g_pair_show)) return;
+    lv_obj_t *o = pov_open();
+    snprintf(g_pov_for, sizeof g_pov_for, "%s", g_pair_show);
+    if(!strncmp(g_pair_show, "digits:", 7) && strlen(g_pair_show) == 13){
+        char code[8]; snprintf(code, sizeof code, "%.3s-%.3s", g_pair_show + 7, g_pair_show + 10);   /* grouped 3-3 */
+        pov_label(o, "Pair with Music Assistant", TH_F_TITLE, TC(TEXT_PRIMARY), -96, 280);
+        pov_label(o, "Enter this code there", TH_F_DETAIL, TC(TEXT_SECONDARY), -58, 260);
+        pov_label(o, code, TF(UI_44), ui_current_accent(), 0, 300);
+        pov_label(o, "The code stays the same if you mistype it", TF(UI_14), TC(TEXT_MUTED), 50, 240);
+        pov_button(o, "Cancel", 112);
+    } else if(!strncmp(g_pair_show, "qr:", 3)){
+        pov_label(o, "Scan with Music Assistant", TH_F_DETAIL, TC(TEXT_PRIMARY), -124, 260);
+        pov_qr(o, g_pair_show + 3, 170, -10);
+        pov_button(o, "Cancel", 122);
+    }
+    ui_request_wake();
+}
+int ma_pairing_shown(void){ return g_pov != NULL; }        /* keeps the screen on */
+void ma_show_token(void){
+    ssc_keys k; char tok[160];
+    if(ssc_keys_load(&k, 1) || ssc_keys_token(&k, tok, sizeof tok) < 0){ ssc_wipe(&k, sizeof k); ui_toast("Can't read the Sendspin keys"); return; }
+    ssc_wipe(&k, sizeof k);
+    lv_obj_t *o = pov_open(); g_pov_token = 1;
+    pov_label(o, "Pairing token", TH_F_DETAIL, TC(TEXT_PRIMARY), -134, 260);
+    pov_qr(o, tok, 176, -16);
+    pov_label(o, "Scan it in Music Assistant. Keep it private.", TF(UI_14), TC(TEXT_MUTED), 92, 250);
+    pov_button(o, "Close", 134);
+    ssc_wipe(tok, sizeof tok);
+}
+static void forget_yes(void){
+    ssc_keys k;
+    if(ssc_keys_load(&k, 0) == 0){
+        int n = k.nrec; k.nrec = 0; memset(k.rec, 0, sizeof k.rec);
+        int r = ssc_keys_save(&k); ssc_wipe(&k, sizeof k);
+        char b[64]; snprintf(b, sizeof b, r ? "Couldn't forget the servers" : n == 1 ? "Forgot 1 server" : "Forgot %d servers", n);
+        ui_toast(b);
+    }
+    pairs_label(); setlist_refresh(); ma_restart();
+}
+void ma_forget_servers(void){
+    pairs_label();
+    if(!strcmp(g_ma_pairs_lbl, "None")){ ui_toast("No paired servers"); return; }
+    fileops_confirm("Forget paired servers?", "Each server must pair again", "Forget", forget_yes);
+}

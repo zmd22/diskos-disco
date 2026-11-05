@@ -122,6 +122,8 @@ int ui_press_travel(void){
 static _Atomic int g_bl_idle = 0;
 int ui_main_is_idle(void){ return g_bl_idle; }
 int ui_display_is_off(void){ return g_screen_off; }
+static volatile int g_wake_req;
+void ui_request_wake(void){ g_wake_req = 1; }   /* lights the screen (and leaves the saver) on the next loop */
 void ui_apply_swipe_thresh(int px){   /* live, no flash write */
     if(px < 20) px = 20; if(px > 200) px = 200;
     g_swipe_thresh = px;
@@ -3976,7 +3978,12 @@ int main(int argc, char **argv){
                 onboarding_woke_by_touch();                  /* once: the power button is the pocket lock */
             } else if(touch_gate_wake && lifted) touch_gate_wake = 0;
         }
-        if(kbinput_active()) last_activity = lv_tick_get();
+        if(kbinput_active() || ma_pairing_shown()) last_activity = lv_tick_get();   /* typing / a pairing code on screen: stay lit */
+        if(g_wake_req){                                   /* something needs to be seen now (MA Sendspin pairing code) */
+            g_wake_req = 0; last_activity = lv_tick_get();
+            if(bl_state){ ui_backlight(ui_effective_brightness()); bl_state = 0; player_blanked = 0; }
+            if(screen_current() == SCR_SAVER) screen_back();
+        }
         {   /* Idle power-off (issue #17): only "idle" when playing music locally and nothing is playing. A working mode
              * other than Playback (USB DAC, Bluetooth DAC, BT streaming, AirPlay, USB storage) is the Disc in use
              * without a song of its own moving, and a Disc on external power (plugged in, or charging) is on purpose:

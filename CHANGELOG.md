@@ -2,6 +2,18 @@
 
 User-facing changes in diskOS Disco!. Details of each release are in [docs/releases](docs/releases/); everything else is in the Git history. diskOS is beta software.
 
+## 3.4.1
+
+**MA Sendspin speaks Sendspin 1.0** (experimental): needs Music Assistant 2.10.7 or newer.
+
+- End-to-end encrypted connection to Music Assistant (Noise; Monocypher).
+- Pairing: Music Assistant asks for the 6-digit code (or QR code) the Disc shows; or scan Settings › MA Sendspin › Pairing Token.
+- Settings › MA Sendspin: Allow Unpaired (on: Music Assistant can play once you approve the Disc there), Forget Servers.
+- Album artwork from Music Assistant in Music, at 360 × 360.
+- FLAC from Music Assistant (lossless, about half the Wi-Fi traffic of PCM); PCM still offered.
+- Sync Delay: 10 ms steps, − / + buttons, double-tap the slider to reset to 0.
+- Volume follows the Sendspin curve; Music Assistant lists the Disc once as a new player (its ID is now its key).
+
 ## 3.4.0
 
 **aptX and aptX HD on the Disc** (experimental). [Release notes](docs/releases/v3.4.0.md) · [Bluetooth guide](docs/BLUETOOTH.md)

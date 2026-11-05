@@ -351,6 +351,9 @@ static void apply_ma_group(int v);                        /* Settings > Network 
 static void apply_ma_on(int v){ ma_set_on(v); }
 static void apply_ma_server(int v){ (void)v; ma_edit_server(); }
 static void apply_ma_name(int v){ (void)v; ma_edit_name(); }
+static void apply_ma_unpaired(int v){ (void)v; ma_unpaired_changed(); }
+static void apply_ma_token(int v){ (void)v; ma_show_token(); }
+static void apply_ma_forget(int v){ (void)v; ma_forget_servers(); }
 
 static void apply_workmode(int v){ (void)v; modes_open(); }
 #include "modes.h"
@@ -1046,7 +1049,13 @@ static const setting_t TABLE[] = {
     { "MA Sendspin", "Player Name", ST_ACTION, NULL, 0,0,0, NULL,0, g_ma_name_lbl, apply_ma_name, 0,
       "How the Disc is called in Music Assistant.", NULL },
     { "MA Sendspin", "Sync Delay", ST_SLIDER, "ma_delay_ms", -2000,2000,10, NULL,0, NULL, NULL, 0,
-      "Sync speakers: positive milliseconds delay the Disc; negative values play it earlier.", NULL },
+      "Sync speakers: positive milliseconds delay the Disc; negative values play it earlier. Double-tap the slider to reset to 0; - and + move it by 10 ms.", NULL },
+    { "MA Sendspin", "Allow Unpaired", ST_TOGGLE, "ma_unpaired", 0,1,1, NULL,0, NULL, apply_ma_unpaired, 1,
+      "On: Music Assistant can play once you approve the Disc there. Off: only paired servers can play. Pair from Music Assistant: the Disc shows a code.", NULL },
+    { "MA Sendspin", "Pairing Token", ST_ACTION, NULL, 0,0,0, NULL,0, LV_SYMBOL_RIGHT, apply_ma_token, 0,
+      "A QR code that pairs Music Assistant without a code. Anyone with it can pair, so keep it private.", NULL },
+    { "MA Sendspin", "Forget Servers", ST_ACTION, NULL, 0,0,0, NULL,0, g_ma_pairs_lbl, apply_ma_forget, 0,
+      "Remove every pairing. Each Music Assistant has to pair again.", NULL },
     { "Connectivity",  "Bluetooth", ST_ACTION, NULL, 0,0,0, NULL,0, LV_SYMBOL_RIGHT, apply_bluetooth_settings, 0,
       "Pair Bluetooth devices. Audio routes to connected headphones or speakers (SBC, beta).", NULL },
     { "Connectivity",  "Bluetooth Codec", ST_CHOICE, "bt_codec", 0,0,0, BT_CODEC_LABEL, BT_CODEC_N, NULL, apply_bt_codec, 0,
@@ -1295,10 +1304,13 @@ static void detail_back_cb(lv_event_t *e){ if(lv_event_get_code(e)==LV_EVENT_CLI
 
 /* VALUE_CHANGED: apply live only (no flash write); RELEASED persists once. This
  * avoids rewriting the whole config file on every pixel of a slider drag. */
+static int is_sync_delay(const setting_t *s){ return s && s->cfg_key && !strcmp(s->cfg_key, "ma_delay_ms"); }
+static int snap_step(const setting_t *s, int v){ return s->step > 1 ? s->min + (v - s->min + s->step / 2) / s->step * s->step : v; }
 static void detail_slider_cb(lv_event_t *e){
     if(!g_active || display_blocked(g_active))return;
     lv_obj_t *sl = lv_event_get_target(e);
     int v = lv_slider_get_value(sl);
+    if(is_sync_delay(g_active)){ int sv = snap_step(g_active, v); if(sv != v){ v = sv; lv_slider_set_value(sl, v, LV_ANIM_OFF); } }   /* 10 ms steps */
     if(g_active->apply) g_active->apply(v);
     lv_obj_t *vl = lv_event_get_user_data(e);
     if(vl){ char b[16]; fmt_slider(g_active, v, b, sizeof b); lv_label_set_text(vl, b); }   /* keep %/px unit while dragging */
@@ -1308,8 +1320,49 @@ static void detail_slider_release_cb(lv_event_t *e){
     if(!g_active || display_blocked(g_active))return;
     lv_obj_t *sl = lv_event_get_target(e);
     if(outdoor_holds(g_active)) return;                 /* Outdoor keeps the user's own level untouched */
-    if(g_active->cfg_key) simple_cfg_set_int(g_active->cfg_key, lv_slider_get_value(sl));
-    if(g_active->cfg_key && !strcmp(g_active->cfg_key, "ma_delay_ms")) ma_delay_changed();   /* restart with the saved value */
+    int v = lv_slider_get_value(sl);
+    if(is_sync_delay(g_active)){ v = snap_step(g_active, v); lv_slider_set_value(sl, v, LV_ANIM_OFF); }
+    if(g_active->cfg_key) simple_cfg_set_int(g_active->cfg_key, v);
+    if(is_sync_delay(g_active)) ma_delay_changed();   /* restart with the saved value */
+}
+/* Sync Delay: a double tap on the slider puts it back to 0 ms (LVGL 9.2 has no double-click event: two short clicks
+ * on the same slider within 400 ms) */
+static int slider_double_tap(lv_obj_t *o){
+    static lv_obj_t *last_o; static uint32_t last_t;
+    uint32_t now = lv_tick_get(); int dbl = last_o == o && now - last_t < 400;
+    last_o = dbl ? NULL : o; last_t = now;
+    return dbl && g_active && g_active->cfg_key && !strcmp(g_active->cfg_key, "ma_delay_ms");
+}
+static void detail_slider_dbl_cb(lv_event_t *e){
+    lv_obj_t *sl = lv_event_get_target(e);
+    if(!slider_double_tap(sl)) return;
+    lv_slider_set_value(sl, 0, LV_ANIM_ON);
+    lv_obj_t *vl = lv_event_get_user_data(e);
+    if(vl){ char b[16]; fmt_slider(g_active, 0, b, sizeof b); lv_label_set_text(vl, b); }
+    simple_cfg_set_int("ma_delay_ms", 0); ma_delay_changed();
+}
+/* Sync Delay: - / + nudge it by one 10 ms step */
+static void detail_nudge_cb(lv_event_t *e){
+    if(!g_active || !is_sync_delay(g_active)) return;
+    lv_obj_t *sl = lv_event_get_user_data(e);
+    int d = (int)(intptr_t)lv_obj_get_user_data(lv_event_get_target(e));
+    int v = snap_step(g_active, lv_slider_get_value(sl)) + d * g_active->step;
+    if(v < g_active->min) v = g_active->min; if(v > g_active->max) v = g_active->max;
+    lv_slider_set_value(sl, v, LV_ANIM_OFF);
+    lv_obj_send_event(sl, LV_EVENT_VALUE_CHANGED, NULL);     /* the value label follows */
+    simple_cfg_set_int("ma_delay_ms", v); ma_delay_changed();
+}
+static void nudge_button(lv_obj_t *parent, lv_obj_t *sl, const char *txt, int dir, int x){
+    lv_obj_t *b = lv_button_create(parent);
+    lv_obj_remove_style_all(b);
+    lv_obj_set_size(b, 52, 40); lv_obj_align(b, LV_ALIGN_TOP_MID, x, 198);
+    lv_obj_set_ext_click_area(b, 6);
+    lv_obj_set_style_radius(b, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(b, TC(SURFACE_RAISED), 0); lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
+    lv_obj_set_user_data(b, (void *)(intptr_t)dir);
+    lv_obj_add_event_cb(b, detail_nudge_cb, LV_EVENT_CLICKED, sl);
+    lv_obj_t *l = lv_label_create(b); lv_label_set_text(l, txt);
+    lv_obj_set_style_text_font(l, TF(UI_16), 0); lv_obj_set_style_text_color(l, TC(TEXT_PRIMARY), 0); lv_obj_center(l);
 }
 static void detail_cycle_cb(lv_event_t *e){
     if(!g_active || display_blocked(g_active))return;
@@ -1535,6 +1588,10 @@ static void zarc_cb(lv_event_t *e){
     lv_obj_t *a = lv_event_get_target(e);
     int v = lv_arc_get_value(a);
     if(s->step > 1) v = s->min + (v - s->min + s->step / 2) / s->step * s->step;
+    if(lv_event_get_code(e) == LV_EVENT_SHORT_CLICKED){
+        if(!slider_double_tap(a)) return;
+        lv_arc_set_value(a, 0); zslider_show(s, 0); simple_cfg_set_int("ma_delay_ms", 0); ma_delay_changed(); return;
+    }
     if(lv_event_get_code(e) == LV_EVENT_VALUE_CHANGED){ if(s->apply) s->apply(v); zslider_show(s, v); }
     else if(lv_event_get_code(e) == LV_EVENT_RELEASED && !outdoor_holds(s) && s->cfg_key){
         simple_cfg_set_int(s->cfg_key, v);
@@ -1561,6 +1618,7 @@ static int zdetail(lv_obj_t *root){
         if(outdoor_holds(s)) lv_obj_add_state(a, LV_STATE_DISABLED);
         lv_obj_add_event_cb(a, zarc_cb, LV_EVENT_VALUE_CHANGED, NULL);
         lv_obj_add_event_cb(a, zarc_cb, LV_EVENT_RELEASED, NULL);
+        lv_obj_add_event_cb(a, zarc_cb, LV_EVENT_SHORT_CLICKED, NULL);
         lv_obj_t *cap = lv_label_create(root); kit_keep(cap); char c[64], cu[64]; zlower(c, sizeof c, tr(display_label(s)));
         for(size_t k = 0; ; k++){ cu[k] = (c[k] >= 'a' && c[k] <= 'z') ? c[k] - 32 : c[k]; if(!c[k] || k + 2 >= sizeof cu){ cu[k] = 0; break; } }
         lv_label_set_text(cap, cu); lv_obj_set_style_text_font(cap, &font_zune_semibold_11, 0);
@@ -1636,6 +1694,12 @@ void setting_detail_refresh(void){
         ui_on(sl, detail_slider_cb, LV_EVENT_VALUE_CHANGED, vl, "settings.detail_slider.value", UI_CORE);
         lv_obj_add_event_cb(sl, detail_slider_release_cb, LV_EVENT_RELEASED, NULL);
         lv_obj_add_event_cb(sl, detail_slider_release_cb, LV_EVENT_PRESS_LOST, NULL);
+        lv_obj_add_event_cb(sl, detail_slider_dbl_cb, LV_EVENT_SHORT_CLICKED, vl);
+        if(is_sync_delay(s)){                                  /* exact 10 ms nudges either side of the value */
+            lv_obj_set_width(vl, 120);
+            nudge_button(g_detail_root, sl, LV_SYMBOL_MINUS, -1, -96);
+            nudge_button(g_detail_root, sl, LV_SYMBOL_PLUS, 1, 96);
+        }
     } else if(s->type == ST_TOGGLE){
         lv_obj_t *sw = lv_switch_create(g_detail_root);
         lv_obj_align(sw, LV_ALIGN_TOP_MID, 0, 160);
@@ -1741,6 +1805,21 @@ void setting_detail_refresh(void){
                                   : (s->cfg_key && !strcmp(s->cfg_key, "bt_codec")) ? bt_codec_hint(v) : NULL;
     if(th_null() && s->cfg_key && !strcmp(s->cfg_key,"theme_variant"))desc="Null uses a fixed dark appearance.\nLight/Dark is unavailable in this theme.";
     if(th_null() && s->cfg_key && !strcmp(s->cfg_key,"null_side"))desc="Null is right-handed only. This option is disabled.";
+    if(s->type == ST_SLIDER && is_sync_delay(s)){                 /* what it does above the slider, how to set it below */
+        static const char *const SD_HELP[2] = { "Positive values delay the Disc; negative values play it earlier.",
+                                                "Double-tap the slider to reset to 0. - and + move it by 10 ms." };
+        static const int SD_Y[2] = { 100, 248 };
+        for(int k = 0; k < 2; k++){
+            lv_obj_t *d = lv_label_create(g_detail_root);
+            lv_label_set_text(d, tr(SD_HELP[k]));
+            lv_label_set_long_mode(d, LV_LABEL_LONG_WRAP);
+            lv_obj_set_width(d, k ? 236 : 264); lv_obj_align(d, LV_ALIGN_TOP_MID, 0, SD_Y[k]);
+            lv_obj_set_style_text_align(d, LV_TEXT_ALIGN_CENTER, 0);
+            lv_obj_set_style_text_font(d, TF(UI_16), 0);
+            lv_obj_set_style_text_color(d, TC(TEXT_MUTED), 0);
+        }
+        desc = NULL;
+    }
     if(desc && desc[0]){
         lv_obj_t *d = lv_label_create(g_detail_root);
         lv_label_set_text(d, tr(desc));

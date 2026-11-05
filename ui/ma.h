@@ -10,6 +10,10 @@ void ma_set_on(int on);
 void ma_edit_server(void);
 void ma_edit_name(void);
 void ma_settings_load(void);
+void ma_unpaired_changed(void);     /* Settings: Allow Unpaired switched */
+void ma_show_token(void);            /* Settings: the Pairing PSK token as a QR code */
+void ma_forget_servers(void);        /* Settings: drop every pairing (asks first) */
+int  ma_pairing_shown(void);         /* a pairing code is on screen: keep it lit */
 void ma_restart(void);               /* new settings: restart the helper if it runs */
 void ma_delay_changed(void);         /* Sync Delay moved: restart once it settles */
 void ma_mode_leaving(void);          /* another working mode was picked */
@@ -18,5 +22,5 @@ void ma_send(const char *cmd);       /* toggle | play | pause | next | previous 
 int  ma_seek(long ms);
 void ma_boot(void);                  /* start it again after boot if it was on */
 void ma_test_state(int s);           /* host renders: 0 off, 1 connecting, 2 ready, 3 playing, 4 error */
-extern char g_ma_server_lbl[48], g_ma_name_lbl[48];
+extern char g_ma_server_lbl[48], g_ma_name_lbl[48], g_ma_pairs_lbl[24];
 #endif

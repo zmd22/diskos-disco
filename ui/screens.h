@@ -95,6 +95,7 @@ void screen_skip_anim_once(void);          /* the next screen change without the
 int  screen_current(void);
 int  screen_back_leads_nowhere(void);   /* Home with nothing to go back to: no back-swipe arrow */
 void ui_toast(const char *msg);
+void ui_request_wake(void);      /* light the screen and leave the saver on the next main-loop pass */
 void splash_start(void);
 void splash_cover(void);         /* a plain cover in the splash colour until splash_start (main.c, before the first frame) */
 void splash_test_frame(int ms);   /* host renders: the splash at ms */

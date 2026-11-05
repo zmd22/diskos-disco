@@ -134,6 +134,8 @@ rebuild and relink `usbboot` against a modified libusb using the included source
   | **SQLite** (amalgamation) | Public domain | https://sqlite.org/copyright.html |
   | **MD5** (Peslyak/Solar Designer) | Public domain | `ui/md5.c` |
   | **QR Code generator** (Nayuki `qrcodegen`) | MIT | `licenses/MIT-qrcodegen.txt` |
+  | **dr_flac** 0.13.4 (FLAC decoding for MA Sendspin) | Public domain (Unlicense) or MIT-0 | text at the end of `ui/vendor/dr_flac/dr_flac.h` |
+  | **Monocypher** 4.0.2 (X25519, ChaCha20-Poly1305, SHA-512 for MA Sendspin's encryption and pairing) | BSD-2-Clause or CC0-1.0 | `licenses/BSD-2-Clause-CC0-Monocypher.txt`; unmodified source in `ui/vendor/monocypher/` |
   | **TJpgDec** (tiny JPEG decoder, via LVGL) | BSD-style (ChaN) | `licenses/LICENSE-TJpgDec.txt` |
   | **Montserrat** font (via LVGL built-in fonts) | SIL OFL 1.1 | `licenses/OFL-1.1-Montserrat.txt` |
   | **Source Han Sans SC** (CJK fallback font, subset) | SIL OFL 1.1 | `licenses/OFL-1.1-SourceHanSans.txt` |
