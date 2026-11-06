@@ -1,111 +1,73 @@
-# Flashing and switching interfaces: what stays, what goes
+# Flashing and switching: what stays, what goes
 
-[Back to the README](../README.md) · [How-to](HOWTO.md) · [SD updates](UPDATING.md)
+[README](../README.md) · [How-to](HOWTO.md) · [SD updates](UPDATING.md)
 
-> **Best-effort hobby project, experimental, as-is.** No warranty or liability; not affiliated with FiiO or Snowsky.
-> Back up your music and keep the saved stock image before you install.
+> Hobby project, as-is, no warranty. Not affiliated with FiiO or Snowsky. Back up your music and keep the stock image.
 
-## Quick answers
+## FAQ
 
-**I installed Disco, but the Disc still shows FiiO's normal screen.**
-Turn the Disc off. Hold **Volume Up** and turn it on. Disco appears. Then go to
-**Settings > System > Controls > Default UI** and choose **diskOS**. Done: you don't need to install again.
+| Question | Answer |
+|---|---|
+| Installed, but FiiO's screen still shows | Power on holding **Volume Up**, then **Settings › System › Controls › Default UI › diskOS**. No reinstall needed. |
+| Switch between Disco and stock | Once: Volume Up at power-on. Permanently: **Default UI**. |
+| Will I lose music? | No. Installing, updating and restoring never touch it. |
+| Old settings returned after reinstall | Expected; they live in the data area. |
+| FiiO update removed Disco | Expected. Get back to V2.57 and reinstall; settings return. |
+| Odd after trying upstream diskOS | **Settings › System › Maintenance › Reset diskOS Settings** (keeps music, Wi-Fi, Bluetooth, audio). |
+| Computer can't find the Disc | Off, hold **Volume Down**, plug in (screen stays black). Use a data cable directly on the computer. |
+| Can I delete `.diskos/` or `diskos-update/` on the SD? | Yes. |
+| Anything to keep on the PC? | The installer's stock backup. It's required to restore stock. |
 
-**How do I switch between Disco and FiiO's normal screen?**
-- Just once: turn the Disc off, hold **Volume Up**, turn it on.
-- Always: in Disco, **Settings > System > Controls > Default UI**.
+## Storage areas
 
-**Will I lose my music?**
-No. Installing, updating or going back never touches your music.
+Flashing never touches the data area, which explains most surprises.
 
-**I reinstalled Disco and my old settings came back. Is that normal?**
-Yes. The Disc remembers them, even when Disco is installed again or removed.
-
-**I updated FiiO's firmware and Disco is gone.**
-That's normal: a FiiO update replaces Disco. Make sure the Disc is on version **V2.57**, then install Disco again.
-Your settings come back.
-
-**Something looks wrong after trying another version (like upstream diskOS).**
-In Disco: **Settings > System > Maintenance > Reset diskOS Settings**. Your music, Wi-Fi, Bluetooth and sound
-settings stay.
-
-**The computer can't find my Disc when installing.**
-Turn the Disc off, hold **Volume Down**, then plug in the cable. The screen stays black; that's normal. Use a
-proper data cable (some cables only charge) and plug it straight into the computer.
-
-**Can I delete the `.diskos` or `diskos-update` folders on my SD card?**
-Yes, it's safe. They're rebuilt or only needed during an update.
-
-**Do I need to keep anything on my computer?**
-Yes: the backup the installer made of your Disc. You need it to go back to FiiO's original system. Don't delete it.
-
----
-
-## The details
-
-Most surprises around installing, going back to stock or trying upstream diskOS come from one fact: **the Disc keeps
-your data in a separate place that flashing doesn't touch.** This page explains the three places, what each action
-changes, and what to do in the common situations.
-
-## The three places
-
-| Place | What's in it | Changed by |
+| Area | Contents | Changed by |
 |---|---|---|
-| **The system** | FiiO's firmware, and Disco's boot scripts and interface once installed. Also the update key you flashed with. | Flashing (Disco's or upstream's installer, restore stock) and FiiO's own firmware updates replace it completely. An SD update replaces only the interface. |
-| **The data area** (`/usr/data`) | Your settings, the **Default UI** choice, the queue, battery history, SongSphere, apps, SD-update state, Last.fm queue; also FiiO's library database with your listening history and play counts. | **Nothing in the list above.** Flashing, restoring stock and firmware updates all leave it as it is. |
-| **The SD card** | Your music. Disco also adds `.diskos/` (a cover cache and Album Roulette data, rebuilt automatically) and the `diskos-update/` folder you copy for SD updates. | Only you. Deleting `.diskos/` or `diskos-update/`, or using another card, is harmless. |
+| **System** | FiiO firmware; Disco boot scripts, interface and update key once installed | Flashing (any installer, restore stock) and FiiO updates replace it. SD updates replace only the interface. |
+| **Data** (`/usr/data`) | Settings, Default UI choice, queue, battery history, SongSphere, apps, update state, Last.fm queue, FiiO's library DB with play history | Nothing above. |
+| **SD card** | Music; `.diskos/` (cover cache, Album Roulette data, auto-rebuilt); `diskos-update/` | Only you. |
 
-So after any reinstall, Disco comes back **with your old settings**, and a choice like "Default UI: Stock" still applies.
+So a reinstalled Disco keeps old settings, including "Default UI: Stock".
 
-## What each action does
+## Effect of each action
 
-| Action | Disco on the Disc | Your settings / Default UI | Update key | History, music |
+| Action | Disco | Settings / Default UI | Update key | History, music |
 |---|---|---|---|---|
-| **Install (flash) Disco** | Installed fresh | Kept | Replaced by the key you flash with (none: SD updates off) | Kept |
-| **SD update** | Interface replaced, boot scripts unchanged | Kept | Unchanged | Kept |
-| **Default UI > Stock** | Stays installed, just not started | Kept | Unchanged | Kept |
-| **Hold Volume Up at power-on** | Starts the *other* interface for this one boot | Kept | Unchanged | Kept |
-| **Restore stock** (installer) | Deactivated; its files in the data area stay, unused | Kept, unused | Gone with the system | Kept |
-| **FiiO firmware update** | Gone (the system is replaced) | Kept, unused | Gone | Kept |
-| **Reset diskOS Settings** (in Disco) | Unchanged | Interface settings back to defaults; music, Wi-Fi, Bluetooth, Last.fm, EQ and audio settings stay | Unchanged | Kept |
+| Flash Disco | Fresh install | Kept | Replaced by the flashed key (none: SD updates off) | Kept |
+| SD update | Interface replaced | Kept | Unchanged | Kept |
+| Default UI › Stock | Installed, not started | Kept | Unchanged | Kept |
+| Volume Up at power-on | Other UI, this boot only | Kept | Unchanged | Kept |
+| Restore stock | Deactivated; data files remain unused | Kept, unused | Removed | Kept |
+| FiiO firmware update | Removed | Kept, unused | Removed | Kept |
+| Reset diskOS Settings | Unchanged | UI settings reset; music, Wi-Fi, Bluetooth, Last.fm, EQ, audio kept | Unchanged | Kept |
 
 ## Common situations
 
-**It keeps starting stock after installing.** Almost always an earlier **Default UI: Stock** choice (made in Disco or
-in upstream diskOS), which survives flashing. Hold **Volume Up** while powering on to start Disco once, then set
-**Settings > System > Controls > Default UI** to **diskOS**. No need to flash again.
-If Volume Up doesn't bring Disco up either, Disco didn't start, and the Disc fell back to stock (it always does when
-Disco can't start). Flash again from stock V2.57; if it keeps happening, the installer's log and
-`/usr/data/diskos_install.log` (over SSH, once Disco runs) show why.
+**Keeps booting stock.** Usually a leftover **Default UI: Stock** (from Disco or upstream). Volume Up at power-on,
+then set Default UI to **diskOS**. If Volume Up doesn't help either, Disco failed to start and the Disc fell back
+to stock; reflash from stock V2.57 and check the installer log or `/usr/data/diskos_install.log`.
 
-**Is Disco installed?** Settings > Help > About in Disco shows its version. Stock's own settings show FiiO's version.
+**Is Disco installed?** **Settings › Help › About** in Disco shows its version.
 
-**I want to try upstream diskOS (or come back from it).** Go back to stock first, then install the other one. Your
-Disco settings stay in the data area meanwhile, and upstream may leave its own there too: if something looks or
-behaves oddly afterwards, use **Settings > System > Maintenance > Reset diskOS Settings**. Each one also brings its
-own update key, so after switching back to Disco, SD updates need Disco installed with **your** key again.
+**Trying upstream diskOS, or coming back.** Restore stock first, then install the other. Both leave data behind; use
+**Reset diskOS Settings** if things look off. Each brings its own update key, so reflash Disco with **your** key to
+get SD updates back.
 
-**I updated the stock firmware and Disco is gone.** Expected: FiiO's update replaces the system. Make sure the Disc is
-on **V2.57** (the only supported version), then install Disco again. Your settings come back with it.
+**FiiO update removed Disco.** Return to V2.57 (the only supported version) and reinstall.
 
-**I lost my update key, or I'm on a new computer.** SD updates only install when signed with the key the Disc was
-flashed with. Copy your `diskos-keys` folder to the new computer, or, if it's lost, make new keys and flash once
-with the new public key. Settings and music stay.
+**Lost key or new computer.** SD updates must be signed with the flashed key. Copy `diskos-keys` over, or make new
+keys and reflash once. Settings and music stay.
 
-**I want Disco gone completely.** Restore stock with the installer. Disco's files stay in the data area but do
-nothing without Disco; they're small. To start from a clean slate later, run **Reset diskOS Settings** in Disco
-*before* restoring stock.
+**Remove Disco completely.** Run **Reset diskOS Settings** first if you want a clean slate, then restore stock.
+Leftover files are small and inert.
 
-**The installer can't find the Disc.** Flashing mode: turn the Disc off, hold **Volume Down**, then connect USB. The
-screen stays **black**: that's normal. Use a data cable (not a charge-only one) and a port directly on the computer.
+## Keep the stock backup
 
-## Keep the stock backup safe
-
-The installer saves your Disc's original system on the **computer you flashed from**, and needs it to restore stock:
+The installer stores the original system on the flashing computer:
 
 - Linux: `~/.local/share/diskos-installer`
 - macOS: `~/Library/Application Support/diskos-installer`
 - Windows app: `%LOCALAPPDATA%\diskOS-Disco\backup`
 
-Keep a copy somewhere else as well. **The installer's `remove` command deletes these saved files**, so restore stock
-(or copy the backup away) before you remove the installer from that computer.
+Keep a second copy. The installer's `remove` command deletes these files, so restore stock or copy the backup first.

@@ -1,15 +1,9 @@
-# diskOS Disco! for Windows (in progress, planned for 2.0)
+# Windows app source
 
-A Windows app that installs diskOS Disco! without typing commands. Plan: `WINDOWS_PLAN` (project doc) and
-`../todo-ideas.md`. Underneath it uses WSL and usbipd-win, the route proven by a full flash on Windows 11.
+Source for `diskOS-Disco.exe`, the Windows installer GUI. It runs the Linux installer inside a private WSL distro and
+attaches the Disc via usbipd-win. User guide: [docs/WINDOWS.md](../docs/WINDOWS.md).
 
-Status: **steps 1-2**: the PC check (Windows 11 x64, virtualization, WSL, USB bridge, disk space, pending restart)
-with a button for whatever is missing, and diskOS's own WSL environment ("diskOS-Disco", imported from
-`diskos-wsl.tar.gz`, runs as root so no udev rule is needed). Next: the install wizard, then SD updates.
-
-`sudo sh wsl/build-env.sh` builds the environment package (minimal Ubuntu 24.04, installer, Python deps, static
-usbboot, current payload) into `out/`.
-
-Build on Linux with `sh build.sh` (needs `mono-devel`). The result is one small EXE that runs on the .NET Framework
-already in Windows. Test builds aren't code-signed, so Windows shows "Windows protected your PC": click
-**More info**, then **Run anyway**.
+- **Build the app** (on Linux, needs `mono-devel`): `sh build.sh`. Output is a single EXE targeting the .NET Framework
+  bundled with Windows. Builds are unsigned, so SmartScreen requires **More info › Run anyway**.
+- **Build the WSL environment:** `sudo sh wsl/build-env.sh` writes `diskos-wsl.tar.gz` (minimal Ubuntu 24.04,
+  installer, Python deps, static usbboot, current payload) to `out/`. The distro runs as root, so no udev rule is needed.

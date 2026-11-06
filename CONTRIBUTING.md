@@ -1,48 +1,37 @@
-# Contributing to diskOS
+# Contributing
 
-Thanks for wanting to help. diskOS touches real hardware in a way that can brick a device, so a few
-rules keep contributions safe and legally clean.
+diskOS can brick real hardware. These rules keep contributions safe and legally clean.
 
-## Ground rules
+## Rules
 
-1. **Hardware-affecting changes must be tested on real hardware.** Anything that changes the image
-   builder, the boot hook, the NAND writer, the SPL, or device targeting has to be flashed and
-   booted on an actual Snowsky Disc before it is declared working. Say which firmware version and
-   which DRAM/NAND variant you tested on.
-2. **Never weaken the fail-closed contract.** The first-boot hook must always fall back to the stock
-   UI when it cannot verify the UI against the baked manifest. The flasher must fail closed rather
-   than commit an unverified or wrong-device write.
-3. **Add an error code for every new failure mode** (`E1xx` preflight, `E2xx` build, `E3xx` flash,
-   `F1xx` device-writer) and document it in `README.md`.
-4. **Keep the honest-limitations tone.** If something is blocked by hardware or a toolchain gap, say
-   so plainly. Do not imply a feature works when it has not been verified.
+1. **Test hardware-affecting changes on a real Disc.** Image builder, boot hook, NAND writer, SPL and device
+   targeting changes must be flashed and booted before they're called working. State firmware version and DRAM/NAND
+   variant.
+2. **Stay fail-closed.** The first-boot hook falls back to stock when it can't verify the UI against the baked
+   manifest; the flasher aborts rather than write unverified data or to the wrong device.
+3. **Every new failure gets an error code** (`E1xx` preflight, `E2xx` build, `E3xx` flash, `F1xx` device writer),
+   documented in `README.md`.
+4. **Be honest about limits.** Don't imply something works until it's verified.
 
-## Licensing and provenance
+## Licensing
 
-- diskOS has two licenses by area: the on-device UI source in [`ui/`](ui/) is **GPL-3.0-or-later**;
-  the installer and build tooling (everything else) is **MIT**. By contributing you agree your
-  contribution is under the license that already governs the file(s) you change. Please sign off your
-  commits (`git commit -s`, Developer Certificate of Origin).
-- **Do not upload FiiO firmware, stock rootfs images, or generated `diskos_*.bin` images** to issues
-  or PRs - they contain FiiO's software. The installer builds images locally from a user's own
-  firmware; that is fine, redistributing them is not.
-- If you touch how a GPL/LGPL component is bundled (usbboot, squashfs-tools, the SPL, libusb),
-  keep its corresponding source and `NOTICE.md` in sync.
-- Do not commit device-identifying data (serials, MAC addresses) or secrets.
+- `ui/` is **GPL-3.0-or-later**; everything else is **MIT**. Contributions take the license of the files they touch.
+  Sign off commits (`git commit -s`, DCO).
+- Never upload FiiO firmware, stock rootfs or generated `diskos_*.bin` images. Building locally is fine;
+  redistributing isn't.
+- When changing how GPL/LGPL components are bundled (usbboot, squashfs-tools, SPL, libusb), keep corresponding
+  source and `NOTICE.md` in sync.
+- No device identifiers (serials, MACs) or secrets in commits.
 
-## Filing issues
+## Issues
 
-Include: firmware version + hash, DRAM/NAND variant if known, host OS, the exact error code, the
-bad-block count if the flasher printed one, and redacted logs. **Do not** post serial numbers, MAC
-addresses, firmware zips, stock rootfs, or generated images.
+Include firmware version and hash, DRAM/NAND variant if known, host OS, the error code, the bad-block count if
+printed, and redacted logs. Don't post serials, MACs, firmware, rootfs or images.
 
 ## Development
 
-See [`agents/AGENTS.md`](agents/AGENTS.md) for a project brief (the hardware facts that are easy to
-get wrong, the repo layout, and the device-safety rules) - useful whether you work by hand or with
-an AI coding agent. Build the installer with `bash build/build.sh`.
-
-For iterating on the on-device UI, see [`docs/DEV_WORKFLOW.md`](docs/DEV_WORKFLOW.md) for builds,
-host previews and signed SD-card updates, and [`docs/UPDATING.md`](docs/UPDATING.md) for key setup,
-trial acceptance and rollback. The helper scripts in [`tools/`](tools/) support screenshots and
-touch diagnostics; UI deployment follows the signed SD-card workflow.
+- Project brief (hardware facts, layout, safety rules): [`agents/AGENTS.md`](agents/AGENTS.md).
+- Installer build: `bash build/build.sh`.
+- UI: [`docs/DEV_WORKFLOW.md`](docs/DEV_WORKFLOW.md) (builds, host previews, SD updates) and
+  [`docs/UPDATING.md`](docs/UPDATING.md) (keys, trials, rollback). [`tools/`](tools/) has screenshot and touch
+  diagnostics helpers. UI deployment always goes through signed SD updates.

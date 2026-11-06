@@ -1,9 +1,13 @@
-# Null in Disco 3.3.0
+# Null
 
-Null uses pixel typography, a right-side menu and fixed-dark palettes: Cyan/Yellow, Red/Lime and Matrix. Music supports Black/Dark cover/Pixel cover backgrounds, its own font choices and alignment, album/track information and controls. Quick Settings offers Text/Icons presentation. Volume uses Null's own overlay.
+Pixel typography, right-side menu, fixed-dark palettes (Cyan/Yellow, Red/Lime, Matrix). Music: Black / Dark cover /
+Pixel cover backgrounds, own fonts and alignment, album/track info and controls. Quick Settings: Text or Icons. Own
+volume overlay.
 
-Use Display > Null settings for theme-owned controls and Navigation for its menu/list behaviour. Shared settings and visibility rules are in [Settings](../DISPLAY_SETTINGS.md). Light/dark, navigation-side and custom accent controls are not offered as working Null switches.
+Theme options: **Display › Null settings**, including Navigation for menu and list behaviour. Shared settings:
+[Settings](../DISPLAY_SETTINGS.md). Light/dark, navigation side and custom accent don't apply.
 
-Null shares round track actions, library letter navigation, Wheel lists and Immersive. Some secondary screens retain shared layouts; Stats deliberately retains default typography in this release. Theme support is not a claim of complete visual parity.
+Shares round track actions, letter navigation, Wheel lists and Immersive. Some secondary screens use shared layouts;
+Stats keeps default typography intentionally.
 
 Implementation: `ui/null_theme.c`, `ui/theme.c`, `ui/theme_kit.c`, `ui/settings_display.h`.

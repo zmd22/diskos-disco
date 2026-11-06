@@ -1,63 +1,50 @@
-# diskOS privacy and network disclosure
+# Privacy and network use
 
-This lists everything the installer and the diskOS UI (`mq_ui`) send over the network. The UI source
-is published under GPL-3.0-or-later in [`ui/`](../ui/); this disclosure is based on that code and on
-observed behaviour. It is a good-faith summary, not a guarantee - read the source for the last word.
+Everything the installer and the on-device UI (`mq_ui`) send over the network. Based on the GPL source in
+[`ui/`](../ui/) and observed behaviour; a good-faith summary, not a guarantee.
 
-## The installer (this repo)
+## Installer
 
-- **`./install.sh` uses `pip`** to upgrade `pip` itself and download two packages - `pyusb` and
-  `pycryptodome` - from **PyPI** into a local `.venv`. That `pip`/PyPI traffic is the only network
-  activity in setup. Point `pip` at your own mirror if you prefer, or pre-install the packages offline.
-- **The installer app itself makes no network requests.** Building the image, decrypting/extracting
-  your firmware, saving the recovery image, and flashing over USB are all fully local. It does not
-  phone home and sends no telemetry.
+- `./install.sh` runs `pip` to upgrade itself and install `pyusb` and `pycryptodome` from **PyPI** into `.venv`.
+  That's the only network traffic in setup; use a mirror or preinstall offline if you prefer.
+- The installer itself makes no network requests: image build, firmware extraction, backup and flashing are local.
+  No telemetry.
 
-## The diskOS UI (`mq_ui`) on the device
+## On-device UI
 
-diskOS is a local music player. The Weather setting is **on by default**. While it is on, diskOS fetches the weather when the UI starts, retries after failures, and refreshes later. With Wi-Fi connected, this can contact `wttr.in` without opening the Weather app. Turning off Settings > Connectivity > Online services > Weather stops automatic startup, retry and refresh fetches and hides the glance. Changing or resetting the location in the Weather app explicitly requests weather even while that toggle is off. A request already in flight may still finish after you turn it off. Other online features act under the conditions below. Each request reveals the device's public IP to the service it contacts.
+Every request exposes the Disc's public IP to the contacted service.
 
-| Feature | Endpoint | Protocol | What is sent |
+| Feature | Endpoint | Transport | Sent / when |
 |---|---|---|---|
-| **Weather** | `wttr.in` | **plain HTTP** | With the Weather setting on, diskOS fetches at UI startup and later refreshes or retries when Wi-Fi works. With it off, automatic fetches stop, but changing or resetting location in the Weather app explicitly requests weather. A request already in flight may still finish after you turn it off. It sends your configured location, or no location so wttr.in can estimate one from your public IP. HTTP traffic is visible on the network. |
-| **Online album art** | `itunes.apple.com` | HTTPS | When Online Album Art is enabled and a playing track has no cover, track and album metadata are used to look for artwork. Off by default. |
-| **Lyrics** | `lrclib.net` | HTTPS | The current track's **title and artist**, to find matching lyrics. |
-| **MA Sendspin** (experimental) | Your Music Assistant server on the local network | WebSocket, end-to-end encrypted (Sendspin 1.0, Noise) | Only while Sendspin is on: the player name, its public key (the player ID), the Wi-Fi MAC address, playback commands and timing. Auto mode finds the server with a local mDNS query. Music, track details and covers come back from your own server. The Disc's Sendspin keys and pairings stay on the Disc (`/usr/data/diskos-sendspin.keys`). Without a pairing the connection is encrypted but not authenticated: pair the Disc (Music Assistant asks for the code it shows) to rule out a look-alike server. Off by default. |
-| **Disc Shelf** | Your configured Navidrome server or SMB3 share | Navidrome: HTTP or HTTPS, according to your URL. SMB3: encryption required in the native development build. | Requests happen only while the app runs. One source connects at a time. The native build uses salted Navidrome tokens, which remain reusable credentials; prefer HTTPS. Remember password On stores readable credentials in a private configuration file. Older standalone builds send the Navidrome password in requests. |
-| **Scrobbling (Last.fm)** | `ws.audioscrobbler.com` | HTTPS | If enabled and connected: the device sends `track.updateNowPlaying` and scrobbles with track metadata (artist/title/album/timestamp), API key and session key to **your** Last.fm account. |
-| **Last.fm sign-in** | `ws.audioscrobbler.com/2.0/`, `www.last.fm/api/auth/` | HTTPS | The device POSTs `auth.getToken` and polls `auth.getSession` at `https://ws.audioscrobbler.com/2.0/` with the API key and authorization token. It displays a QR approval URL; your phone opens that URL. `www.last.fm/api/account/create` is shown as text so you know where to get an API key. |
+| **Weather** (default **on**) | `wttr.in` | **plain HTTP** | Your location, or none (wttr.in guesses from IP). Fetched at startup, on retry and periodically while Wi-Fi works, even without opening the app. Turning it off (**Connectivity › Online services › Weather**) stops automatic fetches; changing or resetting the location in the app still fetches. In-flight requests may complete. |
+| **Online album art** (default off) | `itunes.apple.com` | HTTPS | Track/album metadata, when the playing track has no cover. |
+| **Lyrics** (default on) | `lrclib.net` | HTTPS | Title and artist, only when the Lyrics page opens for a song without local/embedded lyrics. |
+| **MA Sendspin** (experimental, default off) | Your Music Assistant server (LAN) | WebSocket, Noise-encrypted (Sendspin 1.0) | Player name, public key (player ID), Wi-Fi MAC, playback commands and timing. Auto mode uses local mDNS. Keys and pairings stay in `/usr/data/diskos-sendspin.keys`. Unpaired connections are encrypted but unauthenticated; pair (enter the shown code in MA) to rule out impostor servers. |
+| **Disc Shelf** | Your Navidrome server or SMB3 share | Navidrome: per URL scheme. SMB3: encryption required. | Only while the app runs, one source at a time. Navidrome uses reusable salted tokens (prefer HTTPS). Remember password On stores credentials in plain text in a private config file. Old standalone builds send the raw Navidrome password. |
+| **Last.fm scrobbling** (default off) | `ws.audioscrobbler.com` | HTTPS | `track.updateNowPlaying` and scrobbles (artist, title, album, timestamp) with API and session keys. |
+| **Last.fm sign-in** | `ws.audioscrobbler.com/2.0/`, `www.last.fm/api/auth/` | HTTPS | `auth.getToken` / `auth.getSession` polling with API key and token. Approval happens on your phone via QR. `www.last.fm/api/account/create` is only displayed as text. |
 
-### Last.fm credential setup happens over your LOCAL network in plaintext
+### Last.fm setup uses plain HTTP on your LAN
 
-To connect Last.fm, diskOS runs a **temporary web server on the device** at
-`http://<device-wifi-ip>:8080/<random-token>/`, shows a QR for it, and your phone posts your Last.fm
-**API key and shared secret** to it. Important properties:
-- It is **plain HTTP on your Wi-Fi LAN** - your API key/secret cross your local network unencrypted.
-  Do this on a network you trust.
-- The server is **transient** (runs only during setup), bound to the Wi-Fi interface, and gated by a
-  random URL token.
-- Your Last.fm **API key, secret, and session key are then stored on the device** under `/usr/data`
-  (device config); **offline scrobbles are queued** in `/usr/data/lastfm.queue` until they can be sent.
-  Nothing Last.fm-related is sent anywhere except your device, your phone (during setup), and Last.fm.
+Setup starts a temporary server at `http://<device-ip>:8080/<random-token>/` (Wi-Fi interface only, setup only);
+your phone posts your **API key and shared secret** to it **unencrypted**. Use a trusted network. Key, secret and
+session key are stored under `/usr/data`; offline scrobbles queue in `/usr/data/lastfm.queue`. Nothing goes anywhere
+except the Disc, your phone and Last.fm.
 
-> **Last.fm is BETA and unverified end-to-end** - see the README's Current limitations. The transport and
-> signing are tested, but a full connect-and-scrobble round-trip to a live account has not been.
+> Last.fm is **beta**: transport and signing are tested, a full live scrobble round-trip is not.
 
-### The stock FiiO player still runs alongside diskOS
+### Stock FiiO player
 
-diskOS replaces only the UI; FiiO's original player process still runs underneath it. That stock
-component - not diskOS - is responsible for any Bluetooth, firmware-update checks, and LAN media
-endpoints (DLNA/AirPlay/Roon/QPlay-style discovery) the device may present on your local network. Those
-behaviours are inherited from the stock firmware and are outside diskOS's code. On V2.57, the stock player also performs an `ipinfo.io` time-zone lookup and network time synchronization after Wi-Fi connects when Automatic Time is enabled; changing that setting takes effect after the player next starts.
+The stock player still runs underneath and is responsible for Bluetooth, firmware-update checks and any LAN
+discovery (DLNA, AirPlay, Roon, QPlay) the Disc advertises. On V2.57, with Automatic Time on, it also does an
+`ipinfo.io` time-zone lookup and NTP sync after Wi-Fi connects (changes apply on next player start). None of this is
+diskOS code.
 
-## What diskOS does NOT do
+## Not done
 
-- No analytics, telemetry, or usage tracking.
-- It does not upload your music library, your listening history (beyond Last.fm scrobbles if you turn
-  them on), or any personal files.
-- The Weather setting Off stops automatic fetches, including startup; changing or resetting location in the Weather app still requests weather. Online Lyrics starts on by default but requests occur only when the Lyrics page is opened for a song without local or embedded words. Online Album Art and Last.fm start off.
+- No analytics, telemetry or usage tracking.
+- No upload of your library, files or listening history (except Last.fm scrobbles if enabled).
 
 ## Reporting
 
-Report anything that looks like unexpected data leaving the device via the process in
-[`SECURITY.md`](../SECURITY.md).
+Report unexpected network traffic via [`SECURITY.md`](../SECURITY.md).

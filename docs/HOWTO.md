@@ -1,4 +1,4 @@
-# Disco 3.3.0 quick reference
+# Quick reference
 
 | Task | Where / how |
 |---|---|
@@ -20,6 +20,9 @@
 | Update from SD | System > Maintenance > Update from SD Card |
 | Restore contextual hints | Help > Show hints again, on supported themes |
 
-Tap the Music title for track actions in Disco/Null/Squash; hold a library item for its context menu. Queue and Up Next are distinct: the former is the explicit next-song queue, the latter the player's playback context.
+- Track actions: tap the Music title (Disco, Null, Squash). Context menu: hold a library item.
+- **Queue** is your explicit up-next list; **Up Next** is the player's current playback context.
+- Disc Shelf, SongSphere, Album Roulette, Listening Stats and Boomshine are built in.
+- Controls that don't apply to the current firmware or theme are hidden or disabled.
 
-Disc Shelf, SongSphere, Album Roulette, Listening Stats and Boomshine are included in mq_ui. See the [tour](DISCO_TOUR.md), [settings reference](DISPLAY_SETTINGS.md) and [Disc Shelf guide](DISC_SHELF_INSTALL.md). Firmware and theme guards can hide or disable inapplicable controls.
+See the [tour](DISCO_TOUR.md), [settings](DISPLAY_SETTINGS.md) and [Disc Shelf](DISC_SHELF_INSTALL.md).

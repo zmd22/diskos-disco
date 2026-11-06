@@ -1,98 +1,72 @@
 # Install diskOS Disco! from macOS
 
-> **Best-effort hobby project, experimental, as-is.** No warranty or liability; not affiliated with FiiO or Snowsky.
-> Back up your music and keep the saved stock image before you install.
+> Hobby project, as-is, no warranty. Not affiliated with FiiO or Snowsky. Back up your music and keep the stock image.
 
-> **Recommended: start from FiiO's stock V2.57 firmware.** Installing over upstream diskOS or another diskOS build is not supported and can be buggy; restore stock first.
+> - Install over stock V2.57; upstream diskOS and other builds are unsupported.
+> - After another diskOS build, run **Settings › System › Maintenance › Reset diskOS Settings** if anything misbehaves.
+> - Boots stock after install: hold **Volume Up** at power-on, then set **Settings › System › Controls › Default UI** to **diskOS**. See [Switching](SWITCHING.md).
 
-> Switched to Disco from upstream diskOS or another build, and something looks or behaves wrong? **Settings > System > Maintenance > Reset diskOS Settings** gives the interface a fresh start; your music, Wi-Fi, Bluetooth, EQ and audio settings stay. Going back to stock in between does *not* clear what diskOS leaves on the Disc.
->
-> **Starts stock after installing?** An earlier "Default UI: Stock" choice survives flashing. Hold **Volume Up** while
-> powering on to start Disco once, then set Settings > System > Controls > Default UI to **diskOS**.
-> More: [what stays and what goes when you flash or switch](SWITCHING.md).
+Requires a Mac, a USB data cable, an unmodified **FiiO V2.57 firmware ZIP** and ~30 minutes. Based on
+[b0hemia's diskOS 1.2.0 install notes](https://github.com/b0hemia/diskos/tree/v1.2.0#install). Run everything as
+your normal user, **without sudo**. Not yet tested on a physical Mac.
 
-Use a Mac, a USB data cable and your own unmodified **FiiO V2.57 firmware ZIP**. Back up your music and keep the installer's saved stock image on separate storage. Allow about 30 uninterrupted minutes.
+## 1. Source and Python
 
-This follows [b0hemia's diskOS 1.2.0 installation notes](https://github.com/b0hemia/diskos/tree/v1.2.0#install), adapted for Disco. Run commands as your normal user, **without sudo**.
-
-## 1. Get Disco and Python
-
-Download and unpack the source code (tar.gz) from the [latest release](https://github.com/zmd22/diskos-disco/releases/latest). Open Terminal and enter its folder (the name includes the version number):
+Unpack the source tarball from the [latest release](https://github.com/zmd22/diskos-disco/releases/latest):
 
 ```sh
 cd ~/Downloads/diskos-disco-*
-python3 --version
-uname -m
+python3 --version   # needs 3.8+
+uname -m            # arm64 or x86_64
 ```
 
-Python must be 3.8 or newer. Install it from [python.org](https://www.python.org/downloads/macos/) if needed; its installer also includes Tk for the graphical interface. Homebrew users can instead install `python3`; the GUI additionally needs the matching `python-tk@<major.minor>` package reported by `./install.sh`. The command-line installer does not need Tk.
+Get Python from [python.org](https://www.python.org/downloads/macos/) (includes Tk for the GUI). With Homebrew,
+`python3` plus the `python-tk@<major.minor>` that `./install.sh` reports; the CLI doesn't need Tk. On Apple Silicon
+use a native (non-Rosetta) shell.
 
-`uname -m` should say `arm64` on Apple Silicon or `x86_64` on Intel. On Apple Silicon, use a native Terminal/Python session rather than Rosetta.
+## 2. Flash tools
 
-## 2. Get the Mac flash tools
+### Apple Silicon: prebuilt
 
-### Apple Silicon: use the ready-built tools
-
-Download these two files from [b0hemia/diskOS 1.2.0](https://github.com/b0hemia/diskos/releases/tag/v1.2.0) into `~/Downloads`:
-
-- [diskos-installer-macos-arm64.tar.gz](https://github.com/b0hemia/diskos/releases/download/v1.2.0/diskos-installer-macos-arm64.tar.gz)
-- [SHA256SUMS](https://github.com/b0hemia/diskos/releases/download/v1.2.0/SHA256SUMS)
-
-Verify the download before extracting it:
+From [b0hemia/diskOS 1.2.0](https://github.com/b0hemia/diskos/releases/tag/v1.2.0), download
+[diskos-installer-macos-arm64.tar.gz](https://github.com/b0hemia/diskos/releases/download/v1.2.0/diskos-installer-macos-arm64.tar.gz)
+and [SHA256SUMS](https://github.com/b0hemia/diskos/releases/download/v1.2.0/SHA256SUMS) to `~/Downloads`, verify,
+then extract only the native tools into the Disco source folder:
 
 ```sh
-(cd ~/Downloads && shasum -a 256 diskos-installer-macos-arm64.tar.gz)
-```
-
-The printed hash must match the line for that filename in `SHA256SUMS`. From the **Disco source folder**, copy only its native tools:
-
-```sh
+(cd ~/Downloads && shasum -a 256 diskos-installer-macos-arm64.tar.gz)   # must match SHA256SUMS
 mkdir -p vendor
 tar -xzf ~/Downloads/diskos-installer-macos-arm64.tar.gz \
   -C vendor --strip-components 2 diskos-installer/vendor/macos-arm64
 ```
 
-This supplies `usbboot`, `mksquashfs`, `unsquashfs`, their libraries and device-loader files under `vendor/macos-arm64/`. The uploader source and device-loader files in upstream 1.2.0 match Disco's versions. Keep using **Disco's** installer and payload, not the upstream package's installer. No Homebrew tool build is needed on this route.
+This provides `usbboot`, `mksquashfs`, `unsquashfs`, their libs and loader files in `vendor/macos-arm64/` (identical
+to Disco's). Keep using Disco's installer and payload.
 
-### Intel Mac: build native tools once
-
-Install [Homebrew](https://brew.sh/) and Apple's command-line tools if they are missing:
+### Intel: build once
 
 ```sh
-xcode-select --install
+xcode-select --install     # if missing; Homebrew is also required
+bash vendor/setup-macos.sh # builds vendor/macos-x86_64/
 ```
 
-From the Disco source folder:
+The script pins dependency versions ([build inputs](../build/NATIVE_TOOLS.md#pinned-macos-arm64-build-inputs)). On
+a version mismatch, follow its instructions; don't bypass the check. Upstream has no prebuilt Intel package.
+
+## 3. Prepare
 
 ```sh
-bash vendor/setup-macos.sh
-```
-
-This builds `vendor/macos-x86_64/`. The script installs build dependencies through Homebrew and requires specific library versions; see [the pinned build inputs](../build/NATIVE_TOOLS.md#pinned-macos-arm64-build-inputs). If it reports a version mismatch, stop and follow its instructions rather than bypassing the check. Upstream 1.2.0 does not provide a ready-built Intel package.
-
-## 3. Prepare Disco
-
-```sh
-./install.sh
-./diskos-installer doctor
-```
-
-Setup creates a local Python environment. `doctor` reports missing components. A missing player is expected until it is connected in flashing mode.
-
-For later signed SD-card updates, create your update keys once:
-
-```sh
-sh ui/tools/owner-keys/diskos-keys.sh
+./install.sh                # local Python env
+./diskos-installer doctor   # "player missing" is expected until it's in flash mode
+sh ui/tools/owner-keys/diskos-keys.sh          # optional, once: update keys
 cp diskos-keys/diskos-root.pub.pem payload/
 ```
 
-Keep the entire `diskos-keys` folder safe and private. Reuse your existing keys if you already made them. To install without your own update keys, skip this step and omit `--ota-key` below.
+Keep `diskos-keys` private and backed up; reuse existing keys if you have them. Without keys, omit `--ota-key` below.
 
-## 4. Flash the Disc
+## 4. Flash
 
-Keep the Mac awake. Power off the Disc, hold **Volume Down**, and connect USB. Its screen stays black in flashing mode. If macOS asks to allow the USB accessory, allow it.
-
-From the Disco source folder, run the following, replacing the firmware path with your actual downloaded V2.57 ZIP:
+Keep the Mac awake. Disc off, hold **Volume Down**, connect USB (screen stays black); allow the USB accessory if asked.
 
 ```sh
 ./diskos-installer install \
@@ -100,22 +74,15 @@ From the Disco source folder, run the following, replacing the firmware path wit
   --variant public \
   --ui payload/mq_ui \
   --ota-key payload/diskos-root.pub.pem
+shasum -a 256 payload/diskos-root.pub.pem      # compare with the summary's key fingerprint before confirming
 ```
 
-Check the summary before confirming. With your own keys, compare its key fingerprint with:
-
-```sh
-shasum -a 256 payload/diskos-root.pub.pem
-```
-
-Wait for flashing and verification to finish before disconnecting or restarting. Public mode retains USB storage; temporary SSH is available through the Disc's Debug Mode.
-
-The graphical installer is also available with `./diskos-installer gui`. Select Public, your official firmware ZIP, Disco's `payload/mq_ui` as the custom UI and your public update key. The command above makes those choices explicit.
+Wait for flash and verification to complete. `public` keeps USB storage; SSH is available via Debug Mode.
+GUI alternative: `./diskos-installer gui` (Public, firmware ZIP, `payload/mq_ui` as custom UI, your public key).
 
 ## Updates and recovery
 
-After installation, use [Disco's signed SD-card update instructions](UPDATING.md) with the same owner keys. You do not need to build `mq_ui` on your Mac.
-
-If a verified downloaded tool is blocked, use macOS **System Settings → Privacy & Security** to review the blocked item. Keep the whole native-tool folder together, including `lib/`. A missing `usbboot` / E102 error usually means the tools are missing or the folder architecture does not match Python.
-
-Keep the installer's saved stock image. To restore it, use `./diskos-installer restore-stock` and follow the prompts. Installation and USB flashing have not been exercised on a physical Mac during this documentation update.
+- Updates: [signed SD updates](UPDATING.md) with the same keys. No need to build `mq_ui`.
+- Blocked tool: allow it in **System Settings › Privacy & Security**. Keep the tool folder intact, including `lib/`.
+- `usbboot` missing / E102: tools are missing or their architecture doesn't match Python.
+- Restore: `./diskos-installer restore-stock`. Keep the saved stock image.

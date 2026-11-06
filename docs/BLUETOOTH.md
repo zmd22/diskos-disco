@@ -1,63 +1,56 @@
 # Bluetooth audio (experimental)
 
-[Back to the README](../README.md) · [Settings](DISPLAY_SETTINGS.md) · [3.4.0 notes](releases/v3.4.0.md)
+[README](../README.md) · [Settings](DISPLAY_SETTINGS.md) · [3.4.0 notes](releases/v3.4.0.md)
 
 > [!WARNING]
-> **Experimental.** Bluetooth audio, the codec choice, aptX, the automatic switching between Bluetooth stacks, the
-> crash guard and Quiet Wi-Fi for Bluetooth are all experimental. They were tested on one Disc with two pairs of
-> headphones. Wired listening is the dependable way to use the Disc.
+> Bluetooth audio, codec selection, aptX, stack switching, the crash guard and Quiet Wi-Fi are experimental, tested
+> on one Disc with two headphones. Wired is the reliable path.
 
-Pair and connect headphones or speakers in **Settings › Connectivity › Bluetooth**. Audio follows the connected
-headphones automatically.
+Pair in **Settings › Connectivity › Bluetooth**. Audio follows connected headphones automatically.
 
 ## Codecs
 
-**Settings › Connectivity › Bluetooth › Bluetooth Codec** applies from the next connection:
+**Settings › Connectivity › Bluetooth › Bluetooth Codec**, applied on next connection:
 
-| Choice | What the headphones get |
+| Choice | Order tried |
 |---|---|
-| **aptX/LDAC Mobile / Standard / High** | LDAC or aptX, whichever they have, then AAC, then SBC: LDAC → aptX HD → aptX → AAC → SBC. Mobile, Standard and High are LDAC's quality (aptX has none). |
-| **AAC** | AAC, else SBC. Never higher than AAC (useful if LDAC stutters). |
-| **SBC** | SBC, which every pair supports. |
+| **aptX/LDAC Mobile / Standard / High** | LDAC → aptX HD → aptX → AAC → SBC. The suffix sets LDAC quality. |
+| **AAC** | AAC → SBC (useful if LDAC stutters). |
+| **SBC** | SBC only. |
 
-Each pair of headphones gets its own best codec: an LDAC pair gets LDAC and an aptX pair aptX, with the same
-setting. Disco learns each pair's codecs at its first connection. **Song Info** shows the codec really in use, for
-example *Bluetooth · LDAC*.
+Each headphone gets its best supported codec, learned on first connection. **Song Info** shows the active codec
+(e.g. *Bluetooth · LDAC*).
 
 ## aptX and aptX HD
 
-FiiO's Bluetooth audio on the Disc has SBC, AAC and LDAC only. Disco carries its own: BlueALSA 4.0.0 with the
-open-source libfreeaptx encoder, built for the Disc and stored inside the interface, so an SD update brings it.
+FiiO's stack supports SBC, AAC and LDAC only. Disco bundles BlueALSA 4.0.0 with libfreeaptx inside `mq_ui`, so it
+ships via SD update.
 
-1. Turn on **Settings › Connectivity › aptX (experimental)**. Disco puts its files in place and says when it's ready.
-2. Choose a **Bluetooth Codec** starting with *aptX/LDAC*.
-3. Turn Bluetooth off and on.
+1. Enable **Settings › Connectivity › aptX (experimental)** and wait for the ready message.
+2. Pick a **Bluetooth Codec** starting with *aptX/LDAC*.
+3. Toggle Bluetooth off and on.
 
-The first connection of new headphones can still use SBC while Disco learns their codecs; from then on they get their
-best one. Off (the default), Bluetooth is FiiO's, exactly as in 3.3.1.
+A new headphone's first connection may use SBC while its codecs are learned. With the switch off (default), Bluetooth
+is FiiO's stack, unchanged from 3.3.1.
 
-- **LDAC always runs on FiiO's Bluetooth audio**, aptX on Disco's: LDAC through Disco's build froze the Disc in testing.
-  When a pair's best codec needs the other one, Disco pauses the music and reconnects the headphones once (*Reconnecting
-  for LDAC…* / *…for aptX…*). Press Play again afterwards.
-- **aptX Adaptive and aptX Lossless are not supported:** there is no open-source encoder for them. Headphones with
-  those (and classic aptX) get classic aptX.
+- **LDAC runs on FiiO's stack, aptX on Disco's** (LDAC on BlueALSA froze the Disc in testing). When switching is
+  needed, Disco pauses and reconnects once (*Reconnecting for LDAC…* / *…for aptX…*); press Play afterwards.
+- **No aptX Adaptive or Lossless** (no open-source encoder); such headphones get classic aptX.
 
-## When a codec doesn't work
+## Fallback
 
-- A codec that doesn't come up steps down to the next one for **that connection only**. The next connection tries
-  the best one again. Nothing is remembered as broken.
-- **Crash guard:** if the Disc restarts just as music starts on a codec that hasn't played on those headphones before,
-  that codec is skipped for them and Disco says so. Choose Bluetooth Codec again to give it another try.
+- A codec that fails steps down for that connection only; the next connection retries the best one.
+- **Crash guard:** if the Disc restarts as a never-before-played codec starts on a headphone, that codec is skipped
+  for it and Disco tells you. Re-select the Bluetooth Codec to retry.
 
 ## Quiet Wi-Fi for Bluetooth
 
-The Disc's Wi-Fi and Bluetooth share one 2.4 GHz radio and take turns. **Settings › Connectivity › Quiet Wi-Fi for
-Bluetooth** (on by default): while audio goes to Bluetooth, Wi-Fi saves power and stops searching for networks when it
-isn't connected, so the headphones get more airtime. LDAC needs the most, so it gains the most. Wi-Fi still works;
-everything goes back to normal when audio leaves Bluetooth.
+Wi-Fi and Bluetooth share one 2.4 GHz radio. **Settings › Connectivity › Quiet Wi-Fi for Bluetooth** (default on)
+enables Wi-Fi power saving and stops scanning while disconnected during Bluetooth playback, freeing airtime (LDAC
+benefits most). Wi-Fi stays usable; normal behaviour resumes when audio leaves Bluetooth.
 
 ## Known limits
 
-- After changing headphones, press **Play** again.
-- Dropouts on LDAC: keep Quiet Wi-Fi on, or try **aptX/LDAC Mobile** (about half LDAC Standard's bitrate).
-- Bluetooth codec choice applies to firmware V2.57 only.
+- Press **Play** after switching headphones.
+- LDAC dropouts: keep Quiet Wi-Fi on, or use **aptX/LDAC Mobile** (~half LDAC Standard's bitrate).
+- Codec selection requires firmware V2.57.

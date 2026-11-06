@@ -1,10 +1,11 @@
 # Build, verify and deliver
 
-Work on `dev` against an identified source baseline. For this documentation, that is Disco 3.4.0 (tag `v3.4.0`). Check the actual branch, local changes and payload manifest before starting. Keep host rendering and MIPS object files in separate build trees.
+Work on `dev`. Before starting, check the branch, local changes and payload manifest. Keep host-render and MIPS
+objects in separate build trees.
 
-## Target build
+## Device build
 
-Use the pinned GCC 11.2.0 / musl 1.2.6 toolchain for static little-endian MIPS32r2, o32, FP64 and NaN2008. See [UI build instructions](UI.md). With a complete toolchain extracted locally:
+Pinned toolchain: GCC 11.2.0 / musl 1.2.6, static little-endian MIPS32r2, o32, FP64, NaN2008 ([UI build](UI.md)).
 
 ```sh
 python3 ui/tools/build_device.py \
@@ -13,25 +14,35 @@ python3 ui/tools/build_device.py \
   --out /absolute/path/to/new-candidate-output --jobs 2
 ```
 
-The helper builds mq_ui and helpers, checks ELF/ABI/static linkage and records hashes. It refuses to overwrite different output binaries. Its manifest is not interchangeable with the shipping `payload/mq_ui.build.json`; record payload provenance separately. Do not claim visual approval merely by passing a flag.
+Builds `mq_ui` and helpers, checks ELF/ABI/static linkage and records hashes; refuses to overwrite differing
+binaries. Its manifest is not the shipping `payload/mq_ui.build.json`; record payload provenance separately. Passing
+a flag is not visual approval.
 
 ## Host checks
 
-In a separate clean checkout/build tree:
+In a separate clean tree:
 
 ```sh
 make -C ui CROSS= host-render -j2
 make -C ui check-theme
 ```
 
-Choose focused diagnostics from `ui/tests/` for the changed behaviour. For settings, inspect `settings_alignment_test.py` and `display_pass_test.py`; for playback/power, the relevant idle, transport, Bluetooth and storage checks. Report actual results, including baseline failures. Do not state that all tests pass because the theme source gate passes.
+Run the `ui/tests/` diagnostics relevant to your change (settings: `settings_alignment_test.py`,
+`display_pass_test.py`; playback/power: idle, transport, Bluetooth, storage). Report real results, including
+pre-existing failures; `check-theme` passing doesn't mean everything passes.
 
-Render changed screens at 360 × 360, including long text, empty states, supported appearances and navigation. Hardware playback, charging, standby, storage handoff and frame pacing still require the Disc.
+Render changed screens at 360×360 with long text, empty states, every appearance and navigation. Playback, charging,
+standby, storage handoff and frame pacing need the real Disc.
 
-## Deliver
+## Delivery
 
-Keep source, version and payload metadata consistent. `tools/check-release.py` checks version, source hash and ELF/payload constraints; `tools/package-release.py` invokes it before packaging. A documentation change under `ui/` can affect the existing source-hash recipe, even without changing executable behaviour: preserve the original release record and explain the distinction rather than inventing a rebuild.
+Keep source, version and payload metadata in sync. `tools/check-release.py` validates version, source hash and
+ELF/payload constraints; `tools/package-release.py` runs it before packaging. Any change under `ui/`, docs included,
+changes the source hash: keep the original release record and explain the difference rather than faking a rebuild.
 
-Use [signed SD updates](UPDATING.md) for UI candidates on an install with the matching public key. Initial installation, boot-chain changes or root-key changes require the appropriate installer workflow. Never overwrite the active `/usr/data/mq_ui` hard link or force-kill the player/UI as a generic deployment procedure.
+Test UI candidates via [signed SD updates](UPDATING.md). First installs, boot-chain and root-key changes need the
+installer. Never overwrite the live `/usr/data/mq_ui` hard link or kill the player/UI as a deployment method.
 
-Before releasing, record source revision, compiler/ABI, binary hash and size, validation performed and device-test status. Obtain maintainer approval before committing when requested, and before updating main or tags. The release workflow runs for `v*` tags and for main pushes that change `ui/version.h` or `payload/mq_ui.build.json`. Prepare and verify a matching payload before merging those files.
+Before a release, record source revision, compiler/ABI, binary hash and size, validation done and device-test status.
+Get maintainer approval before touching main or tags. The release workflow runs on `v*` tags and on main pushes
+changing `ui/version.h` or `payload/mq_ui.build.json`, so have a verified matching payload before merging those.

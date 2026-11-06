@@ -1,64 +1,47 @@
 # Security policy
 
-diskOS is an **unsupported beta** that flashes firmware over a device's mask-ROM USB mode. Because
-a defect here can brick a device or write to the wrong hardware, security and safety reports are
-taken seriously.
+diskOS is an unsupported beta that flashes firmware through the SoC's mask-ROM USB mode. Defects can brick devices
+or write to the wrong hardware, so security and safety reports are prioritised.
 
-## Reporting a vulnerability
+## Reporting
 
-**Do not open a public issue for a security or device-safety vulnerability.** Instead, use GitHub's
-private vulnerability reporting for this repository (the "Report a vulnerability" button under the
-**Security** tab), which opens a private advisory visible only to the maintainer.
+**Don't open a public issue.** Use GitHub private vulnerability reporting (**Security › Report a vulnerability**).
 
-Please include, where relevant:
-
-- What the issue is and how to reproduce it.
-- The impact (e.g. writes outside the intended partition, wrong-device targeting, host privilege
-  issues, data exposure).
-- Your host OS, the installer version, and the device firmware version.
-
-Please redact anything device-identifying from logs before sending: serial numbers, Bluetooth/Wi-Fi
-MAC addresses, and network credentials.
+Include the issue and reproduction steps, impact (e.g. out-of-partition writes, wrong-device targeting, host
+privilege escalation, data exposure), host OS, installer version and device firmware. Redact serials, MAC addresses
+and network credentials.
 
 ## Especially in scope
 
-- **Wrong-device / wrong-partition writes** - anything that could let the flasher erase or write a
-  device it should have refused, or write outside the intended rootfs region.
-- **Host privilege issues** - the installer is designed to run as your **normal (non-root) user**
-  (USB access via the bundled udev rule); it should not need `sudo`. Path-traversal, symlink-follow,
-  arbitrary-delete, or predictable-temp-file issues matter.
-- **Unauthenticated input** - the installer extracts a squashfs and decrypts a firmware package;
-  report anything that lets crafted input escape the work directory or run code.
-- **Bricking-class bugs** - a report that a specific sequence leaves a device unrecoverable.
+- **Wrong-device / wrong-partition writes:** anything letting the flasher write a device it should refuse, or
+  outside the rootfs region.
+- **Host privilege:** the installer runs as a normal user (udev rule, no `sudo`). Path traversal, symlink following,
+  arbitrary delete, predictable temp files.
+- **Untrusted input:** crafted firmware or squashfs that escapes the work directory or executes code.
+- **Bricking:** any sequence that leaves a device unrecoverable.
 
-## Debug Mode (on-device remote access)
+## Debug Mode
 
-diskOS has an opt-in **Debug Mode** (Settings > System > Debug Mode), **off by default**, that starts
-an SSH server over WiFi. It uses a **random password generated per enable**, placed into a private
-shadow file bind-mounted over `/etc/shadow`; the device's stock password is never used or exposed.
-While it is on, it grants **root access over the network**.
+**Settings › System › Debug Mode** (off by default) starts SSH over Wi-Fi with **root access**, using a random
+password generated per enable in a private shadow file bind-mounted over `/etc/shadow`. The stock password is never
+used or exposed.
 
-- **Password storage:** while Debug Mode is on, the current password is also stored in **plaintext** at
-  `/usr/data/sshd/current_pw` (mode 0600, root-only) so the UI can redisplay it after a restart;
-  disabling Debug Mode deletes it. A reboot while still enabled can leave a stale copy - the SSH
-  overlay is dropped on reboot so that password no longer authenticates until re-enabled. It is only
-  as protected as root/physical access to the device.
-- **SSH server:** Dropbear **2022.83**, which predates the CVE-2023-48795 "Terrapin" Strict-KEX
-  mitigation (update planned); exposure is limited by Debug Mode being opt-in and short-lived.
-- **Serial:** the local USB-serial root shell exists only on **dev** builds and is passwordless-root by
-  design (physical-USB access only); **public builds have no serial shell**. Report only if it is
-  reachable without physical access.
+- The current password is also stored **in plain text** at `/usr/data/sshd/current_pw` (0600, root) so the UI can
+  show it after restart; disabling deletes it. A reboot while enabled can leave a stale copy, but the overlay is
+  dropped on reboot so it no longer authenticates.
+- SSH is Dropbear **2022.83**, which lacks the CVE-2023-48795 (Terrapin) strict-KEX fix (update planned). Exposure is
+  limited by Debug Mode being opt-in and short-lived.
+- **dev** builds have a passwordless root shell on USB serial (physical access only); **public** builds have none.
+  Report only if it's reachable without physical access.
 
-In scope: anything that exposes the debug password, leaves SSH running (or the shadow overlay mounted)
-after it should be off, lets the overlay corrupt/leak the on-disk credentials, or reaches the stock
-`/etc/shadow` over the network.
+In scope: leaking the debug password, SSH or the overlay surviving disable, the overlay corrupting or leaking on-disk
+credentials, or network access to the stock `/etc/shadow`.
 
 ## Response
 
-This is a hobbyist project with no SLA, but security and bricking reports are prioritised over
-features. Expect an initial acknowledgement within a week or so. Fixes for confirmed
-device-safety issues will be called out clearly in the release notes.
+Hobby project, no SLA. Expect acknowledgement within about a week; confirmed device-safety fixes are called out in
+release notes.
 
 ## Supported versions
 
-Only the latest release is supported. There are no backported fixes for older builds.
+Latest release only; no backports.

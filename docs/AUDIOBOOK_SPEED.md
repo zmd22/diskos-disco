@@ -1,29 +1,27 @@
 # Audiobook playback speed
 
-**Status: not planned.** Investigated 29 Oct 2026 on a Disc running the stock V2.57 player. Nothing was built.
+**Not planned.** Investigated 2026-10-29 on stock V2.57; nothing built. Live 1.25×–2× speed isn't possible today:
 
-People ask for 1.25× / 1.5× / 2× audiobook speed. Disco can't offer it as a live control, for these reasons.
+## Why not
 
-## Why there is no speed control
+- `mq_ui` is UI only; FiiO's closed `mq_player` does decoding and output via IPC ([command map](COMMAND_MAP.md)). No known command sets speed.
+- `mq_player` (4,601,368 bytes) links `libavcodec`, `libavformat`, `libavutil`, `libswresample` and `libfiio_decoder`, but **not `libavfilter`** (home of `atempo`); neither does `libfiio_decoder.so`.
+- `mq_player`'s "speed" strings are unrelated:
+  - "Failed to set speed" is the SPI driver (`/dev/spidev0.0`).
+  - `TransportPlaySpeed` / `CurrentSpeed` are the DLNA/UPnP renderer (1× only).
 
-- Disco (`mq_ui`) only draws the interface. FiiO's closed-source `mq_player` decodes and plays the audio, driven by IPC commands ([command map](COMMAND_MAP.md)). No known command changes playback speed.
-- `mq_player` (4,601,368 bytes) links `libavcodec`, `libavformat`, `libavutil`, `libswresample` and `libfiio_decoder`, but **not `libavfilter`**. That is where FFmpeg's tempo filter (`atempo`) lives. `libfiio_decoder.so` doesn't link it either.
-- The "speed" strings in `mq_player` are unrelated:
-  - "Failed to set speed" belongs to the SPI driver (`/dev/spidev0.0`).
-  - `TransportPlaySpeed` / `CurrentSpeed` belong to the DLNA/UPnP renderer, which plays at normal speed only.
+## What the Disc has
 
-## What the Disc does have
+- `/usr/bin/ffmpeg` and `/usr/lib/libavfilter.so.7.57.100`, with `atempo` (pitch-preserving).
+- One XBurst core (~2387 BogoMIPS), ~26 MB free RAM with UI and player running.
 
-- `/usr/bin/ffmpeg` and `/usr/lib/libavfilter.so.7.57.100`, which includes `atempo` (changes speed while keeping pitch).
-- A single Ingenic XBurst core (BogoMIPS ~2387) and about 26 MB of free RAM with the UI and player running.
+## Options
 
-## Options, if anyone picks this up
-
-1. **Sped-up copies on a computer** (the most practical). For example:
+1. **Pre-process on a computer** (most practical):
    `ffmpeg -i book.m4b -map 0:a -map_chapters 0 -filter:a atempo=1.5 -c:a aac -b:a 64k "book (1.5x).m4b"`.
-   Chapter times need dividing by the speed, depending on the FFmpeg version. Each copy uses its own space on the SD card and keeps its own resume position.
-2. **Sped-up copies on the Disc** using its own `ffmpeg`, run in the background while charging. Unmeasured: AAC re-encoding on this CPU is likely to take hours for a long book. Benchmark about 60 s of audio first.
-3. **Disco decodes books itself** (decode → `atempo` → output), bypassing `mq_player`. This would give real live speed control, but it means taking over output routing, Bluetooth and FiiO's sound settings, and the CPU headroom is unknown. Large and risky.
-4. **Higher output sample rate.** Cheap, but it raises the pitch (chipmunk voices). Rejected.
+   Depending on FFmpeg version, chapter times may need dividing by the factor. Each copy costs SD space and has its own resume point.
+2. **Pre-process on the Disc** with its `ffmpeg` while charging. Unbenchmarked; AAC encoding a long book likely takes hours. Time 60 s of audio first.
+3. **Own decode path** (decode → `atempo` → output), bypassing `mq_player`. Real live speed, but requires taking over routing, Bluetooth and FiiO's sound settings; CPU headroom unknown. Large and risky.
+4. **Raise the output sample rate.** Cheap but shifts pitch. Rejected.
 
-A hidden tempo command in `mq_player` was the hoped-for shortcut. The binary has no tempo filter linked in, so that route is closed unless a future FiiO firmware adds one.
+A hidden tempo command in `mq_player` would have been the shortcut, but no tempo filter is linked, so that's closed unless FiiO adds one.

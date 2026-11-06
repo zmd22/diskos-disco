@@ -1,3 +1,3 @@
 # SongSphere
 
-SongSphere is built into Disco 3.3.0. Open its app preview, or enter mood editing from a supported track/group action. Playback > SongSphere controls availability. See [the tour](DISCO_TOUR.md#songsphere). Standalone development sources are not an installation requirement.
+Built into `mq_ui`. Open it from its app preview, or edit moods from a track or group action. Enable or disable it in **Playback › SongSphere**. See the [tour](DISCO_TOUR.md#apps).

@@ -1,9 +1,10 @@
-# Zune in Disco 3.3.0
+# Zune
 
-Zune provides a typographic main menu, its own Music and Quick Settings presentation, accent volume controls, album views and lock-screen choices. Its original theme is credited to [namastecoconut-imagined](https://github.com/namastecoconut-imagined/diskos-disco-zune).
+Typographic main menu, own Music and Quick Settings, accent volume controls, album views and lock-screen options.
+Original theme by [namastecoconut-imagined](https://github.com/namastecoconut-imagined/diskos-disco-zune).
 
-Display > Light / dark supports Dark, Light and Auto. Zune settings owns applicable accent, navigation and saver controls; Album Art/Clock Only and clock tint are theme-specific. Zune does not expose a separate Now Playing style selector. Shared Immersive lives directly under Display.
+- **Display › Light / dark:** Dark, Light, Auto.
+- **Display › Zune settings:** accent, navigation, saver; Album Art / Clock Only and clock tint are Zune-only.
+- No separate Now Playing style selector. Immersive is under **Display**.
 
-3.3.0 includes the Zune fixes from pull request #22 (search result text, empty rows while scrolling the theme list, duplicate Apps shortcuts). Do not describe later commits as part of a shipped payload simply because the version string is unchanged. See [source baseline](../SOURCE_MAP.md).
-
-Implementation: `ui/zune_*.c`, `ui/home_shortcuts.c`, `ui/settings.c`, `ui/settings_display.h` and shared Immersive code.
+Implementation: `ui/zune_*.c`, `ui/home_shortcuts.c`, `ui/settings.c`, `ui/settings_display.h`, shared Immersive code.

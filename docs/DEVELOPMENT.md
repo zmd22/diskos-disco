@@ -1,13 +1,17 @@
 # Development and release rules
 
-- **dev**: experimental work and reviewed checkpoints.
-- **main**: release/publication work only when explicitly authorised.
-- Larger work may use a local branch/worktree; preserve existing work before switching.
-- Force updates require explicit instruction; compare the expected remote head before writing.
-- A source commit does not imply a new firmware binary or hardware validation.
+- **dev:** experimental work and reviewed checkpoints.
+- **main:** releases only, when the maintainer authorises.
+- Use local branches/worktrees for larger work; preserve existing work before switching.
+- No force pushes without explicit instruction; check the remote head first.
+- A source commit doesn't imply a new binary or hardware validation.
 
-Document current implementation, not a remembered chat baseline. Keep proposed features in [targets](../todo.md). Use [the workflow](DEV_WORKFLOW.md) for builds and verification, and [the source map](SOURCE_MAP.md) to find authoritative implementations.
+Document the current implementation. Proposed features go in [targets](../todo.md). Builds and verification:
+[workflow](DEV_WORKFLOW.md). Where things live: [source map](SOURCE_MAP.md).
 
-Release material includes source, matching payload, version, compiler/ABI, checksums, known limitations and actual test results. Never publish private signing keys, device identifiers, FiiO firmware/rootfs or generated stock-containing images. Preserve GPL/LGPL corresponding source and notices. Historical release notes remain historical.
+A release includes source, matching payload, version, compiler/ABI, checksums, known limits and actual test results.
+Never publish signing keys, device identifiers, FiiO firmware/rootfs or images containing it. Keep GPL/LGPL source
+and notices intact. Old release notes stay as written.
 
-Upstream is a reference for architecture, hardware evidence and contribution discipline. Its newer themes, settings, casting features, update services and hot-reload instructions are not automatically Disco features or safe Disco deployment procedures.
+Upstream is a reference for architecture, hardware evidence and process. Its features and deployment methods (themes,
+settings, casting, update services, hot reload) aren't Disco features or safe Disco procedures by default.

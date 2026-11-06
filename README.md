@@ -1,8 +1,8 @@
 <h1 align="center">diskOS Disco!</h1>
 
-> **Development builds on `dev` are experimental / in testing.** Use tagged releases for the published downloads. [Development notes](docs/DEV.md).
+> `dev` is experimental. Use tagged releases. [Dev notes](docs/DEV.md)
 
-**Disco! 3.4.1: Sendspin 1.0 and shuffle fixes.** MA Sendspin gets end-to-end encryption, code pairing, album art and FLAC (experimental); Squash and Disco get new Bluetooth and Wi-Fi screens; Up Next no longer freezes on big shuffles and Previous on shuffle goes back to what played. 3.4.0 brought aptX (experimental). [Release notes](docs/releases/v3.4.1.md) · [Bluetooth](docs/BLUETOOTH.md) · [Changelog](CHANGELOG.md)
+**3.4.1:** Sendspin 1.0 (encryption, code pairing, album art, experimental FLAC), new Bluetooth/Wi-Fi screens for Squash and Disco, shuffle fixes. [Release notes](docs/releases/v3.4.1.md) · [Bluetooth](docs/BLUETOOTH.md) · [Changelog](CHANGELOG.md)
 
 <p align="center">
   <b>Your music. Your kind of Disco.</b><br>
@@ -39,34 +39,39 @@
 ---
 
 > [!CAUTION]
-> **Best-effort hobby project, experimental, as-is, no liability.** Flashing rewrites the Disc's system; an interrupted
-> flash can leave it unbootable. Back up your music and keep the saved stock image. Not affiliated with FiiO, Snowsky or Ingenic.
+> Hobby project, provided as-is, no liability. An interrupted flash can brick the Disc: back up your music and keep the
+> stock image. Not affiliated with FiiO, Snowsky or Ingenic.
 
-## What's in it
+## Features
 
-Eight themes (Disco, Null, Squash, Zune, Braun 2.0, Ring, Braun, Stone), local music with playlists and a Queue, List/Wall/Coverflow and Wheel lists, and Immersive with lyrics. SongSphere, Listening Stats, Album Roulette, Boomshine and Disc Shelf are built in. Bluetooth headphones with SBC, AAC, LDAC and, new in 3.4.0, aptX / aptX HD ([experimental](docs/BLUETOOTH.md)). See the [tour](docs/DISCO_TOUR.md) and [settings](docs/DISPLAY_SETTINGS.md).
+- 8 themes: Disco, Null, Squash, Zune, Braun 2.0, Ring, Braun, Stone
+- Local library, playlists, Queue; List, Wall, Coverflow and Wheel views; Immersive mode with lyrics
+- Built-in apps: SongSphere, Listening Stats, Album Roulette, Boomshine, Disc Shelf
+- Bluetooth: SBC, AAC, LDAC, aptX / aptX HD ([experimental](docs/BLUETOOTH.md))
+
+See the [tour](docs/DISCO_TOUR.md) and [settings](docs/DISPLAY_SETTINGS.md).
 
 ## Install
 
-You need a Disc on **FiiO firmware V2.57**, FiiO's V2.57 firmware ZIP and a good USB data cable.
+Requires: a Disc on **FiiO firmware V2.57**, the V2.57 firmware ZIP, a USB data cable.
 
 > [!IMPORTANT]
-> **Start from FiiO's stock V2.57 firmware**, not upstream diskOS or another build ([go back to stock](#going-back)).
-> Already on Disco!? Just [update from the SD card](#updates-from-the-sd-card).
+> Install over stock V2.57, not upstream diskOS or another build ([back to stock](#going-back)).
+> Already on Disco!? [Update from the SD card](#updates-from-the-sd-card).
 
 ### Windows
 
-Download **[diskOS-Disco-for-Windows.zip](https://github.com/zmd22/diskos-disco/releases/latest/download/diskOS-Disco-for-Windows.zip)**, extract it and run `diskOS-Disco.exe`. Its tabs (Check, Setup, Install, Update, Restore) handle installing, your update keys and SD updates, each on its own. [Windows guide](docs/WINDOWS.md). Unsupported, but confirmed working by users; the redesigned app is experimental. Used an older version? Click **Set up again** once.
+Download **[diskOS-Disco-for-Windows.zip](https://github.com/zmd22/diskos-disco/releases/latest/download/diskOS-Disco-for-Windows.zip)**, extract, run `diskOS-Disco.exe`. Tabs: Check, Setup, Install, Update, Restore. Unsupported but user-confirmed; upgrading from an older app, click **Set up again** once. [Guide](docs/WINDOWS.md)
 
 ### macOS
 
-Follow the [macOS guide](docs/MACOS.md).
+See the [macOS guide](docs/MACOS.md).
 
 ### Linux
 
-**New in 3.4.0 (experimental): the Linux app.** Install the Fedora `.rpm` or Arch `.pkg.tar.zst` from the [latest release](https://github.com/zmd22/diskos-disco/releases/latest) and open **diskOS Disco!** from your applications menu, or run `./diskos-installer` from the source. [Linux guide](docs/LINUX.md).
+**App (experimental):** install the Fedora `.rpm` or Arch `.pkg.tar.zst` from the [latest release](https://github.com/zmd22/diskos-disco/releases/latest), or run `./diskos-installer` from source. [Guide](docs/LINUX.md)
 
-On the command line: download the [latest release](https://github.com/zmd22/diskos-disco/releases/latest) source (or `git clone`); the interface is already in `payload/mq_ui`.
+**CLI:** from the release source or a clone (`payload/mq_ui` is prebuilt):
 
 ```sh
 sh ui/tools/owner-keys/diskos-keys.sh          # once: update keys in ./diskos-keys/ (keep them safe; optional)
@@ -79,38 +84,38 @@ cp diskos-keys/diskos-root.pub.pem payload/
   --ota-key payload/diskos-root.pub.pem         # leave out without keys
 ```
 
-Power the Disc off, hold **Volume Down** and plug in USB (the screen stays black). If you made keys, check that `ota: ON … key sha256` matches `sha256sum payload/diskos-root.pub.pem` before answering `y`. Use **public**, not dev: dev blocks USB storage mode.
+With the Disc off, hold **Volume Down** and plug in USB (screen stays black). With keys, confirm `ota: ON … key sha256` matches `sha256sum payload/diskos-root.pub.pem` before answering `y`. Use `public`; `dev` disables USB storage.
 
 ## Updates from the SD card
 
-**Windows:** the app's Update tab does it ([how](docs/WINDOWS.md#update-from-the-sd-card)). **Linux app:** its Update tab ([how](docs/LINUX.md)). **Linux:** download `mq_ui` from the [latest release](https://github.com/zmd22/diskos-disco/releases/latest) and sign it with the keys installed on this Disc:
+**Windows / Linux app:** use the Update tab ([Windows](docs/WINDOWS.md#update-from-the-sd-card), [Linux](docs/LINUX.md)). **CLI:** sign the release `mq_ui` with the keys installed on the Disc:
 
 ```sh
 sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 3.4.1      # -> ./diskos-update/
 ```
 
-Copy the six files in it one by one into `<SD>/diskos-update/` (overwriting the old ones), then on the Disc: **Settings › System › Maintenance › Update from SD Card › Update**, and restart. The new version runs as a trial: choose **Keep** when asked (or let confirmed playback accept it), or **Go back**. A failing trial rolls back. More in the [SD update guide](docs/UPDATING.md).
+Copy the six files to `<SD>/diskos-update/`, overwriting, then **Settings › System › Maintenance › Update from SD Card › Update** and restart. The update boots as a trial: **Keep** (or confirmed playback) accepts it, **Go back** or a failure rolls back. [Details](docs/UPDATING.md)
 
 ## Build it yourself
 
-See the [UI guide](docs/UI.md) and [build workflow](docs/DEV_WORKFLOW.md).
+[UI guide](docs/UI.md) · [Build workflow](docs/DEV_WORKFLOW.md)
 
 ## Known limits
 
-- **Firmware V2.57 only.** Start from stock, not another diskOS build.
-- **Starts stock every time?** Hold **Volume Up** while powering on, then set **Settings › System › Controls › Default UI** to **diskOS**.
-- **Came from another diskOS build and something's off?** **Settings › System › Maintenance › Reset diskOS Settings** (music, Wi-Fi, Bluetooth and audio stay).
-- **Covers** are cached only while the SD card has 500 MB free.
-- **Suddenly see FiiO's interface?** Disco! stopped; restart. `/usr/data/diskos_boot.log` (Debug Mode SSH) says why.
-- **Languages:** Latin, Greek, Cyrillic, Thai, Korean, Japanese and common Chinese. No right-to-left or Indian scripts yet.
-- **Updates** come by signed SD update or a fresh install; no online updates.
-- **Bluetooth codecs and aptX are experimental.** After changing headphones, press Play again. aptX Adaptive/Lossless aren't supported. [More](docs/BLUETOOTH.md#known-limits)
+- Firmware V2.57 only.
+- Boots stock every time: hold **Volume Up** at power-on, then set **Settings › System › Controls › Default UI** to **diskOS**.
+- Odd behaviour after another diskOS build: **Settings › System › Maintenance › Reset diskOS Settings** (keeps music, Wi-Fi, Bluetooth, audio).
+- Covers are cached only with ≥500 MB free on the SD card.
+- FiiO UI appears unexpectedly: Disco! exited; restart. Reason is in `/usr/data/diskos_boot.log`.
+- Scripts: Latin, Greek, Cyrillic, Thai, Korean, Japanese, common Chinese. No RTL or Indic.
+- Updates via signed SD update or reinstall only; no OTA.
+- Bluetooth codecs are experimental. Press Play after switching headphones. No aptX Adaptive/Lossless. [More](docs/BLUETOOTH.md#known-limits)
 
 ## Going back
 
-- **Settings › System › Controls › Default UI › Stock** makes FiiO's interface the default; hold **Volume Up** at power-on to boot the other one once.
-- `./diskos-installer restore-stock` (Linux) restores the backup made at install. The Windows app keeps it in `%LOCALAPPDATA%\diskOS-Disco\backup`; keep a copy elsewhere.
-- What survives flashing, restoring and switching: [Flashing and switching](docs/SWITCHING.md).
+- **Settings › System › Controls › Default UI › Stock** sets FiiO's UI as default; **Volume Up** at power-on boots the other once.
+- `./diskos-installer restore-stock` restores the install-time backup. Windows stores it in `%LOCALAPPDATA%\diskOS-Disco\backup`; copy it elsewhere.
+- What survives each path: [Flashing and switching](docs/SWITCHING.md).
 
 ## Documentation
 
@@ -131,21 +136,19 @@ I’m out. Peace, and happy listening. Thank you to everyone who built, tested, 
 
 ## Thanks
 
-- **[namastecoconut-imagined](https://github.com/namastecoconut-imagined/diskos-disco-zune)**, for the original Zune theme: its Metro-inspired design, typography, menus and music screen. Disco's version builds on it.
-- **[b0hemia](https://github.com/b0hemia/diskos)**, for diskOS itself: the reverse engineering, installer, boot and recovery chain, signed updates and the UI this grew from. [Support b0hemia on Ko-fi](https://ko-fi.com/b0hemia).
-- **diskOS contributors**: everyone who reported, tested and patched upstream.
-- **[ingvarr777](https://github.com/ingvarr777)**, for Ogg Opus support and careful bug reports.
-- **[LVGL](https://lvgl.io)**, SQLite, jsmn, musl, the Inter, Montserrat and Font Awesome fonts, and every project in [NOTICE.md](NOTICE.md).
-- **Dieter Rams** and the Braun SK4, for the design language the Braun theme borrows with respect.
-- FiiO / Snowsky for a lovely little round player (no affiliation).
+- **[namastecoconut-imagined](https://github.com/namastecoconut-imagined/diskos-disco-zune)**: the original Zune theme Disco's builds on.
+- **[b0hemia](https://github.com/b0hemia/diskos)**: diskOS — reverse engineering, installer, boot/recovery chain, signed updates, the base UI. [Support b0hemia on Ko-fi](https://ko-fi.com/b0hemia).
+- **diskOS contributors**: upstream reports, testing and patches.
+- **[ingvarr777](https://github.com/ingvarr777)**: Ogg Opus support, bug reports.
+- **[LVGL](https://lvgl.io)**, SQLite, jsmn, musl, Inter, Montserrat, Font Awesome and everything in [NOTICE.md](NOTICE.md).
+- **Dieter Rams** and the Braun SK4, inspiration for the Braun theme.
+- FiiO / Snowsky for the hardware (no affiliation).
 
-### A note on the contributor list
-
-Early commits by "disco" were made by the maintainer ([zmd22](https://github.com/zmd22)) under a misconfigured email; the history is kept as is.
+Early commits by "disco" are the maintainer ([zmd22](https://github.com/zmd22)) under a misconfigured email.
 
 ## License
 
-Installer, scripts and docs: **MIT** ([LICENSE](LICENSE)). On-device interface in [ui/](ui/): **GPL-3.0-or-later** ([ui/COPYING](ui/COPYING)). Third-party terms: [NOTICE.md](NOTICE.md), [SPL_SOURCE.md](SPL_SOURCE.md), [licenses/](licenses/).
+Installer, scripts, docs: **MIT** ([LICENSE](LICENSE)). [ui/](ui/): **GPL-3.0-or-later** ([COPYING](ui/COPYING)). Third-party: [NOTICE.md](NOTICE.md), [SPL_SOURCE.md](SPL_SOURCE.md), [licenses/](licenses/).
 
 > [!WARNING]
-> Never share generated `diskos_*.bin` images: they contain FiiO's root filesystem.
+> Don't share generated `diskos_*.bin` images; they contain FiiO's root filesystem.

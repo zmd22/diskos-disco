@@ -1,9 +1,16 @@
-# Squash in Disco 3.3.0
+# Squash
 
-Squash has bold Music typography, a rising launcher, fixed right-side navigation, eight-icon Quick Settings and a bottom volume arc. Single-tap track text opens actions; double-tap controls playback; horizontal swipes skip. The launcher supports configured shortcuts.
+Bold Music typography, rising launcher (with configurable shortcuts), fixed right-side navigation, eight-icon Quick
+Settings, bottom volume arc. Tap track text for actions, double-tap for play/pause, swipe horizontally to skip.
 
-Display > Squash settings owns Music appearance and theme Navigation. Music backgrounds are Plain, Blur and Cover; the font preference is independent (`simple_track_font`). Playback state and playback mode indicators are separate switches. Its Music gesture controls and QS geometry are fixed, so unrelated Disco switches are hidden.
+**Display › Squash settings** covers Music appearance and Navigation:
 
-Shared features include Wheel lists, letter navigation, round track menus and Immersive. Configure standby timing in Battery & power and online services in Connectivity. See [Settings](../DISPLAY_SETTINGS.md).
+- Backgrounds: Plain, Blur, Cover. Font is a separate preference (`simple_track_font`).
+- Playback state and mode indicators are separate toggles.
+- Gesture controls and QS layout are fixed, so unrelated Disco options are hidden.
 
-Implementation: `ui/simple_theme.c`, `ui/disco_home.c`, `ui/simple_theme.h` and shared screen modules. Compatibility keys still use `simple_*`; this is not a separate theme named Simple.
+Shares Wheel lists, letter navigation, round track menus and Immersive. Standby timing is in Battery & power, online
+services in Connectivity. See [Settings](../DISPLAY_SETTINGS.md).
+
+Implementation: `ui/simple_theme.c`, `ui/simple_theme.h`, `ui/disco_home.c`, shared screen modules. Config keys use
+the legacy `simple_*` prefix; there's no separate "Simple" theme.

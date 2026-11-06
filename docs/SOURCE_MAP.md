@@ -2,17 +2,14 @@
 
 ## Baselines
 
-This documentation describes **Disco 3.3.0**, the release commit tagged `v3.3.0`. Its shipped mq_ui SHA-256 is `4af9b27339279f8b6609fdc5523df8dbc9d99111ed83c3db895df35677673beb`.
-
-The main merge `bb389f6` (Zune Apps, Search and Settings fixes, pull request #22) is part of the 3.3.0 source and payload.
-
-Reference: [b0hemia/diskOS](https://github.com/b0hemia/diskOS/tree/53a9cc512d7aec766fd7c5e304e78cac6ca9b7d3), commit `53a9cc512d7aec766fd7c5e304e78cac6ca9b7d3`. Upstream's tour, documentation index, contribution rules and developer workflow informed the organisation, not Disco's feature list.
+- **Disco 3.4.1**, tag `v3.4.1`. Shipped `mq_ui` SHA-256: `4f986897e5c081bb727a0d0ec43f9a285e296d65ea00d5dd708db0b85e4a0d96`.
+- Upstream reference: [b0hemia/diskOS @ `53a9cc5`](https://github.com/b0hemia/diskOS/tree/53a9cc512d7aec766fd7c5e304e78cac6ca9b7d3). Its docs shaped this documentation's structure, not Disco's feature set.
 
 ## Implementation owners
 
-Paths below are relative to the repository root. Read the implementation together with its configuration and routes; a function or old preset remaining in source does not mean the user can select it.
+Paths are relative to the repo root. Read code together with its config and routing: dead functions or old presets in source aren't necessarily reachable.
 
-| Area | Authoritative sources |
+| Area | Sources |
 |---|---|
 | Startup, power, input and screen lifetime | `ui/main.c`, `ui/screenmgr.c`, `ui/screens.h`, `ui/controls.c`, `ui/battery.c` |
 | Playback IPC and persistence | `ui/ipc.c`, `ui/config.c`, `ui/musicdb.c` |
@@ -28,17 +25,15 @@ Paths below are relative to the repository root. Read the implementation togethe
 | Initial installation | `diskos_installer/`, `install.sh`, `src/launcher/`, `src/usbboot/`, `flash/`, `windows/` |
 | Boot selection and signed updates | `payload/` boot/verification scripts, `diskos_installer/imagebuild.py`, `ui/tools/owner-keys/` |
 | Build and packaging | `ui/Makefile`, `ui/tools/build_device.py`, `build/`, `tools/check-release.py`, `tools/package-release.py`, `.github/workflows/` |
-| Verification | `tests/`, `ui/tests/`; tests and fixtures are not runtime features |
+| Verification | `tests/`, `ui/tests/` |
 | Third-party and legal source | `ui/lvgl/`, bundled libraries, `vendor/`, `corresponding-source/`, `spl-src/`, `licenses/` and notices |
 
-## What carries over from upstream
+## Relation to upstream
 
-The stock-player boundary, hardware evidence, installer architecture, fail-closed update verification, component licences and requirement for real-device validation remain relevant. Keep host renders, static/ABI checks and physical-device results distinct.
+Shared with upstream: the stock-player boundary, hardware evidence, installer architecture, fail-closed update verification, licensing and the real-device testing requirement. Keep host renders, static/ABI checks and device results separate.
 
-Disco owns its theme selection, settings hierarchy, Wheel lists, Shade, track menus and integrated apps. Do not copy upstream theme lists, Beam/casting screens, online-update availability or development hot-reload commands into these guides without an implementation check. Disco's documented UI deployment route is the signed SD update.
+Disco-specific: theme selection, settings hierarchy, Wheel lists, Shade, track menus, integrated apps. Don't document upstream themes, Beam/casting, online updates or hot reload without checking the implementation. UI deployment is via signed SD update only.
 
-## Scope and evidence
+## Scope
 
-The audit covers the first-party runtime, configuration/routing, app integration, installer and build areas needed to reconcile the guides. Vendored code, generated glyph data and old research are dependency/evidence records, not a fresh line-by-line correctness or security audit. No physical-device validation was performed for this documentation change.
-
-Current user instructions live in this directory. Earlier plans and investigations are under [archive](../archive/README.md); release notes retain their historical meaning. The [UI source guide](UI.md) explains why documentation embedded in the hashed release source remains frozen.
+This map covers first-party runtime, config/routing, apps, installer and build. Vendored code, generated glyphs and old research weren't re-audited. Current docs live here; old plans are in [archive](../archive/README.md). Why docs inside `ui/` are frozen: [UI.md](UI.md).

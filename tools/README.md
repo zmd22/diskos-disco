@@ -1,27 +1,22 @@
 # diskOS device tools
 
-Host-side helper scripts for capturing screenshots and driving touch diagnostics over SSH.
-Install UI builds through [signed SD-card updates](../docs/UPDATING.md). The full build, preview
-and update workflow is in [DEV_WORKFLOW.md](../docs/DEV_WORKFLOW.md).
-
-If you are an agent or a new contributor picking this up cold, read the **Device rules** section
-first. A couple of the device's behaviors are non-obvious and easy to get wrong.
+Host scripts for screenshots and touch input over SSH. Install builds via [signed SD updates](../docs/UPDATING.md);
+full workflow in [DEV_WORKFLOW.md](../docs/DEV_WORKFLOW.md). **Read [Device rules](#device-rules) first.**
 
 ## Contents
 | Script | What it does |
 |---|---|
 | `diskos-shot.sh` | Capture the device screen to a PNG |
-| `diskos-touch.sh` | Drive the touchscreen over SSH (tap / swipe) via the on-device injector |
-| `tinj.c` | The on-device touch injector, built once and pushed (used by `diskos-touch.sh`) |
+| `diskos-touch.sh` | Tap / swipe via the on-device injector |
+| `tinj.c` | On-device touch injector (build once, push) |
 
 ## Requirements
 - `sshpass` and `ssh` (OpenSSH)
 - For screenshots: `python3` with Pillow (`pip install Pillow`)
 
 ## Getting access
-Enable **Debug Mode** on the device (Settings > System > Maintenance). It shows the device IP and a one-time SSH
-password. The password is regenerated on every enable and **does not survive a reboot**, so grab a
-fresh one each session. The scripts read the IP and password from environment variables:
+Enable **Settings › System › Maintenance › Debug Mode**; it shows the IP and an SSH password that changes on every
+enable and doesn't survive reboot. Pass both via the environment:
 
 ```sh
 export DISKOS_IP=192.168.x.x       # from Debug Mode
@@ -30,23 +25,19 @@ export DISKOS_PW=xxxxxxxxxx         # from Debug Mode
 
 ## Install a UI build
 
-Use the [signed SD-card update instructions](../docs/UPDATING.md): sign on the computer with your
-existing keys, copy the complete `diskos-update` folder to the card root, install from Settings,
-restart and accept the trial. Updating `mq_ui` alone does not install separate user apps.
+Sign with your existing keys, copy the six `diskos-update` files to the card root, install from Settings, restart,
+accept the trial ([details](../docs/UPDATING.md)). This doesn't install separate user apps.
 
 ## Screenshot
 ```sh
 DISKOS_IP=... DISKOS_PW=... ./diskos-shot.sh home.png
 ```
-The panel is 360x360, 32bpp BGRA, mounted rotated 180 degrees. The script reads `/dev/fb0` (one frame
-is 518400 bytes), reinterprets it as BGRA, rotates 180, and saves a PNG.
+Reads one 518,400-byte frame from `/dev/fb0` (360×360 BGRA, panel mounted 180°), rotates it upright and saves a PNG.
 
-## Driving the touchscreen (agent navigation)
-This lets an agent navigate the UI: capture a screenshot, read the coordinate of the thing to touch,
-and tap it. Coordinates are screen coordinates (0..359, top-left origin) matching the upright PNG from
-`diskos-shot.sh`; the injector applies the 180-degree panel rotation for you.
+## Touch
+Coordinates are 0–359 from top-left, matching the upright screenshot; the injector handles rotation.
 
-Build the injector once (any host with the Docker builder), then push it to the device:
+Build and push the injector once:
 ```sh
 # from ui/ where the Docker image lives, with tinj.c copied in:
 docker run --rm -v "$PWD:/src" -w /src diskos-ui-builder sh -c '${CROSS}gcc -O2 -static -o tinj tinj.c'
@@ -54,13 +45,13 @@ export SSHPASS="$DISKOS_PW"    # sshpass -e reads the password from the environm
 sshpass -e ssh root@"$DISKOS_IP" 'cat > /usr/data/tinj && chmod 755 /usr/data/tinj' < tinj
 ```
 
-Then drive it:
+Use:
 ```sh
 DISKOS_IP=... DISKOS_PW=... ./diskos-touch.sh tap 180 116          # tap the album cover
 DISKOS_IP=... DISKOS_PW=... ./diskos-touch.sh swipe 40 125 320 125  # swipe right (back / previous)
 ```
 
-A typical agent loop:
+Typical loop:
 ```sh
 ./diskos-shot.sh state.png     # look at the screen
 ./diskos-touch.sh tap X Y      # act on it
@@ -68,31 +59,24 @@ A typical agent loop:
 ```
 
 Notes and limits:
-- The cst816t is MT type-B on `/dev/input/event1`. `tinj` writes 32-bit-ABI `input_event` records
-  directly to that node. Physical keys (volume, play, power) are on `event0` and owned by the player,
-  so this tool cannot press them; it only drives touch.
-- Taps reliably wake the screen and drive list rows and swipe navigation. A small non-list button can
-  occasionally be missed if press and release fall in one UI input-read cycle (the tap holds contact
-  ~90ms to avoid this). If a control resists, use a list-row equivalent or a swipe.
-- On the round screen, a horizontal swipe changes pages; `y` near the center avoids the seek ring on
-  Now Playing.
+- The cst816t is MT type-B on `/dev/input/event1`; `tinj` writes 32-bit `input_event`s there. Physical keys are on
+  `event0`, owned by the player, and can't be injected.
+- Taps hold ~90 ms. Small buttons are occasionally missed if press and release land in one input cycle; use a list
+  row or swipe instead.
+- Horizontal swipes change pages; keep `y` near centre to avoid the Now Playing seek ring.
 
-## Device rules (read before poking around)
+## Device rules
 
-- **Never kill `mq_player`.** It is the stock audio engine and it owns the SD card. Killing it frees
-  the card, and the hardware MCU reboots the whole device (about 10 seconds). Only ever touch `mq_ui`.
-- **Deploy the UI through signed SD-card updates.** Do not replace `/usr/data/mq_ui` over SSH or
-  alter the boot manifest. Boot verifies the selected UI and falls back if verification fails.
-- **Use the normal restart/shutdown controls.** These diagnostic tools do not need to stop the UI
-  or player services.
+- **Never kill `mq_player`.** It owns the SD card; killing it makes the MCU reboot the Disc (~10 s).
+- **Deploy only via signed SD updates.** Don't replace `/usr/data/mq_ui` over SSH or edit the boot manifest; boot
+  verification falls back to stock.
+- Use the normal restart/shutdown controls; these tools never need to stop services.
 
-## Debugging playback / IPC
+## Playback / IPC debugging
 - Player log: `/usr/data/fiio/log/fiio_player.log`
-- PCM state: `/proc/asound/card*/pcm*p/sub*/status` (`RUNNING` means audio is actually playing)
-- Send a raw `/player` command frame: `/usr/data/psend <FRAME>` (on the device)
+- PCM state: `/proc/asound/card*/pcm*p/sub*/status` (`RUNNING` = playing)
+- Raw `/player` frame: `/usr/data/psend <FRAME>` (on device)
 
 ## Notes
-- The device is 2.4 GHz Wi-Fi only; SSH can blip occasionally. The scripts use short connect timeouts;
-  just re-run on a transient failure.
-- These scripts do not hardcode any credentials. Debug Mode passwords are per-session by design; pass
-  them in through the environment as shown above.
+- 2.4 GHz Wi-Fi only; SSH drops occasionally. Scripts use short timeouts; just rerun.
+- No credentials are hardcoded.

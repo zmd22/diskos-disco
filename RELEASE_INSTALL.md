@@ -1,36 +1,27 @@
 # Install diskOS Disco!
 
-> **Best-effort hobby project, experimental, as-is.** No warranty or liability; not affiliated with FiiO or Snowsky.
-> Back up your music and keep the saved stock image before you install.
+> Hobby project, as-is, no warranty. Not affiliated with FiiO or Snowsky. Back up your music and keep the stock image.
 
-> **Recommended: start from FiiO's stock V2.57 firmware.** Installing over upstream diskOS or another diskOS build is not supported and can be buggy; restore stock first.
+- **Base:** install over stock FiiO V2.57. Upstream diskOS or other builds are unsupported; restore stock first.
+- **Coming from another diskOS build:** if anything misbehaves, run **Settings › System › Maintenance › Reset diskOS Settings** (keeps music, Wi-Fi, Bluetooth, EQ, audio). Restoring stock does not clear diskOS data.
+- **Boots stock after install:** a previous "Default UI: Stock" survives flashing. Hold **Volume Up** at power-on, then set **Settings › System › Controls › Default UI** to **diskOS**. See [flashing and switching](https://github.com/zmd22/diskos-disco/blob/v3.4.1/docs/SWITCHING.md).
 
-> Switched to Disco from upstream diskOS or another build, and something looks or behaves wrong? **Settings > System > Maintenance > Reset diskOS Settings** gives the interface a fresh start; your music, Wi-Fi, Bluetooth, EQ and audio settings stay. Going back to stock in between does *not* clear what diskOS leaves on the Disc.
->
-> **Starts stock after installing?** An earlier "Default UI: Stock" choice survives flashing. Hold **Volume Up** while
-> powering on to start Disco once, then set Settings > System > Controls > Default UI to **diskOS**.
-> More: [what stays and what goes when you flash or switch](https://github.com/zmd22/diskos-disco/blob/v3.4.1/docs/SWITCHING.md).
+## Install
 
-**On Windows:** download `diskOS-Disco-for-Windows.zip` from the release, extract it and run `diskOS-Disco.exe`. Its
-tabs check your PC, flash the Disc and make SD updates (redesigned in 3.4.0, experimental) ([guide](https://github.com/zmd22/diskos-disco/blob/v3.4.1/docs/WINDOWS.md)).
+- **Windows:** extract `diskOS-Disco-for-Windows.zip`, run `diskOS-Disco.exe` (experimental). [Guide](https://github.com/zmd22/diskos-disco/blob/v3.4.1/docs/WINDOWS.md)
+- **macOS:** [Mac guide](https://github.com/zmd22/diskos-disco/blob/v3.4.1/docs/MACOS.md), with links to upstream's Apple Silicon flash tools.
+- **Linux:** install the Fedora or Arch package (experimental, [guide](https://github.com/zmd22/diskos-disco/blob/v3.4.1/docs/LINUX.md)), or use the CLI installer from source ([README](https://github.com/zmd22/diskos-disco/blob/v3.4.1/README.md#install)).
 
-**On macOS:** follow the [Mac guide](https://github.com/zmd22/diskos-disco/blob/v3.4.1/docs/MACOS.md), including links to upstream’s ready-built Apple Silicon flash tools.
+On 1.4.1 or later, 3.4.1 installs by SD update. Older versions need one reflash (the 1.4.1 boot-script fixes can't ship via SD).
 
-**On Linux:** install the Fedora or Arch package from the release and open **diskOS Disco!** (new in 3.4.0, experimental;
-[guide](https://github.com/zmd22/diskos-disco/blob/v3.4.1/docs/LINUX.md)), or flash with the installer from the
-repository or source download, using your update key
-([README](https://github.com/zmd22/diskos-disco/blob/v3.4.1/README.md#install)). **Already on 1.4.1 or later? 3.4.1 supports an SD update.** Older than that? Reflash once first
-(the 1.4.1 boot-script fixes can't arrive by SD card). See [what's new](https://github.com/zmd22/diskos-disco/releases/latest).
+## Updates
 
-After that, `mq_ui` is the interface: sign it with your own keys and install it from the SD card
-([docs/UPDATING.md](https://github.com/zmd22/diskos-disco/blob/v3.4.1/docs/UPDATING.md)).
+`mq_ui` is the interface. Sign it with your keys and install from the SD card: [UPDATING.md](https://github.com/zmd22/diskos-disco/blob/v3.4.1/docs/UPDATING.md).
 
-**New in 3.4.1: MA Sendspin 1.0** (experimental): encrypted, with code pairing, album art and FLAC; needs Music Assistant 2.10.7 or newer.
-**Since 3.4.0: aptX and aptX HD** over Bluetooth (experimental): turn on Settings › Connectivity › aptX (experimental).
-See the [Bluetooth guide](https://github.com/zmd22/diskos-disco/blob/v3.4.1/docs/BLUETOOTH.md).
+## Notable
 
-[Disc Shelf](https://github.com/zmd22/diskos-disco/blob/v3.4.1/docs/DISC_SHELF_INSTALL.md) is built in: browse Navidrome or SMB3 and download original files. The legacy standalone Disc Shelf 1.0.4 archive is no longer packaged (3.3.1 has the last copy).
+- **3.4.1:** MA Sendspin 1.0 (experimental): encrypted, code pairing, album art, FLAC. Needs Music Assistant 2.10.7+.
+- **3.4.0:** aptX / aptX HD (experimental): **Settings › Connectivity › aptX (experimental)**. [Bluetooth guide](https://github.com/zmd22/diskos-disco/blob/v3.4.1/docs/BLUETOOTH.md)
+- Built in: [Disc Shelf](https://github.com/zmd22/diskos-disco/blob/v3.4.1/docs/DISC_SHELF_INSTALL.md) (Navidrome / SMB3 downloads), Boomshine, [Album Roulette](https://github.com/zmd22/diskos-disco/blob/v3.4.1/docs/ALBUM_ROULETTE_INSTALL.md). Add them via the theme's Menu items editor. The standalone Disc Shelf 1.0.4 is no longer packaged (last in 3.3.1).
 
-Boomshine and [Album Roulette](https://github.com/zmd22/diskos-disco/blob/v3.4.1/docs/ALBUM_ROULETTE_INSTALL.md) are built into `mq_ui`: add them in the theme’s Menu items editor. Installed apps can join that menu too.
-
-This package is not a flasher. It contains no FiiO firmware, music, signing keys or account details.
+This package is not a flasher and contains no FiiO firmware, music, keys or account data.
