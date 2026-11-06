@@ -19,7 +19,10 @@ static char*value(ds_profile_t*p,int i){switch(i){case 0:return p->server;case 1
 static void build_fields(void);
 int ds_setup_close(void){if(!form)return 0;lv_obj_delete(form->root);ds_secret_clear(form,sizeof *form);free(form);form=NULL;return 1;}
 static void dismiss(lv_event_t*e){(void)e;ds_setup_close();}
-static void edited(const char*s){if(!form||!s)return;int i=form->editing;size_t max=i==0?1023:i==3?900:i==5?127:255;if(strlen(s)>max||strpbrk(s,"\r\n")){ui_toast("Value too long or contains a new line");return;}strcpy(value(&form->cfg.profile[form->edit_source],i),s);build_fields();}
+static void edited(const char*s){if(!form||!s)return;int i=form->editing;size_t max=i==0?1023:i==3?900:i==5?127:255;if(strlen(s)>max||strpbrk(s,"\r\n")){ui_toast("Value too long or contains a new line");return;}char*dst=value(&form->cfg.profile[form->edit_source],i);
+ /* Navidrome URL typed as "host:port": add the http:// the validator requires (it said only "Set server, ...") */
+ if(i==0&&form->edit_source==DS_NAVIDROME&&s[0]&&!strstr(s,"://")&&strlen(s)+7<=max)snprintf(dst,1024,"http://%s",s);
+ else strcpy(dst,s);build_fields();}
 static void edit(lv_event_t*e){if(!form)return;int i=(int)(intptr_t)lv_event_get_user_data(e);form->editing=i;form->edit_source=form->cfg.source;char*v=value(&form->cfg.profile[form->edit_source],i);const char*t=i==0?(form->cfg.source==DS_SMB?"SMB host or IP":"Navidrome URL"):title[i];if(i==2)kbinput_open_password(t,v,edited);else kbinput_open(t,v,edited);}
 static void remember(lv_event_t*e){(void)e;ds_profile_t*p=&form->cfg.profile[form->cfg.source];p->remember=!p->remember;build_fields();}
 static void choose_source(lv_event_t*e){if(!form)return;form->cfg.source=(int)(intptr_t)lv_event_get_user_data(e);build_fields();}
@@ -47,9 +50,12 @@ static void save(lv_event_t*e){
 void ds_setup_open(void(*saved)(void)){
  if(form)return;form=calloc(1,sizeof *form);if(!form){ui_toast("Not enough memory");return;}form->saved=saved;ds_settings_load(CONFIG_PATH,&form->cfg);
  form->root=lv_obj_create(screen_get_root(SCR_SHELF));lv_obj_remove_style_all(form->root);lv_obj_set_size(form->root,360,360);lv_obj_set_style_bg_color(form->root,TC(CANVAS),0);lv_obj_set_style_bg_opa(form->root,LV_OPA_COVER,0);lv_obj_remove_flag(form->root,LV_OBJ_FLAG_SCROLLABLE);kit_keep(form->root);
+ /* Zune's pivot header puts its back ring (and a wide hit area) at y 38..94: move the source row below it, or a tap
+  * on Navidrome lands on Back and closes the form without saving. */
+ int dz=th_zune()?26:0;
  ui_header_cb(form->root,"Server",dismiss);shelf_brand_icon(form->root,170,6,20);
- for(int i=0;i<2;i++){lv_obj_t*b=form->source[i]=lv_button_create(form->root);lv_obj_set_pos(b,54+i*128,70);lv_obj_set_size(b,124,34);lv_obj_t*l=lv_label_create(b);lv_label_set_text(l,i?"SMB3":"Navidrome");app_theme_button(b,0);lv_obj_set_style_text_font(l,TF(UI_16),0);lv_obj_center(l);lv_obj_add_event_cb(b,choose_source,LV_EVENT_SHORT_CLICKED,(void*)(intptr_t)i);}
- form->list=lv_obj_create(form->root);lv_obj_remove_style_all(form->list);lv_obj_set_pos(form->list,44,112);lv_obj_set_size(form->list,272,168);lv_obj_set_flex_flow(form->list,LV_FLEX_FLOW_COLUMN);lv_obj_set_flex_align(form->list,LV_FLEX_ALIGN_START,LV_FLEX_ALIGN_CENTER,LV_FLEX_ALIGN_CENTER);lv_obj_set_style_pad_row(form->list,5,0);lv_obj_set_style_pad_bottom(form->list,8,0);lv_obj_set_scroll_dir(form->list,LV_DIR_VER);lv_obj_set_scrollbar_mode(form->list,LV_SCROLLBAR_MODE_AUTO);kit_keep(form->list);
+ for(int i=0;i<2;i++){lv_obj_t*b=form->source[i]=lv_button_create(form->root);lv_obj_set_pos(b,54+i*128,70+dz);lv_obj_set_size(b,124,34);lv_obj_t*l=lv_label_create(b);lv_label_set_text(l,i?"SMB3":"Navidrome");app_theme_button(b,0);lv_obj_set_style_text_font(l,TF(UI_16),0);lv_obj_center(l);lv_obj_add_event_cb(b,choose_source,LV_EVENT_SHORT_CLICKED,(void*)(intptr_t)i);}
+ form->list=lv_obj_create(form->root);lv_obj_remove_style_all(form->list);lv_obj_set_pos(form->list,44,112+dz);lv_obj_set_size(form->list,272,168-dz);lv_obj_set_flex_flow(form->list,LV_FLEX_FLOW_COLUMN);lv_obj_set_flex_align(form->list,LV_FLEX_ALIGN_START,LV_FLEX_ALIGN_CENTER,LV_FLEX_ALIGN_CENTER);lv_obj_set_style_pad_row(form->list,5,0);lv_obj_set_style_pad_bottom(form->list,8,0);lv_obj_set_scroll_dir(form->list,LV_DIR_VER);lv_obj_set_scrollbar_mode(form->list,LV_SCROLLBAR_MODE_AUTO);kit_keep(form->list);
  lv_obj_t*b=lv_button_create(form->root);lv_obj_set_pos(b,114,284);lv_obj_set_size(b,132,44);lv_obj_t*l=lv_label_create(b);lv_label_set_text(l,"Save");lv_obj_center(l);app_theme_button(b,0);lv_obj_add_event_cb(b,save,LV_EVENT_SHORT_CLICKED,NULL);build_fields();
 }
 void ds_setup_preview_source(int source){if(form){form->cfg.source=source;build_fields();}}

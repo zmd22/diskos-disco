@@ -44,7 +44,10 @@ int ds_settings_validate(const ds_settings_t*c,int test,char*err,size_t cap){
  for(int s=0;s<2;s++)for(int i=0;i<6;i++){size_t n;char*v=field((ds_profile_t*)&c->profile[s],i,&n);if(strpbrk(v,"\r\n")){snprintf(err,cap,"Settings cannot contain new lines");return 0;}}
  int server_ok=c->source==DS_SMB?p->server[0]&&!strpbrk(p->server," /\\\t@?#"):
  (!strncmp(p->server,"http://",7)||!strncmp(p->server,"https://",8))&&!strpbrk(p->server," \t?#@")&&p->server[!strncmp(p->server,"https://",8)?8:7]!=0;
- if(!server_ok||!p->user[0]||!p->password[0]){snprintf(err,cap,"Set server, username and password");return 0;}
+ if(!p->server[0]){snprintf(err,cap,"Set the server");return 0;}
+ if(!server_ok){snprintf(err,cap,c->source==DS_SMB?"Server: host or IP only, no smb:// or path":"Server must start with http:// or https://");return 0;}
+ if(!p->user[0]){snprintf(err,cap,"Set the username");return 0;}
+ if(!p->password[0]){snprintf(err,cap,"Set the password");return 0;}
  if(c->source==DS_SMB&&(!p->share[0]||strpbrk(p->share,"/\\")||!strcmp(p->share,".")||!strcmp(p->share,".."))){snprintf(err,cap,"Set a share name, without a folder path");return 0;}
  if((!test&&strncmp(p->dest,"/tmp/sdcard/",12))||strstr(p->dest,"..")||!p->dest[0]||strlen(p->dest)>900){snprintf(err,cap,"Download folder must be on the SD card");return 0;}
  return 1;
