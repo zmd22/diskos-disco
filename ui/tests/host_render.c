@@ -2568,6 +2568,21 @@ int main(int argc, char **argv){
             ipc_seed_state(&st); ui_update(&st);
             for(int i=0;i<40;i++){ lv_tick_inc(10); lv_timer_handler(); }
         }
+        if(getenv("REVIEW_ZUNE_CYR")){
+            LV_FONT_DECLARE(font_zune_regular_16) LV_FONT_DECLARE(font_zune_light_21) LV_FONT_DECLARE(font_zune_semibold_22)
+            lv_font_glyph_dsc_t g;
+            const lv_font_t *cuts[]={&font_zune_regular_16,&font_zune_light_21,&font_zune_semibold_22};
+            const uint32_t cps[]={0x410,0x44F,0x451};                       /* А я ё */
+            for(unsigned c=0;c<sizeof cuts/sizeof cuts[0];c++) for(unsigned k=0;k<sizeof cps/sizeof cps[0];k++)
+                assert(lv_font_get_glyph_dsc(cuts[c],&g,cps[k],0) && g.resolved_font==cuts[c]);   /* the cut itself, not a fallback */
+            const char *at=getenv("NP_ALBUM"); assert(at&&*at);
+            lv_obj_t *al=ui_test_zune_np_part(2); assert(al);
+            assert(strstr(lv_label_get_text(al),at));                       /* the album line carries the NP album */
+            lv_obj_set_style_text_font(al,&font_zune_light_21,0);           /* render with the Cyrillic cut for the review PNG */
+            puts("PASS: Zune cuts resolve Cyrillic directly");
+            return 0;
+            return 0;
+        }
     } else return 2;
     if(!strcmp(argv[3],"immersive")){
         sd_io_init(media_local); assert(sd_io_resume());
