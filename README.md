@@ -130,9 +130,6 @@ Copy the six files to `<SD>/diskos-update/`, overwriting, then **Settings › Sy
 | [Changelog](CHANGELOG.md) | Every release, newest first |
 | [All docs](docs/README.md) | Apps, hardware notes, development, legal |
 
-## A note from zmd22
-
-I’m out. Peace, and happy listening. Thank you to everyone who built, tested, shared and listened. Enjoy the music.
 
 ## Thanks
 
