@@ -361,7 +361,9 @@ static void btn_cb(lv_event_t *e){
 }
 
 void azjump_create(azjump_t *a, lv_obj_t *root, azjump_cb_t jump, const char *tag){
-    a->library=!strcmp(tag,"library")||!strcmp(tag,"shelf");a->current=0;
+    /* Disc Shelf always uses the keypad: its lists load one letter at a time from the network, so a wheel that
+     * follows live would fetch every letter it passes and could never turn smoothly. */
+    a->library=!strcmp(tag,"library");a->current=0;
     if(a->library)for(int i=0;i<4;i++)if(!pickers[i]||pickers[i]==a){pickers[i]=a;break;}
     a->jump = jump;
     a->btn = lv_button_create(root);

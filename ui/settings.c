@@ -784,7 +784,7 @@ static const setting_t TABLE[] = {
     {"Zune","Main icon hold",ST_CHOICE,"zune_hold",0,0,0,zune_main_names,ZMAIN_COUNT,NULL,NULL,ZMAIN_MUSIC,"Hold the main icon for this shortcut.",NULL},
     {"Controls","Menu hold",ST_CYCLER,"zune_nav_hold",0,0,0,OPT_NAV_ACTION,DISCO_NAV_COUNT,NULL,NULL,DISCO_NAV_MUSIC,"Hold a row on the Zune main menu. Shuffle! starts the whole library.",NULL},
     { "Playback", "Library seek", ST_CYCLER,"library_seeking",0,0,0,OPT_LIBRARY_SEEK,2,NULL,NULL,0,
-      "A-Z keys use the letter grid. A-Z wheel: hold the scrollbar letter, turn around the screen, then tap the centre to jump. After release, 1 second without touching also jumps.",NULL },
+      "A-Z keys use the letter grid. A-Z wheel: hold the scrollbar letter, turn around the screen, then tap the centre to jump. After release, 1 second without touching also jumps. Disc Shelf always uses the keys.",NULL },
     { "Playback", "Play Mode",   ST_CYCLER, "work_mode", 0,0,0, OPT_MODE, 5, NULL, apply_mode, 0,
       "How the player advances through tracks.", D_MODE },
     { "Playback", "Up Next", ST_TOGGLE, "up_next", 0,1,0, NULL,0, NULL, apply_upnext, 0,

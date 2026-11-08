@@ -768,7 +768,10 @@ void discshelf_preview(const char *scene){
   if(!strcmp(scene,"player")){track_state_t st={.have_track=1,.duration_ms=240000,.position_ms=92000};strcpy(st.artist,"The Midnight");strcpy(st.title,"Everything in Its Right Place");ipc_seed_state(&st);music_open(NULL);}
  }
  if(!strcmp(scene,"grid")){azjump_show(&alphabet,1);lv_obj_send_event(alphabet.btn,LV_EVENT_SHORT_CLICKED,NULL);}
- if(!strcmp(scene,"wheel")){azjump_show(&alphabet,1);lv_obj_send_event(alphabet.btn,LV_EVENT_LONG_PRESSED,NULL);}
+ if(!strcmp(scene,"wheel")){   /* Library seek = wheel: a hold must not open the wheel here, a tap opens the keypad */
+  azjump_show(&alphabet,1);lv_obj_send_event(alphabet.btn,LV_EVENT_LONG_PRESSED,NULL);assert(!azjump_active());
+  lv_obj_send_event(alphabet.btn,LV_EVENT_SHORT_CLICKED,NULL);assert(!azjump_active()&&!lv_obj_has_flag(letters,LV_OBJ_FLAG_HIDDEN));
+  puts("PASS: Disc Shelf keeps the A-Z keypad when Library seek is the wheel");}
 }
 
 static void settings_saved(void){restart_after_close=1;discshelf_stop();}
