@@ -15,6 +15,9 @@ config_test: ../config.c config_test.c ../config.h
 playstate_test: ../playstate.c playstate_test.c ../playstate.h
 	$(CC) $(CFLAGS) -I.. ../playstate.c playstate_test.c -o $@
 
+battcycle_test: ../battcycle.c battcycle_test.c ../battcycle.h
+	$(CC) $(CFLAGS) -I.. ../battcycle.c battcycle_test.c -o $@
+
 fileops_test: fileops_test.c ../fileops.c
 	$(CC) $(CFLAGS) -D_GNU_SOURCE -DLV_CONF_INCLUDE_SIMPLE -ffunction-sections -fdata-sections -I.. $< -Wl,--gc-sections -pthread -o $@
 
@@ -27,10 +30,12 @@ review: fileops_test apps_shortcut_test
 	./apps_shortcut_test
 
 .PHONY: run clean
-run: config_test playstate_test
+run: config_test playstate_test battcycle_test
 	./config_test
 	@echo "--- playstate ---"
 	./playstate_test
+	@echo "--- battcycle ---"
+	./battcycle_test
 
 clean:
-	rm -f config_test playstate_test fileops_test apps_shortcut_test
+	rm -f config_test playstate_test battcycle_test fileops_test apps_shortcut_test
