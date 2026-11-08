@@ -33,4 +33,5 @@ Music is not controlled by this app; the game is silent.
 ## In this repository
 
 `main.c` and `game.c` are compiled into `mq_ui` with `-DBOOMSHINE_BUILTIN` (see `ui/Makefile`); `fonts.h`
-holds the embedded glyphs. The game writes its log to /tmp/boomshine.log.
+holds the embedded glyphs, run-length encoded by `ui/tools/boomshine_font_rle.py` and drawn straight from the
+encoded stream. The game writes its log to /tmp/boomshine.log.

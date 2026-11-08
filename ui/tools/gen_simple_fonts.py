@@ -22,3 +22,5 @@ for px in (36,80):
 
 for name in ("font_simple_nunito_26.c","font_simple_nunito_36.c","font_simple_nunito_28.c","font_simple_nunito_32.c","font_simple_nunito_38.c","font_simple_icons_36.c","font_simple_icons_80.c"):
  out=root/name;out.write_text(out.read_text().rstrip()+"\n")
+# Large faces (32 px and up) are stored RLE-compressed; the tool skips the smaller ones.
+import sys;subprocess.run([sys.executable,str(root/'tools/compress_lv_font.py'),*(str(root/f'font_simple_nunito_{px}.c') for px in (26,28,32,36,38)),str(root/'font_simple_icons_36.c'),str(root/'font_simple_icons_80.c')],check=True)

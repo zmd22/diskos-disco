@@ -4,6 +4,9 @@
 #define _POSIX_C_SOURCE 200809L
 #include "game.h"
 #include "fonts.h"
+#if !BOOMSHINE_FONT_RLE
+#error "fonts.h must be run-length encoded (ui/tools/boomshine_font_rle.py)"
+#endif
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/fb.h>
@@ -89,8 +92,11 @@ static int text_width(const char *s,int size){
 static void text_at(int x,int y,const char *s,int size,uint32_t c){
     const Font *f=font(size);
     while(*s){unsigned ch=(unsigned char)*s++;if(ch<32||ch>=127)continue;
-        const Glyph *g=&f->glyph[ch-32];
-        for(int j=0;j<g->h;j++)for(int i=0;i<g->w;i++)pixel(x+i,y+j,c,f->pixels[g->off+j*g->w+i]);
+        const Glyph *g=&f->glyph[ch-32];const unsigned char *p=f->pixels+g->off;
+        for(int k=0,n=g->w*g->h;k<n;){   /* run-length glyphs (fonts.h): a value draws one pixel, 0 n skips n clear ones */
+            if(*p){pixel(x+k%g->w,y+k/g->w,c,*p++);k++;}
+            else{k+=p[1];p+=2;}
+        }
         x+=g->advance;
     }
 }
