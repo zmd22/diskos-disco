@@ -125,14 +125,14 @@ void ui_set_memory(int mode);
 void ui_set_maxvol(int v);
 void ui_set_balance(int v);
 
-static const char *squash_accent_reason = "Squash uses its own theme palette. This accent setting doesn't apply.";
+static const char *squash_accent_reason = "Squash is using its orange. To use this colour, set Squash > Colours > Accent to Accent colour.";
 static const char *accent_disabled_reason(void){
     if(th_braun2())return "Braun 2.0 uses a fixed orange accent for active controls.";
     return th_null() ? "Null uses fixed colour schemes. Choose a colour scheme in Appearance instead of a custom accent." : squash_accent_reason;
 }
 static void apply_open_colorpick(int v){
     (void)v;
-    if(th_simple() || th_null() || th_braun2()){ui_toast(accent_disabled_reason());return;}
+    if((th_simple() && !theme_squash_follows_accent()) || th_null() || th_braun2()){ui_toast(accent_disabled_reason());return;}
     colorpick_open();
 }   /* seed sliders from cfg + open */
 static void apply_debug_mode(int v){ (void)v; debug_open(); }           /* Settings -> System -> Debug Mode */
@@ -415,6 +415,8 @@ void disco_sheen_apply(void);
 static void apply_disco_sheen(int v){ (void)v; disco_sheen_apply(); }
 static const char *OPT_DPROG[] = { "Disco", "Accent", "Off" };
 static const char *OPT_DEQ[] = { "Disco", "Accent" };
+static const char *OPT_SQACC[] = { "Squash orange", "Accent colour" };
+static void apply_squash_accent(int v){ (void)v; theme_reload_or_revert("squash_accent"); }
 static const char *OPT_DSHAPE[] = { "Linear", "Arc" };
 static const char *OPT_DTAL[] = { "Centred", "Left" };
 static const char *OPT_SIMPLE_BG[]={"Plain","Blur","Cover"};
@@ -963,6 +965,8 @@ static const setting_t TABLE[] = {
       "Disco gives bands rainbow colours; Accent uses the cover or chosen colour.", NULL },
     { "Disco Colours", "Volume", ST_CYCLER, "disco_vol", 0,0,0, OPT_DEQ, 2, NULL, apply_disco_eq, 0,
       "Volume arc: Disco rainbow or the cover/chosen accent colour.", NULL },
+    { "Disco Colours", "Accent", ST_CYCLER, "squash_accent", 0,0,0, OPT_SQACC, 2, NULL, apply_squash_accent, 0,
+      "Squash orange, or your Accent Colour: a colour you pick, or one from the album art.", NULL },
     { "Disco Colours", "Progress Bar", ST_CYCLER, "disco_progress", 0,0,0, OPT_DPROG, 3, NULL, apply_disco_progress, 0,
       "Music progress: Disco rainbow, cover/chosen Accent, or Off. Shape is set in Layout.", NULL },
     { "Disco Layout", "Progress Shape", ST_CYCLER, "disco_prog_shape", 0,0,0, OPT_DSHAPE, 2, NULL, apply_disco_progress, 0,

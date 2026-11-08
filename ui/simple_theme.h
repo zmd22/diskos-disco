@@ -14,6 +14,7 @@ void simple_nav_init(lv_obj_t *);
 void simple_nav_open(int);
 void simple_nav_screen(int);
 void simple_nav_refresh(void);
+void simple_accent_changed(uint32_t old_acc, uint32_t old_sel);   /* Squash following the Accent Colour */
 void simple_refresh_budget(int);
 int simple_nav_is_open(void);
 int simple_owns_point(int,int);

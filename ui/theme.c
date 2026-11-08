@@ -643,6 +643,23 @@ static void zune_palettes_init(void){
 }
 int th_zune(void){return g_preset==THEME_PRESET_ZUNE;}
 
+/* Squash following the Accent Colour: the live accent - fitted to read on Squash's surfaces - takes every orange role.
+ * The orange stays as ACCENT_IDLE, what shows with no song in album mode. */
+int theme_squash_follows_accent(void){return cfg_get_int("squash_accent",0)==1;}
+int theme_squash_live_accent(lv_color_t c, uint32_t *old_acc, uint32_t *old_sel){
+ if(!th_simple()||!theme_squash_follows_accent())return 0;
+ uint32_t *p=FORK_SIMPLE[g_variant?1:0];if(g_pal!=p)return 0;
+ uint32_t rgb=lv_color_to_u32(theme_accent_from_rgb(lv_color_to_u32(c)&0xFFFFFFu))&0xFFFFFFu;
+ if(p[THEME_CLR_ACCENT_PRIMARY]==rgb)return 0;
+ if(old_acc)*old_acc=p[THEME_CLR_ACCENT_PRIMARY];
+ if(old_sel)*old_sel=p[THEME_CLR_SURFACE_SELECTED];
+ p[THEME_CLR_ACCENT_PRIMARY]=p[THEME_CLR_ACCENT_EMPHASIS]=p[THEME_CLR_CONTROL_FILL]=p[THEME_CLR_CONTROL_KNOB]=rgb;
+ p[THEME_CLR_BORDER]=p[THEME_CLR_BORDER_STRONG]=rgb;
+ uint32_t sel=lv_color_to_u32(lv_color_mix(lv_color_hex(rgb),lv_color_hex(p[THEME_CLR_CANVAS]),g_variant?40:51))&0xFFFFFFu;
+ p[THEME_CLR_SURFACE_SELECTED]=p[THEME_CLR_LIST_PRESSED]=sel;
+ return 1;
+}
+
 static void simple_palettes_init(void){
  for(int v=0;v<2;v++){
   uint32_t *p=FORK_SIMPLE[v];memcpy(p,v?DEFAULT_LIGHT:DEFAULT_DARK,sizeof FORK_SIMPLE[v]);

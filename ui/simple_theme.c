@@ -24,7 +24,8 @@ int wifi_radio_live(void);int bt_state(void);
 /* Never remap shared system preferences. Only inherited theme-owned keys are namespaced. */
 static const char *scope(const char *key,char *buf,size_t n){
  if(!th_simple()||!key)return key;
- if(!strcmp(key,"accent_color")||!strcmp(key,"accent_mode")){snprintf(buf,n,"simple_%s",key);return buf;}
+ /* Squash's own colour unless it follows the shared Accent Colour (Colours > Accent) */
+ if((!strcmp(key,"accent_color")||!strcmp(key,"accent_mode"))&&!theme_squash_follows_accent()){snprintf(buf,n,"simple_%s",key);return buf;}
  if(!strncmp(key,"hint_",5)){snprintf(buf,n,"simple_%s",key);return buf;}
  if(!strncmp(key,"disco_",6)){snprintf(buf,n,"simple_%s",key+6);return buf;}
  if(!strncmp(key,"dm_app",6)){snprintf(buf,n,"sm_app%s",key+6);return buf;}
@@ -32,7 +33,7 @@ static const char *scope(const char *key,char *buf,size_t n){
 }
 int simple_cfg_get_int(const char*k,int d){char b[64];
  if(th_simple()){
-  if(!strcmp(k,"accent_color"))d=0xF28A32;
+  if(!strcmp(k,"accent_color")&&!theme_squash_follows_accent())d=0xF28A32;
   if(!strcmp(k,"disco_controls"))return 2;
   if(!strcmp(k,"disco_progress")||!strcmp(k,"disco_eq")||!strcmp(k,"disco_vol"))d=1;
   if(!strcmp(k,"disco_sheen")||!strcmp(k,"disco_side"))return 0;
@@ -469,3 +470,28 @@ void simple_radio_skin(lv_obj_t *ring,lv_obj_t *glyph,lv_obj_t *name,lv_obj_t *s
 }
 
 lv_obj_t *simple_volume_root(void){return sv_root;}
+
+/* Squash following the Accent Colour: what is already built keeps the colours it was given, so a new accent is
+ * painted in here - every local colour that was the old accent, one of its shades or the old selection moves over.
+ * Runs once per accent change (a new album in album mode), over the screens that exist and the layers kept between
+ * them (the wheel, the volume sheet, Quick settings). */
+#define RC_N 4
+static void recolour(lv_obj_t*o,const uint32_t*from,const lv_color_t*to){
+ static const lv_style_prop_t props[]={LV_STYLE_TEXT_COLOR,LV_STYLE_BORDER_COLOR,LV_STYLE_BG_COLOR,LV_STYLE_BG_GRAD_COLOR,LV_STYLE_ARC_COLOR,LV_STYLE_SHADOW_COLOR,LV_STYLE_OUTLINE_COLOR};
+ static const lv_style_selector_t sels[]={0,LV_STATE_PRESSED,LV_STATE_CHECKED,LV_PART_INDICATOR,LV_PART_KNOB,LV_PART_INDICATOR|LV_STATE_CHECKED,LV_PART_SELECTED};
+ for(unsigned p=0;p<sizeof props/sizeof *props;p++)for(unsigned s=0;s<sizeof sels/sizeof *sels;s++){
+  lv_style_value_t v;if(lv_obj_get_local_style_prop(o,props[p],&v,sels[s])!=LV_STYLE_RES_FOUND)continue;
+  uint32_t c=lv_color_to_u32(v.color)&0xFFFFFFu;
+  for(int k=0;k<RC_N;k++)if(c==from[k]){lv_style_value_t n={.color=to[k]};lv_obj_set_local_style_prop(o,props[p],n,sels[s]);break;}
+ }
+ for(uint32_t i=0;i<lv_obj_get_child_count(o);i++)recolour(lv_obj_get_child(o,i),from,to);
+}
+void simple_accent_changed(uint32_t old_acc,uint32_t old_sel){
+ if(!th_simple())return;
+ lv_color_t cv=TC(CANVAS),oa=theme_color_from_rgb(old_acc),na=TC(ACCENT_PRIMARY);
+ uint32_t from[RC_N]={old_acc,lv_color_to_u32(theme_color_mix(oa,cv,38))&0xFFFFFFu,lv_color_to_u32(theme_color_mix(oa,cv,12))&0xFFFFFFu,old_sel};
+ lv_color_t to[RC_N]={na,theme_color_mix(na,cv,38),theme_color_mix(na,cv,12),TC(SURFACE_SELECTED)};
+ for(int i=0;i<SCR_COUNT;i++){lv_obj_t*r=screen_get_root(i);if(r)recolour(r,from,to);}
+ lv_obj_t*kept[]={nav_root,nav_hub,qs_root,sv_root,action_arrow};
+ for(unsigned i=0;i<sizeof kept/sizeof *kept;i++)if(kept[i])recolour(kept[i],from,to);   /* a second pass finds nothing old */
+}

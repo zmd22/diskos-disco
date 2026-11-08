@@ -1953,8 +1953,19 @@ int main(int argc, char **argv){
             lv_obj_t *root=screen_get_root(SCR_SETLIST);assert(!find_text(root,"Accent colour"));
             int before=simple_cfg_get_int("accent_color",-1);extern void settings_test_open_accent(void);settings_test_open_accent();nav_wait(50);
             assert(screen_current()==SCR_SETLIST&&simple_cfg_get_int("accent_color",-1)==before);
-            assert(find_text(lv_layer_top(),th_null()?"Null uses fixed colour schemes. Choose a colour scheme in Appearance instead of a custom accent.":"Squash uses its own theme palette. This accent setting doesn't apply."));
+            assert(find_text(lv_layer_top(),th_null()?"Null uses fixed colour schemes. Choose a colour scheme in Appearance instead of a custom accent.":"Squash is using its orange. To use this colour, set Squash > Colours > Accent to Accent colour."));
             puts("PASS: Theme-owned accent is hidden when unsupported, guarded on direct entry, preserves saved colour");return 0;
+        }
+        if(th_simple() && getenv("REVIEW_SQUASH_FOLLOW")){   /* Squash > Colours > Accent = Accent colour */
+            assert(!theme_squash_follows_accent());cfg_set_int("squash_accent",1);assert(theme_squash_follows_accent());
+            setlist_open("Display");settings_open_group("Theme Colours");nav_wait(100);
+            assert(find_text(screen_get_root(SCR_SETLIST),"Accent Colour")||find_text(screen_get_root(SCR_SETLIST),"Accent colour"));
+            ui_set_accent_config(1,0x2E86DE);nav_wait(50);
+            uint32_t a=lv_color_to_u32(TC(ACCENT_PRIMARY))&0xFFFFFF;
+            assert(a!=0xF28A32 && (a&0xFF)>(a>>16&0xFF));            /* blue now, not orange */
+            ui_set_accent_config(1,0x27AE60);nav_wait(50);
+            assert((lv_color_to_u32(TC(ACCENT_PRIMARY))&0xFFFFFF)!=a);
+            puts("PASS: Squash follows the Accent Colour live");return 0;
         }
         if(getenv("REVIEW_DISCO_SETTINGS")){
             void settings_open_group(const char *);

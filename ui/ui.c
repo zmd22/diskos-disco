@@ -1588,6 +1588,9 @@ static lv_color_t np_col(void){ if(th_zune()) return (g_zart && np_acc_set) ? np
 lv_color_t ui_media_accent(void){ if(th_zune()) return (g_zart && np_acc_set) ? np_acc : TC(ACCENT_PRIMARY); if(th_simple())return TC(ACCENT_PRIMARY); if(th_braun_family()) return TC(ACCENT_PRIMARY); return (np_acc_set && !ui_accent_is_static()) ? np_acc : accent; }   /* theme.h: media surfaces (Braun: orange) */
 static void apply_accent(void)
 {
+    {   /* Squash following the Accent Colour: its orange roles too, and the parts already built */
+        uint32_t oa, os; if(theme_squash_live_accent(accent, &oa, &os)) simple_accent_changed(oa, os);
+    }
     if(th_zune()){                                    /* Zune media follows the selected/album accent. */
         lv_obj_t *transport[]={btn_prev,btn_pp,btn_next};for(int i=0;i<3;i++)if(transport[i]){lv_obj_set_style_bg_color(transport[i],np_col(),0);if(i!=1)lv_obj_set_style_border_color(transport[i],np_col(),0);}
         if(g_zi_fmt) lv_obj_set_style_text_color(g_zi_fmt, np_col(), 0);
@@ -3797,6 +3800,7 @@ void ui_create(lv_obj_t *root)
      * after, and now reading the live accent) would paint the default until the first
      * ui_update() corrected them. Dynamic mode keeps the default until an album accent lands. */
     accent = (g_accent_mode == 1) ? theme_color_from_rgb(g_accent_color) : TC(ACCENT_PRIMARY);
+    { uint32_t oa, os; if(theme_squash_live_accent(accent, &oa, &os)) simple_accent_changed(oa, os); }
     ui_zune_art_sync();
     last_path[0] = '\0';
     last_art_key[0] = '\0';

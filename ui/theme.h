@@ -53,6 +53,10 @@ int theme_preset_available(int preset);
 #define THEME_PRESET_SQUASH 12
 #define THEME_PRESET_SIMPLE THEME_PRESET_SQUASH /* saved ID / internal compatibility */
 int th_simple(void);
+/* Squash > Colours > Accent: 0 = Squash orange, 1 = the Accent Colour (picked, or from the album art) */
+int theme_squash_follows_accent(void);
+/* repaint Squash's accent roles with the live accent; 1 if they changed (old: the previous accent and selection shade) */
+int theme_squash_live_accent(lv_color_t c, uint32_t *old_acc, uint32_t *old_sel);
 int th_disco_family(void);
 #define THEME_PRESET_NULL 11
 int th_null(void);
