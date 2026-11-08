@@ -25,8 +25,10 @@ typedef struct {
     uint32_t low;        /* lowest level on battery since the last session (BC_NONE = unknown) */
     uint32_t last_pct;   /* the previous reading (BC_NONE = none yet) */
     uint32_t power_at;   /* last time there was evidence of external power (charging, a rise, the charger's voltage) */
-    uint32_t pad[3];
+    uint32_t rules;      /* BC_RULES the session was found with: another value -> rebuild it from the history */
+    uint32_t pad[2];
 } bcycle_t;
+#define BC_RULES 2       /* 0: none or the 3.4.2-batt1 test build, 2: this */
 
 typedef struct {
     uint32_t now;        /* unix seconds */
@@ -47,7 +49,9 @@ enum { BC_EV_NONE = 0, BC_EV_START = 1, BC_EV_FULL = 2, BC_EV_END = 4, BC_EV_END
                                     * the voltage, long before the level falls and ends the session */
 
 void bc_init(bcycle_t *c);
-int  bc_load(bcycle_t *c, const void *buf, unsigned len);   /* 1 if buf held a USC1 record, short or full */
+/* 1: a full record; 2: a short one from older firmware or one from other rules (the totals are kept, the session is
+ * cleared: the caller rebuilds it from the recorded history with bc_feed); 0: none */
+int  bc_load(bcycle_t *c, const void *buf, unsigned len);
 int  bc_full_level(int limit);                               /* 95, or 79 with Charging Limit */
 /* on external power right now: in a session with recent evidence. With Charging Limit the charger parks the battery
  * at 80 % at a voltage not measured yet, so a full session there counts as on power until it ends. */
@@ -57,4 +61,7 @@ int  bc_step(bcycle_t *c, const bc_reading_t *r);           /* BC_EV_* bits; the
 /* The Disc was off or asleep: the first reading after start. A level well above the last recorded one means it
  * charged meanwhile (a session that may already be full). */
 int  bc_resume(bcycle_t *c, const bc_reading_t *r, int last_recorded_pct, int last_recorded_power);
+/* one recorded reading of a history, in order: a gap of more than BC_GAP_S since the previous one is a resume */
+#define BC_GAP_S (5 * 60)
+int  bc_feed(bcycle_t *c, const bc_reading_t *r, uint32_t prev_t, int prev_pct);
 #endif

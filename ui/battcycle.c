@@ -5,15 +5,22 @@
 
 void bc_init(bcycle_t *c){
     memset(c, 0, sizeof *c);
-    c->magic = BC_MAGIC1; c->low = BC_NONE; c->last_pct = BC_NONE;
+    c->magic = BC_MAGIC1; c->low = BC_NONE; c->last_pct = BC_NONE; c->rules = BC_RULES;
 }
 int bc_load(bcycle_t *c, const void *buf, unsigned len){
     uint32_t magic; if(len < 20) return 0;
     memcpy(&magic, buf, 4);
     if(magic != BC_MAGIC1) return 0;
     bc_init(c);
-    memcpy(c, buf, len >= sizeof *c ? sizeof *c : 20);   /* a short (old) record: the totals; no session known */
-    return 1;
+    if(len >= sizeof *c){
+        memcpy(c, buf, sizeof *c);
+        if(c->rules == BC_RULES) return 1;
+        bcycle_t t = *c; bc_init(c);                     /* other rules: keep the totals, find the session again */
+        c->full_at = t.full_at; c->play_min = t.play_min; c->scr_min = t.scr_min;
+        return 2;
+    }
+    memcpy(c, buf, 20);                                  /* a short (old) record: the totals; no session known */
+    return 2;
 }
 /* 95, not 90: a quick top-up unplugged at 90 is not a full charge. A charge that stops by itself lower is caught by
  * the charger's held voltage instead (bc_step). */
@@ -57,6 +64,10 @@ int bc_step(bcycle_t *c, const bc_reading_t *r){
     }
     c->last_pct = (uint32_t)pct;
     return ev;
+}
+int bc_feed(bcycle_t *c, const bc_reading_t *r, uint32_t prev_t, int prev_pct){
+    if(prev_t && (r->now < prev_t || r->now - prev_t > BC_GAP_S)) return bc_resume(c, r, prev_pct, 0);
+    return bc_step(c, r);
 }
 int bc_resume(bcycle_t *c, const bc_reading_t *r, int last_pct, int last_power){
     if(r->pct < 0 || r->pct > 100) return BC_EV_NONE;

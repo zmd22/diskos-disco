@@ -72,10 +72,26 @@ void usage_save(void){
     if(fclose(f) != 0) ok = 0;
     if(ok) rename(tmp, USAGE_CHG_FILE); else unlink(tmp);
 }
+/* First start after an update from firmware that kept no charge sessions: replay the recorded history (the last
+ * 25 h) through the same rules, so a full charge made just before the update still restarts the totals - now if it
+ * already ended, or when it ends (a charge still on, or unplugged at the top, carries on as the live session). */
+static void restart_totals_at(uint32_t from);
+static void rebuild_sessions(void){
+    int lim = simple_cfg_get_int("charge_protect", 0); uint32_t prev_t = 0; int prev_pct = -1;
+    for(int i = 0; i < g_n; i++){
+        const usmp_t *s = at(i);
+        bc_reading_t r = { s->t, s->pct, (s->fl & FL_CHG) != 0, s->mv, lim };
+        int ev = bc_feed(&g_cy, &r, prev_t, prev_pct);
+        if((ev & BC_EV_END_FULL) && g_cy.power_at > g_cy.full_at) restart_totals_at(g_cy.power_at - g_cy.power_at % 60u);
+        prev_t = s->t; prev_pct = s->pct;
+    }
+    usage_save();                                          /* the full record from now on: this runs once */
+}
 static void load(void){
     bc_init(&g_cy);
     FILE *c = fopen(USAGE_CHG_FILE, "rb");
-    if(c){ unsigned char b[sizeof(bcycle_t)]; size_t n = fread(b, 1, sizeof b, c); bc_load(&g_cy, b, (unsigned)n); fclose(c); }
+    int kind = 0;
+    if(c){ unsigned char b[sizeof(bcycle_t)]; size_t n = fread(b, 1, sizeof b, c); kind = bc_load(&g_cy, b, (unsigned)n); fclose(c); }
     FILE *f = fopen(USAGE_FILE, "rb"); if(!f) return;
     uint32_t hdr[2];
     if(fread(hdr, sizeof hdr, 1, f) == 1 && hdr[0] == 0x31475355u){
@@ -86,6 +102,7 @@ static void load(void){
         for(uint32_t i = 0; i < n && fread(&s, sizeof s, 1, f) == 1; i++) if(s.pct <= 100) push(s.t, s.pct, s.fl, s.mv);
     }
     fclose(f);
+    if(kind == 2) rebuild_sessions();
 }
 /* from the 3 s status poll */
 void usage_note_battery(int pct, int charging){ if(pct >= 0 && pct <= 100){ g_batt = pct; g_chg = charging; } }

@@ -82,11 +82,23 @@ static void synthetic(void){
     events = 0; feed(98, 0, 4240); assert(events & BC_EV_END_FULL);
     puts("PASS unplugged at 99 %: off power in minutes, not when the level first falls");
 
+    /* 10. history recorded by older firmware (no voltage), replayed after the update: tonight's charge, 68 -> 99 with
+     * the charging flag up to 85, unplugged at 99 and still reading 99. The session carries on, full, off power. */
+    reset(); uint32_t pt = 0; int pp = -1, lastrise = 0;
+    for(int i = 0; i < 30; i++){ bc_reading_t q = { now, 68, 0, 0, 0 }; bc_feed(&c, &q, pt, pp); pt = now; pp = 68; now += 60; }
+    for(int p = 68; p <= 99; p++){ bc_reading_t q = { now, p, p <= 85, 0, 0 }; bc_feed(&c, &q, pt, pp); pt = now; pp = p; lastrise = (int)now; now += 60; }
+    for(int i = 0; i < 20; i++){ bc_reading_t q = { now, 99, 0, 0, 0 }; bc_feed(&c, &q, pt, pp); pt = now; now += 60; }
+    assert(c.pwr && c.full_seen && c.power_at == (uint32_t)lastrise && !bc_on_power(&c, now, 0));
+    { bc_reading_t q = { now + 600, 99, 0, 4250, 0 }; assert(!(bc_resume(&c, &q, 99, 0) & (BC_EV_END | BC_EV_END_FULL))); }
+    events = 0; now += 1200; feed(98, 0, 4230); assert(events & BC_EV_END_FULL);
+    puts("PASS a full charge recorded by older firmware still restarts the totals after the update");
+
     /* 8. an old USC1 record loads with its totals */
     uint32_t old[5] = { BC_MAGIC1, 1793409044u, 538, 593, 0 };
-    bcycle_t l; assert(bc_load(&l, old, sizeof old) && l.full_at == 1793409044u && l.play_min == 538 && !l.pwr && l.low == BC_NONE);
+    bcycle_t l; assert(bc_load(&l, old, sizeof old) == 2 && l.full_at == 1793409044u && l.play_min == 538 && !l.pwr && l.low == BC_NONE);
     bcycle_t w; bc_init(&w); w.full_at = 5; w.pwr = 1; w.peak = 93; bcycle_t r2;
-    assert(bc_load(&r2, &w, sizeof w) && r2.pwr == 1 && r2.peak == 93 && r2.magic == BC_MAGIC1);
+    assert(bc_load(&r2, &w, sizeof w) == 1 && r2.pwr == 1 && r2.peak == 93 && r2.magic == BC_MAGIC1);
+    w.rules = 0; w.play_min = 77; assert(bc_load(&r2, &w, sizeof w) == 2 && !r2.pwr && r2.play_min == 77 && r2.rules == BC_RULES);
     puts("PASS USC1 totals carry over, and the full record keeps the old start for a downgrade");
 }
 
@@ -97,7 +109,7 @@ static void replay(const char *path){
     bc_init(&c);
     while(fread(&s, sizeof s, 1, f) == 1){
         bc_reading_t r = { s.t, s.pct, s.fl & 1, s.mv, 0 }; int ev;
-        if(prev_t && s.t - prev_t > 5 * 60) ev = bc_resume(&c, &r, prev_pct, 0); else ev = bc_step(&c, &r);
+        ev = bc_feed(&c, &r, prev_t, prev_pct);
         char tb[32]; time_t tt = s.t; strftime(tb, sizeof tb, "%a %d %H:%M", localtime(&tt));
         if(ev & BC_EV_START){ sessions++; printf("  %s %3d%%  session starts\n", tb, s.pct); }
         if(ev & BC_EV_FULL) printf("  %s %3d%%  full\n", tb, s.pct);
