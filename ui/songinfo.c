@@ -409,6 +409,22 @@ void songinfo_create(lv_obj_t *root)
             kit_keep(g_cover); kit_keep(g_title); kit_keep(g_artist);
         }
     }
+    if(!th_null()){   /* the key column fits its longest name ("Sample Rate" stayed on two lines); the value gives way */
+        int need = 0;
+        for(int i = 0; i < F_COUNT; i++){
+            const char *t = lv_label_get_text(g_key[i]);
+            int w = lv_text_get_width(t, strlen(t), lv_obj_get_style_text_font(g_key[i], 0), lv_obj_get_style_text_letter_space(g_key[i], 0));
+            if(w > need) need = w;
+        }
+        if(need > 100) need = 100;                                      /* a long translation still wraps, the value keeps room */
+        for(int i = 0; i < F_COUNT; i++){
+            int kw = lv_obj_get_style_width(g_key[i], 0);
+            if(need <= kw) continue;
+            int cw = lv_obj_get_style_width(g_cell[i], 0), gap = lv_obj_get_style_pad_column(g_cell[i], 0);
+            lv_obj_set_width(g_key[i], need);
+            lv_obj_set_width(g_val[i], cw - need - gap);
+        }
+    }
 }
 
 /* ---- Zune (Figma 14): "info" as a pivot header; every fact as a small grey label over its value, the rows stepping

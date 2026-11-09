@@ -128,6 +128,7 @@ static void zdate_page(void){
     lv_obj_t *cap = zlab(g_root, &font_zune_semibold_11, TC(TEXT_MUTED), "DATE");
     lv_obj_set_style_text_letter_space(cap, 2, 0); lv_obj_align(cap, LV_ALIGN_TOP_MID, 0, 40);
     r_day = zroller(days, lt.tm_mday - 1, 70, -88); r_mon = zroller(MON, lt.tm_mon, 80, 0); r_year = zroller(years, y, 96, 90);
+    lv_obj_align(r_day, LV_ALIGN_TOP_MID, -88, 70); lv_obj_align(r_mon, LV_ALIGN_TOP_MID, 0, 70); lv_obj_align(r_year, LV_ALIGN_TOP_MID, 90, 70);   /* higher, so "next" clears the bezel */
     lv_obj_update_layout(r_day);
     int ry = lv_obj_get_y(r_day), rh = lv_obj_get_height(r_day);
     for(int k = 0; k < 2; k++){                                 /* the focus band: two accent hairlines */
@@ -257,7 +258,14 @@ void datetime_refresh(void){
     p = mins;         for(int i = 0; i < 60; i++) p += sprintf(p, i < 59 ? "%02d\n" : "%02d", i);
     int y = lt.tm_year + 1900 - YEAR0; if(y < 0) y = 0; if(y >= YEARS) y = YEARS - 1;
     /* rows laid out from the rollers' real height (it depends on the theme's font) */
-    const int y0 = 66;
+    int y0 = 66;
+    lv_obj_update_layout(g_root);                       /* below the header, however tall the theme draws it (Braun 2.0's panel) */
+    for(uint32_t k = 0; k < lv_obj_get_child_count(g_root); k++){
+        lv_obj_t *c = lv_obj_get_child(g_root, (int32_t)k);
+        if(lv_obj_has_flag(c, LV_OBJ_FLAG_HIDDEN) || lv_obj_get_y(c) > 60) continue;
+        int bot = lv_obj_get_y(c) + lv_obj_get_height(c) + 4;
+        if(bot > y0 && bot < 110) y0 = bot;
+    }
     r_day  = roller(g_root, days,   lt.tm_mday - 1, 62,  -80, y0);
     r_mon  = roller(g_root, MONTHS, lt.tm_mon,      74,    0, y0);
     r_year = roller(g_root, years,  y,              82,   84, y0);

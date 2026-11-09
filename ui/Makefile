@@ -17,10 +17,12 @@ CC    := $(CROSS)gcc
 REPRO_FLAGS := -ffile-prefix-map=$(APP)/= -ffile-prefix-map=$(LVGL)/=lvgl/
 # No fused multiply-add contraction: floating-point results stay exactly the same as the separate multiply and add
 # the code is written with (the MIPS32r2 target otherwise uses madd.s/madd.d).
+# Implicit declarations are errors (-Werror=implicit-function-declaration): an undeclared call compiles against a guessed
+# int-returning prototype and can crash at run time.
 FP_FLAGS := -ffp-contract=off
 CFLAGS := -Os -pipe -std=gnu11 -static -pthread -D_GNU_SOURCE -DLV_CONF_INCLUDE_SIMPLE \
   -ffunction-sections -fdata-sections \
-  -I$(APP) -I$(NUI) -I$(APP)/vendor/libsmb2/include -Wall -MMD -MP $(REPRO_FLAGS) $(FP_FLAGS)
+  -I$(APP) -I$(NUI) -I$(APP)/vendor/libsmb2/include -Wall -Werror=implicit-function-declaration -MMD -MP $(REPRO_FLAGS) $(FP_FLAGS)
 # Device-test builds only: make clean && make EXTRA_CFLAGS=-DDISKOS_TEST_OUTPUTS (shows SPDIF Output + USB Audio)
 CFLAGS += $(EXTRA_CFLAGS)
 # --gc-sections drops every provably-unreferenced function/data section at link (unused LVGL fonts,

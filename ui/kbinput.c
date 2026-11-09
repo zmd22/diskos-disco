@@ -148,6 +148,14 @@ void kbinput_open_password(const char *title, const char *initial, kbinput_done_
     g_mask_next = 1;
     kbinput_open(title, initial, cb);
 }
+/* a password field: the eye at its right end shows or hides what was typed (Zune has its own "show") */
+static void eye_cb(lv_event_t *e){
+    lv_obj_t *l = lv_obj_get_child(lv_event_get_target_obj(e), 0);
+    if(!g_ta || !l) return;
+    int masked = lv_textarea_get_password_mode(g_ta);
+    lv_textarea_set_password_mode(g_ta, !masked);
+    lv_label_set_text(l, masked ? LV_SYMBOL_EYE_CLOSE : LV_SYMBOL_EYE_OPEN);
+}
 void kbinput_open(const char *title, const char *initial, kbinput_done_cb_t cb){
     if(g_modal) finish(NULL);
     g_done = cb;
@@ -190,6 +198,15 @@ void kbinput_open(const char *title, const char *initial, kbinput_done_cb_t cb){
     /* Cancel and Save between the field and the keys, where Search has its Search button */
     pill(g_modal, -50, 70, LV_SYMBOL_CLOSE, TC(TEXT_SECONDARY), cancel_btn);
     pill(g_modal,  50, 70, LV_SYMBOL_OK,    TC(STATUS_SUCCESS), save_btn);
+    if(g_keep_spaces){                                       /* password: an eye inside the field's right end */
+        lv_obj_set_style_pad_right(g_ta, 40, 0);
+        lv_obj_t *b = lv_button_create(g_modal); lv_obj_remove_style_all(b);
+        lv_obj_set_size(b, 36, 36); lv_obj_align_to(b, g_ta, LV_ALIGN_RIGHT_MID, -4, 0);
+        lv_obj_set_ext_click_area(b, 6);
+        lv_obj_add_event_cb(b, eye_cb, LV_EVENT_CLICKED, NULL);
+        lv_obj_t *l = lv_label_create(b); lv_label_set_text(l, LV_SYMBOL_EYE_OPEN);
+        lv_obj_set_style_text_font(l, TF(UI_16), 0); lv_obj_set_style_text_color(l, TC(TEXT_SECONDARY), 0); lv_obj_center(l);
+    }
 
     bkb_create(g_modal, g_ta, do_save);
 }

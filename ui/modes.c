@@ -540,7 +540,7 @@ void modes_create(lv_obj_t *root){
             lv_obj_set_style_text_font(lv_obj_get_child(g_drow[i],0),TF(UI_20),0);
             lv_obj_align(lv_obj_get_child(g_drow[i],0),LV_ALIGN_LEFT_MID,8,0);
             lv_obj_t *label=lv_obj_get_child(g_drow[i],1);
-            lv_obj_set_width(label,width-62);lv_obj_align(label,LV_ALIGN_LEFT_MID,34,0);
+            lv_obj_set_width(label,width-66);lv_obj_align(label,LV_ALIGN_LEFT_MID,38,0);   /* clear of the widest glyph (USB storage, USB DAC) */
             lv_obj_set_style_text_font(label,TF(UI_22),0);
             lv_obj_set_style_text_letter_space(label,-1,0);
             lv_obj_align(lv_obj_get_child(g_drow[i],2),LV_ALIGN_RIGHT_MID,-8,0);

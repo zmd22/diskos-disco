@@ -2070,6 +2070,13 @@ static void zlib_chrome(lv_obj_t *root){
     zpiv_attach();
 }
 
+/* a one-time hold hint, once the list is built: an empty list has nothing to hold, and the hint stays unshown */
+static void hold_hint_cb(lv_timer_t *t){
+    const char *msg = (const char *)lv_timer_get_user_data(t);
+    static int shown_group, shown_fav; int *shown = !strcmp(msg, "Hold to remove") ? &shown_fav : &shown_group;
+    if(*shown || g_count <= 0) return;
+    *shown = 1; ui_toast(msg);
+}
 static void library_reload_inner(void){
     if(!g_list) return;
     if(g_lhint){ lv_obj_add_flag(g_lhint, LV_OBJ_FLAG_HIDDEN); g_lhint_ch = 0; }  /* don't leave a stale A-Z hint across views */
@@ -2094,11 +2101,9 @@ static void library_reload_inner(void){
     az_show(0);
 
     /* one-time discoverability hints for the invisible long-press actions */
-    static int s_group_hold_hint=0, s_fav_hold_hint=0;
-    if((g_view==VIEW_ALBUMS || g_view==VIEW_ARTISTS || g_view==VIEW_GENRES) && !s_group_hold_hint){
-        s_group_hold_hint=1; ui_toast("Hold an item for more");
-    } else if(g_view==VIEW_FAVS && !s_fav_hold_hint){
-        s_fav_hold_hint=1; ui_toast("Hold to remove");
+    if(g_view==VIEW_ALBUMS || g_view==VIEW_ARTISTS || g_view==VIEW_GENRES || g_view==VIEW_FAVS){   /* checked once the list is built */
+        lv_timer_t *t = lv_timer_create(hold_hint_cb, 0, (void *)(g_view==VIEW_FAVS ? "Hold to remove" : "Hold an item for more"));
+        lv_timer_set_repeat_count(t, 1);
     }
 
     char dur[12];

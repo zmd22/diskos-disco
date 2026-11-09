@@ -442,7 +442,7 @@ void zune_radio_skin(lv_obj_t *root, const char *title, const char *onlabel, con
                      lv_obj_t *name, lv_obj_t *sub, lv_obj_t *sw, lv_obj_t *rb, lv_obj_t *list){
     lv_obj_add_flag(ring, LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(glyph, LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_flag(name, LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(sub, LV_OBJ_FLAG_HIDDEN);
-    lv_obj_set_pos(list, 0, 136); lv_obj_set_size(list, 360, 224); lv_obj_set_style_pad_bottom(list, 84, 0);
+    lv_obj_set_pos(list, 0, 136); lv_obj_set_size(list, 360, 176); lv_obj_set_style_pad_bottom(list, 48, 0);   /* ends above the scan link: no row runs under it */
     for(int k = 0; k < 2; k++){
         lv_obj_t *f = lv_obj_create(root); lv_obj_remove_style_all(f); kit_keep(f);
         lv_obj_set_size(f, 360, k ? 96 : 140); lv_obj_align(f, k ? LV_ALIGN_BOTTOM_MID : LV_ALIGN_TOP_MID, 0, 0);

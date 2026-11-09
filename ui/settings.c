@@ -896,7 +896,7 @@ static const setting_t TABLE[] = {
     { "Standby",  "Saver Style", ST_CYCLER, "saver_style", 0,0,0, OPT_SAVERSTYLE, 6, NULL, NULL, 0,
       "Choose Cover, Analog, Minimal, Digital, Vinyl or Ring screensaver.", NULL },
     { "Standby",  "Screen Off",  ST_CYCLER, "screenoff_idx", 0,0,0, OPT_POWER, 5, NULL, NULL, 3,
-      "How long after the screensaver the screen turns fully off.", NULL },
+      "How long after the screensaver the screen turns fully off. With the screensaver Off, how long after the last touch.", NULL },
     { "Standby",  "Lock Screen", ST_CYCLER, "zlock_src", 0,0,0, OPT_ZLOCK, 2, NULL, NULL, 0,
       "What the lock screen shows while music plays.", OPT_ZLOCK_D },
     { "Standby",  "Clock Accent", ST_CYCLER, "zlock_tint", 0,0,0, OPT_ZTINT, 5, NULL, NULL, 4,

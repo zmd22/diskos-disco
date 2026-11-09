@@ -35,6 +35,8 @@
 #include "controls.h"
 #include "screens.h"
 #include "npshade.h"
+#include "quicksettings.h"
+#include "ui.h"
 #include "ma.h"
 #include "modes.h"
 #include "anim.h"
@@ -3424,6 +3426,7 @@ int main(int argc, char **argv){
     lv_indev_state_t prev_ts = LV_INDEV_STATE_RELEASED;
     int sx=0, sy=0, lastx=0, lasty=0; uint32_t sms=0; int s_press_scr=SCR_HOME;   /* swipe tracking + the screen the press began on */
     int cover_tap=0;   /* press landed on the NP cover -> LVGL's cover click opens full-screen art (not a seek) */
+    int shade_touch=0; /* press began while the Shade was down: it owns the gesture, nothing beneath arms or hints */
     int fsart_touch=0; /* press began while full-screen art was up -> LVGL's overlay click closes it; we only swallow */
     int seek_touch=0;  /* fork: press began on Disco Music's progress line / ring -> no swipe-left to Apps */
     int sleep_touch=0; /* press began while the sleep popover was up -> swallow the whole gesture (no ring seek) */
@@ -3693,13 +3696,14 @@ int main(int argc, char **argv){
                     g_press_sx = g_press_lx = p.x; g_press_sy = g_press_ly = p.y;
                     s_press_scr=screen_current();   /* a gesture belongs to the screen it STARTED on */
                     cover_tap = 0;
+                    shade_touch = npshade_active();
                     fsart_touch = ui_np_fsart_active();   /* latch: overlay owns this whole gesture */
                     sleep_touch = ui_volume_overlay_visible() || ui_np_overlay_active() || azjump_owns_point(p.x,p.y)   /* latch: the sleep popover owns this whole gesture, */
                                || (screen_current()==SCR_EQ_EDITOR && eqcustom_owns_point(p.x, p.y))    /* and so does the EQ dial (fork) */
                                || (screen_current()==SCR_SPHERE && sphere_ui_owns_point(p.x, p.y));     /* and SongSphere's marker */
                     seek_touch = dhome_owns_point(p.x, p.y) || simple_owns_point(p.x,p.y);
                     if(th_null() && null_owns_point(p.x,p.y))sleep_touch=1;   /* fork: Disco Music's seek line / ring (no swipe to Apps) */
-                    if(fsart_touch || sleep_touch){
+                    if(fsart_touch || sleep_touch || shade_touch){
                         /* a modal overlay is up -> LVGL handles it; arm no ring seek / rim scroll here */
                     } else if(screen_current()==SCR_NOWPLAYING){
                         /* A press within the album-cover square (centre 180,116; ~148px) is a
@@ -3724,17 +3728,18 @@ int main(int argc, char **argv){
                 last_activity = lv_tick_get();
                 lastx=p.x; lasty=p.y; g_press_lx=p.x; g_press_ly=p.y;
                 g_hint_late = lv_tick_elaps(sms) >= 700;   /* the bubble only fills while the swipe would still count */
-                if(!woke && !fsart_touch && BACK_EDGE(sx) && screen_current()!=SCR_NOWPLAYING && screen_current()!=SCR_SAVER && !sleep_touch && SIDE_DX(p.x - sx) > 0
+                if(!woke && !fsart_touch && !shade_touch && BACK_EDGE(sx) && screen_current()!=SCR_NOWPLAYING && screen_current()!=SCR_SAVER && !sleep_touch && SIDE_DX(p.x - sx) > 0
                    && !screen_back_leads_nowhere()                       /* no arrow where Back can't go anywhere */
                    && abs(p.x - sx) > 2 * abs(p.y - sy)) ui_back_hint(p.y, SIDE_DX(p.x - sx));   /* fork: back-swipe feedback */
                 else ui_back_hint(0, 0);
-                if(!woke && !fsart_touch && !sleep_touch && !seek_touch && screen_current()==SCR_HOME && SIDE_DX(p.x-sx)<0
+                if(!woke && !fsart_touch && !shade_touch && !sleep_touch && !seek_touch && screen_current()==SCR_HOME && SIDE_DX(p.x-sx)<0
                    && abs(p.x-sx)>2*abs(p.y-sy))ui_shortcuts_hint(p.y,-SIDE_DX(p.x-sx));
                 else ui_shortcuts_hint(0,0);
-                if(!woke && !fsart_touch && sy > 320 && screen_current()!=SCR_HOME && screen_current()!=SCR_QUICK && screen_current()!=SCR_SAVER && (screen_current()!=SCR_NOWPLAYING||th_zune()) && !sleep_touch
+                if(!woke && !fsart_touch && !shade_touch && sy > 320 && screen_current()!=SCR_HOME && screen_current()!=SCR_QUICK && screen_current()!=SCR_SAVER && (screen_current()!=SCR_NOWPLAYING||th_zune()) && !sleep_touch
                    && sy - p.y > 0 && abs(p.y - sy) > 2 * abs(p.x - sx)) ui_home_hint(p.x, sy - p.y);   /* fork: home-swipe feedback */
                 else ui_home_hint(0, 0);
-                if(screen_current()==SCR_NOWPLAYING && !ui_np_fsart_active() && !sleep_touch) ui_np_seek_move(p.x, p.y);
+                if(shade_touch){ /* the Shade's own swipes are classified on release */ }
+                else if(screen_current()==SCR_NOWPLAYING && !ui_np_fsart_active() && !sleep_touch) ui_np_seek_move(p.x, p.y);
                 else if(rim_move(p.x, p.y)){ /* rim drag owns the gesture (list or cover flow) */ }
                 else if(screen_current()==SCR_ALBUMWALL && rim_state==RIM_IDLE && sy>=106) albumwall_drag(p.x);  /* linear drag only when no rim gesture is armed */
             } else if(ts==LV_INDEV_STATE_RELEASED && prev_ts==LV_INDEV_STATE_PRESSED){
@@ -4003,7 +4008,7 @@ int main(int argc, char **argv){
         int sstyle    = simple_cfg_get_int("saver_style", 0);
         int art_saver = (sstyle == 0 || sstyle == 4);
         int saver_ok  = (!art_saver || playing);
-        if(saver_timeout > 0 || manual){
+        if(saver_timeout > 0 || manual || screenoff_extra > 0){   /* Screensaver Off still lets Screen Off act */
             /* manual sleep runs its dim/off countdown from the tile tap, independent of the
              * (possibly disabled) auto-saver timer */
             uint32_t idle = manual ? lv_tick_elaps(g_manual_sleep_at) : lv_tick_elaps(last_activity);
@@ -4031,7 +4036,9 @@ int main(int argc, char **argv){
              * delay when set, else a 10s default so the tile actually powers the panel down. */
             uint32_t off_at = manual ? (uint32_t)(screenoff_extra > 0 ? screenoff_extra : 10)*1000
                                      : (uint32_t)(saver_timeout+screenoff_extra)*1000;
-            if(bl_state==1 && (manual || screenoff_extra > 0) && idle > off_at){
+            /* Screensaver Off: nothing dims first, so the lit screen goes straight off Screen Off after the last touch */
+            int straight_off = !manual && saver_timeout == 0 && bl_state == 0;
+            if((bl_state==1 || straight_off) && (manual || screenoff_extra > 0) && idle > off_at){
                 ui_backlight(0); bl_state = 2;
                 /* screen fully off -> STOP the screensaver. Leaving SCR_SAVER: (a) satisfies "the
                  * saver stops when the screen turns off"; (b) pops back to the screen shown BEFORE

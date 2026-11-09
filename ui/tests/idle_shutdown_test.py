@@ -13,6 +13,7 @@ prefix = r'''
 #include "power.h"
 #include "sqlite3.h"
 #include <assert.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -23,13 +24,13 @@ static unsigned now=100, gen=1;
 static int stock, idle_idx=1, audio, spawn_fail, poll_fail, poll_pending, drain=1;
 static int shown, reopened, sent, kills, warned, ready, hold, handoff_fail;
 static unsigned lv_tick_get(void){return now;}
+static uint32_t ui_position_still_ms(void){return audio?0:now;}   /* audio playing: the position moves; otherwise still since start (main.c) */
 static int fw_os_ver(void){return 257;}
 static unsigned ipc_generation(void){return gen;}
 static int cfg_get_int(const char*k,int d){return !strcmp(k,"idle_off_idx")?idle_idx:d;}
 static void cfg_set_int(const char*k,int v){(void)k;(void)v;}
 static int ipc_send_quiet(const char*f){(void)f;return 0;}
 static int ipc_send_cmd(const char*f){if(!strcmp(f,"0806000C0001")){if(handoff_fail)return -1;sent++;}return 0;}
-static int ui_audio_running(void){return audio;}
 static void ui_shutdown_screen(void){shown++;}
 static void ui_shutdown_hide(void){}
 static void ui_toast(const char*m){if(strstr(m,"unavailable"))warned++;if(strstr(m,"is ready"))ready++;}
@@ -38,6 +39,8 @@ static int ui_sd_quiesce_drained(void){return drain;}
 static void ui_sd_quiesce_end(void){hold=0;reopened++;}
 static void scanner_abort(void){}
 static void art_kill_all(void){}
+static void mdb_history_hold(int h){(void)h;}           /* the play-history writer holds with the SD quiesce */
+static int mdb_history_drained(void){return 1;}
 static void stats_flush(void){}
 static void usage_save(void){}
 static int command_spawn(pid_t*p,char *const a[]){(void)a;*p=123;return spawn_fail?-1:0;}

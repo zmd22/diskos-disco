@@ -346,6 +346,8 @@ void eqpreset_refresh(void);
 void eqcustom_refresh(void);   /* re-resolve the edited USER slot on SCR_EQ_EDITOR entry (display-only) */
 void settings_open_detail(int idx);
 void settings_open_key(const char *key);   /* open a setting detail by cfg key (drawer tiles) */
+void settings_open_group(const char *g); /* jump the open category list to one of its groups by name (settings.c) */
+int search_landing_active(void);           /* Search shows its landing page, not results (search.c) */
 /* reusable on-screen keyboard modal (kbinput.c) */
 typedef void (*kbinput_done_cb_t)(const char *text);  /* NULL if cancelled; "" if saved empty */
 void kbinput_open(const char *title, const char *initial, kbinput_done_cb_t cb);

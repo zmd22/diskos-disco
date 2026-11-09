@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Plugged-in detection for idle power-off (#17): any non-battery power supply with online=1 counts, whatever its
-name; the battery doesn't; no such source -> unknown (-1). Production usage_plugged_in() on a fake sysfs tree."""
+name; the battery doesn't; no such source -> unknown (-1). Production plugged_listed() (the sysfs half of
+usage_plugged_in(), which adds the charge-cycle and USB-host checks on top) on a fake sysfs tree."""
 import subprocess, tempfile
 from pathlib import Path
 ui = Path(__file__).resolve().parents[1]; src = (ui / "usage.c").read_text()
-start = src.index("int usage_plugged_in(void){"); end = src.index("\n}\n", start) + 3
+start = src.index("static int plugged_listed(void){"); end = src.index("\n}\n", start) + 3
 cases = [
     ("unplugged",                {"cw221X-bat": ("Battery", "1"), "usb": ("USB", "0")}, 0),
     ("plugged into USB",         {"cw221X-bat": ("Battery", "1"), "usb": ("USB", "1")}, 1),
@@ -21,7 +22,7 @@ with tempfile.TemporaryDirectory() as d:
             (root / sup).mkdir(parents=True); (root / sup / "type").write_text(typ + "\n"); (root / sup / "online").write_text(online + "\n")
         C = ('#include <dirent.h>\n#include <stdint.h>\n#include <stdio.h>\n#include <string.h>\n'
              'static uint32_t lv_tick_get(void){ return 1000; }\n#define POWER_SUPPLY_DIR "%s"\n' % root) + src[start:end] + \
-            '\nint main(void){ printf("%d\\n", usage_plugged_in()); return 0; }\n'
+            '\nint main(void){ printf("%d\\n", plugged_listed()); return 0; }\n'
         (d / "t.c").write_text(C)
         subprocess.run(["cc", "-std=gnu11", "-o", str(d / "t"), str(d / "t.c")], check=True)
         got = int(subprocess.run([str(d / "t")], capture_output=True, text=True, check=True).stdout)

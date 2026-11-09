@@ -294,7 +294,12 @@ void ring_button_style(lv_obj_t *b){            /* fork: one Ring button - accen
   lv_obj_set_style_border_side(b,LV_BORDER_SIDE_FULL,0);return; }
  lv_obj_set_style_border_width(b,2,0);lv_obj_set_style_border_opa(b,LV_OPA_COVER,0);
  lv_obj_set_style_border_color(b,ring_border_color(),0);lv_obj_set_style_border_side(b,LV_BORDER_SIDE_FULL,0);
- ring_btn_ink(b,ui_media_accent());
+ /* a button already filled with an accent (Date & Time's Set, the Equalizer's On) keeps text readable on that fill:
+  * the album colour on an accent fill vanished */
+ lv_color_t bg=lv_obj_get_style_bg_color(b,0);
+ if(lv_obj_get_style_bg_opa(b,0)>=LV_OPA_50 && (lv_color_eq(bg,ui_current_accent())||lv_color_eq(bg,TC(ACCENT_PRIMARY))||lv_color_eq(bg,ui_media_accent())))
+  ring_btn_ink(b,theme_on_color(bg));
+ else ring_btn_ink(b,ui_media_accent());
 }
 static void ring_style(lv_obj_t *o,kit_role_t role){
  if(role==KIT_TITLE){lv_obj_set_style_border_width(o,0,0);lv_obj_set_style_outline_width(o,0,0);}

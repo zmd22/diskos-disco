@@ -61,6 +61,7 @@ static void zfoc_tick(lv_timer_t *t){
     (void)t; if(screen_current() != SCR_EQ || !g_zlinks) return;
     int f = zdial_focus(); if(f == g_zlast_focus) return; g_zlast_focus = f;
     if(f >= 10) lv_obj_remove_flag(g_zlinks, LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(g_zlinks, LV_OBJ_FLAG_HIDDEN);
+    zdial_set_bottom(f >= 10 ? 226 : 250);   /* edit / rename showing: the row under the focus gives way to them */
 }
 static void zeq_build(void);
 static void zeq_rebuild(void *u){ (void)u; zeq_build(); }
@@ -176,6 +177,7 @@ void eqpreset_create(lv_obj_t *root){
  lv_obj_set_size(switch_pointer,3,9);lv_obj_align(switch_pointer,LV_ALIGN_TOP_MID,10,4);
  lv_obj_set_style_bg_opa(switch_pointer,LV_OPA_COVER,0);lv_obj_set_style_radius(switch_pointer,1,0);
  lv_obj_set_style_transform_rotation(switch_pointer,300,0);lv_obj_clear_flag(switch_pointer,LV_OBJ_FLAG_CLICKABLE);
+ if(th_ringlike()) lv_obj_add_flag(switch_pointer,LV_OBJ_FLAG_HIDDEN);   /* Ring: the "On"/"Off" text says it; the pointer would cross it */
  if(th_disco()){   /* fork: Disco keeps the navigation circle's sliver on the right rim - the controls step left of it */
   for(uint32_t k=0;k<lv_obj_get_child_count(root);k++){
    lv_obj_t *o=lv_obj_get_child(root,(int32_t)k);

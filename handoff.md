@@ -1,9 +1,9 @@
-# Handoff — documentation baseline Disco 3.3.0
+# Handoff — baseline Disco 3.4.4
 
-Release source: the commit tagged `v3.3.0`. Payload SHA-256: `4af9b27339279f8b6609fdc5523df8dbc9d99111ed83c3db895df35677673beb`.
+Release source: the commit tagged `v3.4.4`. `mq_ui` SHA-256: `788f12f01d0c8d9f431fe59b02f1709772e841cfcf66212f9c4f087237c66230` ([record](docs/RELEASE_3.4.4.md)).
 
-Work on dev unless explicitly directed otherwise. Verify remote heads and local changes; later main commits are not automatically part of the 3.3.0 binary. The documentation cleanup is prepared for review and must not be committed before the requested summary/approval.
+Work on dev unless explicitly directed otherwise. Verify remote heads and local changes; later commits are not part of the 3.4.4 binary. No packaging, tag, release or merge to main until the maintainer calls it.
 
 Read [docs](docs/README.md), [workflow](docs/DEV_WORKFLOW.md), [source map](docs/SOURCE_MAP.md) and [targets](todo.md). Preserve theme identities, saved setting IDs, audio behaviour and signed-update protections. The Ring theme and Ring Now Playing layout are separate.
 
-The release records a static MIPS build; do not infer new device-test results from documentation edits. No firmware behaviour is changed by this cleanup.
+The release records a static MIPS build; do not infer new device-test results from documentation edits.

@@ -24,6 +24,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>   /* usleep (scan_thread), before its first use */
 #include <strings.h>
 #include <stdint.h>
 #include <ctype.h>

@@ -368,7 +368,7 @@ static int tagfix_apply_leased(const char *path, const char *lrc, const uint8_t 
     if(!want_lyr && !want_art) return 0;
     char tmp[660]; tmp_name(path, tmp, sizeof tmp);
     if(!sd_write_begin()) return TF_ERR_BUSY;
-    uint32_t crcw; long lenw; int r;
+    uint32_t crcw = 0; long lenw = -1; int r;   /* set by the writers on success; -1 never matches a real length */
     if(fmt == FMT_FLAC) r = flac_write(path, tmp, want_lyr ? lrc : NULL, want_art ? jpg : NULL, jlen, jw, jh, &crcw, &lenw);
     else                r = mp3_write (path, tmp, want_lyr ? lrc : NULL, want_art ? jpg : NULL, jlen, &crcw, &lenw);
     if(r != 0){ sd_write_end(); return r == -2 ? TF_ERR_FORMAT : TF_ERR_IO; }

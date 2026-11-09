@@ -8,6 +8,8 @@
 /* Copyright (C) 2026 diskOS contributors */
 #include "lvgl/src/indev/lv_indev_private.h"   /* long_pr_sent: was the press that sent this click a long press? */
 #include "screens.h"
+#include "npshade.h"
+#include "quicksettings.h"
 #include "ma.h"
 #include "theme_kit.h"
 #include "theme.h"
@@ -114,6 +116,7 @@ void crash_crumb(int screen);
 int disco_editor_back(void);
 static void transition(int from, int to, int dir)
 {
+    if(from != to && npshade_active()) npshade_dismiss();   /* the Shade belongs to the screen it was pulled over (saver, Home...) */
     if(th_zune()&&from!=to){zune_overlays_close();zsaver_set_visible(to==SCR_SAVER);quicksettings_zune_visible(to==SCR_QUICK&&!ui_display_is_off());}
     if(from==SCR_NOWPLAYING && to!=SCR_NOWPLAYING)ui_imm_control_cancel();
     azjump_close_active();
@@ -255,7 +258,9 @@ void screen_show(int which)
     if (discshelf_navigation_locked() && which != SCR_SHELF && which != SCR_SAVER && which != SCR_QUICK) return;
     if ((th_disco_family() || th_null()) && which == SCR_NOWPLAYING && !disco_np_wanted()) { screen_home(); return; }   /* Disco/Null: ordinary playback routes to Music; only explicit Immersive enters the shared NP root. */
     int from = s_current;
-    if (which != s_current) {
+    if (which == SCR_HOME) s_sp = 0;   /* Home is the root: reaching it any way (swipe up, the QS cover, the Shade) drops the
+                                        * history, as screen_home() does - Back on Home must not reopen what was left */
+    else if (which != s_current) {
         int cap = (int)(sizeof(s_stack)/sizeof(s_stack[0]));
         if (s_sp >= cap) {            /* full: keep the root (s_stack[0]) so Back still
                                        * reaches Home; drop the 2nd-oldest instead */

@@ -260,7 +260,7 @@ Now Playing accent: derived from album art, or any fixed colour you pick.
 Pre-decode album art so covers load instantly. Background decoding can warm the player; it throttles on heat.										
 Idle time before the clock screensaver appears and the screen dims.										
 Screensaver look: Cover art, Analog clock, Minimal, Digital, or spinning Vinyl.										
-How long after the screensaver the screen turns fully off.										
+How long after the screensaver the screen turns fully off. With the screensaver Off, how long after the last touch.										
 Use a 24-hour clock instead of AM/PM.										
 Slide animations between screens.										
 The colour of the Disc drawn on the startup screen. Set it to match yours.										

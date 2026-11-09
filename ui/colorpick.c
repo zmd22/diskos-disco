@@ -289,17 +289,17 @@ void colorpick_open(void){
     screen_show(SCR_COLORPICK);
 }
 
-static lv_obj_t *pill(lv_obj_t *root, const char *txt, int x, int w, lv_event_cb_t cb){
-    lv_obj_t *b = lv_button_create(root);
+static lv_obj_t *pill(lv_obj_t *row, const char *txt, lv_event_cb_t cb){   /* sized to its text in any theme's font */
+    lv_obj_t *b = lv_button_create(row);
     lv_obj_remove_style_all(b);
-    lv_obj_set_size(b, w, 24); lv_obj_set_pos(b, x, 234);
+    lv_obj_set_size(b, LV_SIZE_CONTENT, 26); lv_obj_set_style_pad_hor(b, 9, 0);
     lv_obj_set_style_radius(b, 12, 0);
     lv_obj_set_style_bg_color(b, TC(SURFACE), 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
     lv_obj_set_ext_click_area(b, 4);
     lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *l = lv_label_create(b); lv_label_set_text(l, txt);
-    lv_obj_set_style_text_font(l, TH_F_CAPTION, 0); lv_obj_set_style_text_color(l, TC(TEXT_PRIMARY), 0); lv_obj_center(l);
+    lv_obj_set_style_text_font(l, TH_F_CAPTION, 0); lv_obj_set_style_text_color(l, TC(TEXT_PRIMARY), 0); lv_obj_align(l, LV_ALIGN_LEFT_MID, 0, 0);
     return b;
 }
 void colorpick_create(lv_obj_t *root){
@@ -335,8 +335,12 @@ void colorpick_create(lv_obj_t *root){
     g_hub_name = lv_label_create(root);
     lv_obj_set_style_text_font(g_hub_name, TH_F_DETAIL, 0); lv_obj_set_style_text_color(g_hub_name, TC(TEXT_PRIMARY), 0);
     lv_obj_align(g_hub_name, LV_ALIGN_CENTER, 0, 24);
-    g_follow = pill(root, "Follow album", 96, 84, follow_cb);
-    g_custom_btn = pill(root, "Custom", 184, 76, custom_open_cb);
+    lv_obj_t *row = lv_obj_create(root); lv_obj_remove_style_all(row);   /* the two pills, centred as a pair */
+    lv_obj_set_size(row, LV_SIZE_CONTENT, 26); lv_obj_align(row, LV_ALIGN_TOP_MID, 0, 233);
+    lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW); lv_obj_set_style_pad_column(row, 6, 0);
+    lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+    g_follow = pill(row, "Follow album", follow_cb);
+    g_custom_btn = pill(row, "Custom", custom_open_cb);
 
     /* Custom: the hue / saturation / brightness sliders (the previous screen, unchanged) over the ring */
     g_custom = lv_obj_create(root);

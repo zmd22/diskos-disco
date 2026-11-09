@@ -1,6 +1,7 @@
 #include "simple_theme.h"
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 #include "curvelist.h"
+#include "lvgl/src/misc/lv_area_private.h"   /* lv_area_intersect */
 #include "null_theme.h"
 #include "theme.h"
 #include "braun.h"
@@ -270,6 +271,20 @@ void curvelist_wheel_row(lv_obj_t *r, lv_obj_t *list){
     g_wheel_icon = fade < 8 ? TC(ACCENT_PRIMARY) : theme_color_mix(TC(CANVAS), TC(ACCENT_PRIMARY), (uint8_t)fade);   /* Squash icons stay orange */
     wheel_paint(r, want);
 }
+/* Width of a label's text (one line), 0 when empty */
+static int label_text_w(lv_obj_t *l){
+    const char *t = lv_label_get_text(l);
+    if(!t || !*t) return 0;
+    return lv_text_get_width(t, strlen(t), lv_obj_get_style_text_font(l, 0), lv_obj_get_style_text_letter_space(l, 0));
+}
+/* Where a right-hand label's text starts once it sits at x with width w */
+static int label_text_x(lv_obj_t *l, int x, int w){
+    int tw = label_text_w(l);
+    if(!tw) return 0x7FFF;                                              /* nothing drawn: no limit */
+    if(lv_obj_get_style_text_align(l, 0) == LV_TEXT_ALIGN_RIGHT && tw < w) return x + w - tw;
+    return x;
+}
+
 static void curve(curvelist_t *c){
     if(curvelist_wheel() && !wheel_excluded(c->list)){
         curvelist_wheel_list(c->list, 48);
@@ -316,6 +331,7 @@ static void curve(curvelist_t *c){
         int d = c->full_w - w;
         lv_obj_set_width(r, w);
         lv_obj_set_style_translate_x(r, shift, 0);
+        int right_x = 0x7FFF;                                           /* where the leftmost right-hand text now starts */
         for(uint32_t k = 0; k < lv_obj_get_child_count(r); k++){       /* keep text inside the row */
             lv_obj_t *ch = lv_obj_get_child(r, k);
             if(!lv_obj_check_type(ch, &lv_label_class)) continue;
@@ -325,7 +341,23 @@ static void curve(curvelist_t *c){
             if(ox < 130) continue;
             if(shift && lv_obj_get_style_text_align(ch, 0) == LV_TEXT_ALIGN_RIGHT && ow - d >= 40){   /* Disco: shrink it in place, */
                 lv_obj_set_x(ch, ox); lv_obj_set_width(ch, ow - d);                                     /* so it never runs into the title */
-            } else { lv_obj_set_x(ch, ox - d); if(shift || lv_obj_get_width(ch) < ow) lv_obj_set_width(ch, ow); }   /* right-hand value slides in; a shrunk one gets its width back */
+                { int tx = label_text_x(ch, ox, ow - d); if(tx < right_x) right_x = tx; }
+            } else { lv_obj_set_x(ch, ox - d); if(shift || lv_obj_get_width(ch) < ow) lv_obj_set_width(ch, ow);   /* right-hand value slides in; a shrunk one gets its width back */
+                     { int tx = label_text_x(ch, ox - d, ow); if(tx < right_x) right_x = tx; } }
+        }
+        /* ... and a one-line title reaching into that space gives way (it scrolls or ends in "..."), so a long name
+         * ("Library management") never runs under the chevron on a narrowed row; it gets its width back further in */
+        for(uint32_t k = 0; k < lv_obj_get_child_count(r); k++){
+            lv_obj_t *ch = lv_obj_get_child(r, k);
+            if(!lv_obj_check_type(ch, &lv_label_class)) continue;
+            intptr_t orig = (intptr_t)lv_obj_get_user_data(ch);
+            int ox = (int)(orig >> 16), ow = (int)(orig & 0xFFFF);
+            if(!orig || ox >= 130 || ox + ow <= 130) continue;
+            lv_label_long_mode_t lm = lv_label_get_long_mode(ch);
+            if(lm == LV_LABEL_LONG_WRAP) continue;                                   /* a wrapping label would grow taller */
+            int want = right_x < 0x7FFF && ox + label_text_w(ch) > right_x - 4 ? right_x - 4 - ox : ow;   /* only when its text gets there */
+            if(want < 40) want = 40;
+            if(lv_obj_get_width(ch) != want) lv_obj_set_width(ch, want);
         }
     }
 }

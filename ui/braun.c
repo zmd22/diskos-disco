@@ -286,8 +286,8 @@ void br_weather_text(lv_obj_t *label, const char *s){
     for(int i = 0; s && s[i] && n < (int)sizeof o - 1; i++){
         if(s[i] == ' ' && n > 0 && o[n-1] == ' ') continue;
         if((s[i] == 'C' || s[i] == 'F') && n > 1 && (unsigned char)o[n-1] == 0xB0) continue;
-        if(s[i] == ' ' && s[i+1] == ' '){ o[n] = 0;                                   /* stop before the condition (o was not terminated yet) */
-                                         if(n > 3 && strchr(o, 0xB0)) break; }
+        if(s[i] == ' '){ o[n] = 0;                                   /* stop before the condition, one space or two (o was not terminated yet) */
+                         if(n > 3 && strchr(o, 0xB0)) break; }
         o[n++] = s[i];
     }
     while(n > 0 && o[n-1] == ' ') n--;

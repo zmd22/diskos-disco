@@ -252,7 +252,7 @@ static void disco_faders_create(lv_obj_t *root){
             if(th_null())kit_keep(ob[k]);
         }
         lv_obj_set_style_text_font(g_rim[i], TF(UI_14), 0);
-        lv_obj_align(g_rim[i], LV_ALIGN_TOP_MID, x - 180, DBOT + o + 6);
+        lv_obj_align(g_rim[i], LV_ALIGN_TOP_MID, x - 180, DBOT + o + 6 + (th_null() && (i & 1) ? 15 : 0));   /* Null's wide pixel digits: every other band a line lower, so "125" "250" "500" never run together */
     }
 }
 static void disco_faders_paint(void){

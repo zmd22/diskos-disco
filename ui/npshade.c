@@ -46,29 +46,44 @@ static void text_for_theme(char *out, int cap, const char *s){
     if(th_null()) theme_upper(out, cap, s);
     else snprintf(out, (size_t)cap, "%s", s);
 }
+static char g_cover_path[256];   /* the song the cover was set for: the cover buffer is reused, so a new song (or a
+                                  * decode that landed after a gap) sets it again */
+static void set_text(lv_obj_t *l, const char *t){ if(l && strcmp(lv_label_get_text(l), t)) lv_label_set_text(l, t); }   /* only a real change redraws */
 static void refresh(void){
     if(!g_ov) return;
     track_state_t st; ipc_get_state(&st);
     char b[192];
-    text_for_theme(b, sizeof b, st.have_track && st.title[0] ? st.title : "Not playing"); lv_label_set_text(g_title, b);
-    text_for_theme(b, sizeof b, st.have_track ? st.artist : ""); lv_label_set_text(g_artist, b);
+    text_for_theme(b, sizeof b, st.have_track && st.title[0] ? st.title : "Not playing"); set_text(g_title, b);
+    text_for_theme(b, sizeof b, st.have_track ? st.artist : ""); set_text(g_artist, b);
     long dur = st.duration_ms > 0 ? st.duration_ms : 1;
-    lv_bar_set_value(g_bar, (int32_t)(st.have_track ? st.position_ms * 1000 / dur : 0), LV_ANIM_OFF);
+    int32_t prog = st.have_track ? (int32_t)((long long)st.position_ms * 1000 / dur) : 0;   /* 64-bit: a 32-bit long overflows past 35 min */
+    if(prog < 0) prog = 0;
+    if(prog > 1000) prog = 1000;
+    if(lv_bar_get_value(g_bar) != prog) lv_bar_set_value(g_bar, prog, LV_ANIM_OFF);
     const void *cv = ui_current_cover_dsc();
-    if(cv){ const lv_image_dsc_t *d = cv; lv_image_set_src(g_cover, cv); if(d->header.w) lv_image_set_scale(g_cover, 256 * g_cov / d->header.w); lv_obj_remove_flag(g_cover, LV_OBJ_FLAG_HIDDEN); }
-    else lv_obj_add_flag(g_cover, LV_OBJ_FLAG_HIDDEN);
+    if(cv){ const lv_image_dsc_t *d = cv;
+            if(lv_image_get_src(g_cover) != cv || strcmp(g_cover_path, st.path)){
+                snprintf(g_cover_path, sizeof g_cover_path, "%s", st.path);
+                lv_image_set_src(g_cover, cv); if(d->header.w) lv_image_set_scale(g_cover, 256 * g_cov / d->header.w);
+                lv_obj_invalidate(g_cover); }
+            lv_obj_remove_flag(g_cover, LV_OBJ_FLAG_HIDDEN); }
+    else { lv_obj_add_flag(g_cover, LV_OBJ_FLAG_HIDDEN); g_cover_path[0] = 0; }
     time_t now = time(NULL); struct tm lt; localtime_r(&now, &lt);
-    char c[8]; snprintf(c, sizeof c, "%d:%02d", lt.tm_hour, lt.tm_min); lv_label_set_text(g_clock, c);
+    char c[16];
+    if(simple_cfg_get_int("time_24h", 1)) snprintf(c, sizeof c, "%d:%02d", lt.tm_hour, lt.tm_min);   /* the clock setting, as everywhere */
+    else snprintf(c, sizeof c, "%d:%02d %s", lt.tm_hour % 12 ? lt.tm_hour % 12 : 12, lt.tm_min, lt.tm_hour < 12 ? "AM" : "PM");
+    set_text(g_clock, c);
     int chg = 0, pct = ui_battery(&chg);   /* the battery beside the clock */
     const char *bg = chg ? LV_SYMBOL_CHARGE : pct < 0 ? LV_SYMBOL_BATTERY_3 : pct > 80 ? LV_SYMBOL_BATTERY_FULL : pct > 55 ? LV_SYMBOL_BATTERY_3
                    : pct > 30 ? LV_SYMBOL_BATTERY_2 : pct > 12 ? LV_SYMBOL_BATTERY_1 : LV_SYMBOL_BATTERY_EMPTY;
-    if(pct >= 0){ char bb[24]; snprintf(bb, sizeof bb, "%s %d%%", chg ? LV_SYMBOL_CHARGE : bg, pct > 100 ? 100 : pct); lv_label_set_text(g_batt, bb); }
-    else lv_label_set_text(g_batt, bg);
-    if(g_badge_l) lv_label_set_text(g_badge_l, ui_is_playing() ? LV_SYMBOL_PAUSE : LV_SYMBOL_PLAY);
-    if(g_ring) lv_arc_set_value(g_ring, (int32_t)(st.have_track ? st.position_ms * 1000 / dur : 0));
-    lv_obj_set_style_text_color(g_batt, pct >= 0 && pct <= 12 && !chg ? TC(STATUS_DANGER) : TC(TEXT_SECONDARY), 0);
+    if(pct >= 0){ char bb[24]; snprintf(bb, sizeof bb, "%s %d%%", chg ? LV_SYMBOL_CHARGE : bg, pct > 100 ? 100 : pct); set_text(g_batt, bb); }
+    else set_text(g_batt, bg);
+    if(g_badge_l) set_text(g_badge_l, ui_is_playing() ? LV_SYMBOL_PAUSE : LV_SYMBOL_PLAY);
+    if(g_ring && lv_arc_get_value(g_ring) != prog) lv_arc_set_value(g_ring, prog);
+    lv_color_t bc = pct >= 0 && pct <= 12 && !chg ? TC(STATUS_DANGER) : TC(TEXT_SECONDARY);
+    if(!lv_color_eq(lv_obj_get_style_text_color(g_batt, 0), bc)) lv_obj_set_style_text_color(g_batt, bc, 0);
 }
-static void tick_cb(lv_timer_t *t){ (void)t; refresh(); }
+static void tick_cb(lv_timer_t *t){ (void)t; if(!ui_display_is_off()) refresh(); }   /* nothing to see with the panel off */
 
 static void ty_exec(void *o, int32_t v){ lv_obj_set_y((lv_obj_t *)o, v); }
 static void opa_exec(void *o, int32_t v){ lv_obj_set_style_bg_opa((lv_obj_t *)o, (lv_opa_t)v, 0); }
@@ -242,7 +257,10 @@ static void shard(int k, int cy){
     lv_obj_add_flag(b, LV_OBJ_FLAG_ADV_HITTEST);   /* taps count inside the circle, not its square */
     lv_obj_set_ext_click_area(b, 8);
     const lv_font_t *f = TF(UI_20);
-    lv_obj_set_style_text_color(l, TC(TEXT_PRIMARY), 0); lv_obj_set_style_text_font(l, f, 0);
+    { lv_color_t tx = TC(TEXT_PRIMARY), sc = TC(SCRIM);   /* the theme's text where it reads on the dark shard; light themes' dark text does not */
+      int dl = (int)lv_color_luminance(tx) - (int)lv_color_luminance(sc);
+      lv_obj_set_style_text_color(l, dl > 100 || dl < -100 ? tx : theme_on_color(sc), 0); }
+    lv_obj_set_style_text_font(l, f, 0);
     double ax = 0, ay = 0; long n = 0;   /* the oval: inside both the glass and the circle */
     for(int py = y; py < y + sd; py++) for(int px = x; px < x + sd; px++){
         float ex = px + 0.5f - (x + sd / 2.0f), ey = py + 0.5f - cy, gx = px + 0.5f - 180, gy = py + 0.5f - 180;

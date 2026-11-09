@@ -146,9 +146,10 @@ static void eq_toggle(void){
  char message[160];snprintf(message,sizeof message,"EQ %s\nPreset: %s",preset?"On":"Off",ui_eq_name(remembered));ui_toast(message);
  quicksettings_refresh(ui_is_playing());
 }
+static int slot_of(int id){ for(int i=0;i<g_nitems;i++) if(g_items[i]==id) return i; return -1; }   /* orbit slot showing that item, -1 when not shown */
 static void pick_cb(int i){                                       /* short taps */
     switch(i){
-        case T_WIFI: { int on = wifi_toggle(); orbit_set_on(&g_orb,T_WIFI,on,th_ringlike()?ui_current_accent():TC(ACCENT_PRIMARY));
+        case T_WIFI: { int on = wifi_toggle(); orbit_set_on(&g_orb,slot_of(T_WIFI),on,th_ringlike()?ui_current_accent():TC(ACCENT_PRIMARY));
                        ui_toast(on ? "Turning on Wi-Fi\xE2\x80\xA6" : "Wi-Fi off"); } break;
         case T_BT:   { int on = bt_toggle(); paint_radios();
                        ui_toast(on ? "Turning on Bluetooth\xE2\x80\xA6" : "Bluetooth off"); } break;
@@ -202,12 +203,14 @@ static void spin_exec(void *var, int32_t v){ lv_obj_set_style_transform_rotation
 static void rescan_show(int on){
     if(th_disco_family()||th_null()||th_zune()||th_braun2()){g_scanning=on;return;}
     if(on == g_scanning) return;
+    int sl = slot_of(T_RESCAN);                                         /* the slot Rescan sits in, not its catalogue id */
+    if(sl < 0 || sl >= g_orb.n || !g_orb.icon[sl]){ g_scanning = -1; return; }   /* not shown: paint it once it is */
     g_scanning = on;
-    lv_obj_t *ic = g_orb.icon[T_RESCAN];
+    lv_obj_t *ic = g_orb.icon[sl];
     lv_anim_delete(ic, spin_exec);
     lv_obj_set_style_text_color(ic, on ? TC(ACCENT_PRIMARY) : (th_braun_family() ? TC(ON_CONTROL) : TC(TEXT_PRIMARY)), 0);
-    if(g_orb.cap[T_RESCAN]){ lv_label_set_text(g_orb.cap[T_RESCAN], on ? "Scanning" : "Rescan");
-                            lv_obj_set_style_text_color(g_orb.cap[T_RESCAN], on ? TC(TEXT_PRIMARY) : TC(TEXT_SECONDARY), 0); }
+    if(g_orb.cap[sl]){ lv_label_set_text(g_orb.cap[sl], on ? "Scanning" : "Rescan");
+                            lv_obj_set_style_text_color(g_orb.cap[sl], on ? TC(TEXT_PRIMARY) : TC(TEXT_SECONDARY), 0); }
     if(on){
         lv_obj_update_layout(ic);
         lv_obj_set_style_transform_pivot_x(ic, lv_obj_get_width(ic) / 2, 0);

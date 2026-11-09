@@ -2,7 +2,7 @@
 
 ## Baselines
 
-- **Disco 3.4.1**, tag `v3.4.1`. Shipped `mq_ui` SHA-256: `4f986897e5c081bb727a0d0ec43f9a285e296d65ea00d5dd708db0b85e4a0d96`.
+- **Disco 3.4.4**, tag `v3.4.4`. Shipped `mq_ui` SHA-256: `788f12f01d0c8d9f431fe59b02f1709772e841cfcf66212f9c4f087237c66230` ([record](RELEASE_3.4.4.md)).
 - Upstream reference: [b0hemia/diskOS @ `53a9cc5`](https://github.com/b0hemia/diskOS/tree/53a9cc512d7aec766fd7c5e304e78cac6ca9b7d3). Its docs shaped this documentation's structure, not Disco's feature set.
 
 ## Implementation owners
