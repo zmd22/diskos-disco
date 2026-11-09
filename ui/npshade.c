@@ -2,9 +2,10 @@
 /* Copyright (C) 2026 diskOS contributors */
 /* Quick settings style 2, "Shade" (Display > QS style; one setting for all themes).
  *
- * A pull down from the top edge on any screen but Music lowers a now-playing shade over the top two thirds of the
- * screen: the clock, the cover, title and artist, a thin progress line and previous / play-pause / next, with a grab
- * bar and "pull down for quick settings" at its foot. What is behind dims. A second pull down (or a tap on the grab
+ * A pull down from the top edge on any screen but Music lowers a now-playing shade over the top of the screen, its
+ * lower edge an arc that follows the glass: the clock and battery, a round cover in its progress ring with play-pause
+ * on the ring, previous / next as Disco's nav shards on the rim, title and artist on the widest line, and a grab bar
+ * with "pull down for quick settings" at its foot. What is behind dims. A second pull down (or a tap on the grab
  * bar) stretches the shade to full screen and hands over to the theme's own Quick settings; a pull up or a tap on the
  * dimmed part closes it. Style 1, "Classic" (the default), keeps today's behaviour: the pull opens Quick settings.
  * Every theme draws the same shape in its own colours and type. */
@@ -21,16 +22,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 
 #define SHADE_H   250      /* the first stage reaches this far down */
 #define SHADE_MS  150      /* open / close: quick */
 #define GROW_MS   170      /* the second pull: to full screen */
 #define COVER     112      /* the cover, with play-pause on it and previous / next either side */
 #define COVER_Y   36
+#define DOME_R   350      /* the shade's lower edge: an arc of this radius, centred on the screen's axis */
+#define DOME_B   300      /* ... ending this far down (screen y) */
 
 static lv_obj_t *g_batt, *g_flash, *g_flash_l;
 static lv_obj_t *g_ov, *g_scrim, *g_panel, *g_handle, *g_hint, *g_clock, *g_cover, *g_title, *g_artist, *g_bar, *g_btn[3], *g_btn_l[3];
 static lv_timer_t *g_tick;
+static int g_cov = COVER, g_py_open = -40, g_py_hidden = -SHADE_H - 40;   /* the cover's size; the panel's y open and hidden */
+static lv_obj_t *g_badge, *g_badge_l, *g_ring;
 static int g_closing;
 
 int npshade_style(void){ return simple_cfg_get_int("qs_style", 0) == 1; }
@@ -49,20 +55,22 @@ static void refresh(void){
     long dur = st.duration_ms > 0 ? st.duration_ms : 1;
     lv_bar_set_value(g_bar, (int32_t)(st.have_track ? st.position_ms * 1000 / dur : 0), LV_ANIM_OFF);
     const void *cv = ui_current_cover_dsc();
-    if(cv){ const lv_image_dsc_t *d = cv; lv_image_set_src(g_cover, cv); if(d->header.w) lv_image_set_scale(g_cover, 256 * COVER / d->header.w); lv_obj_remove_flag(g_cover, LV_OBJ_FLAG_HIDDEN); }
+    if(cv){ const lv_image_dsc_t *d = cv; lv_image_set_src(g_cover, cv); if(d->header.w) lv_image_set_scale(g_cover, 256 * g_cov / d->header.w); lv_obj_remove_flag(g_cover, LV_OBJ_FLAG_HIDDEN); }
     else lv_obj_add_flag(g_cover, LV_OBJ_FLAG_HIDDEN);
     time_t now = time(NULL); struct tm lt; localtime_r(&now, &lt);
     char c[8]; snprintf(c, sizeof c, "%d:%02d", lt.tm_hour, lt.tm_min); lv_label_set_text(g_clock, c);
     int chg = 0, pct = ui_battery(&chg);   /* the battery beside the clock */
     const char *bg = chg ? LV_SYMBOL_CHARGE : pct < 0 ? LV_SYMBOL_BATTERY_3 : pct > 80 ? LV_SYMBOL_BATTERY_FULL : pct > 55 ? LV_SYMBOL_BATTERY_3
                    : pct > 30 ? LV_SYMBOL_BATTERY_2 : pct > 12 ? LV_SYMBOL_BATTERY_1 : LV_SYMBOL_BATTERY_EMPTY;
-    lv_label_set_text(g_batt, bg);
+    if(pct >= 0){ char bb[24]; snprintf(bb, sizeof bb, "%s %d%%", chg ? LV_SYMBOL_CHARGE : bg, pct > 100 ? 100 : pct); lv_label_set_text(g_batt, bb); }
+    else lv_label_set_text(g_batt, bg);
+    if(g_badge_l) lv_label_set_text(g_badge_l, ui_is_playing() ? LV_SYMBOL_PAUSE : LV_SYMBOL_PLAY);
+    if(g_ring) lv_arc_set_value(g_ring, (int32_t)(st.have_track ? st.position_ms * 1000 / dur : 0));
     lv_obj_set_style_text_color(g_batt, pct >= 0 && pct <= 12 && !chg ? TC(STATUS_DANGER) : TC(TEXT_SECONDARY), 0);
 }
 static void tick_cb(lv_timer_t *t){ (void)t; refresh(); }
 
 static void ty_exec(void *o, int32_t v){ lv_obj_set_y((lv_obj_t *)o, v); }
-static void h_exec(void *o, int32_t v){ lv_obj_set_height((lv_obj_t *)o, v); }
 static void opa_exec(void *o, int32_t v){ lv_obj_set_style_bg_opa((lv_obj_t *)o, (lv_opa_t)v, 0); }
 static void fade_exec(void *o, int32_t v){ lv_obj_set_style_opa((lv_obj_t *)o, (lv_opa_t)v, 0); }
 static void anim(void *var, lv_anim_exec_xcb_t cb, int32_t a, int32_t b, uint32_t ms, lv_anim_completed_cb_t done){
@@ -73,13 +81,14 @@ static void anim(void *var, lv_anim_exec_xcb_t cb, int32_t a, int32_t b, uint32_
 static void destroy(void){
     if(g_tick){ lv_timer_delete(g_tick); g_tick = NULL; }
     if(g_ov){ lv_obj_delete(g_ov); g_ov = NULL; }
+    g_badge = g_badge_l = g_ring = NULL;
     g_closing = 0;
 }
 static void closed_cb(lv_anim_t *a){ (void)a; destroy(); }
 void npshade_close(void){
     if(!g_ov || g_closing) return;
     g_closing = 1;
-    anim(g_panel, ty_exec, lv_obj_get_y(g_panel), -SHADE_H - 20, SHADE_MS, closed_cb);
+    anim(g_panel, ty_exec, lv_obj_get_y(g_panel), g_py_hidden + 20, SHADE_MS, closed_cb);
     anim(g_scrim, opa_exec, lv_obj_get_style_bg_opa(g_scrim, 0), 0, SHADE_MS, NULL);
     anim(g_hint, fade_exec, 255, 0, SHADE_MS / 2, NULL);
 }
@@ -104,9 +113,10 @@ static int was_swipe(void){   /* a tap that travelled is a swipe the gesture cod
 void npshade_grow(void){
     if(!g_ov || g_closing) return;
     g_closing = 1;
-    lv_obj_t *parts[] = { g_clock, g_batt, g_cover, g_title, g_artist, g_bar, g_btn[0], g_btn[2], g_handle, g_hint };
-    for(unsigned i = 0; i < sizeof parts / sizeof parts[0]; i++) anim(parts[i], fade_exec, 255, 0, GROW_MS * 2 / 3, NULL);
-    anim(g_panel, h_exec, lv_obj_get_height(g_panel), 360 + 60, GROW_MS, grown_cb);
+    lv_obj_t *parts[] = { g_clock, g_batt, g_cover, g_title, g_artist, g_bar, g_btn[0], g_btn[2], g_handle, g_hint, g_ring, g_badge };
+    for(unsigned i = 0; i < sizeof parts / sizeof parts[0]; i++) if(parts[i]) anim(parts[i], fade_exec, 255, 0, GROW_MS * 2 / 3, NULL);
+    /* the disc slides down until its lower arc clears the glass's corners (at x 0 it is 50 px above its bottom) */
+    anim(g_panel, ty_exec, lv_obj_get_y(g_panel), g_py_open + (360 + 60 - DOME_B), GROW_MS, grown_cb);
     anim(g_scrim, opa_exec, lv_obj_get_style_bg_opa(g_scrim, 0), 255, GROW_MS, NULL);
 }
 static void album_ev(lv_event_t *e){
@@ -158,6 +168,115 @@ static void button(int k, int x, int y, int d, const char *glyph, const char *cm
     lv_obj_set_style_text_color(l, filled ? TC(CANVAS) : th_zune() ? TC(TEXT_PRIMARY) : TC(ACCENT_PRIMARY), 0);
     lv_obj_add_event_cb(b, transport_ev, LV_EVENT_SHORT_CLICKED, (void *)cmd);
     g_btn[k] = b; g_btn_l[k] = l;
+}
+/* ---- the round layout: a round cover in its progress ring, play-pause on the ring, previous / next as Disco's nav
+ * shards on the rim, the title on the widest line; the shade's lower edge is an arc that follows the glass ---- */
+static void dome(int bottom){   /* the panel becomes a big disc whose lower arc ends at `bottom` (screen y) */
+    int d = DOME_R * 2, y = bottom - d;
+    lv_obj_set_size(g_panel, d, d); lv_obj_set_x(g_panel, 180 - DOME_R);
+    lv_obj_set_style_radius(g_panel, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_pad_top(g_panel, -y, 0);          /* children keep screen y */
+    g_py_open = y; g_py_hidden = y - bottom - 30; lv_obj_set_y(g_panel, g_py_hidden);
+    lv_obj_align(g_handle, LV_ALIGN_TOP_MID, 0, bottom - 14);
+    lv_obj_set_size(g_handle, 44, 5);
+    lv_obj_align(g_hint, LV_ALIGN_TOP_MID, 0, bottom + 6);
+}
+static void badge(int cx, int cy, int d){   /* play / pause, always shown: what a tap on the cover does */
+    g_badge = lv_obj_create(g_panel); lv_obj_remove_style_all(g_badge); kit_keep(g_badge);
+    lv_obj_set_size(g_badge, d, d); lv_obj_align(g_badge, LV_ALIGN_TOP_MID, cx, cy - d / 2);
+    lv_obj_set_style_radius(g_badge, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_color(g_badge, TC(ACCENT_PRIMARY), 0); lv_obj_set_style_bg_opa(g_badge, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_width(g_badge, 3, 0); lv_obj_set_style_border_color(g_badge, lv_obj_get_style_bg_color(g_panel, 0), 0);
+    lv_obj_add_flag(g_badge, LV_OBJ_FLAG_CLICKABLE); lv_obj_add_event_cb(g_badge, cover_ev, LV_EVENT_SHORT_CLICKED, NULL);
+    lv_obj_set_ext_click_area(g_badge, 8);
+    g_badge_l = lv_label_create(g_badge); kit_keep(g_badge_l); lv_obj_center(g_badge_l);
+    lv_obj_set_style_text_font(g_badge_l, TF(UI_20), 0); lv_obj_set_style_text_color(g_badge_l, TC(ON_ACCENT), 0);
+}
+static void status_row(int y, const lv_font_t *fc, const lv_font_t *fb){   /* clock and battery %, one centred row */
+    lv_obj_set_style_text_font(g_clock, fc, 0); lv_obj_set_style_text_color(g_clock, TC(TEXT_PRIMARY), 0);
+    lv_obj_set_style_text_font(g_batt, fb, 0);
+    /* either side of a 10 px gap at the centre, each box wide enough for any theme's type (Null's pixel face is wide) */
+    lv_obj_set_width(g_clock, 96); lv_obj_set_width(g_batt, 96);
+    lv_label_set_long_mode(g_clock, LV_LABEL_LONG_CLIP); lv_label_set_long_mode(g_batt, LV_LABEL_LONG_CLIP);
+    lv_obj_set_style_text_align(g_clock, LV_TEXT_ALIGN_RIGHT, 0); lv_obj_set_style_text_align(g_batt, LV_TEXT_ALIGN_LEFT, 0);
+    int fh = lv_font_get_line_height(fc), bh = lv_font_get_line_height(fb);
+    lv_obj_align(g_clock, LV_ALIGN_TOP_MID, -(48 + 5), y); lv_obj_align(g_batt, LV_ALIGN_TOP_MID, 48 + 5, y + (fh - bh) / 2 + 1);
+}
+static void text_rows(int y, const lv_font_t *ft, const lv_font_t *fa, int wt, int wa){
+    lv_obj_set_style_text_font(g_title, ft, 0); lv_obj_set_width(g_title, wt); lv_obj_set_height(g_title, lv_font_get_line_height(ft));
+    lv_obj_set_style_text_font(g_artist, fa, 0); lv_obj_set_width(g_artist, wa); lv_obj_set_height(g_artist, lv_font_get_line_height(fa));
+    lv_obj_align(g_title, LV_ALIGN_TOP_MID, 0, y); lv_obj_align(g_artist, LV_ALIGN_TOP_MID, 0, y + lv_font_get_line_height(ft) + 2);
+}
+static void cover_round(int y, int d){   /* the cover in a round clipping frame: an image's own radius does not clip it */
+    lv_obj_t *f = lv_obj_create(g_panel); lv_obj_remove_style_all(f); kit_keep(f);
+    lv_obj_move_to_index(f, lv_obj_get_index(g_cover));
+    lv_obj_set_size(f, d, d); lv_obj_align(f, LV_ALIGN_TOP_MID, 0, y);
+    lv_obj_set_style_radius(f, LV_RADIUS_CIRCLE, 0); lv_obj_set_style_clip_corner(f, true, 0);
+    lv_obj_remove_flag(f, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_parent(g_cover, f);
+    g_cov = d; lv_obj_set_size(g_cover, d, d); lv_obj_align(g_cover, LV_ALIGN_TOP_LEFT, 0, 0);
+    lv_obj_set_style_radius(g_cover, 0, 0); lv_obj_set_style_clip_corner(g_cover, false, 0);
+    lv_obj_align(g_flash, LV_ALIGN_TOP_MID, 0, y + d / 2 - 28);
+}
+static uint32_t utf8_first(const char *t){   /* the code point of a label's first character */
+    const unsigned char *g = (const unsigned char *)t;
+    if(g[0] < 0x80) return g[0];
+    if(g[0] < 0xE0) return ((g[0] & 0x1Fu) << 6) | (g[1] & 0x3Fu);
+    if(g[0] < 0xF0) return ((g[0] & 0x0Fu) << 12) | ((g[1] & 0x3Fu) << 6) | (g[2] & 0x3Fu);
+    return ((g[0] & 0x07u) << 18) | ((g[1] & 0x3Fu) << 12) | ((g[2] & 0x3Fu) << 6) | (g[3] & 0x3Fu);
+}
+/* previous / next: Disco's nav shard - a circle parked off the glass, reaching in from the rim at the cover's height, so
+ * the round bezel cuts it into a pointed oval; mirrored left and right. The glyph's ink sits on the oval's centre of
+ * area (the oval leans with the rim, so the middle of its line through the cover's centre is not its middle). */
+#define SHARD_D     180
+#define SHARD_REACH  54
+static void shard(int k, int cy){
+    int left = k == 0, sd = SHARD_D, rim = (int)lroundf(sqrtf(180.0f * 180 - (float)(cy - 180) * (cy - 180)));   /* half the glass's width at cy */
+    int x = left ? 180 - rim + SHARD_REACH - sd : 180 + rim - SHARD_REACH, y = cy - sd / 2;
+    lv_obj_t *b = g_btn[k], *l = g_btn_l[k];
+    lv_obj_set_size(b, sd, sd); lv_obj_align(b, LV_ALIGN_TOP_LEFT, (DOME_R - 180) + x, y);
+    lv_obj_set_style_radius(b, LV_RADIUS_CIRCLE, 0); lv_obj_set_style_pad_all(b, 0, 0);
+    lv_obj_set_style_bg_color(b, TC(SCRIM), 0); lv_obj_set_style_bg_opa(b, 190, 0); lv_obj_set_style_bg_opa(b, 235, LV_STATE_PRESSED);
+    lv_obj_set_style_bg_grad_dir(b, LV_GRAD_DIR_NONE, 0); lv_obj_set_style_shadow_width(b, 0, 0);
+    lv_obj_set_style_border_width(b, 2, 0); lv_obj_set_style_border_color(b, TC(ACCENT_PRIMARY), 0); lv_obj_set_style_border_opa(b, 130, 0);
+    lv_obj_add_flag(b, LV_OBJ_FLAG_ADV_HITTEST);   /* taps count inside the circle, not its square */
+    lv_obj_set_ext_click_area(b, 8);
+    const lv_font_t *f = TF(UI_20);
+    lv_obj_set_style_text_color(l, TC(TEXT_PRIMARY), 0); lv_obj_set_style_text_font(l, f, 0);
+    double ax = 0, ay = 0; long n = 0;   /* the oval: inside both the glass and the circle */
+    for(int py = y; py < y + sd; py++) for(int px = x; px < x + sd; px++){
+        float ex = px + 0.5f - (x + sd / 2.0f), ey = py + 0.5f - cy, gx = px + 0.5f - 180, gy = py + 0.5f - 180;
+        if(ex * ex + ey * ey <= sd * sd / 4.0f && gx * gx + gy * gy <= 180.0f * 180){ ax += px + 0.5; ay += py + 0.5; n++; }
+    }
+    float mx = n ? (float)(ax / n) : x + sd / 2.0f, my = n ? (float)(ay / n) : cy;
+    lv_font_glyph_dsc_t gd; memset(&gd, 0, sizeof gd);
+    int lh = lv_font_get_line_height(f);
+    if(!lv_font_get_glyph_dsc(f, &gd, utf8_first(lv_label_get_text(l)), 0)){ gd.adv_w = 20; gd.box_w = 20; gd.box_h = 20; }
+    float ink_x = gd.ofs_x + gd.box_w / 2.0f, ink_y = (lh - f->base_line) - gd.box_h - gd.ofs_y + gd.box_h / 2.0f;   /* from the label's corner */
+    int bw = lv_obj_get_style_border_width(b, 0);   /* a child sits inside the border */
+    lv_obj_set_size(l, gd.adv_w, lh); lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_LEFT, 0);
+    lv_obj_align(l, LV_ALIGN_TOP_LEFT, (int)lroundf(mx - ink_x - x) - bw, (int)lroundf(my - ink_y - y) - bw);
+}
+static void layout(void){
+    lv_obj_set_style_bg_opa(g_panel, LV_OPA_COVER, 0);
+    dome(DOME_B);
+    int b2 = th_braun2();
+    status_row(12, b2 ? br_font(18, 1) : TF(UI_18), b2 ? br_font(16, 0) : TF(UI_16));
+    int ring_d = 152, ring_y = 40, cy = ring_y + ring_d / 2;   /* the ring's centre line: the shards sit on it */
+    cover_round(ring_y + 16, ring_d - 32);
+    g_ring = lv_arc_create(g_panel); kit_keep(g_ring); lv_obj_set_size(g_ring, ring_d, ring_d); lv_obj_align(g_ring, LV_ALIGN_TOP_MID, 0, ring_y);
+    lv_obj_remove_flag(g_ring, LV_OBJ_FLAG_CLICKABLE); lv_obj_remove_style(g_ring, NULL, LV_PART_KNOB);
+    lv_arc_set_range(g_ring, 0, 1000);
+    lv_obj_set_style_arc_width(g_ring, 6, LV_PART_MAIN); lv_obj_set_style_arc_width(g_ring, 6, LV_PART_INDICATOR);
+    lv_obj_set_style_arc_color(g_ring, theme_color_mix(TC(TEXT_PRIMARY), lv_obj_get_style_bg_color(g_panel, 0), 50), LV_PART_MAIN);
+    lv_obj_set_style_arc_color(g_ring, TC(ACCENT_PRIMARY), LV_PART_INDICATOR);
+    lv_obj_set_style_arc_rounded(g_ring, true, LV_PART_MAIN); lv_obj_set_style_arc_rounded(g_ring, true, LV_PART_INDICATOR);
+    lv_arc_set_rotation(g_ring, 90 + 26); lv_arc_set_bg_angles(g_ring, 0, 360 - 52);   /* open at the bottom for play-pause */
+    lv_obj_move_to_index(g_ring, 0);
+    badge(0, ring_y + ring_d - 6, 46);
+    shard(0, cy); shard(2, cy);
+    text_rows(cy + ring_d / 2 + 26, b2 ? br_font(22, 1) : TF(UI_24), b2 ? br_font(16, 0) : TF(UI_18), 296, 270);
+    lv_obj_add_flag(g_bar, LV_OBJ_FLAG_HIDDEN);   /* the ring shows the progress */
 }
 void npshade_open(void){
     if(g_ov) return;
@@ -232,10 +351,11 @@ void npshade_open(void){
         }
         lv_obj_set_style_bg_color(g_handle, TC(SURFACE_RAISED), 0);
     }
+    layout();
     refresh();
     g_tick = lv_timer_create(tick_cb, 1000, NULL);
     /* in: the shade slides down and the screen behind dims, together */
-    anim(g_panel, ty_exec, -SHADE_H - 40, -40, SHADE_MS, NULL);
+    anim(g_panel, ty_exec, g_py_hidden, g_py_open, SHADE_MS, NULL);
     anim(g_scrim, opa_exec, 0, 165, SHADE_MS, NULL);   /* dim enough that the hint reads over any screen */
     anim(g_hint, fade_exec, 0, 255, SHADE_MS, NULL);
 }

@@ -795,6 +795,26 @@ int main(int argc, char **argv){
         screen_set_anim(0); screens_init(); ui_shutdown_screen();
         goto render;
     }
+    if(!strcmp(argv[3],"shade")){   /* the QS "Shade" over Home, a track playing; the cover is OUT.png */
+        void npshade_open(void);
+        sd_io_init(media_local); assert(sd_io_resume());
+        cfg_set_int_deferred("online_lyrics",0); cfg_set_int_deferred("online_art",0);
+        cfg_set_int_deferred("qs_style",1);
+        screen_set_anim(0); screens_init(); screen_show(SCR_HOME);
+        track_state_t st={0};
+        snprintf(st.path,sizeof st.path,"%s",argv[5]); char *dot=strrchr(st.path,'.'); assert(dot); strcpy(dot,".png");
+        snprintf(st.title,sizeof st.title,"%s",getenv("SHADE_TITLE")?getenv("SHADE_TITLE"):"Midnight Static");
+        snprintf(st.artist,sizeof st.artist,"%s",getenv("SHADE_ARTIST")?getenv("SHADE_ARTIST"):"The Long Afternoons");
+        snprintf(st.album,sizeof st.album,"Glass Weather");
+        st.have_track=1; st.state=1; st.duration_ms=214000; st.position_ms=83000;
+        test_track_state=st; test_track_override=1;
+        ipc_seed_state(&st); ui_take_art_applied(); ui_update(&st);
+        for(int i=0;i<500&&!ui_current_cover_dsc();i++){ ui_art_poll(NULL); usleep(10000); }
+        for(int i=0;i<40;i++){ lv_tick_inc(10); lv_timer_handler(); }
+        npshade_open();
+        for(int i=0;i<60;i++){ lv_tick_inc(10); lv_timer_handler(); }
+        goto render;
+    }
     if(!strncmp(argv[3],"shortcuts-",10)){
         screen_set_anim(0); screens_init();
         setlist_open("Display");
