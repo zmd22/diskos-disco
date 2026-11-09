@@ -229,8 +229,8 @@ void dhome_controls_apply(void){
     for(int k = 0; k < 3; k++){ lv_anim_delete(g_btn[k], ctl_opa_cb); lv_obj_set_style_opa(g_btn[k], 255, 0); }
     lv_anim_delete(g_mode, ctl_opa_cb); lv_obj_set_style_opa(g_mode, 255, 0);
     g_ctl_shown = 1;
-    for(int k = 0; k < 3; k++){ if(m == 2) lv_obj_add_flag(g_btn[k], LV_OBJ_FLAG_HIDDEN); else lv_obj_remove_flag(g_btn[k], LV_OBJ_FLAG_HIDDEN); }
-    if(m == 2) lv_obj_add_flag(g_mode, LV_OBJ_FLAG_HIDDEN); else lv_obj_remove_flag(g_mode, LV_OBJ_FLAG_HIDDEN);
+    for(int k = 0; k < 3; k++){ if(m == 2 || g_idle) lv_obj_add_flag(g_btn[k], LV_OBJ_FLAG_HIDDEN); else lv_obj_remove_flag(g_btn[k], LV_OBJ_FLAG_HIDDEN); }   /* idle: the pills stand there */
+    if(m == 2 || g_idle) lv_obj_add_flag(g_mode, LV_OBJ_FLAG_HIDDEN); else lv_obj_remove_flag(g_mode, LV_OBJ_FLAG_HIDDEN);
     if(m == 2 && !g_gz) gz_create(lv_obj_get_parent(g_btn[0]));
     if(g_gz){
         lv_obj_t *o[5] = { g_gz, g_gz_hint[0], g_gz_hint[1], g_gz_hint[2], g_gz_hint[3] };
@@ -731,11 +731,25 @@ const void *disco_idle_art(void){
     return &g_idle_dsc;
 }
 int dhome_idle(void){ return g_idle; }
+static void simple_music_content(int);
+/* idle: the Shuffle all / Browse pills under the count; the transport buttons give them the room */
+static lv_obj_t *g_idle_row;
+static void idle_row_apply(void){
+    if(!g_trk) return;
+    if(!g_idle_row){ if(!g_idle) return; g_idle_row = ui_idle_actions(lv_obj_get_parent(g_trk)); }
+    ui_idle_actions_show(g_idle_row, g_idle);
+    if(!g_idle) return;
+    lv_obj_update_layout(g_idle_row);
+    lv_obj_align(g_idle_row, LV_ALIGN_TOP_MID, 0, th_simple() ? 222 : 204);
+    lv_obj_move_foreground(g_idle_row);                                 /* above the gesture field: the pills take their own taps */
+}
 static void idle_eval(void){                                            /* switch idle on / off as the track state says */
     int want = !g_have && (lv_tick_get() >= 10000 || simple_cfg_get_int("memory_play", 0) == 0);
     if(want == g_idle) return;
     g_idle = want;
-    if(g_idle){ dl_text(&L_TITLE, "Go to Library"); dl_text(&L_ARTIST, ""); }
+    if(g_idle){ dl_text(&L_TITLE, "Nothing playing"); dl_text(&L_ARTIST, ui_idle_count_text()); }
+    dhome_controls_apply(); idle_row_apply();                           /* leaving idle: the transport as configured */
+    if(th_simple()) simple_music_content(1);
     disco_art_changed();                                                /* the cover, the backdrops and the ink follow */
     disco_progress_apply();
 }
@@ -1055,7 +1069,8 @@ static void simple_music_content(int force){
   snprintf(title,sizeof title,"%s",L_TITLE.cur);snprintf(artist,sizeof artist,"%s",L_ARTIST.cur);snprintf(album,sizeof album,"%s",st.album);snprintf(path,sizeof path,"%s",st.path);
   int h=lv_font_get_line_height(TF(MUSIC_TITLE));lv_obj_set_height(L_TITLE.fg,h);lv_obj_set_y(L_TITLE.fg,SIMPLE_TEXT_Y-h);
   lv_label_set_long_mode(L_TITLE.fg,LV_LABEL_LONG_CLIP);lv_label_set_long_mode(L_ARTIST.fg,LV_LABEL_LONG_CLIP);lv_label_set_long_mode(simple_album,LV_LABEL_LONG_CLIP);
-  lv_label_set_text(L_TITLE.fg,L_TITLE.cur);lv_label_set_text(L_ARTIST.fg,L_ARTIST.cur);lv_label_set_text(simple_album,st.album);
+  lv_obj_set_style_text_font(L_ARTIST.fg,g_idle?TF(UI_22):TF(MUSIC_ARTIST),0);   /* idle: the song count, a line that must fit */
+  lv_label_set_text(L_TITLE.fg,L_TITLE.cur);lv_label_set_text(L_ARTIST.fg,L_ARTIST.cur);lv_label_set_text(simple_album,g_idle?"":st.album);
   ui_music_scroll(L_TITLE.fg);ui_music_scroll(L_ARTIST.fg);ui_music_scroll(simple_album);
  }
 }
@@ -1098,7 +1113,7 @@ static void simple_music_layout(void){
   lv_obj_t*o[2]={simple_play_state,simple_mode_state};
   for(int k=0;k<2;k++){kit_keep(o[k]);lv_obj_clear_flag(o[k],LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);lv_obj_set_style_text_font(o[k],TF(UI_20),0);lv_obj_set_style_text_align(o[k],LV_TEXT_ALIGN_CENTER,0);lv_obj_set_size(o[k],28,28);lv_obj_set_pos(o[k],k?226:106,304);}
  }
- simple_music_indicators();simple_music_art();
+ simple_music_indicators();simple_music_art();idle_row_apply();
  lv_obj_set_style_bg_opa(g_wash,simple_cfg_get_int("simple_background",0)==1?51:77,0);lv_obj_set_style_bg_grad_dir(g_wash,LV_GRAD_DIR_NONE,0);lv_obj_set_pos(g_wash,0,0);lv_obj_set_size(g_wash,360,360);
  acc_paint();
 }

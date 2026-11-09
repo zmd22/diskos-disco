@@ -552,7 +552,7 @@ void null_home_create(lv_obj_t *r)
     extern const lv_font_t font_weather16;
     weather_font=*TF(UI_16);weather_font.fallback=&font_weather16;   /* a touch larger */
     lv_obj_set_style_text_font(music_weather,&weather_font,0);
-    title = text(r, "GO TO LIBRARY", 36, 116, 288, TF(HEADER), TC(TEXT_PRIMARY));
+    title = text(r, "NOT PLAYING", 36, 116, 288, TF(HEADER), TC(TEXT_PRIMARY));
     artist = text(r, "", 36, 157, 288, &pixel14, TC(TEXT_SECONDARY));
     album = text(r, "", 36, 180, 288, TF(UI_16), TC(TEXT_SECONDARY));
     lv_label_set_long_mode(title, LV_LABEL_LONG_SCROLL_CIRCULAR);
@@ -596,13 +596,58 @@ void null_home_create(lv_obj_t *r)
     null_options_changed();
     null_clockinfo_apply();
 }
+/* Nothing playing: the size of the library under the title, and Shuffle all / Browse where the progress line was */
+static lv_obj_t *idle_row;
+static int idle_shown = -1;
+static char idle_count[48];
+static void idle_apply(void)
+{
+    if (!home || !title)
+        return;
+    int idle = !have;
+    if (idle == idle_shown)
+        return;
+    idle_shown = idle;
+    if (idle) {   /* the wide face: "28,619 SONGS", without "on the card" */
+        snprintf(idle_count, sizeof idle_count, "%s", ui_idle_count_text());
+        char *cut = strstr(idle_count, " on the card");
+        if (cut && idle_count[0] != 'N')
+            *cut = 0;
+        else if (cut)
+            snprintf(idle_count, sizeof idle_count, "No music yet");
+    }
+    if (!idle_row) {
+        idle_row = ui_idle_actions(lv_obj_get_parent(title));
+        keep_tree(idle_row);
+    }
+    lv_obj_t *gone[] = {seek, times, playhead};
+    for (int i = 0; i < 3; i++) {
+        if (idle)
+            lv_obj_add_flag(gone[i], LV_OBJ_FLAG_HIDDEN);
+        else
+            lv_obj_remove_flag(gone[i], LV_OBJ_FLAG_HIDDEN);
+    }
+    if (idle || !simple_cfg_get_int("null_music_album", 1))   /* no album line without a track */
+        lv_obj_add_flag(album, LV_OBJ_FLAG_HIDDEN);
+    else
+        lv_obj_remove_flag(album, LV_OBJ_FLAG_HIDDEN);
+    ui_idle_actions_show(idle_row, idle);
+    if (idle) {
+        lv_obj_update_layout(idle_row);
+        lv_obj_align(idle_row, LV_ALIGN_TOP_MID, 0, 204);
+        lv_obj_move_foreground(idle_row);
+    }
+}
 void null_home_update(const char *t, const char *a, int p)
 {
     have = t != NULL;
     playing = !!p;
+    idle_apply();
+    if (!t)
+        a = idle_count;
     if (title) {
         char b[192];
-        theme_upper(b, sizeof b, t ? t : "GO TO LIBRARY");
+        theme_upper(b, sizeof b, t ? t : "NOT PLAYING");   /* the wide face: "nothing playing" would have to scroll */
         if (strcmp(last_title, b)) {
             snprintf(last_title, sizeof last_title, "%s", b);
             text_set(title, b);ui_music_scroll(title);ui_music_scroll(artist);ui_music_scroll(album);
@@ -1177,7 +1222,7 @@ void null_options_changed(void)
     lv_obj_set_style_text_align(artist, alignment(), 0);
     lv_obj_set_style_text_align(album, alignment(), 0);
     lv_obj_set_style_text_align(times, alignment(), 0);
-    if (simple_cfg_get_int("null_music_album", 1))
+    if (simple_cfg_get_int("null_music_album", 1) && idle_shown != 1)
         lv_obj_remove_flag(album, LV_OBJ_FLAG_HIDDEN);
     else
         lv_obj_add_flag(album, LV_OBJ_FLAG_HIDDEN);

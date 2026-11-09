@@ -1327,8 +1327,9 @@ int main(int argc, char **argv){
             ipc_set_external("Midnight City","M83","Hurry Up, We're Dreaming",getenv("MA_TRACK"),243000,61000,tn.tv_sec*1000LL+tn.tv_nsec/1000000,1000);
             ipc_get_state(&st); st.state=2;
         }
+        if(getenv("NOTRACK")){ void ui_idle_test_songs(int); if(getenv("IDLE_SONGS")) ui_idle_test_songs(atoi(getenv("IDLE_SONGS"))); memset(&st,0,sizeof st); ipc_seed_state(&st); }   /* nothing loaded: each theme's idle Music / Home */
         ui_update(&st);
-        int loaded=0;for(int i=0;i<500;i++){ui_art_poll(NULL);if(ui_current_cover_dsc()){loaded=1;break;}usleep(10000);}assert(loaded);
+        int loaded=0;for(int i=0;i<500&&!getenv("NOTRACK");i++){ui_art_poll(NULL);if(ui_current_cover_dsc()){loaded=1;break;}usleep(10000);}assert(loaded||getenv("NOTRACK"));
         if(getenv("REVIEW_SIMPLE_ALBUM")){
             unsigned ui_art_revision(void);
             assert(th_simple());unsigned revision=ui_art_revision();int calls=atomic_load(&art_decode_calls);
@@ -2821,7 +2822,8 @@ render:
     if(getenv("TOPHOLD")){ void dhome_test_top_hold(void); for(int k=0;k<atoi(getenv("TOPHOLD"));k++) dhome_test_top_hold(); for(int i=0;i<10;i++){lv_tick_inc(10);lv_timer_handler();} }
     if(getenv("SETKEY")){ void settings_open_key(const char*); settings_open_key(getenv("SETKEY")); for(int i=0;i<20;i++){lv_tick_inc(10);lv_timer_handler();} }
     if(getenv("IDLE")){ void dhome_set_now_playing(const char*,const char*,lv_color_t,bool); void disco_art_changed(void);   /* Disco Music with nothing playing */
-        dhome_set_now_playing(NULL,NULL,lv_color_hex(0x8080FF),false); for(int i=0;i<30;i++){lv_tick_inc(10);lv_timer_handler();} }
+        dhome_set_now_playing(NULL,NULL,lv_color_hex(0x8080FF),false); if(th_null()){ void null_home_update(const char*,const char*,int); null_home_update(NULL,NULL,0); }
+        for(int i=0;i<30;i++){lv_tick_inc(10);lv_timer_handler();} }
     if(getenv("REVIEW_TRACK_POPUP")){
         extern void disco_track_overlay_open(void);
         disco_track_overlay_open(); assert(disco_track_overlay_visible());

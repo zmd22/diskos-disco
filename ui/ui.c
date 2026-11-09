@@ -1884,6 +1884,8 @@ void ui_vinyl_spin(int want)
 /* Now Playing style: 0 = album cover (rounded square), 1 = vinyl disc. */
 static void np_layout(int poster);
 static void np_layout_ring(int on);
+static int g_np_idle = -1;                                 /* Now Playing shows its nothing-playing state */
+static void np_idle_apply(int idle, int force);
 void kit_fork_np_braun(void);
 void kit_fork_np_zune(void);
 static void zune_title_fit_text(const char *t);
@@ -1944,6 +1946,7 @@ void ui_set_np_style(int style)
     np_queue_place();
     apply_accent();
     ui_np_rescroll();
+    if(g_np_idle == 1) np_idle_apply(1, 1);   /* a layout switch shows the transport again: keep the idle pills */
 }
 /* Poster: full-bleed sharp cover, big title in the middle, heart + play-mode on the right, immersive on
  * the left, glyph-only transport, seek ring on the top rim, volume on the bottom rim, a heavy fade over the
@@ -2324,11 +2327,22 @@ void zhome_status_text(char *b, size_t n);               /* zune_home.c */
 void ui_np_status_changed(void);
 lv_obj_t *zune_status(lv_obj_t *root, int scr); void zune_status_refresh(void);
 void ui_np_status_changed(void){ zune_status_refresh(); }   /* zune_home.c: the clock or battery changed */
+static int zune_col_width(int y,int h);
 static void zune_fmt_update(const track_state_t *st){
     if(!g_zfmt) return;
     char b[96]="";
     /* Same per-track cache and estimate rules as Immersive; no repeated DB I/O. */
     imm_tech_text(st,b,sizeof b);
+    /* compact, so the line fits beside the artwork: "FLAC / 1411kbps / 44.1kHz"; if that is still too wide, without
+     * the spaces round the slashes, and then one size smaller */
+    for(const char *u[2]={" kbps"," kHz"},**k=u;k<u+2;k++){char *q=strstr(b,*k);if(q)memmove(q,q+1,strlen(q));}
+    int fh=lv_font_get_line_height(ZNP_F_FMT),room=zune_col_width(48+ZNP_TOP+ZNP_ART-fh,fh);
+    const lv_font_t *f=ZNP_F_FMT;lv_point_t z;
+    lv_text_get_size(&z,b,f,0,0,LV_COORD_MAX,LV_TEXT_FLAG_NONE);
+    if(z.x>room){char *q;while((q=strstr(b," / "))){q[0]='/';memmove(q+1,q+3,strlen(q+3)+1);}
+                 lv_text_get_size(&z,b,f,0,0,LV_COORD_MAX,LV_TEXT_FLAG_NONE);}
+    if(z.x>room)f=TF(UI_10);
+    if(lv_obj_get_style_text_font(g_zfmt,0)!=f)lv_obj_set_style_text_font(g_zfmt,f,0);
     if(strcmp(lv_label_get_text(g_zfmt),b))lv_label_set_text(g_zfmt,b);
 }
 static int zune_col_width(int y,int h){
@@ -2390,6 +2404,73 @@ static void zune_shuffle_all_cb(lv_event_t *e){
     ui_play_list(1, "", 1);                              /* all songs, shuffled */
 }
 static void zune_browse_cb(lv_event_t *e){ (void)e; screen_show(SCR_LIBRARY); }
+/* ---- nothing playing, in every theme: how much music is on the card and two ways in. Zune draws them as its text
+ * links (below); the other themes show ui_idle_actions() where their transport would be. ---- */
+static int g_idle_songs = -1, g_idle_test = -1;
+void ui_idle_test_songs(int n){ g_idle_test = n; }          /* host renders: a library of n songs */
+const char *ui_idle_count_text(void){                       /* one count per call: ask when the idle state is entered */
+    static char cnt[48]; int n = g_idle_songs = g_idle_test >= 0 ? g_idle_test : mdb_total_song_count();
+    if(n >= 1000) snprintf(cnt, sizeof cnt, "%d,%03d songs on the card", n / 1000, n % 1000);
+    else if(n > 0) snprintf(cnt, sizeof cnt, "%d song%s on the card", n, n == 1 ? "" : "s"); else snprintf(cnt, sizeof cnt, "No music on the card yet");
+    return cnt;
+}
+static void idle_shuffle_cb(lv_event_t *e){ zune_shuffle_all_cb(e); }
+static lv_obj_t *idle_pill(lv_obj_t *row, const char *icon, const char *text, int primary, lv_event_cb_t cb, const char *action){
+    lv_obj_t *b = lv_button_create(row); lv_obj_remove_style_all(b);
+    lv_obj_set_size(b, LV_SIZE_CONTENT, 42); lv_obj_set_style_pad_hor(b, 16, 0); lv_obj_set_style_pad_column(b, 8, 0);
+    lv_obj_set_flex_flow(b, LV_FLEX_FLOW_ROW); lv_obj_set_flex_align(b, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_radius(b, LV_RADIUS_CIRCLE, 0);
+    lv_color_t bg = primary ? TC(ACCENT_PRIMARY) : TC(SURFACE_RAISED), ink = primary ? theme_on_color(bg) : TC(TEXT_PRIMARY);
+    lv_obj_set_style_bg_color(b, bg, 0); lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0); lv_obj_set_style_bg_opa(b, LV_OPA_70, LV_STATE_PRESSED);
+    if(!primary){ lv_obj_set_style_border_width(b, 1, 0); lv_obj_set_style_border_color(b, TC(BORDER), 0); }
+    if(th_null()){                                         /* Null: outlined boxes, as its other keys */
+        ink = primary ? TC(TEXT_PRIMARY) : TC(TEXT_SECONDARY); icon = NULL;
+        lv_obj_set_style_radius(b, 0, 0); lv_obj_set_style_bg_opa(b, LV_OPA_TRANSP, 0); lv_obj_set_style_bg_opa(b, LV_OPA_30, LV_STATE_PRESSED);
+        lv_obj_set_style_border_width(b, 1, 0); lv_obj_set_style_border_color(b, ink, 0); lv_obj_set_style_pad_hor(b, 12, 0);
+    }
+    lv_obj_set_ext_click_area(b, 6);
+    const lv_font_t *f = th_braun_family() ? br_font(16, 0) : th_null() ? TF(UI_14) : TF(UI_16);
+    if(icon){ lv_obj_t *i = lv_label_create(b); lv_label_set_text(i, icon); lv_obj_set_style_text_font(i, TF(UI_16), 0); lv_obj_set_style_text_color(i, ink, 0); }
+    lv_obj_t *l = lv_label_create(b); lv_label_set_text(l, text); lv_obj_set_style_text_font(l, f, 0); lv_obj_set_style_text_color(l, ink, 0);
+    ui_on(b, cb, LV_EVENT_CLICKED, NULL, action, UI_REACHABLE);
+    return b;
+}
+/* the two pills, side by side and centred on the row; hidden until ui_idle_actions_show() */
+lv_obj_t *ui_idle_actions(lv_obj_t *parent){
+    lv_obj_t *row = lv_obj_create(parent); lv_obj_remove_style_all(row);
+    lv_obj_set_size(row, LV_SIZE_CONTENT, 42); lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW); lv_obj_set_style_pad_column(row, 8, 0);
+    lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
+    idle_pill(row, LV_SYMBOL_SHUFFLE, th_null() ? "SHUFFLE ALL" : "Shuffle all", 1, idle_shuffle_cb, "np.idle.shuffle_all");
+    idle_pill(row, NULL, th_null() ? "BROWSE" : "Browse", 0, zune_browse_cb, "np.idle.browse");
+    lv_obj_add_flag(row, LV_OBJ_FLAG_HIDDEN);
+    return row;
+}
+void ui_idle_actions_show(lv_obj_t *row, int show){   /* with no music on the card there is nothing to shuffle */
+    if(!row) return;
+    SHOW(row, show);
+    if(show){ if(g_idle_songs < 0) ui_idle_count_text(); SHOW(lv_obj_get_child(row, 0), g_idle_songs > 0); }
+}
+/* Now Playing in Ring, Braun and Braun 2.0: the count under "Nothing playing", the pills in place of the transport */
+static lv_obj_t *g_np_idle_row;
+static void np_idle_apply(int idle, int force){
+    if(th_zune() || th_disco_family() || th_null() || !g_np_scr || !btn_pp) return;
+    if(idle == g_np_idle && !force) return;
+    g_np_idle = idle;
+    if(!g_np_idle_row) g_np_idle_row = ui_idle_actions(g_np_scr);
+    lv_obj_t *gone[] = { btn_prev, btn_pp, btn_next, t_elapsed, t_remain };
+    static unsigned hid;                                     /* only what this hid comes back: a layout may keep one hidden (Braun 2.0's remaining time) */
+    for(unsigned i = 0; i < sizeof gone / sizeof gone[0]; i++){
+        if(!gone[i]) continue;
+        if(idle){ if(!lv_obj_has_flag(gone[i], LV_OBJ_FLAG_HIDDEN)){ hid |= 1u << i; lv_obj_add_flag(gone[i], LV_OBJ_FLAG_HIDDEN); } }
+        else if(hid & (1u << i)) lv_obj_remove_flag(gone[i], LV_OBJ_FLAG_HIDDEN);
+    }
+    if(!idle) hid = 0;
+    if(idle){ const char *cnt = ui_idle_count_text(); set_label_text_changed(artist, cnt); br2_np_relayout_src("Nothing playing", cnt, ""); }
+    ui_idle_actions_show(g_np_idle_row, idle);
+    if(idle){ lv_obj_update_layout(g_np_scr);                /* the row's width is known once it is laid out */
+              lv_obj_align_to(g_np_idle_row, btn_pp, LV_ALIGN_CENTER, 0, th_braun2() ? -18 : 0);   /* Braun 2.0: its keys sit on the rim, where the pair would not fit */
+              lv_obj_move_foreground(g_np_idle_row); }
+}
 static lv_obj_t *zune_link(const char *t, lv_color_t c, lv_event_cb_t cb, const char *action){
     lv_obj_t *b = lv_label_create(g_np_scr); lv_label_set_text(b, t);
     lv_obj_set_style_text_font(b, TF(UI_16), 0); lv_obj_set_style_text_color(b, c, 0);
@@ -2408,9 +2489,8 @@ static void zune_idle(int idle){
     SHOW(g_zshuf, idle); SHOW(g_zbrowse, idle);
     if(ring) lv_obj_set_style_opa(ring, idle ? LV_OPA_TRANSP : LV_OPA_COVER, LV_PART_KNOB);   /* idle: the track ring only */
     if(idle){
-        static char cnt[48]; int n = mdb_total_song_count();
-        if(n >= 1000) snprintf(cnt, sizeof cnt, "%d,%03d songs on the card", n / 1000, n % 1000);
-        else if(n > 0) snprintf(cnt, sizeof cnt, "%d songs on the card", n); else snprintf(cnt, sizeof cnt, "no music on the card yet");
+        char cnt[48]; snprintf(cnt, sizeof cnt, "%s", ui_idle_count_text()); int n = g_idle_songs;
+        if(cnt[0] == 'N') cnt[0] = 'n';                                    /* Zune: lower case */
         lv_label_set_text(title, "nothing playing"); zune_title_fit_text("nothing playing");
         if(artist){ lv_label_set_text(artist, cnt); lv_obj_set_style_text_color(artist, TC(TEXT_MUTED), 0);
                     lv_obj_set_style_text_font(artist, TF(UI_12), 0); lv_label_set_long_mode(artist, LV_LABEL_LONG_WRAP);
@@ -2535,7 +2615,7 @@ void kit_fork_np_zune(void){
         lv_obj_align(btn_pp, LV_ALIGN_CENTER, 0, ZNP_ROW_Y - 180);
     }
     zune_col_chain();
-    { track_state_t zs; ipc_get_state(&zs); if(!zs.have_track) zune_idle(1); }   /* opened with nothing loaded */
+    { track_state_t zs; ipc_get_state(&zs); if(!zs.have_track){ g_zidle = -1; zune_idle(1); } }   /* nothing loaded: applied again, this layout pass has just reset the column */
 }
 static void np_layout(int poster){
     if(!poster&&g_posterx){if(poster_img)lv_image_set_src(poster_img,NULL);lv_image_cache_drop(&g_posterxdsc);free(g_posterx);g_posterx=NULL;g_poster_baked=0;}
@@ -4301,7 +4381,7 @@ void ui_update(const track_state_t *st)
         update_accent_seed(st);   /* no-track -> neutral light grey (resets seed + applies once via the gate) */
 
         if(th_zune())zune_idle(1);
-        else{set_label_text_changed(title,"No Track");set_label_text_changed(artist,"");set_label_text_changed(album,"");br2_np_relayout_src("No Track","","");}
+        else{set_label_text_changed(title,"Nothing playing");set_label_text_changed(artist,"");set_label_text_changed(album,"");br2_np_relayout_src("Nothing playing","","");np_idle_apply(1,0);}
         set_label_text_changed(t_elapsed, "0:00");
         set_label_text_changed(t_remain, "0:00");
         set_label_text_changed(btn_pp, LV_SYMBOL_PLAY);
@@ -4320,7 +4400,7 @@ void ui_update(const track_state_t *st)
 
     ui_history_tick(st);
 
-    if(th_zune()){zune_idle(0);zune_fmt_update(st);}
+    if(th_zune()){zune_idle(0);zune_fmt_update(st);} else np_idle_apply(0,0);
     { const char *nt = st->title[0] ? st->title : "Untitled";
       if(th_zune()){
           if(strcmp(g_ztitle_input,nt)){copy_cstr(g_ztitle_input,sizeof g_ztitle_input,nt);lv_label_set_text(title,nt);zune_title_fit_text(nt);}

@@ -381,6 +381,9 @@ int  ui_play_mode_now(void);           /* the play mode the player is using (0..
 int  ui_queue_jump(int ord1);          /* Up Next: type-0 jump to 1-based position in the current queue (0 = sent) */
 /* play a library list (0100): list_type 0=all,2=artist,3=album,10=genre;
  * name = artist/album/genre (NULL/"" for all); pos1 = 1-based start track. */
+const char *ui_idle_count_text(void);                 /* "28,619 songs on the card" (counts once per call) */
+lv_obj_t *ui_idle_actions(lv_obj_t *parent);           /* nothing playing: the Shuffle all / Browse pills, hidden until shown */
+void ui_idle_actions_show(lv_obj_t *row, int show);
 int  ui_play_list(int list_type, const char *name, int pos1);   /* 1 = the play was sent (else refused/failed, toasted) */
 int  ui_play_favorite(int love_id, int pos1);   /* V2.57 favourites queue from this MY_LOVE.ID (row pos1) */
 int  ui_press_travel(void);   /* px the current/last touch moved; tap handlers under swipes ignore a moved press */
