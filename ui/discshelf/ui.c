@@ -64,6 +64,7 @@ static double progress_speed(unsigned serial,int64_t bytes,uint32_t now){
 }
 
 static int title_width, restart_after_close;
+static int title_cy = 44;   /* the title's centre line: the top navigation line, or Zune's back ring */
 static void settings_cb(lv_event_t *e);
 static mp_gesture_t swipe;
 static void update_title(void);
@@ -465,7 +466,7 @@ static void update_title(void){
   * retaining the shared title helper's old baseline padding. */
  const lv_font_t *f=lv_obj_get_style_text_font(heading,0);
  int h=lv_font_get_line_height(f);lv_obj_set_style_pad_top(heading,0,0);
- lv_obj_set_y(heading,44-h/2);lv_obj_set_height(heading,h);
+ lv_obj_set_y(heading,title_cy-h/2);lv_obj_set_height(heading,h);
 }
 static void download_text(void) {
   char text[80];
@@ -671,8 +672,10 @@ static void build(void) {
     lv_obj_remove_flag(backbtn,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
     for(int i=0;i<n;i++)lv_obj_set_parent(made[i],backbtn);
     hx=lv_obj_get_style_x(heading,0);hw=276-hx;
+    /* centre the title on the ring (the first thing made after it), as on Zune's other pivot pages */
+    if(n)title_cy=lv_obj_get_style_y(made[0],0)+lv_obj_get_style_height(made[0],0)/2;
   }
-  lv_obj_set_pos(heading,hx,44-lv_font_get_line_height(lv_obj_get_style_text_font(heading,0))/2);
+  lv_obj_set_pos(heading,hx,title_cy-lv_font_get_line_height(lv_obj_get_style_text_font(heading,0))/2);
   lv_obj_set_size(heading,hw,lv_font_get_line_height(lv_obj_get_style_text_font(heading,0)));
   lv_obj_set_style_text_align(heading,LV_TEXT_ALIGN_LEFT,0);lv_label_set_long_mode(heading,LV_LABEL_LONG_DOT);title_width=hw;
   brand_icon=shelf_brand_icon(root,170,6,20);
