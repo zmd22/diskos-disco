@@ -2,6 +2,17 @@
 
 User-facing changes in diskOS Disco!. Details of each release are in [docs/releases](docs/releases/); everything else is in the Git history. diskOS is beta software.
 
+## 3.5.0
+
+**A polish pass:** clearer text, less wasted space and a round of fixes. [Release notes](docs/releases/v3.5.0.md)
+
+- Nothing playing: every theme shows the song count with Shuffle all / Browse.
+- Squash: larger text and less empty space on Music, Equalizer, Date & Time, lists and captions.
+- Zune: larger Now Playing text and transport, a compact file info line, larger Quick Settings captions and keyboard.
+- Shade: fixed progress on long songs, 12 / 24-hour clock, light themes; it closes on navigation and keeps its touches.
+- Screen Off now acts with Screensaver Off; Home clears the Back history; a show / hide button for passwords.
+- Layout fixes across Ring, Braun, Braun 2.0, Disco, Null and Zune.
+
 ## 3.4.4
 
 **Battery life back to 3.4.1.** Large fonts are stored uncompressed again: 3.4.2's compression made the Disc unpack

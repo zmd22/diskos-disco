@@ -1,16 +1,16 @@
 {
-  "version": "3.4.4",
-  "revision": "Large fonts (32 px and up) stored uncompressed again (LV_USE_FONT_COMPRESSED 0): LVGL 9.2 decoded every compressed glyph on every draw, which cost battery on scrolling Now Playing titles, Zune clocks and big numerals; Zune keeps its Cyrillic",
-  "baseline": "v3.4.3",
-  "ui_source_sha256": "4769004436d64b4ea27a1750eed6ba52e71d096db02597a8407f832db201177d",
+  "version": "3.5.0",
+  "revision": "Interface polish: nothing-playing state in every theme (song count, Shuffle all / Browse); Squash larger text and less empty space; Zune Now Playing, Quick Settings and dial keyboard larger, compact file info line; Shade fixes (long-song progress, 12/24 h clock, light themes, redraw only on change, closes on navigation, owns its touches); Home clears Back history; Screen Off acts with Screensaver Off; password show/hide; curved-list, Ring accent-button and per-theme layout fixes",
+  "baseline": "v3.4.4",
+  "ui_source_sha256": "01556801011c0c0fabf52abecb60136a713c3baf8406d79c49f692dfe01d21b6",
   "ui_source_hash_recipe": "sorted tracked ui paths: path + NUL + file bytes + NUL",
   "compiler": "musl-cross-make GCC 11.2.0, musl 1.2.6; mipsel-linux-musl, -ffp-contract=off",
   "abi": "static little-endian MIPS32r2, o32, FP64, NaN2008",
-  "status": "Fresh static MIPS build from a clean export of source_base_commit. Host renders of every theme (light and dark; Home, Now Playing, actions, Shade; both Now Playing fonts) are pixel-identical to 3.4.3; this exact binary was signed and sent to a Disc as 3.4.4 but has not been physically tested before release.",
+  "status": "Fresh static MIPS build from a clean export of source_base_commit. Host renders of every theme (light and dark) were compared page by page against 3.4.4; only the intended pages changed. The same source with the test label \"rc1\" was signed and put on a Disc as 3.5.0-rc1; this exact binary has not itself been physically tested.",
   "binary": {
-    "sha256": "788f12f01d0c8d9f431fe59b02f1709772e841cfcf66212f9c4f087237c66230",
-    "md5": "be382a735d597a9119793ac5230a78f2",
-    "bytes": 7810256
+    "sha256": "012e5e6bfffe7685a0a2b6215083fc61286a56cb27b459bd1888e0494ed2f91d",
+    "md5": "602237f7dec17a463e9403094185f0df",
+    "bytes": 7821056
   },
   "artwork_helper": {
     "bytes": 119424,
@@ -26,10 +26,10 @@
     "bluealsa": "BlueALSA 4.0.0 (MIT) with build/bluealsa-aptx/patches/0001-0003, embedded in mq_ui",
     "libfreeaptx": "0.1.1 (LGPL-2.1-or-later), embedded as a separate shared library; source in ui/vendor/aptx"
   },
-  "baseline_commit": "bdf2d1d73af19d3d6629fc34ade465252a8d0d1d",
-  "source_identity": "Built from source_base_commit (DISCO_VERSION 3.4.4, empty test label). ui_source_sha256 identifies the exact tracked UI snapshot.",
-  "release_tag": "v3.4.4",
-  "source_base_commit": "9eb48c621f57ed45675b1510162faaf8702fab17",
+  "baseline_commit": "fe180cc02d9c7bf15a5d381525fd8f4591d09f34",
+  "source_identity": "Built from source_base_commit (DISCO_VERSION 3.5.0, empty test label). ui_source_sha256 identifies the exact tracked UI snapshot.",
+  "release_tag": "v3.5.0",
+  "source_base_commit": "84e9b03147ab3439a38004b2d88a95745c3df7b3",
   "crypto": "Monocypher 4.0.2 (BSD-2-Clause or CC0-1.0), unmodified, in ui/vendor/monocypher",
   "flac": "dr_flac 0.13.4 (Unlicense or MIT-0), unmodified, in ui/vendor/dr_flac"
 }
