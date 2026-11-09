@@ -299,7 +299,7 @@ static lv_obj_t *pill(lv_obj_t *row, const char *txt, lv_event_cb_t cb){   /* si
     lv_obj_set_ext_click_area(b, 4);
     lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *l = lv_label_create(b); lv_label_set_text(l, txt);
-    lv_obj_set_style_text_font(l, TH_F_CAPTION, 0); lv_obj_set_style_text_color(l, TC(TEXT_PRIMARY), 0); lv_obj_align(l, LV_ALIGN_LEFT_MID, 0, 0);
+    lv_obj_set_style_text_font(l, th_simple() ? TF(UI_14) : TH_F_CAPTION, 0); lv_obj_set_style_text_color(l, TC(TEXT_PRIMARY), 0); lv_obj_align(l, LV_ALIGN_LEFT_MID, 0, 0);
     return b;
 }
 void colorpick_create(lv_obj_t *root){
@@ -308,8 +308,8 @@ void colorpick_create(lv_obj_t *root){
     lv_obj_set_style_bg_opa(root, LV_OPA_COVER, 0);
     lv_obj_clear_flag(root, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_t *t = lv_label_create(root); lv_label_set_text(t, "Accent colour");
-    lv_obj_set_style_text_font(t, TH_F_CAPTION, 0); lv_obj_set_style_text_color(t, TC(TEXT_SECONDARY), 0);
-    lv_obj_align(t, LV_ALIGN_TOP_MID, 0, 16);
+    lv_obj_set_style_text_font(t, th_simple() ? TF(UI_14) : TH_F_CAPTION, 0); lv_obj_set_style_text_color(t, TC(TEXT_SECONDARY), 0);
+    lv_obj_align(t, LV_ALIGN_TOP_MID, 0, th_simple() ? 10 : 16);
     for(int i = 0; i < NSW; i++){                            /* the ring of presets */
         float a = (-90.0f + i * 36.0f) * 0.0174533f;
         lv_obj_t *b = lv_button_create(root);
@@ -336,7 +336,7 @@ void colorpick_create(lv_obj_t *root){
     lv_obj_set_style_text_font(g_hub_name, TH_F_DETAIL, 0); lv_obj_set_style_text_color(g_hub_name, TC(TEXT_PRIMARY), 0);
     lv_obj_align(g_hub_name, LV_ALIGN_CENTER, 0, 24);
     lv_obj_t *row = lv_obj_create(root); lv_obj_remove_style_all(row);   /* the two pills, centred as a pair */
-    lv_obj_set_size(row, LV_SIZE_CONTENT, 26); lv_obj_align(row, LV_ALIGN_TOP_MID, 0, 233);
+    lv_obj_set_size(row, LV_SIZE_CONTENT, 26); lv_obj_align(row, LV_ALIGN_TOP_MID, 0, th_simple() ? 235 : 233);
     lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW); lv_obj_set_style_pad_column(row, 6, 0);
     lv_obj_remove_flag(row, LV_OBJ_FLAG_SCROLLABLE | LV_OBJ_FLAG_CLICKABLE);
     g_follow = pill(row, "Follow album", follow_cb);

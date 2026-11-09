@@ -167,7 +167,7 @@ static lv_obj_t *row(lv_obj_t *list, const shelf_app_t *a, lv_event_cb_t cb, int
     lv_obj_remove_flag(r, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(r, LV_OBJ_FLAG_CLICKABLE); lv_obj_add_event_cb(r, cb, LV_EVENT_CLICKED, (void *)ud);
     tile(r, 10, (ROW_H - TILE) / 2, TILE, a, list == g_pick_list);
-    const lv_font_t *ft = ui_font_cjk(20), *fs = ui_font_cjk(14);
+    const lv_font_t *ft = ui_font_cjk(th_simple() ? 22 : 20), *fs = ui_font_cjk(14);
     int h1 = lv_font_get_line_height(ft), h2 = lv_font_get_line_height(fs), y = (ROW_H - h1 - h2) / 2;
     label(r, a->name, 68, y, 180, ft, TC(TEXT_PRIMARY), LV_TEXT_ALIGN_LEFT);
     label(r, a->tagline[0] ? a->tagline : "Installed app", 68, y + h1, 180, fs, TC(TEXT_SECONDARY), LV_TEXT_ALIGN_LEFT);
@@ -223,7 +223,7 @@ static void shelf_build(void){
     if(!g_shelf_list) return;
     lv_obj_clean(g_shelf_list); icons_forget(0);
     lv_obj_t *h = block(g_shelf_list, 56);
-    label(h, "Apps", 80, 18, 200, TF(UI_22), TC(TEXT_PRIMARY), LV_TEXT_ALIGN_CENTER);
+    label(h, "Apps", 80, th_simple() ? 12 : 18, 200, th_simple() ? TF(HEADER) : TF(UI_22), th_simple() ? TC(ACCENT_PRIMARY) : TC(TEXT_PRIMARY), LV_TEXT_ALIGN_CENTER);
     if(!g_npin){
         lv_obj_t *b = block(g_shelf_list, 120);
         lv_obj_t *l = lv_label_create(b);

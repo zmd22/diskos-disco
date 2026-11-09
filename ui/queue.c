@@ -676,15 +676,16 @@ void queue_create(lv_obj_t *root){
     if(modern){   /* the theme's own header; the sub-line under it; the three buttons narrower, centred, clear of the rim */
         lv_obj_add_flag(hb, LV_OBJ_FLAG_HIDDEN);
         ui_header_cb(root, "Queue", back_cb);
-        lv_obj_align(g_sub, LV_ALIGN_TOP_MID, 0, 46);
-        lv_obj_t *b3[3] = { g_play_btn, g_shuffle_btn, g_clear_btn }; int w3[3] = { th_null() ? 100 : 92, 44, th_null() ? 104 : 92 }, x = 180 - (w3[0] + w3[1] + w3[2] + 2 * 8) / 2;   /* Null: its wide face */
-        for(int k = 0; k < 3; k++){ lv_obj_set_size(b3[k], w3[k], 40); lv_obj_set_pos(b3[k], x, 74); x += w3[k] + 8;
-                                    ui_pill_style(b3[k], k == 0); }   /* the shared Play / Shuffle pills */
+        lv_obj_align(g_sub, LV_ALIGN_TOP_MID, 0, th_simple() ? 50 : 46); if(th_simple()) lv_obj_set_style_text_font(g_sub, ui_font_cjk(18), 0);
+        lv_obj_t *b3[3] = { g_play_btn, g_shuffle_btn, g_clear_btn }; int w3[3] = { th_simple() ? 94 : th_null() ? 100 : 92, th_simple() ? 46 : 44, th_simple() ? 100 : th_null() ? 104 : 92 }, x = 180 - (w3[0] + w3[1] + w3[2] + 2 * 8) / 2;   /* Null: its wide face */
+        for(int k = 0; k < 3; k++){ lv_obj_set_size(b3[k], w3[k], th_simple() ? 46 : 40); lv_obj_set_pos(b3[k], x, th_simple() ? 78 : 74); x += w3[k] + 8;
+                                    ui_pill_style(b3[k], k == 0);
+                                    if(th_simple()) for(uint32_t c = 0; c < lv_obj_get_child_count(b3[k]); c++) lv_obj_set_style_text_font(lv_obj_get_child(b3[k], c), TF(UI_20), 0); }   /* the shared Play / Shuffle pills */
     }
     g_list = lv_obj_create(root);
     lv_obj_remove_style_all(g_list);
     lv_obj_set_pos(g_list, (360 - QW) / 2, 122); lv_obj_set_size(g_list, QW, 238);
-    if(modern){ lv_obj_set_y(g_list, 124); lv_obj_set_height(g_list, 236); }
+    if(modern){ lv_obj_set_y(g_list, th_simple() ? 132 : 124); lv_obj_set_height(g_list, th_simple() ? 228 : 236); }
     lv_obj_set_style_pad_bottom(g_list, 40, 0);
     lv_obj_set_style_pad_row(g_list, 8, 0);
     lv_obj_set_flex_flow(g_list, LV_FLEX_FLOW_COLUMN);

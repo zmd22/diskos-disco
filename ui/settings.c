@@ -1954,11 +1954,11 @@ static void settings_disco_list(lv_obj_t *root){          /* styled like the sub
     for(int g = 0; g < N_GROUPS; g++){
         lv_obj_t *r = setting_card(list);
         lv_obj_add_event_cb(r, disco_cat_cb, LV_EVENT_CLICKED, (void *)(intptr_t)g);
-        lv_obj_t *ic = lv_label_create(r); lv_label_set_text(ic, GROUP_ICONS[g]); lv_obj_set_style_text_font(ic, TH_F_LIST, 0);
+        lv_obj_t *ic = lv_label_create(r); lv_label_set_text(ic, GROUP_ICONS[g]); lv_obj_set_style_text_font(ic, th_simple() ? ui_font_cjk(20) : TH_F_LIST, 0);
         lv_obj_set_style_text_color(ic, ui_current_accent(), 0); lv_obj_set_pos(ic, 18, 16);
         lv_obj_t *n = lv_label_create(r); lv_label_set_text(n, GROUPS[g]);
-        lv_obj_set_style_text_font(n, TH_F_LIST, 0); lv_obj_set_style_text_color(n, TC(TEXT_PRIMARY), 0);
-        lv_obj_set_pos(n, 50, 16);lv_obj_set_width(n,192);
+        lv_obj_set_style_text_font(n, th_simple() ? ui_font_cjk(20) : TH_F_LIST, 0); lv_obj_set_style_text_color(n, TC(TEXT_PRIMARY), 0);
+        lv_obj_set_pos(n, th_simple() ? 52 : 50, th_simple() ? 14 : 16); if(th_simple()) lv_obj_set_y(ic, 14);lv_obj_set_width(n,192);
         lv_label_set_long_mode(n,LV_LABEL_LONG_SCROLL_CIRCULAR);
         lv_obj_t *c = lv_label_create(r); lv_label_set_text(c, LV_SYMBOL_RIGHT); lv_obj_set_style_text_font(c, TH_F_DETAIL, 0);
         lv_obj_set_style_text_color(c, TC(TEXT_SECONDARY), 0); lv_obj_set_size(c, 120, 22); lv_obj_set_pos(c, 150, 18);
@@ -2102,10 +2102,10 @@ void setlist_refresh(void){
 
         lv_obj_t *lbl = lv_label_create(row);
         lv_label_set_text(lbl, display_label(s));
-        lv_obj_set_pos(lbl,18,16);
+        lv_obj_set_pos(lbl,18,th_simple() ? 14 : 16);
         lv_obj_set_width(lbl,s->type==ST_READONLY || setting_unavailable(s) || display_disabled_reason(s) || (th_null() && s->cfg_key && !strcmp(s->cfg_key,"null_side"))?116:202);
         lv_label_set_long_mode(lbl,LV_LABEL_LONG_SCROLL_CIRCULAR);
-        lv_obj_set_style_text_font(lbl, TH_F_LIST, 0);
+        lv_obj_set_style_text_font(lbl, th_simple() ? ui_font_cjk(20) : TH_F_LIST, 0);
         lv_obj_set_style_text_color(lbl, TC(TEXT_PRIMARY), 0);
 
         char b[40]; row_value(s, b, sizeof b);

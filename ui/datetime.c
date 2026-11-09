@@ -34,8 +34,9 @@ static lv_obj_t *roller(lv_obj_t *parent, const char *opts, int sel, int w, int 
     lv_obj_set_style_bg_opa(r, LV_OPA_COVER, 0);
     lv_obj_set_style_border_width(r, 0, 0);
     lv_obj_set_style_radius(r, 12, 0);
-    lv_obj_set_style_text_font(r, TF(UI_16), 0);
+    lv_obj_set_style_text_font(r, th_simple() ? TF(UI_20) : TF(UI_16), 0);
     lv_obj_set_style_text_line_space(r, 6, 0);
+    if(th_simple()) lv_obj_set_width(r, w + 10);
     lv_obj_set_style_text_color(r, TC(TEXT_MUTED), 0);
     lv_obj_set_style_text_align(r, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_bg_color(r, TC(SURFACE_RAISED), LV_PART_SELECTED);
@@ -258,7 +259,7 @@ void datetime_refresh(void){
     p = mins;         for(int i = 0; i < 60; i++) p += sprintf(p, i < 59 ? "%02d\n" : "%02d", i);
     int y = lt.tm_year + 1900 - YEAR0; if(y < 0) y = 0; if(y >= YEARS) y = YEARS - 1;
     /* rows laid out from the rollers' real height (it depends on the theme's font) */
-    int y0 = 66;
+    int y0 = th_simple() ? 62 : 66;
     lv_obj_update_layout(g_root);                       /* below the header, however tall the theme draws it (Braun 2.0's panel) */
     for(uint32_t k = 0; k < lv_obj_get_child_count(g_root); k++){
         lv_obj_t *c = lv_obj_get_child(g_root, (int32_t)k);
@@ -266,13 +267,14 @@ void datetime_refresh(void){
         int bot = lv_obj_get_y(c) + lv_obj_get_height(c) + 4;
         if(bot > y0 && bot < 110) y0 = bot;
     }
-    r_day  = roller(g_root, days,   lt.tm_mday - 1, 62,  -80, y0);
-    r_mon  = roller(g_root, MONTHS, lt.tm_mon,      74,    0, y0);
-    r_year = roller(g_root, years,  y,              82,   84, y0);
+    int sx = th_simple() ? 14 : 0;
+    r_day  = roller(g_root, days,   lt.tm_mday - 1, 62,  -80 - sx, y0);
+    r_mon  = roller(g_root, MONTHS, lt.tm_mon,      74,    th_simple() ? -6 : 0, y0);
+    r_year = roller(g_root, years,  y,              82,   84 + sx, y0);
     lv_obj_update_layout(r_day);
     int h = lv_obj_get_height(r_day), y1 = y0 + h + 8;
-    r_hour = roller(g_root, hours,  lt.tm_hour,     70,  -42, y1);
-    r_min  = roller(g_root, mins,   lt.tm_min,      70,   42, y1);
+    r_hour = roller(g_root, hours,  lt.tm_hour,     70,  th_simple() ? -50 : -42, y1);   /* Squash: wider rollers in 20 px text */
+    r_min  = roller(g_root, mins,   lt.tm_min,      70,   th_simple() ? 50 : 42, y1);
     lv_obj_t *colon = lv_label_create(g_root);
     lv_label_set_text(colon, ":");
     lv_obj_set_style_text_font(colon, TF(UI_20), 0);
@@ -281,8 +283,8 @@ void datetime_refresh(void){
 
     lv_obj_t *b = lv_button_create(g_root);
     lv_obj_remove_style_all(b);
-    lv_obj_set_size(b, 120, 40);
-    lv_obj_align(b, LV_ALIGN_TOP_MID, 0, y1 + h + 10);
+    lv_obj_set_size(b, th_simple() ? 110 : 120, th_simple() ? 44 : 40);
+    lv_obj_align(b, LV_ALIGN_TOP_MID, 0, y1 + h + (th_simple() ? 6 : 10));
     lv_obj_set_style_radius(b, 20, 0);
     lv_obj_set_style_bg_color(b, ui_current_accent(), 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);

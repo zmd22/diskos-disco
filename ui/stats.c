@@ -629,7 +629,7 @@ static void build_overview(void){
     { lv_obj_t *pill = box(b, 72, 44, 216, 34, 17, TC(SURFACE), LV_OPA_COVER);
       box(pill, (g_ptype - P_WEEK) * 72 + 2, 2, 68, 30, 15, TC(ACCENT_PRIMARY), LV_OPA_COVER);
       for(int i = 0; i < 3; i++)
-          text(pill, P[i], i * 72, (34 - lv_font_get_line_height(TF(UI_16))) / 2, 72, TF(UI_16), i == g_ptype - P_WEEK ? TC(ON_ACCENT) : TC(TEXT_SECONDARY), LV_TEXT_ALIGN_CENTER); }
+          text(pill, P[i], i * 72, (34 - lv_font_get_line_height(th_simple()?TF(UI_18):TF(UI_16))) / 2, 72, th_simple()?TF(UI_18):TF(UI_16), i == g_ptype - P_WEEK ? TC(ON_ACCENT) : TC(TEXT_SECONDARY), LV_TEXT_ALIGN_CENTER); }
     strip(b, 40, 42, 0);                                                         /* on top: tap or drag it */
     /* the period, bigger, with < > to step back and forward */
     lv_obj_t *s1 = strip(b, 90, 44, 1);
@@ -659,8 +659,8 @@ static void build_overview(void){
     if(om){ int pw = text_w(om, fo); text(b, om, x + 4, base - (fo->line_height - fo->base_line), pw + 2, fo, TC(TEXT_SECONDARY), LV_TEXT_ALIGN_LEFT); }
     int y = ty + fb->line_height + 8;
     if(g_s.empty){
-        centre(b, g_poff == 0 ? "Nothing played yet" : "Nothing played then", y + 4, 260, TF(UI_20), TC(TEXT_SECONDARY));
-        centre(b, "A song counts once it has played\nfor 30 seconds. Your stats\nfill in as you listen.", y + 40, 290, TF(UI_16), TC(TEXT_MUTED));
+        centre(b, g_poff == 0 ? "Nothing played yet" : "Nothing played then", y + 4, 260, TF(UI_20), th_simple()?TC(TEXT_PRIMARY):TC(TEXT_SECONDARY));
+        centre(b, "A song counts once it has played\nfor 30 seconds. Your stats\nfill in as you listen.", y + 40, 290, TF(UI_16), th_simple()?TC(TEXT_SECONDARY):TC(TEXT_MUTED));
         return;
     }
     if(g_s.prev_known){                                                          /* the comparison, in a soft accent chip */

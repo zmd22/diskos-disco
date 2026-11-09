@@ -130,7 +130,7 @@ void eqpreset_refresh(void){
  if(th_zune()){ if(fw_os_ver()==257)eq_rate_request(); zeq_build(); return; }
  if(!name_label)return;if(fw_os_ver()==257)eq_rate_request();int p=selected();char b[80];name_for(p,b,sizeof b);if(th_null()){char up[80];theme_upper(up,sizeof up,b);lv_label_set_text(name_label,up);}else lv_label_set_text(name_label,b);
  if((library_lift()||th_braun2())&&!th_null()){   /* a name wider than its space steps down a size before it has to scroll */
-  const lv_font_t *steps[3]={TF(UI_24),TF(UI_20),TF(UI_18)},*f=steps[0];int room=lv_obj_get_style_width(name_label,0);
+  const lv_font_t *steps[3]={th_simple()?TF(UI_28):TF(UI_24),th_simple()?TF(UI_24):TF(UI_20),th_simple()?TF(UI_20):TF(UI_18)},*f=steps[0];int room=lv_obj_get_style_width(name_label,0);
   for(int k=0;k<3;k++){lv_point_t sz;f=steps[k];lv_text_get_size(&sz,lv_label_get_text(name_label),f,0,0,LV_COORD_MAX,LV_TEXT_FLAG_NONE);if(sz.x<=room)break;}
   lv_obj_set_style_text_font(name_label,f,0);
  }
@@ -201,6 +201,14 @@ void eqpreset_create(lv_obj_t *root){
   lv_obj_set_style_text_font(switch_label,TF(HEADER_SM),0);
   lv_obj_set_size(switch_button,104,48);lv_obj_align(switch_button,LV_ALIGN_TOP_MID,0,280);
   lv_obj_add_flag(switch_pointer,LV_OBJ_FLAG_HIDDEN);kit_keep(name_label);
+ }
+ if(th_simple()){   /* Squash: the controls fill the page under the header, in larger text */
+  lv_obj_set_size(prev_b,50,50);lv_obj_align(prev_b,LV_ALIGN_TOP_MID,-122,86);lv_obj_set_size(next_b,50,50);lv_obj_align(next_b,LV_ALIGN_TOP_MID,122,86);
+  lv_obj_set_width(name_label,186);lv_obj_align(name_label,LV_ALIGN_TOP_MID,0,94);lv_obj_set_style_text_font(name_label,TF(UI_28),0);
+  lv_obj_set_size(edit_button,122,54);lv_obj_align(edit_button,LV_ALIGN_TOP_MID,-66,154);lv_obj_set_size(rename_button,122,54);lv_obj_align(rename_button,LV_ALIGN_TOP_MID,66,154);
+  lv_obj_set_style_text_font(lv_obj_get_child(edit_button,0),TF(UI_22),0);lv_obj_set_style_text_font(lv_obj_get_child(rename_button,0),TF(UI_22),0);
+  lv_obj_set_style_text_font(note_label,TF(UI_18),0);lv_obj_align(note_label,LV_ALIGN_TOP_MID,0,222);
+  lv_obj_set_size(switch_button,76,76);lv_obj_align(switch_button,LV_ALIGN_TOP_MID,0,256);lv_obj_set_style_text_font(switch_label,TF(UI_24),0);
  }
  if(th_braun2()){   /* Braun 2.0: the name fits (steps down, then ends in ...); On is the orange primary key */
   lv_obj_set_width(name_label,200);lv_label_set_long_mode(name_label,LV_LABEL_LONG_DOT);kit_keep(name_label);

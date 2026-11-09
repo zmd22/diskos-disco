@@ -356,6 +356,7 @@ static void curve(curvelist_t *c){
             lv_label_long_mode_t lm = lv_label_get_long_mode(ch);
             if(lm == LV_LABEL_LONG_WRAP) continue;                                   /* a wrapping label would grow taller */
             int want = right_x < 0x7FFF && ox + label_text_w(ch) > right_x - 4 ? right_x - 4 - ox : ow;   /* only when its text gets there */
+            if(th_simple() && right_x == 0x7FFF && ox + label_text_w(ch) > w - 2) want = w - 6 - ox;   /* Squash: nor past the narrowed row's end (it ends in "...") */
             if(want < 40) want = 40;
             if(lv_obj_get_width(ch) != want) lv_obj_set_width(ch, want);
         }

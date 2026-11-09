@@ -66,9 +66,9 @@ static int hdr_half(int y1, int y2){   /* half the screen's width across rows y1
 static const lv_font_t *g_title_font0;   /* the Library title's own size, for refitting when its text changes */
 static void title_fit(lv_obj_t *title, const char *text, const lv_font_t *f0, int w);
 static void title_fit(lv_obj_t *title, const char *text, const lv_font_t *f0, int w){   /* text: the full title (a "..." label reads back shortened) */
-    const lv_font_t *steps[6] = { f0, TF(UI_22), TF(UI_20), TF(UI_18), TF(UI_16), TF(UI_14) };
+    const lv_font_t *steps[8] = { f0, th_simple() ? TF(UI_28) : f0, th_simple() ? TF(UI_26) : f0, TF(UI_22), TF(UI_20), TF(UI_18), TF(UI_16), TF(UI_14) };
     const lv_font_t *f = f0, *best = f0; int best_w = 1 << 30;
-    for(int k = 0; k < 6; k++){   /* the first size (largest first) that fits; failing that, the narrowest */
+    for(int k = 0; k < 8; k++){   /* the first size (largest first) that fits; failing that, the narrowest */
         lv_point_t ts; lv_text_get_size(&ts, text, steps[k], 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
         if(k && lv_font_get_line_height(steps[k]) > lv_font_get_line_height(f0)) continue;   /* never larger than the theme's own */
         if(ts.x <= w - 6){ f = steps[k]; best = NULL; break; }
@@ -1199,17 +1199,18 @@ static void empty_scan(const char *txt){
         return;
     }
     empty_label(txt);
+    if(th_simple()){ lv_obj_t *el = lv_obj_get_child(g_list, -1); if(el){ lv_obj_set_style_text_font(el, TF(UI_24), 0); lv_obj_set_style_text_color(el, TC(TEXT_PRIMARY), 0); lv_obj_set_style_margin_top(el, 44, 0); lv_obj_set_style_margin_bottom(el, 10, 0); kit_keep(el);} }
     lv_obj_t *b = lv_button_create(g_list);
     lv_obj_remove_style_all(b);
-    lv_obj_set_size(b, 200, 46);
-    lv_obj_set_style_radius(b, 23, 0);
+    lv_obj_set_size(b, th_simple() ? 248 : 200, th_simple() ? 60 : 46);
+    lv_obj_set_style_radius(b, 30, 0);
     lv_obj_set_style_bg_color(b, TC(SURFACE), 0);
     lv_obj_set_style_bg_opa(b, LV_OPA_COVER, 0);
     lv_obj_set_style_bg_color(b, TC(SURFACE_RAISED), LV_STATE_PRESSED);
     lv_obj_add_event_cb(b, scan_action_cb, LV_EVENT_CLICKED, NULL);
     lv_obj_t *l = lv_label_create(b);
     lv_label_set_text(l, LV_SYMBOL_REFRESH "  Scan Library");
-    lv_obj_set_style_text_font(l, TF(UI_16), 0);
+    lv_obj_set_style_text_font(l, th_simple() ? TF(UI_22) : TF(UI_16), 0);
     lv_obj_set_style_text_color(l, TC(TEXT_PRIMARY), 0);
     lv_obj_center(l);
 }

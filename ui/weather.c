@@ -574,8 +574,8 @@ void weather_app_create(lv_obj_t *root)
         /* Squash: two balanced forecast pairs above its bottom circular flyout.
          * Static objects, no extra fetches, timers or artwork allocations. */
         lv_obj_add_flag(ring,LV_OBJ_FLAG_HIDDEN);
-        lv_obj_t *title=wlabel(root,TF(UI_24),TC(TEXT_PRIMARY));
-        lv_label_set_text(title,"Weather");lv_obj_align(title,LV_ALIGN_TOP_MID,0,27);
+        lv_obj_t *title=wlabel(root,TF(HEADER),TC(ACCENT_PRIMARY));
+        lv_label_set_text(title,"Weather");lv_obj_align(title,LV_ALIGN_TOP_MID,0,20);
         simple_keep_label(title);
         lv_obj_t *cap=lv_obj_create(root);lv_obj_remove_style_all(cap);
         lv_obj_set_size(cap,500,500);lv_obj_set_pos(cap,-70,208);
@@ -600,9 +600,9 @@ void weather_app_create(lv_obj_t *root)
             lv_obj_set_style_border_opa(pill,75,0);
             lv_obj_remove_flag(pill,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);kit_keep(pill);
             lv_obj_set_parent(g_wd_hour[k],pill);lv_obj_set_parent(g_wd_icon[k],pill);lv_obj_set_parent(g_wd_temp[k],pill);
-            lv_obj_set_style_text_font(g_wd_hour[k],TF(UI_14),0);
+            lv_obj_set_style_text_font(g_wd_hour[k],TF(UI_16),0);
             lv_obj_set_style_text_color(g_wd_hour[k],TC(TEXT_SECONDARY),0);
-            lv_obj_align(g_wd_hour[k],LV_ALIGN_TOP_MID,0,6);
+            lv_obj_align(g_wd_hour[k],LV_ALIGN_TOP_MID,0,4);
             lv_obj_set_style_text_font(g_wd_temp[k],TF(UI_24),0);
             lv_obj_align(g_wd_icon[k],LV_ALIGN_BOTTOM_MID,-23,-12);
             lv_obj_align(g_wd_temp[k],LV_ALIGN_BOTTOM_MID,12,-5);
@@ -615,11 +615,11 @@ void weather_app_create(lv_obj_t *root)
         lv_obj_set_style_transform_scale(g_wd_cicon,384,0);
         lv_obj_set_style_text_font(g_wd_loc,TF(UI_18),0);
         lv_obj_set_width(g_wd_loc,160);lv_obj_align(g_wd_loc,LV_ALIGN_TOP_MID,0,215);
-        lv_obj_set_width(g_wd_cond,232);lv_obj_set_style_text_font(g_wd_cond,TF(UI_16),0);
-        lv_obj_align(g_wd_cond,LV_ALIGN_TOP_MID,0,289);
-        lv_obj_set_style_text_font(g_wd_hl,TF(UI_14),0);
+        lv_obj_set_width(g_wd_cond,232);lv_obj_set_style_text_font(g_wd_cond,TF(UI_18),0);
+        lv_obj_align(g_wd_cond,LV_ALIGN_TOP_MID,0,286);
+        lv_obj_set_style_text_font(g_wd_hl,TF(UI_16),0);
         lv_obj_set_style_text_color(g_wd_hl,TC(TEXT_SECONDARY),0);
-        lv_obj_align(g_wd_hl,LV_ALIGN_TOP_MID,0,313);
+        lv_obj_align(g_wd_hl,LV_ALIGN_TOP_MID,0,311);
         lv_obj_set_width(g_wd_hint,210);lv_obj_set_style_text_align(g_wd_hint,LV_TEXT_ALIGN_CENTER,0);
         lv_obj_align(g_wd_hint,LV_ALIGN_TOP_MID,0,134);
         simple_keep_label(g_wd_ctemp);simple_keep_label(g_wd_cicon);simple_keep_label(g_wd_loc);

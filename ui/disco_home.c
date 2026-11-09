@@ -112,6 +112,7 @@ static void pa_set(int f);
 #define GZ_W 272
 #define GZ_H 112
 #define SIMPLE_SEEK_Y 265
+#define SIMPLE_TEXT_Y 74      /* Squash Music: where the title line ends and the artist line starts, inside the text field */
 static lv_obj_t *g_gz, *g_gz_hint[4], *g_gz_fx;
 static lv_obj_t *simple_play_state, *simple_mode_state;
 static void simple_music_indicators(void);
@@ -1052,7 +1053,7 @@ static void simple_music_content(int force){
  if(!L_TITLE.fg||!simple_album)return;
  if(changed){
   snprintf(title,sizeof title,"%s",L_TITLE.cur);snprintf(artist,sizeof artist,"%s",L_ARTIST.cur);snprintf(album,sizeof album,"%s",st.album);snprintf(path,sizeof path,"%s",st.path);
-  int h=lv_font_get_line_height(TF(MUSIC_TITLE));lv_obj_set_height(L_TITLE.fg,h);lv_obj_set_y(L_TITLE.fg,92-h);
+  int h=lv_font_get_line_height(TF(MUSIC_TITLE));lv_obj_set_height(L_TITLE.fg,h);lv_obj_set_y(L_TITLE.fg,SIMPLE_TEXT_Y-h);
   lv_label_set_long_mode(L_TITLE.fg,LV_LABEL_LONG_CLIP);lv_label_set_long_mode(L_ARTIST.fg,LV_LABEL_LONG_CLIP);lv_label_set_long_mode(simple_album,LV_LABEL_LONG_CLIP);
   lv_label_set_text(L_TITLE.fg,L_TITLE.cur);lv_label_set_text(L_ARTIST.fg,L_ARTIST.cur);lv_label_set_text(simple_album,st.album);
   ui_music_scroll(L_TITLE.fg);ui_music_scroll(L_ARTIST.fg);ui_music_scroll(simple_album);
@@ -1075,12 +1076,12 @@ static void simple_music_layout(void){
  simple_label_pair(&L_STAT,0,0,200,20,TF(UI_16));simple_label_pair(&L_TIME,0,20,200,35,TF(UI_30));simple_label_pair(&L_WX,0,56,200,26,&g_wfont);   /* a touch larger, still inside the 82 px field */
  int aligned_left=simple_cfg_get_int("disco_title_al",0)==1;
  lv_obj_set_pos(g_trk,36,94);lv_obj_set_size(g_trk,288,136);
- simple_label_pair(&L_TITLE,0,0,288,92,TF(MUSIC_TITLE));simple_label_pair(&L_ARTIST,0,92,288,39,TF(MUSIC_ARTIST));lv_label_set_long_mode(L_ARTIST.fg,LV_LABEL_LONG_DOT);
+ simple_label_pair(&L_TITLE,0,0,288,SIMPLE_TEXT_Y,TF(MUSIC_TITLE));simple_label_pair(&L_ARTIST,0,SIMPLE_TEXT_Y,288,39,TF(MUSIC_ARTIST));   /* title, artist and album sit midway between the clock and the progress line */lv_label_set_long_mode(L_ARTIST.fg,LV_LABEL_LONG_DOT);
  lv_obj_set_style_text_align(L_TITLE.fg,aligned_left?LV_TEXT_ALIGN_LEFT:LV_TEXT_ALIGN_CENTER,0);
  lv_obj_set_style_text_align(L_ARTIST.fg,aligned_left?LV_TEXT_ALIGN_LEFT:LV_TEXT_ALIGN_CENTER,0);
  if(!simple_album){simple_album=lv_label_create(lv_obj_get_parent(g_trk));lv_label_set_long_mode(simple_album,LV_LABEL_LONG_DOT);kit_keep(simple_album);}
  lv_obj_set_style_text_font(simple_album,TF(MUSIC_ALBUM),0);lv_obj_set_style_text_color(simple_album,TC(TEXT_SECONDARY),0);
- lv_obj_set_style_text_align(simple_album,aligned_left?LV_TEXT_ALIGN_LEFT:LV_TEXT_ALIGN_CENTER,0);lv_obj_set_pos(simple_album,36,224);lv_obj_set_size(simple_album,288,35);   /* clear of the progress line */
+ lv_obj_set_style_text_align(simple_album,aligned_left?LV_TEXT_ALIGN_LEFT:LV_TEXT_ALIGN_CENTER,0);lv_obj_set_pos(simple_album,36,208);lv_obj_set_size(simple_album,288,35);   /* clear of the progress line */
  simple_music_content(1);
  lv_obj_set_pos(g_gz,36,94);lv_obj_set_size(g_gz,288,171);lv_obj_move_foreground(g_gz);
  lv_label_set_text(g_gz_hint[0],LV_SYMBOL_LEFT LV_SYMBOL_LEFT);lv_obj_set_pos(g_gz_hint[0],112,306);
@@ -1091,11 +1092,11 @@ static void simple_music_layout(void){
  for(int k=0;k<2;k++){lv_obj_t*l=k?L_MODE.fg:L_MODE.sh;if(k){lv_obj_set_style_text_color(l,TC(ACCENT_PRIMARY),0);kit_keep(l);}else lv_obj_add_flag(l,LV_OBJ_FLAG_HIDDEN);}
  lv_obj_set_style_bg_color(g_ul_solid,TC(ACCENT_PRIMARY),0);if(!pa_on())lv_obj_remove_flag(g_ul_solid,LV_OBJ_FLAG_HIDDEN);
  lv_obj_set_style_bg_color(g_ul_knob,TC(ACCENT_PRIMARY),0);lv_obj_set_style_outline_opa(g_ul_knob,0,0);
- simple_label_pair(&L_EL,36,278,90,24,TF(UI_16));simple_label_pair(&L_RM,234,278,90,24,TF(UI_16));
+ simple_label_pair(&L_EL,40,272,90,28,TF(UI_20));simple_label_pair(&L_RM,230,272,90,28,TF(UI_20));
  if(!simple_play_state){
   lv_obj_t*root=lv_obj_get_parent(g_trk);simple_play_state=lv_label_create(root);simple_mode_state=lv_label_create(root);
   lv_obj_t*o[2]={simple_play_state,simple_mode_state};
-  for(int k=0;k<2;k++){kit_keep(o[k]);lv_obj_clear_flag(o[k],LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);lv_obj_set_style_text_font(o[k],TF(UI_16),0);lv_obj_set_style_text_align(o[k],LV_TEXT_ALIGN_CENTER,0);lv_obj_set_size(o[k],24,24);lv_obj_set_pos(o[k],k?224:112,304);}
+  for(int k=0;k<2;k++){kit_keep(o[k]);lv_obj_clear_flag(o[k],LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);lv_obj_set_style_text_font(o[k],TF(UI_20),0);lv_obj_set_style_text_align(o[k],LV_TEXT_ALIGN_CENTER,0);lv_obj_set_size(o[k],28,28);lv_obj_set_pos(o[k],k?226:106,304);}
  }
  simple_music_indicators();simple_music_art();
  lv_obj_set_style_bg_opa(g_wash,simple_cfg_get_int("simple_background",0)==1?51:77,0);lv_obj_set_style_bg_grad_dir(g_wash,LV_GRAD_DIR_NONE,0);lv_obj_set_pos(g_wash,0,0);lv_obj_set_size(g_wash,360,360);

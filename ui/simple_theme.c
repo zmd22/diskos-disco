@@ -343,8 +343,8 @@ static lv_obj_t*simple_header(lv_obj_t*r,const char*t,lv_event_cb_t cb){
  lv_obj_t*b=circle(r,96,44,36);lv_obj_set_ext_click_area(b,6);lv_obj_t*back_icon=label(b,LV_SYMBOL_LEFT,0,0,36,TF(UI_20),TC(ACCENT_PRIMARY));lv_obj_center(back_icon);
  ui_on(b,cb?cb:simple_back,LV_EVENT_CLICKED,NULL,"nav.back",UI_CORE);
  lv_point_t size;const lv_font_t*f=TF(HEADER);lv_text_get_size(&size,shown,f,0,0,LV_COORD_MAX,LV_TEXT_FLAG_NONE);
- if(size.x>152){f=TF(UI_22);lv_text_get_size(&size,shown,f,0,0,LV_COORD_MAX,LV_TEXT_FLAG_NONE);if(size.x>152)f=TF(UI_20);}
- lv_obj_t*l=label(r,shown,120,44-lv_font_get_line_height(f)/2,156,f,TC(ACCENT_PRIMARY));lv_obj_set_height(l,40);lv_label_set_long_mode(l,LV_LABEL_LONG_DOT);return l;
+ int room=176;if(size.x>room){f=TF(UI_28);lv_text_get_size(&size,shown,f,0,0,LV_COORD_MAX,LV_TEXT_FLAG_NONE);}if(size.x>room){f=TF(UI_24);lv_text_get_size(&size,shown,f,0,0,LV_COORD_MAX,LV_TEXT_FLAG_NONE);if(size.x>room)f=TF(UI_22);}
+ lv_obj_t*l=label(r,shown,120,44-lv_font_get_line_height(f)/2,180,f,TC(ACCENT_PRIMARY));lv_obj_set_height(l,40);lv_label_set_long_mode(l,LV_LABEL_LONG_DOT);return l;
 }
 const theme_kit_t theme_kit_simple={.id="squash",.style=simple_style,.header=simple_header};
 
@@ -426,7 +426,7 @@ void simple_volume_show(int value){
   sv_value=label(sv_sheet,"",144,241,72,TF(MUSIC_ARTIST),TC(TEXT_PRIMARY));
   lv_obj_t*hub=circle(sv_sheet,180,316,72);lv_obj_set_style_bg_color(hub,TC(CANVAS),0);lv_obj_set_style_bg_opa(hub,255,0);lv_obj_add_event_cb(hub,sv_dismiss,LV_EVENT_CLICKED,NULL);
   simple_logo(hub);
-  label(sv_sheet,"0",49,282,36,TF(UI_14),TC(TEXT_SECONDARY));char max[12];snprintf(max,sizeof max,"%d",VOL_MAX);label(sv_sheet,max,275,282,36,TF(UI_14),TC(TEXT_SECONDARY));
+  label(sv_sheet,"0",46,278,40,TF(UI_18),TC(TEXT_SECONDARY));char max[12];snprintf(max,sizeof max,"%d",VOL_MAX);label(sv_sheet,max,270,278,44,TF(UI_18),TC(TEXT_SECONDARY));
   sv_timer=lv_timer_create(sv_timeout,1800,NULL);lv_timer_pause(sv_timer);
   sv_retry=lv_timer_create(sv_retry_send,120,NULL);if(sv_retry)lv_timer_pause(sv_retry);lv_obj_add_flag(sv_root,LV_OBJ_FLAG_HIDDEN);
  }

@@ -102,7 +102,8 @@ static void res_note(const char *msg){
     lv_obj_set_width(l, 240);
     lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(l, TC(TEXT_MUTED), 0);
-    lv_obj_set_style_text_font(l, TF(UI_16), 0);
+    lv_obj_set_style_text_font(l, th_simple() ? TF(UI_20) : TF(UI_16), 0);
+    if(th_simple()) lv_obj_set_style_margin_top(l, 36, 0);
 }
 static void res_row(const mdb_song_t *s){
     lv_obj_t *r = lv_obj_create(g_res_list);
@@ -267,7 +268,7 @@ static void land_build(void){
     lv_obj_set_style_border_width(big, 1, 0); lv_obj_set_style_border_color(big, ui_current_accent(), 0); lv_obj_set_style_border_opa(big, 160, 0);
     char (*r)[96] = g_recent; int n; memset(g_recent, 0, sizeof g_recent); recent_get(g_recent, &n);
     lv_obj_t *cap = lv_label_create(g_land); lv_label_set_text(cap, n ? "Recent" : "Your recent searches show up here");
-    lv_obj_set_style_text_font(cap, TF(UI_14), 0); lv_obj_set_style_text_color(cap, TC(TEXT_SECONDARY), 0);
+    lv_obj_set_style_text_font(cap, th_simple() ? TF(UI_18) : TF(UI_14), 0); lv_obj_set_style_text_color(cap, TC(TEXT_SECONDARY), 0);
     lv_obj_align(cap, LV_ALIGN_TOP_MID, 0, 146 - library_lift());
     if(library_lift()){ lv_label_set_long_mode(cap, LV_LABEL_LONG_WRAP); lv_obj_set_width(cap, 220); lv_obj_set_style_text_align(cap, LV_TEXT_ALIGN_CENTER, 0); }
     if(!n && library_lift()){   /* nothing yet: a large, quiet magnifier fills the empty page */

@@ -40,7 +40,8 @@ static void un_note(const char *msg){
     lv_obj_set_width(l, 260);
     lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_style_text_color(l, TC(TEXT_MUTED), 0);
-    lv_obj_set_style_text_font(l, TF(UI_14), 0);
+    lv_obj_set_style_text_font(l, th_simple() ? TF(UI_20) : TF(UI_14), 0);
+    if(th_simple()) lv_obj_set_style_margin_top(l, 70, 0);
 }
 
 /* The list must still describe what is playing: same track (identity epoch), same queue row (an unknown pos_id on

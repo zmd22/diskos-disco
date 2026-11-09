@@ -523,7 +523,7 @@ void usage_create(lv_obj_t *root){
     lv_obj_set_style_text_font(g_chg_ic,TF(UI_20),0);lv_obj_align(g_chg_ic,LV_ALIGN_TOP_MID,dx+(left?-80:80),62);
     /* one status line in clock time, one line of detail */
     g_sub=centre_label(root,TF(UI_20),TC(TEXT_PRIMARY),236,dx,108);
-    g_sub2=centre_label(root,TF(UI_14),TC(TEXT_SECONDARY),236,dx,134);
+    g_sub2=centre_label(root,th_simple()?TF(UI_16):TF(UI_14),TC(TEXT_SECONDARY),236,dx,134);
     /* the last 24 hours */
     g_graph=lv_obj_create(root);lv_obj_remove_style_all(g_graph);lv_obj_set_size(g_graph,GR_N*GR_P-1,GR_H);
     lv_obj_align(g_graph,LV_ALIGN_TOP_MID,dx,164);lv_obj_clear_flag(g_graph,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
@@ -532,20 +532,20 @@ void usage_create(lv_obj_t *root){
         lv_obj_set_size(o,3,2);lv_obj_set_pos(o,b*GR_P,GR_H-2);lv_obj_set_style_radius(o,1,0);
         lv_obj_clear_flag(o,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
     }
-    g_gr_l=centre_label(root,TF(UI_12),TC(TEXT_MUTED),60,dx-GR_N*GR_P/2+30,220);lv_label_set_text(g_gr_l,"24 h ago");
+    g_gr_l=centre_label(root,th_simple()?TF(UI_14):TF(UI_12),TC(TEXT_MUTED),70,dx-GR_N*GR_P/2+35,220);lv_label_set_text(g_gr_l,"24 h ago");
     lv_obj_set_style_text_align(g_gr_l,LV_TEXT_ALIGN_LEFT,0);
-    g_gr_r=centre_label(root,TF(UI_12),TC(TEXT_MUTED),60,dx+GR_N*GR_P/2-30,220);lv_label_set_text(g_gr_r,"now");
+    g_gr_r=centre_label(root,th_simple()?TF(UI_14):TF(UI_12),TC(TEXT_MUTED),60,dx+GR_N*GR_P/2-30,220);lv_label_set_text(g_gr_r,"now");
     lv_obj_set_style_text_align(g_gr_r,LV_TEXT_ALIGN_RIGHT,0);
     /* the totals: since the last full charge (hold the caption to restart them) */
     /* the lower block sits below the side bubble, where the ring is narrow: keep it near the centre */
     int ldx=dx/3;
-    g_cap=centre_label(root,TF(UI_14),TC(TEXT_MUTED),th_null()?260:240,ldx,244);
+    g_cap=centre_label(root,th_simple()?TF(UI_16):TF(UI_14),TC(TEXT_MUTED),th_null()?260:240,ldx,th_simple()?240:244);
     lv_obj_add_flag(g_cap,LV_OBJ_FLAG_CLICKABLE);lv_obj_set_ext_click_area(g_cap,14);
     lv_obj_add_event_cb(g_cap,cap_hold_cb,LV_EVENT_LONG_PRESSED,NULL);
     g_play_v=centre_label(root,TF(UI_20),TC(TEXT_PRIMARY),110,ldx-56,264);
     g_scr_v=centre_label(root,TF(UI_20),TC(TEXT_PRIMARY),110,ldx+56,264);
-    lv_label_set_text(centre_label(root,TF(UI_14),TC(TEXT_SECONDARY),110,ldx-56,290),"playing");
-    lv_label_set_text(centre_label(root,TF(UI_14),TC(TEXT_SECONDARY),110,ldx+56,290),"screen on");
+    lv_label_set_text(centre_label(root,th_simple()?TF(UI_16):TF(UI_14),TC(TEXT_SECONDARY),110,ldx-56,290),"playing");
+    lv_label_set_text(centre_label(root,th_simple()?TF(UI_16):TF(UI_14),TC(TEXT_SECONDARY),110,ldx+56,290),"screen on");
     g_tip=lv_obj_create(root);lv_obj_remove_style_all(g_tip);lv_obj_set_size(g_tip,14,14);   /* the glowing tip at the level */
     lv_obj_set_style_radius(g_tip,LV_RADIUS_CIRCLE,0);lv_obj_set_style_bg_opa(g_tip,LV_OPA_COVER,0);
     lv_obj_set_style_border_width(g_tip,3,0);lv_obj_set_style_border_color(g_tip,TC(CANVAS),0);

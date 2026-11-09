@@ -355,13 +355,13 @@ void songinfo_create(lv_obj_t *root)
         lv_obj_set_style_bg_color(rule, TC(BORDER), 0); lv_obj_set_style_bg_opa(rule, LV_OPA_COVER, 0);
         lv_obj_clear_flag(rule, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE);
         lv_obj_set_pos(list, 58, 134); lv_obj_set_size(list, 244, 160);
-        lv_obj_set_style_pad_row(list, 4, 0); lv_obj_set_style_pad_bottom(list, 6, 0);
+        lv_obj_set_style_pad_row(list, th_simple() ? 2 : 4, 0); lv_obj_set_style_pad_bottom(list, 6, 0);
         autotag_button(root, 308);
         for(int i = 0; i < F_COUNT; i++){
-            lv_obj_set_style_pad_bottom(g_cell[i], 5, 0);
+            lv_obj_set_style_pad_bottom(g_cell[i], th_simple() ? 4 : 5, 0);
             lv_obj_set_style_border_width(g_cell[i], 1, 0); lv_obj_set_style_border_side(g_cell[i], LV_BORDER_SIDE_BOTTOM, 0);
             lv_obj_set_style_border_color(g_cell[i], TC(BORDER), 0); lv_obj_set_style_border_opa(g_cell[i], 100, 0);
-            lv_obj_set_style_text_font(g_key[i], TF(UI_14), 0); lv_obj_set_style_text_color(g_key[i], TC(TEXT_SECONDARY), 0);
+            lv_obj_set_style_text_font(g_key[i], th_simple() ? TF(UI_16) : TF(UI_14), 0); lv_obj_set_style_text_color(g_key[i], TC(TEXT_SECONDARY), 0);
             lv_obj_set_style_text_font(g_val[i], ui_font_cjk(18), 0);
             lv_label_set_long_mode(g_val[i], LV_LABEL_LONG_WRAP);
         }
@@ -416,7 +416,7 @@ void songinfo_create(lv_obj_t *root)
             int w = lv_text_get_width(t, strlen(t), lv_obj_get_style_text_font(g_key[i], 0), lv_obj_get_style_text_letter_space(g_key[i], 0));
             if(w > need) need = w;
         }
-        if(need > 100) need = 100;                                      /* a long translation still wraps, the value keeps room */
+        if(need > (th_simple() ? 108 : 100)) need = th_simple() ? 108 : 100;                                      /* a long translation still wraps, the value keeps room */
         for(int i = 0; i < F_COUNT; i++){
             int kw = lv_obj_get_style_width(g_key[i], 0);
             if(need <= kw) continue;
