@@ -2309,7 +2309,10 @@ void kit_fork_np_braun2(void){
 #define ZNP_ART    192
 #define ZNP_ROW_Y  296                                    /* the transport row's centre line */
 #define ZNP_TOP    14                                     /* everything above the transport sits this much lower than Figma 10 */
-#define ZNP_SIDE_DX 70
+#define ZNP_SIDE_DX 76
+#define ZNP_F_ALBUM TF(UI_16)                             /* the column's smaller lines: album 17, times 19, format 16 px */
+#define ZNP_F_TIME  TF(UI_20)
+#define ZNP_F_FMT   TF(UI_12)
 /* the column follows the title: one line or two, the artist sits right under it */
 static int g_zcol_hooked;
 static char g_ztitle_input[160],g_zartist_input[160],g_zalbum_input[240];
@@ -2331,7 +2334,7 @@ static void zune_fmt_update(const track_state_t *st){
 static int zune_col_width(int y,int h){
     int dy=abs(y-180);if(abs(y+h-180)>dy)dy=abs(y+h-180);
     if(dy>175)dy=175;
-    int w=180+(int)sqrtf(32400.f-(float)(dy*dy))-8-ZNP_COL_X;
+    int w=180+(int)sqrtf(32400.f-(float)(dy*dy))-12-ZNP_COL_X;   /* clear of the seek ring */
     return w>ZNP_COL_W?ZNP_COL_W:w<100?100:w;
 }
 static int zune_fit_row(lv_obj_t *o,int width){
@@ -2355,11 +2358,11 @@ static void zune_col_chain(void){
     lv_obj_t *rows[]={title,artist,album};int heights[3];
     for(int i=0;i<3;i++)heights[i]=zune_fit_row(rows[i],ZNP_COL_W);
     int bottom=48+ZNP_TOP+ZNP_ART; /* Info block shares the artwork's lower edge. */
-    int fh=g_zfmt?lv_font_get_line_height(TF(UI_10)):0,th=lv_font_get_line_height(TF(UI_12));
-    int ty=bottom-fh-6-th;
+    int fh=g_zfmt?lv_font_get_line_height(ZNP_F_FMT):0,th=lv_font_get_line_height(ZNP_F_TIME);
+    int ty=bottom-fh-4-th;
     for(int pass=0;pass<3;pass++){
         int total=heights[0]+(heights[1]?6+heights[1]:0)+(heights[2]?2+heights[2]:0);
-        int y=ty-10-total;
+        int y=ty-8-total;
         for(int i=0;i<3;i++)if(rows[i]){
             if(i&&heights[i])y+=i==1?6:2;
             heights[i]=zune_fit_row(rows[i],zune_col_width(y,heights[i]));
@@ -2467,7 +2470,7 @@ void kit_fork_np_zune(void){
         lv_obj_align(artist, LV_ALIGN_TOP_LEFT, ZNP_COL_X, 122);
     }
     if(album){
-        lv_obj_set_style_text_font(album, TF(UI_12), 0);
+        lv_obj_set_style_text_font(album, ZNP_F_ALBUM, 0);
         lv_obj_set_style_text_align(album, LV_TEXT_ALIGN_LEFT, 0);
         lv_obj_set_style_text_color(album, TC(TEXT_MUTED), 0);
         lv_label_set_long_mode(album, LV_LABEL_LONG_DOT);
@@ -2477,7 +2480,7 @@ void kit_fork_np_zune(void){
     if(np_mid_btn){ lv_obj_set_size(np_mid_btn, ZNP_COL_W, 112); lv_obj_align(np_mid_btn, LV_ALIGN_TOP_LEFT, ZNP_COL_X, 60 + ZNP_TOP); }
     lv_obj_t *tm[3] = { t_elapsed, t_sep, t_remain };
     for(int i = 0; i < 3; i++) if(tm[i]){
-        lv_obj_set_style_text_font(tm[i], TF(UI_12), 0);
+        lv_obj_set_style_text_font(tm[i], ZNP_F_TIME, 0);
         lv_obj_set_style_text_color(tm[i], TC(TEXT_MUTED), 0);
         lv_obj_set_width(tm[i], LV_SIZE_CONTENT);
     }
@@ -2491,9 +2494,9 @@ void kit_fork_np_zune(void){
     if(cover) lv_obj_move_background(cover);                     /* the seek ring draws over the art, not under it */
     if(!g_zfmt){
         g_zfmt = lv_label_create(g_np_scr); lv_label_set_text(g_zfmt, "");
-        lv_obj_set_style_text_font(g_zfmt, TF(UI_10), 0);
+        lv_obj_set_style_text_font(g_zfmt, ZNP_F_FMT, 0);
         lv_obj_set_style_text_letter_space(g_zfmt, 0, 0);
-        lv_obj_set_size(g_zfmt,ZNP_COL_W,lv_font_get_line_height(TF(UI_10)));
+        lv_obj_set_size(g_zfmt,ZNP_COL_W,lv_font_get_line_height(ZNP_F_FMT));
         lv_label_set_long_mode(g_zfmt,LV_LABEL_LONG_DOT);
         lv_obj_set_style_text_color(g_zfmt, acc, 0);
         lv_obj_remove_flag(g_zfmt, LV_OBJ_FLAG_CLICKABLE);
@@ -2515,9 +2518,9 @@ void kit_fork_np_zune(void){
         lv_obj_set_style_bg_color(side[i],acc,0);lv_obj_set_style_bg_opa(side[i],24,0);
         lv_obj_set_style_bg_opa(side[i],90,LV_STATE_PRESSED);
         lv_obj_set_style_border_width(side[i],1,0);lv_obj_set_style_border_color(side[i],acc,0);lv_obj_set_style_border_opa(side[i],LV_OPA_40,0);
-        lv_obj_set_size(side[i], 48, 48); lv_obj_set_style_pad_all(side[i], 0, 0);
+        lv_obj_set_size(side[i], 54, 54); lv_obj_set_style_pad_all(side[i], 0, 0);
         lv_obj_set_style_text_align(side[i], LV_TEXT_ALIGN_CENTER, 0);
-        lv_obj_set_style_pad_top(side[i], (48 - lv_font_get_line_height(TF(UI_20))) / 2, 0);
+        lv_obj_set_style_pad_top(side[i], (54 - lv_font_get_line_height(TF(UI_20))) / 2, 0);
         lv_obj_align(side[i], LV_ALIGN_CENTER, i ? ZNP_SIDE_DX : -ZNP_SIDE_DX, ZNP_ROW_Y - 180);
     }
     if(btn_pp){
@@ -2526,8 +2529,8 @@ void kit_fork_np_zune(void){
         lv_obj_set_style_border_color(btn_pp, w, 0); lv_obj_set_style_border_width(btn_pp, 2, 0);
         lv_obj_set_style_border_opa(btn_pp, LV_OPA_COVER, 0);
         lv_obj_set_style_radius(btn_pp, LV_RADIUS_CIRCLE, 0); lv_obj_set_style_pad_all(btn_pp, 0, 0);
-        lv_obj_set_size(btn_pp, 52, 52); lv_obj_set_style_text_align(btn_pp, LV_TEXT_ALIGN_CENTER, 0);
-        lv_obj_set_style_pad_top(btn_pp, (52 - lv_font_get_line_height(TF(UI_20))) / 2 - 1, 0);
+        lv_obj_set_size(btn_pp, 62, 62); lv_obj_set_style_text_align(btn_pp, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_style_pad_top(btn_pp, (62 - lv_font_get_line_height(TF(UI_20))) / 2 - 1, 0);
         lv_obj_set_style_pad_left(btn_pp, 3, 0);              /* optical centre: a play triangle reads left-heavy */
         lv_obj_align(btn_pp, LV_ALIGN_CENTER, 0, ZNP_ROW_Y - 180);
     }
