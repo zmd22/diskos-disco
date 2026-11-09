@@ -1,16 +1,16 @@
 {
-  "version": "3.4.1",
-  "revision": "MA Sendspin on Sendspin 1.0 (Noise encryption, code pairing, Pairing Token, album artwork, FLAC), Sync Delay steps; Squash/Disco Bluetooth and Wi-Fi screens, Disco Quick Settings oval, AirPlay icon, one Working mode icon set, Sendspin on the Zune dial; fixed Up Next freeze on large shuffles, Previous on shuffle goes back; stall reporter",
-  "baseline": "v3.4.0",
-  "ui_source_sha256": "7d372095ef07a6b7f809ba8de087fbc4610900a7737713f126d42ad0e726dad5",
+  "version": "3.4.2",
+  "revision": "mq_ui about 680 KB smaller than 3.4.1 (compressed large fonts, run-length Boomshine glyphs) with the Cyrillic Zune cuts from PR #24 kept; Disc Shelf always uses the A-Z keypad; battery charge detection rebuilt from what the gauge reports (auto-reset after a full charge, including charges that stop below 100 %), new battery details screen; Squash follows the Accent colour or keeps its orange",
+  "baseline": "v3.4.1",
+  "ui_source_sha256": "8e0db7429a367145207072992310dbe1402a368d27d1f4b69c544bedd70ef8ac",
   "ui_source_hash_recipe": "sorted tracked ui paths: path + NUL + file bytes + NUL",
   "compiler": "musl-cross-make GCC 11.2.0, musl 1.2.6; mipsel-linux-musl, -ffp-contract=off",
   "abi": "static little-endian MIPS32r2, o32, FP64, NaN2008",
-  "status": "Fresh static MIPS build. Its source was tested on a Disc as signed test builds (3.4.1 with the Sendspin, BT/Wi-Fi and Quick Settings work; 3.4.1-fixed with the Up Next and shuffle Previous fixes); this exact binary differs from 3.4.1-fixed only in the empty test label and has not itself been physically tested.",
+  "status": "Fresh static MIPS build. Its source was tested on a Disc as signed test builds (the slimmed fonts, Disc Shelf keypad and battery work, then 3.4.2-squash2 with the Squash accent); this exact binary differs from 3.4.2-squash2 only in the version label and has not itself been physically tested.",
   "binary": {
-    "sha256": "4f986897e5c081bb727a0d0ec43f9a285e296d65ea00d5dd708db0b85e4a0d96",
-    "md5": "59dfb3e57bf937b5f7b0a196ec3ffdbf",
-    "bytes": 7703164
+    "sha256": "bca2b27381b36c888cd94350dd559d89800afa3797dee67f556c802a443864ce",
+    "md5": "1cad93a54b6a8173a007e187a43b93a7",
+    "bytes": 7019568
   },
   "artwork_helper": {
     "bytes": 119424,
@@ -26,10 +26,10 @@
     "bluealsa": "BlueALSA 4.0.0 (MIT) with build/bluealsa-aptx/patches/0001-0003, embedded in mq_ui",
     "libfreeaptx": "0.1.1 (LGPL-2.1-or-later), embedded as a separate shared library; source in ui/vendor/aptx"
   },
-  "baseline_commit": "f35c9ddd6aa46953e2dfeb535cb29ff530c96b17",
-  "source_identity": "Built from source_base_commit (DISCO_VERSION 3.4.1, empty test label). ui_source_sha256 identifies the exact tracked UI snapshot.",
-  "release_tag": "v3.4.1",
-  "source_base_commit": "7d8e66b0feb0c53932af8b52e570d00fac84acc3",
+  "baseline_commit": "1cb1828fdf563f4ff9b380c5f50537316ddfe9a8",
+  "source_identity": "Built from source_base_commit (DISCO_VERSION 3.4.2, empty test label). ui_source_sha256 identifies the exact tracked UI snapshot.",
+  "release_tag": "v3.4.2",
+  "source_base_commit": "6c7c6ff8f728682417ebe10f922ff5c1683773c6",
   "crypto": "Monocypher 4.0.2 (BSD-2-Clause or CC0-1.0), unmodified, in ui/vendor/monocypher",
   "flac": "dr_flac 0.13.4 (Unlicense or MIT-0), unmodified, in ui/vendor/dr_flac"
 }

@@ -2,6 +2,21 @@
 
 User-facing changes in diskOS Disco!. Details of each release are in [docs/releases](docs/releases/); everything else is in the Git history. diskOS is beta software.
 
+## 3.4.2
+
+**Cyrillic in Zune** (thanks to Mihail Dyusov, [PR #24](https://github.com/zmd22/diskos-disco/pull/24)), with Disco's
+large fonts redone in a compressed format: `mq_ui` is about 680 KB smaller than 3.4.1. Battery totals restart after a
+full charge again. [Release notes](docs/releases/v3.4.2.md)
+
+- Zune: Cyrillic in all 21 font cuts (PR #24 by @meekieD).
+- Fonts of 32 px and up compressed, Boomshine glyphs run-length encoded; pixel-identical renders.
+- Battery: charges followed from the level, charging flag and voltage; "since full charge" restarts after a full
+  charge, also one that stops below 100 % by itself; idle power-off works right after an unplug. New details screen
+  with a 24-hour graph.
+- Squash: Accent colour picker in Squash settings › Appearance; Orange keeps Squash's orange, anything else follows
+  the shared Accent colour.
+- Disc Shelf always uses the A-Z keypad.
+
 ## 3.4.1
 
 **MA Sendspin speaks Sendspin 1.0, with code pairing, album art and FLAC** (experimental; needs Music Assistant 2.10.7
