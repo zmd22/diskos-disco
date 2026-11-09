@@ -1,4 +1,4 @@
-# Disco 3.4.2 tour
+# Disco 3.4.3 tour
 
 Touch UI for the round Snowsky Disc. FiiO's stock player handles audio; Disco handles browsing, controls and built-in
 apps. Full menus: [Settings](DISPLAY_SETTINGS.md).

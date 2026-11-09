@@ -2,6 +2,16 @@
 
 User-facing changes in diskOS Disco!. Details of each release are in [docs/releases](docs/releases/); everything else is in the Git history. diskOS is beta software.
 
+## 3.4.3
+
+**The Shade, made for the round screen**, and Disc Shelf fixes for Zune (thanks to @ericklv,
+[PR #25](https://github.com/zmd22/diskos-disco/pull/25)). [Release notes](docs/releases/v3.4.3.md)
+
+- Shade (Display › QS style › Shade): round cover in a progress ring, a visible play / pause on the ring, previous /
+  next as nav-shard ovals on the rim, larger clock with battery %, a title on the widest line, a curved lower edge.
+- Disc Shelf in Zune: the home page no longer goes blank; Navidrome in the Server form no longer hits Back; clearer
+  server errors (`http://` added to a bare Navidrome address); the title lines up with the back ring.
+
 ## 3.4.2
 
 **Cyrillic in Zune** (thanks to Mihail Dyusov, [PR #24](https://github.com/zmd22/diskos-disco/pull/24)), with Disco's
