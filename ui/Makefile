@@ -66,7 +66,6 @@ check-theme:
 
 mq_ui: $(OBJS)
 	@$(MAKE) --no-print-directory check-theme
-	@python3 $(APP)/tools/compress_lv_font.py --check   # large fonts stay RLE-compressed (LV_USE_FONT_COMPRESSED)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS) $(LDLIBS)
 	cp -f $@ $@.debug                 # unstripped twin for crash symbolication (not shipped)
 	$(CROSS)strip $@ || true

@@ -3,7 +3,7 @@
 """Zune theme fonts: Open Sans (SIL OFL 1.1) cut to fixed weights, converted with lv_font_conv 1.5.3.
 Output: ui/font_zune_<weight>_<px>.c, LVGL name font_zune_<weight>_<px>.
 Usage: python3 ui/tools/gen_zune_fonts.py --src ../fonts/OpenSans-VF.ttf"""
-import argparse, subprocess, sys
+import argparse, subprocess
 from pathlib import Path
 UI = Path(__file__).resolve().parent.parent
 TEXT = '0x20-0x7E,0xA0-0xFF,0x400-0x45F,0x2018-0x201D,0x2026,0x2022,0x203A'   # Latin-1, Cyrillic (RU/UA/BE/SR/BG), punctuation
@@ -37,5 +37,4 @@ def main():
                             '-o', str(dest)], check=True)
             dest.write_text(dest.read_text().replace(str(ttf), f'fonts/zune/OpenSans-VF.ttf@wght={weight}').replace(str(dest), dest.name).rstrip()+'\n')
             print(f'made {fn}: {actual}px / weight {weight}', flush=True)
-            subprocess.run([sys.executable, str(UI / 'tools/compress_lv_font.py'), str(dest)], check=True)   # 32 px and up: RLE
 if __name__ == '__main__': main()
