@@ -332,6 +332,9 @@ int ds_config_read(const char *path,int test,char *err,size_t cap){
  net_test=test;ds_settings_t c;
  if(!ds_settings_load(path,&c)){snprintf(err,cap,"Open Server to choose and configure a source.");ds_secret_clear(&c,sizeof c);return 0;}
  atomic_store(&ds_source,c.source);
+ { const ds_profile_t*q=&c.profile[c.source];
+   if(q->server[0]&&q->user[0]&&!q->password[0]){   /* saved without "Remember password": say so, not "Set server..." */
+     snprintf(err,cap,"Password not saved. Open Server.");ds_secret_clear(&c,sizeof c);return 0;} }
  if(!ds_settings_validate(&c,test,err,cap)){ds_secret_clear(&c,sizeof c);return 0;}
  ds_profile_t*p=&c.profile[c.source];
  strcpy(ds_server,p->server);strcpy(ds_username,p->user);strcpy(ds_password,p->password);strcpy(ds_download_root,p->dest);strcpy(ds_smb_share,p->share);strcpy(ds_smb_domain,p->domain);

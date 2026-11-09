@@ -651,14 +651,30 @@ static void build(void) {
   lv_obj_set_style_bg_color(root, TC(CANVAS), 0);
   lv_obj_remove_flag(root, LV_OBJ_FLAG_SCROLLABLE);
   landing=shelf_home_create(root,home_cb,exit_cb,settings_cb);
+  uint32_t before=lv_obj_get_child_count(root);
   heading=ui_header_cb(root,"Disc Shelf",back_cb);title_width=lv_obj_get_style_width(heading,0);
-  backbtn=lv_obj_get_child(root,lv_obj_get_index(heading)-1);
-  /* One top navigation line in every theme, with matched visual centres. */
-  lv_obj_set_pos(backbtn,92,24);lv_obj_set_size(backbtn,40,40);
-  lv_obj_t *back_icon=lv_obj_get_child(backbtn,0);lv_obj_center(back_icon);
-  lv_obj_set_pos(heading,140,44-lv_font_get_line_height(lv_obj_get_style_text_font(heading,0))/2);
-  lv_obj_set_size(heading,136,lv_font_get_line_height(lv_obj_get_style_text_font(heading,0)));
-  lv_obj_set_style_text_align(heading,LV_TEXT_ALIGN_LEFT,0);lv_label_set_long_mode(heading,LV_LABEL_LONG_DOT);title_width=136;
+  int hx=140,hw=136;
+  if(lv_obj_get_index(heading)>(int32_t)before){
+    /* The header made its back button just before the title: one top navigation line in every
+     * theme, with matched visual centres. */
+    backbtn=lv_obj_get_child(root,lv_obj_get_index(heading)-1);
+    lv_obj_set_pos(backbtn,92,24);lv_obj_set_size(backbtn,40,40);
+    lv_obj_t *back_icon=lv_obj_get_child(backbtn,0);lv_obj_center(back_icon);
+  } else {
+    /* The header made its back control after the title (Zune pivot: ring + hit target). Group those in a
+     * transparent box so they hide and show as one back button. The child before the title is the landing
+     * group here, which must never be treated as the back button (it blanked the whole home page). */
+    lv_obj_t *made[8];int n=0;
+    for(uint32_t i=before;i<lv_obj_get_child_count(root)&&n<8;i++){lv_obj_t *c=lv_obj_get_child(root,i);if(c!=heading)made[n++]=c;}
+    backbtn=lv_obj_create(root);lv_obj_remove_style_all(backbtn);kit_keep(backbtn);
+    lv_obj_set_pos(backbtn,0,0);lv_obj_set_size(backbtn,360,100);
+    lv_obj_remove_flag(backbtn,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
+    for(int i=0;i<n;i++)lv_obj_set_parent(made[i],backbtn);
+    hx=lv_obj_get_style_x(heading,0);hw=276-hx;
+  }
+  lv_obj_set_pos(heading,hx,44-lv_font_get_line_height(lv_obj_get_style_text_font(heading,0))/2);
+  lv_obj_set_size(heading,hw,lv_font_get_line_height(lv_obj_get_style_text_font(heading,0)));
+  lv_obj_set_style_text_align(heading,LV_TEXT_ALIGN_LEFT,0);lv_label_set_long_mode(heading,LV_LABEL_LONG_DOT);title_width=hw;
   brand_icon=shelf_brand_icon(root,170,6,20);
   content = lv_obj_create(root);
   lv_obj_remove_style_all(content);
