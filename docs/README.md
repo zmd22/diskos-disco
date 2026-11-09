@@ -1,6 +1,6 @@
-# Disco 3.4.3 documentation
+# Disco 3.4.4 documentation
 
-Documents the `v3.4.3` release. Later branch changes aren't covered.
+Documents the `v3.4.4` release. Later branch changes aren't covered.
 
 ## Use
 
@@ -21,6 +21,6 @@ Documents the `v3.4.3` release. Later branch changes aren't covered.
 
 ## Releases and legal
 
-- [3.4.3 notes](releases/v3.4.3.md) · [3.4.3 binary record](RELEASE_3.4.3.md) · [3.4.2 notes](releases/v3.4.2.md) · [Changelog](../CHANGELOG.md)
+- [3.4.4 notes](releases/v3.4.4.md) · [3.4.4 binary record](RELEASE_3.4.4.md) · [3.4.3 notes](releases/v3.4.3.md) · [Changelog](../CHANGELOG.md)
 - Older release notes are historical, not instructions.
 - [Licenses](../licenses/README.md) · [NOTICE](../NOTICE.md) · [SPL source](../SPL_SOURCE.md) · [Security](../SECURITY.md)

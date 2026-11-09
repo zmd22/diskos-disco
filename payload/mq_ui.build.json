@@ -1,16 +1,16 @@
 {
-  "version": "3.4.3",
-  "revision": "QS Shade redesigned for the round screen (round cover in its progress ring, play-pause on the ring, previous / next as Disco nav shards, an arc-shaped lower edge); Disc Shelf on Zune fixed (PR #25: blank home page, Server form taps, clearer server errors) with its title centred on the back ring",
-  "baseline": "v3.4.2",
-  "ui_source_sha256": "02f61db5ed7db42aea242b67c9ca5943b01ef7f237f5be711fde1dc3e84cd85a",
+  "version": "3.4.4",
+  "revision": "Large fonts (32 px and up) stored uncompressed again (LV_USE_FONT_COMPRESSED 0): LVGL 9.2 decoded every compressed glyph on every draw, which cost battery on scrolling Now Playing titles, Zune clocks and big numerals; Zune keeps its Cyrillic",
+  "baseline": "v3.4.3",
+  "ui_source_sha256": "4769004436d64b4ea27a1750eed6ba52e71d096db02597a8407f832db201177d",
   "ui_source_hash_recipe": "sorted tracked ui paths: path + NUL + file bytes + NUL",
   "compiler": "musl-cross-make GCC 11.2.0, musl 1.2.6; mipsel-linux-musl, -ffp-contract=off",
   "abi": "static little-endian MIPS32r2, o32, FP64, NaN2008",
-  "status": "Fresh static MIPS build from a clean export of source_base_commit. Host renders checked the new Shade in all seven themes; this exact binary was signed and sent to a Disc as 3.4.3 but has not been physically tested before release.",
+  "status": "Fresh static MIPS build from a clean export of source_base_commit. Host renders of every theme (light and dark; Home, Now Playing, actions, Shade; both Now Playing fonts) are pixel-identical to 3.4.3; this exact binary was signed and sent to a Disc as 3.4.4 but has not been physically tested before release.",
   "binary": {
-    "sha256": "36be56efb1041c6018215f8361e94303a9041f1d02570a0ce121b2e6086bf977",
-    "md5": "4c90cb72a316e46a3474f56552b00f23",
-    "bytes": 7023680
+    "sha256": "788f12f01d0c8d9f431fe59b02f1709772e841cfcf66212f9c4f087237c66230",
+    "md5": "be382a735d597a9119793ac5230a78f2",
+    "bytes": 7810256
   },
   "artwork_helper": {
     "bytes": 119424,
@@ -26,10 +26,10 @@
     "bluealsa": "BlueALSA 4.0.0 (MIT) with build/bluealsa-aptx/patches/0001-0003, embedded in mq_ui",
     "libfreeaptx": "0.1.1 (LGPL-2.1-or-later), embedded as a separate shared library; source in ui/vendor/aptx"
   },
-  "baseline_commit": "7d47eb2f9fa2794f77ec4a506cc516250322d769",
-  "source_identity": "Built from source_base_commit (DISCO_VERSION 3.4.3, empty test label). ui_source_sha256 identifies the exact tracked UI snapshot.",
-  "release_tag": "v3.4.3",
-  "source_base_commit": "0b787059c76e00c687a614744cf5b4339e045b8c",
+  "baseline_commit": "bdf2d1d73af19d3d6629fc34ade465252a8d0d1d",
+  "source_identity": "Built from source_base_commit (DISCO_VERSION 3.4.4, empty test label). ui_source_sha256 identifies the exact tracked UI snapshot.",
+  "release_tag": "v3.4.4",
+  "source_base_commit": "9eb48c621f57ed45675b1510162faaf8702fab17",
   "crypto": "Monocypher 4.0.2 (BSD-2-Clause or CC0-1.0), unmodified, in ui/vendor/monocypher",
   "flac": "dr_flac 0.13.4 (Unlicense or MIT-0), unmodified, in ui/vendor/dr_flac"
 }

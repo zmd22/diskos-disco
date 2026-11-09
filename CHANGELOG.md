@@ -2,6 +2,12 @@
 
 User-facing changes in diskOS Disco!. Details of each release are in [docs/releases](docs/releases/); everything else is in the Git history. diskOS is beta software.
 
+## 3.4.4
+
+**Battery life back to 3.4.1.** Large fonts are stored uncompressed again: 3.4.2's compression made the Disc unpack
+every big glyph on each redraw (scrolling Now Playing titles, large clocks). Same look, Cyrillic in Zune kept; `mq_ui`
+is about 790 KB larger. [Release notes](docs/releases/v3.4.4.md)
+
 ## 3.4.3
 
 **The Shade, made for the round screen**, and Disc Shelf fixes for Zune (thanks to @ericklv,
