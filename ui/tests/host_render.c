@@ -1948,24 +1948,32 @@ int main(int argc, char **argv){
             if(!th_disco_family()&&!th_null()){settings_open_key("np_style");assert(screen_current()==SCR_SETTING_DETAIL);assert(find_heading(screen_get_root(SCR_SETTING_DETAIL),"Now Playing style"));}
             printf("PASS: Display pages, back destinations, %d disabled controls, direct guards, writable theme-specific keys and preserved preferences (theme %d)\n",disabled,theme_preset());return 0;
         }
-        if((th_simple() || th_null()) && getenv("REVIEW_SQUASH_ACCENT")){
+        if(th_null() && getenv("REVIEW_SQUASH_ACCENT")){
             setlist_open("Display");settings_open_group("Theme Colours");nav_wait(100);
             lv_obj_t *root=screen_get_root(SCR_SETLIST);assert(!find_text(root,"Accent colour"));
             int before=simple_cfg_get_int("accent_color",-1);extern void settings_test_open_accent(void);settings_test_open_accent();nav_wait(50);
             assert(screen_current()==SCR_SETLIST&&simple_cfg_get_int("accent_color",-1)==before);
-            assert(find_text(lv_layer_top(),th_null()?"Null uses fixed colour schemes. Choose a colour scheme in Appearance instead of a custom accent.":"Squash is using its orange. To use this colour, set Squash > Colours > Accent to Accent colour."));
+            assert(find_text(lv_layer_top(),"Null uses fixed colour schemes. Choose a colour scheme in Appearance instead of a custom accent."));
             puts("PASS: Theme-owned accent is hidden when unsupported, guarded on direct entry, preserves saved colour");return 0;
         }
-        if(th_simple() && getenv("REVIEW_SQUASH_FOLLOW")){   /* Squash > Colours > Accent = Accent colour */
-            assert(!theme_squash_follows_accent());cfg_set_int("squash_accent",1);assert(theme_squash_follows_accent());
-            setlist_open("Display");settings_open_group("Theme Colours");nav_wait(100);
-            assert(find_text(screen_get_root(SCR_SETLIST),"Accent Colour")||find_text(screen_get_root(SCR_SETLIST),"Accent colour"));
-            ui_set_accent_config(1,0x2E86DE);nav_wait(50);
+        if(th_simple() && getenv("REVIEW_SQUASH_FOLLOW")){   /* Accent colour picker: Squash orange, a colour, album, back */
+            assert(!theme_squash_follows_accent());
+            setlist_open("Display");settings_open_group("Appearance");nav_wait(100);
+            assert(find_text(screen_get_root(SCR_SETLIST),"Accent colour"));
+            uint32_t orange=lv_color_to_u32(TC(ACCENT_PRIMARY))&0xFFFFFF;
+            extern void settings_test_open_accent(void);settings_test_open_accent();nav_wait(50);
+            lv_obj_t *pick=screen_get_root(SCR_COLORPICK);assert(screen_current()==SCR_COLORPICK);
+            assert(find_text(pick,"Squash orange")&&find_text(pick,"Follow album")&&find_text(pick,"Custom"));   /* the hub names it */
+            lv_obj_t *sw=NULL;for(uint32_t i=0;i<lv_obj_get_child_count(pick);i++){lv_obj_t*c=lv_obj_get_child(pick,i);
+                if(lv_obj_get_width(c)==34&&(lv_color_to_u32(lv_obj_get_style_bg_color(c,0))&0xFFFFFF)==0x0A84FF)sw=c;}
+            assert(sw);lv_obj_send_event(sw,LV_EVENT_CLICKED,NULL);nav_wait(50);              /* Blue */
             uint32_t a=lv_color_to_u32(TC(ACCENT_PRIMARY))&0xFFFFFF;
-            assert(a!=0xF28A32 && (a&0xFF)>(a>>16&0xFF));            /* blue now, not orange */
-            ui_set_accent_config(1,0x27AE60);nav_wait(50);
-            assert((lv_color_to_u32(TC(ACCENT_PRIMARY))&0xFFFFFF)!=a);
-            puts("PASS: Squash follows the Accent Colour live");return 0;
+            assert(theme_squash_follows_accent()&&a!=orange&&(a&0xFF)>(a>>16&0xFF));
+            lv_obj_t *sq=NULL;for(uint32_t i=0;i<lv_obj_get_child_count(pick);i++){lv_obj_t*c=lv_obj_get_child(pick,i);   /* the ring's Squash orange */
+                if(lv_obj_get_width(c)==34&&(lv_color_to_u32(lv_obj_get_style_bg_color(c,0))&0xFFFFFF)==theme_squash_orange())sq=c;}
+            assert(sq);lv_obj_send_event(sq,LV_EVENT_CLICKED,NULL);nav_wait(50);
+            assert(!theme_squash_follows_accent()&&(lv_color_to_u32(TC(ACCENT_PRIMARY))&0xFFFFFF)==orange);
+            puts("PASS: Squash accent picker: its orange, a shared colour live, and back to orange live");return 0;
         }
         if(getenv("REVIEW_DISCO_SETTINGS")){
             void settings_open_group(const char *);

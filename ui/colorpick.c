@@ -36,6 +36,15 @@ static void rgb2hsv(int r,int g,int b,int*h,int*s,int*v){
 }
 
 static int g_mode = 1, g_rgb = UI_RED;   /* the ring section below reads these */
+/* Squash: its own orange is a third choice. Any other choice switches Squash to the shared Accent Colour first, so the
+ * accent keys below are the shared ones (simple_cfg scopes them to Squash's own while it keeps its orange). */
+void ui_set_accent_config(int mode, int rgb);
+static int squash_orange(void){ return th_simple() && !theme_squash_follows_accent(); }
+static void squash_take(void){
+    if(!squash_orange()) return;
+    cfg_set_int("squash_accent", 1);
+    g_mode = simple_cfg_get_int("accent_mode", 1);   /* now the shared colour */
+}
 static int g_pending_rgb = UI_RED;       /* last live colour; persisted on slider release */
 
 
@@ -49,6 +58,7 @@ static void slider_cb(lv_event_t *e){
     int r,gg,b; hsv2rgb(h,s,v,&r,&gg,&b);
     int rgb = (r<<16)|(gg<<8)|b;
     g_pending_rgb = rgb;
+    squash_take();
     if(g_preview) lv_obj_set_style_bg_color(g_preview, theme_color_from_rgb(rgb), 0);
     g_mode = 1; g_rgb = rgb;                                       /* leaving dynamic: the Custom colour is now the accent */
     ui_set_accent_config(1, rgb);
@@ -93,24 +103,36 @@ static void mk_label(lv_obj_t *root, int y, const char *txt){
 static const uint32_t SW_RGB[NSW] = { 0xE4122C, 0xFF9500, 0xFFCC00, 0x34C759, 0x00C7BE, 0x0A84FF, 0x5E5CE6, 0xBF5AF2, 0xFF375F, 0xAC8E68 };
 static const char *const SW_NAME[NSW] = { "Red", "Orange", "Yellow", "Green", "Teal", "Blue", "Indigo", "Purple", "Pink", "Sand" };
 static lv_obj_t *g_sw[NSW], *g_hub, *g_hub_glyph, *g_hub_name, *g_follow, *g_custom_btn, *g_custom;
+#define SW_SQUASH 1                                         /* Squash: the Orange preset is Squash's own orange */
 
 static int preset_of(int rgb){ for(int i = 0; i < NSW; i++) if((int)SW_RGB[i] == (rgb & 0xFFFFFF)) return i; return -1; }
 static void paint(void){                                    /* selection, hub and the two pills from g_mode / g_rgb */
-    int sel = g_mode ? preset_of(g_rgb) : -1;
+    int orange = squash_orange();
+    int sel = orange ? SW_SQUASH : g_mode ? preset_of(g_rgb) : -1;
+    if(th_simple() && !orange && sel == SW_SQUASH) sel = -1;   /* that swatch means Squash orange here */
     for(int i = 0; i < NSW; i++){
         lv_obj_set_style_border_width(g_sw[i], i == sel ? 3 : 0, 0);
         lv_obj_set_style_border_color(g_sw[i], TC(TEXT_PRIMARY), 0);
     }
-    lv_color_t hc = g_mode ? theme_color_from_rgb((uint32_t)g_rgb) : ui_media_accent();
+    lv_color_t hc = orange ? TC(ACCENT_PRIMARY) : g_mode ? theme_color_from_rgb((uint32_t)g_rgb) : ui_media_accent();
     lv_obj_set_style_bg_color(g_hub, hc, 0);
-    lv_label_set_text(g_hub_glyph, g_mode ? LV_SYMBOL_OK : LV_SYMBOL_IMAGE);
-    lv_label_set_text(g_hub_name, !g_mode ? "Album" : sel >= 0 ? SW_NAME[sel] : "Custom");
-    lv_obj_set_style_bg_color(g_follow, !g_mode ? ui_current_accent() : TC(SURFACE), 0);
-    lv_obj_set_style_bg_color(g_custom_btn, (g_mode && sel < 0) ? ui_current_accent() : TC(SURFACE), 0);
+    lv_label_set_text(g_hub_glyph, orange || g_mode ? LV_SYMBOL_OK : LV_SYMBOL_IMAGE);
+    lv_label_set_text(g_hub_name, orange ? "Squash orange" : !g_mode ? "Album" : sel >= 0 ? SW_NAME[sel] : "Custom");
+    if(th_simple()) lv_obj_set_style_bg_color(g_sw[SW_SQUASH], theme_color_from_rgb(theme_squash_orange()), 0);
+    lv_obj_set_style_bg_color(g_follow, !orange && !g_mode ? ui_current_accent() : TC(SURFACE), 0);
+    lv_obj_set_style_bg_color(g_custom_btn, (!orange && g_mode && sel < 0) ? ui_current_accent() : TC(SURFACE), 0);
+    lv_obj_t *pl[] = { g_follow, g_custom_btn };   /* Squash: the chosen pill's text reads on the accent */
+    if(th_simple()) for(int i = 0; i < 2; i++) if(pl[i]){
+        lv_obj_t *l = lv_obj_get_child(pl[i], 0); int on = lv_color_eq(lv_obj_get_style_bg_color(pl[i], 0), ui_current_accent());
+        if(l) lv_obj_set_style_text_color(l, on ? theme_on_color(ui_current_accent()) : TC(TEXT_PRIMARY), 0);
+    }
 }
+static void squash_orange_pick(void);
 static void swatch_cb(lv_event_t *e){
     int i = (int)(intptr_t)lv_event_get_user_data(e);
     if(i < 0 || i >= NSW) return;
+    if(th_simple() && i == SW_SQUASH){ squash_orange_pick(); return; }
+    squash_take();
     g_mode = 1; g_rgb = (int)SW_RGB[i];
     simple_cfg_set_int("accent_mode", 1); simple_cfg_set_int("accent_color", g_rgb);
     ui_set_accent_config(1, g_rgb);
@@ -118,9 +140,18 @@ static void swatch_cb(lv_event_t *e){
 }
 static void follow_cb(lv_event_t *e){
     (void)e;
+    squash_take();
     g_mode = 0;
     simple_cfg_set_int("accent_mode", 0);
     ui_set_accent_config(0, 0);
+    paint();
+}
+static void squash_orange_pick(void){                       /* Squash: back to its own orange, live */
+    if(squash_orange()) return;
+    cfg_set_int("squash_accent", 0);
+    uint32_t oa, os;
+    if(theme_squash_reset_palette(&oa, &os)) simple_accent_changed(oa, os);
+    ui_set_accent_config(simple_cfg_get_int("accent_mode", 1), simple_cfg_get_int("accent_color", UI_RED));   /* Squash's own */
     paint();
 }
 static void hub_done_cb(lv_event_t *e){ (void)e; screen_back(); }

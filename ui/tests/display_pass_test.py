@@ -16,7 +16,7 @@ png=b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack('!2I5B',360,360,8,2,0,0,0))+c
 cases=[(theme,'REVIEW_DISPLAY') for theme in [10,11,12,8,9]]+[
     (11,'REVIEW_DISPLAY_IDLE'),(11,'REVIEW_NULL'),(11,'REVIEW_NULL_GESTURES'),(11,'REVIEW_NULL_VOLUME'),
     (12,'REVIEW_MODES'),(11,'REVIEW_MODES'),(10,'REVIEW_NAV'),(10,'REVIEW_HINTS'),
-    (10,'REVIEW_DISCO_SETTINGS'),(12,'REVIEW_SQUASH_ACCENT'),(12,'REVIEW_SQUASH_FOLLOW'),(11,'REVIEW_SQUASH_ACCENT'),
+    (10,'REVIEW_DISCO_SETTINGS'),(12,'REVIEW_SQUASH_FOLLOW'),(11,'REVIEW_SQUASH_ACCENT'),
     (10,'REVIEW_HELP_MENU'),(11,'REVIEW_HELP_MENU'),(12,'REVIEW_HELP_MENU')]
 with tempfile.TemporaryDirectory(prefix='disco-display-') as directory:
     out=Path(directory)/'fixture.ppm';out.with_suffix('.png').write_bytes(png)

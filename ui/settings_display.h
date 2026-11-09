@@ -123,8 +123,7 @@ static const char *display_disabled_reason(const setting_t *s){
     const char *k=s->cfg_key?s->cfg_key:"";
     if(!strcmp(k,"zune_nav_hold")&&!th_zune())return "This action belongs to the Zune main menu.";
     if(!strcmp(k,"imm_scrub_action")&&!simple_cfg_get_int("imm_scrub",0))return "Enable Circular control first.";
-    if(s->apply==apply_open_colorpick && ((th_simple()&&!theme_squash_follows_accent())||th_null()||th_braun2()))return accent_disabled_reason();
-    if(!strcmp(k,"squash_accent") && !th_simple())return "This option belongs to Squash.";
+    if(s->apply==apply_open_colorpick && (th_null()||th_braun2()))return accent_disabled_reason();
     if(!strcmp(k,"disco_qs_style") && th_zune())return "Zune uses six circular quick actions. Choose and reorder them in Items.";
     if(!strcmp(k,"theme_variant") && th_null())return "Null uses a fixed dark appearance. Choose a colour scheme instead.";
     if(!strcmp(k,"null_side"))return "Null keeps its navigation on the right.";

@@ -675,6 +675,15 @@ static void simple_palettes_init(void){
   p[THEME_CLR_ON_ACCENT]=v?0xFFFFFF:0x17181A;
  }
 }
+uint32_t theme_squash_orange(void){ return (uint32_t)cfg_get_int("simple_accent_color", g_variant ? 0xB84C0C : 0xF28A32) & 0xFFFFFFu; }
+int theme_squash_reset_palette(uint32_t *old_acc, uint32_t *old_sel){
+ if(!th_simple())return 0;
+ const uint32_t *p=FORK_SIMPLE[g_variant?1:0];
+ if(old_acc)*old_acc=p[THEME_CLR_ACCENT_PRIMARY];
+ if(old_sel)*old_sel=p[THEME_CLR_SURFACE_SELECTED];
+ simple_palettes_init();
+ return 1;
+}
 static void fork_config_migrate(void){
     if(cfg_get_int("fork_theme_migrated",0)) return;
     cfg_begin();
