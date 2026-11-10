@@ -1449,6 +1449,7 @@ static int classic_detail_list(const setting_t *s, int v){
     int n = is_theme ? N_THEME_SHOWN : shown_opts(s);
     int h = (n < 6 ? n : 6) * 34;
     lv_obj_t *list = classic_list(g_detail_root, 78, h), *cur = NULL;
+    if(n <= 6){ lv_obj_set_style_pad_bottom(list, 0, 0); lv_obj_remove_flag(list, LV_OBJ_FLAG_SCROLLABLE); }   /* all fit: a still list */
     for(int r = 0; r < n; r++){
         int i = is_theme ? THEME_SHOWN[r] : (is_variant && n == 3) ? VARIANT_ORDER[r] : r;
         char nm[40]; snprintf(nm, sizeof nm, "%s", tr(s->opts[i]));
@@ -1460,7 +1461,7 @@ static int classic_detail_list(const setting_t *s, int v){
                     lv_obj_set_style_text_font(ck, TF(UI_16), 0); lv_obj_set_style_text_color(ck, TC(TEXT_PRIMARY), 0);
                     lv_obj_align(ck, LV_ALIGN_RIGHT_MID, -10, 0); cur = row; }
     }
-    if(cur){ lv_obj_update_layout(list); lv_obj_scroll_to_view(cur, LV_ANIM_OFF); }   /* the ticked option in view */
+    if(cur && n > 6){ lv_obj_update_layout(list); lv_obj_scroll_to_view(cur, LV_ANIM_OFF); }   /* a long list: the ticked option in view */
     return 78 + h + 10;
 }
 static void zlower(char *o, size_t n, const char *s){
