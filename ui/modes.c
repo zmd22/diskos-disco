@@ -6,6 +6,7 @@
 #include "braun2.h"
 #include <string.h>
 #include "orbit.h"
+#include "classic.h"
 #include "theme.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -294,6 +295,15 @@ static void icon_spin(lv_obj_t *l, int on){
     lv_anim_start(&a);
 }
 static void disco_paint(int slot, int pending){
+    if(th_classic()){   /* rb_classic: a tick (turning arrows while it switches) right of the active mode */
+        for(int i = 0; i < N_MODES; i++){
+            lv_obj_t *r = g_drow[i]; if(!r) continue;
+            lv_obj_t *v = lv_obj_get_child(r, 1); int on = i == slot;
+            lv_label_set_text(v, on ? (pending ? LV_SYMBOL_REFRESH : LV_SYMBOL_OK) : "");
+            icon_spin(v, on && pending);
+        }
+        return;
+    }
     lv_color_t acc = ui_current_accent();
     for(int i = 0; i < N_MODES; i++){
         lv_obj_t *r = g_drow[i]; if(!r) continue;
@@ -499,7 +509,23 @@ void modes_create(lv_obj_t *root){
 
     if(th_braun2()){ b2modes_create(root); return; }
     if(th_simple() || th_null()){squash_modes_create(root);return;}
-    if((th_disco_family() || th_null() || th_classic())){
+    if(th_classic()){   /* rb_classic: its header and menu list */
+        static const char *NM[N_MODES] = { "Playback", "USB DAC", "Bluetooth DAC", "BT streaming", "AirPlay", "USB storage" };
+        ui_header(root, "Working mode");
+        lv_obj_t *list = classic_list(root, 78, 34 * 6);
+        memset(g_drow, 0, sizeof g_drow);
+        for(int k = 0; k < N_DISCO; k++){
+            int i = DISCO_ORD[k];
+            lv_obj_t *r = g_drow[i] = classic_row(list, NM[i], 0);
+            ui_on(r, disco_row_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i, "modes.select", UI_CORE);
+            lv_obj_t *v = lv_label_create(r); lv_label_set_text(v, "");
+            lv_obj_set_style_text_font(v, TF(UI_16), 0); lv_obj_set_style_text_color(v, TC(TEXT_PRIMARY), 0);
+            lv_obj_align(v, LV_ALIGN_RIGHT_MID, -10, 0);
+        }
+        mark_selected();
+        return;
+    }
+    if((th_disco_family() || th_null())){
         disco_title(root, "Working mode");
         static const char *NM[N_MODES] = { "Playback", "USB DAC", "Bluetooth DAC", "BT streaming", "AirPlay", "USB storage" };
         memset(g_drow, 0, sizeof g_drow);

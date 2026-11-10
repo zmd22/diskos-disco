@@ -260,7 +260,7 @@ static void disco_faders_paint(void){
     for(int i = 0; i < NB; i++){
         int x = dxp(i), o = doff(i), mid = DMID + o, t = clampi(g_t[i], -GMAX, GMAX), s = (i == g_sel && g_editable);
         int y = (int)lroundf(mid - t / 10.0f * DKPX);
-        lv_color_t c = !g_editable ? TC(TEXT_SECONDARY) : (th_null() || simple_cfg_get_int("disco_eq", 0)) ? (th_null()?TC(TEXT_PRIMARY):ui_current_accent()) : theme_color_from_rgb(IRI[i]);   /* Display > Equalizer: Disco / Accent */
+        lv_color_t c = !g_editable ? TC(TEXT_SECONDARY) : (th_null() || th_classic() || simple_cfg_get_int("disco_eq", 0)) ? ((th_null()||th_classic())?TC(TEXT_PRIMARY):ui_current_accent()) : theme_color_from_rgb(IRI[i]);   /* Display > Equalizer: Disco / Accent */
         int a = y < mid ? y : mid, b = y < mid ? mid : y; if(b - a < 2){ a = mid - 1; b = mid + 1; }
         lv_obj_set_pos(g_dfill[i], x - 7, a); lv_obj_set_size(g_dfill[i], 14, b - a);
         lv_obj_set_style_bg_color(g_dfill[i], c, 0);
@@ -754,6 +754,17 @@ void eqcustom_create(lv_obj_t *root){
     g_glbl = centre_lbl(root, 8, glbl_cb);
     g_minus = round_btn(root, LV_SYMBOL_MINUS, -34, -1);
     g_plus  = round_btn(root, LV_SYMBOL_PLUS, 34, +1);
+    if(th_classic()){   /* rb_classic: finger-sized steps, framed in ink */
+        lv_obj_t *pm[2] = { g_minus, g_plus };
+        for(int i = 0; i < 2; i++){
+            lv_obj_set_size(pm[i], 42, 42); lv_obj_align(pm[i], LV_ALIGN_CENTER, i ? 40 : -40, 44);
+            lv_obj_set_ext_click_area(pm[i], 10);
+            lv_obj_set_style_bg_color(pm[i], TC(CANVAS), 0); lv_obj_set_style_border_width(pm[i], 2, 0); lv_obj_set_style_border_color(pm[i], TC(TEXT_PRIMARY), 0);
+            lv_obj_set_style_bg_color(pm[i], TC(TEXT_PRIMARY), LV_STATE_PRESSED);
+            lv_obj_t *l = lv_obj_get_child(pm[i], 0); lv_obj_set_style_text_font(l, TF(UI_20), 0);
+            lv_obj_set_style_text_color(l, TC(CANVAS), LV_STATE_PRESSED); lv_obj_add_flag(l, LV_OBJ_FLAG_EVENT_BUBBLE);
+        }
+    }
     g_modecap = lv_label_create(root);
     lv_obj_set_style_text_font(g_modecap, TF(UI_10), 0); lv_obj_set_style_text_color(g_modecap, TC(TEXT_DISABLED), 0);
     lv_obj_align(g_modecap, LV_ALIGN_CENTER, 0, 39);

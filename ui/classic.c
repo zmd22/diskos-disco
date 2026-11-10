@@ -6,6 +6,7 @@
 #include "ipc.h"
 #include "theme.h"
 #include "theme_kit.h"
+#include "config.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -17,17 +18,16 @@
 #define CL_COL_X 50            /* the menu column, fixed for every row */
 #define CL_COL_W 260
 
-/* ---- battery glyph: outline, nub, three cells; every one on screen follows the last status ---- */
-#define CL_BATT_MAX 8
+/* ---- battery glyph: outline, nub and a fill sized to the level; every one on screen follows the last status ---- */
+#define CL_BATT_MAX 64
 static lv_obj_t *g_batt[CL_BATT_MAX];
 static int g_batt_pct = -1, g_batt_chg;
 static void batt_paint(lv_obj_t *b){
-    int cells = g_batt_pct < 0 ? 3 : g_batt_pct > 66 ? 3 : g_batt_pct > 33 ? 2 : g_batt_pct > 8 ? 1 : 0;
-    for(int i = 0; i < 3; i++){
-        lv_obj_t *c = lv_obj_get_child(b, i + 1);
-        if(!c) continue;
-        if(i < cells || g_batt_chg) lv_obj_remove_flag(c, LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(c, LV_OBJ_FLAG_HIDDEN);
-    }
+    lv_obj_t *fill = lv_obj_get_child(b, 1);
+    if(!fill) return;
+    int pct = g_batt_pct < 0 ? 100 : g_batt_pct > 100 ? 100 : g_batt_pct;
+    lv_obj_set_width(fill, pct * 20 / 100 > 1 ? pct * 20 / 100 : 2);
+    lv_obj_set_style_bg_opa(fill, g_batt_chg ? LV_OPA_50 : LV_OPA_COVER, 0);   /* charging: a lighter fill */
 }
 static void batt_deleted(lv_event_t *e){
     lv_obj_t *b = lv_event_get_target(e);
@@ -43,10 +43,8 @@ lv_obj_t *classic_battery(lv_obj_t *parent, int x, int y){
     lv_obj_t *body = plain(b); lv_obj_set_size(body, 26, 14);
     lv_obj_set_style_border_width(body, 2, 0); lv_obj_set_style_border_color(body, TC(TEXT_PRIMARY), 0);
     lv_obj_set_style_radius(body, 2, 0);
-    for(int i = 0; i < 3; i++){
-        lv_obj_t *c = plain(b); lv_obj_set_pos(c, 4 + i * 6, 4); lv_obj_set_size(c, 4, 6);
-        lv_obj_set_style_bg_opa(c, LV_OPA_COVER, 0); lv_obj_set_style_bg_color(c, TC(TEXT_PRIMARY), 0);
-    }
+    lv_obj_t *fill = plain(b); lv_obj_set_pos(fill, 3, 3); lv_obj_set_size(fill, 20, 8);
+    lv_obj_set_style_bg_color(fill, TC(TEXT_PRIMARY), 0);
     lv_obj_t *nub = plain(b); lv_obj_set_pos(nub, 26, 4); lv_obj_set_size(nub, 3, 6);
     lv_obj_set_style_bg_opa(nub, LV_OPA_COVER, 0); lv_obj_set_style_bg_color(nub, TC(TEXT_PRIMARY), 0);
     for(int i = 0; i < CL_BATT_MAX; i++) if(!g_batt[i]){ g_batt[i] = b; lv_obj_add_event_cb(b, batt_deleted, LV_EVENT_DELETE, NULL); break; }
@@ -64,12 +62,12 @@ static lv_obj_t *rule(lv_obj_t *parent, int y){
 static lv_obj_t *title_label(lv_obj_t *parent, const char *text){
     lv_obj_t *t = lv_label_create(parent);
     lv_obj_set_user_data(t, (void *)&theme_title_tag);
-    theme_title_text(t, text);
     lv_obj_set_style_text_font(t, TF(HEADER), 0); lv_obj_set_style_text_color(t, TC(TEXT_PRIMARY), 0);
     lv_obj_set_style_text_align(t, LV_TEXT_ALIGN_CENTER, 0);
     lv_obj_set_size(t, 150, lv_font_get_line_height(TF(HEADER)));
     lv_obj_set_pos(t, 105, CL_TITLE_Y - lv_font_get_line_height(TF(HEADER)) / 2);
     lv_label_set_long_mode(t, LV_LABEL_LONG_DOT);
+    theme_title_text(t, text);   /* after the box is fixed: dots are picked against the final width */
     return t;
 }
 static void back_home_cb(lv_event_t *e){ if(lv_event_get_code(e) == LV_EVENT_CLICKED && screen_press_was_long()) screen_home(); }
@@ -104,9 +102,24 @@ static void label_states(lv_obj_t *o, int on){
         } else label_states(ch, on);
     }
 }
+/* a scroll takes PRESSED off the row without an event: watch the inverted row and give its labels back */
+static lv_obj_t *g_inv;
+static lv_timer_t *g_inv_t;
+static void inv_watch(lv_timer_t *t){
+    if(g_inv && lv_obj_has_state(g_inv, LV_STATE_PRESSED)) return;
+    if(g_inv) label_states(g_inv, 0);
+    g_inv = NULL; lv_timer_pause(t);
+}
 static void invert_cb(lv_event_t *e){
     lv_event_code_t c = lv_event_get_code(e);
-    label_states(lv_event_get_current_target(e), c == LV_EVENT_PRESSED);
+    lv_obj_t *o = lv_event_get_current_target(e);
+    if(c == LV_EVENT_DELETE){ if(g_inv == o) g_inv = NULL; return; }
+    label_states(o, c == LV_EVENT_PRESSED);
+    if(c == LV_EVENT_PRESSED){
+        if(g_inv && g_inv != o) label_states(g_inv, 0);
+        g_inv = o;
+        if(!g_inv_t) g_inv_t = lv_timer_create(inv_watch, 40, NULL); else lv_timer_resume(g_inv_t);
+    } else if(g_inv == o) g_inv = NULL;
 }
 static void invert_on_press(lv_obj_t *o){
     lv_obj_set_style_bg_color(o, TC(TEXT_PRIMARY), LV_STATE_PRESSED);
@@ -114,6 +127,7 @@ static void invert_on_press(lv_obj_t *o){
     lv_obj_add_event_cb(o, invert_cb, LV_EVENT_PRESSED, NULL);
     lv_obj_add_event_cb(o, invert_cb, LV_EVENT_RELEASED, NULL);
     lv_obj_add_event_cb(o, invert_cb, LV_EVENT_PRESS_LOST, NULL);
+    lv_obj_add_event_cb(o, invert_cb, LV_EVENT_DELETE, NULL);
 }
 /* a shared list's row in this theme: straight, frameless, inverted while pressed (rows are reused: styled once) */
 void classic_row_style(lv_obj_t *r){
@@ -198,7 +212,7 @@ lv_obj_t *classic_row(lv_obj_t *list, const char *label, int arrow){
     invert_on_press(r);
     lv_obj_t *l = lv_label_create(r); lv_label_set_text(l, label);
     lv_obj_set_style_text_font(l, TF(UI_20), 0); lv_obj_set_style_text_color(l, TC(TEXT_PRIMARY), 0);
-    lv_obj_set_width(l, CL_COL_W - 44); lv_label_set_long_mode(l, LV_LABEL_LONG_DOT);
+    lv_obj_set_size(l, CL_COL_W - 44, lv_font_get_line_height(TF(UI_20))); lv_label_set_long_mode(l, LV_LABEL_LONG_DOT);   /* one line */
     lv_obj_align(l, LV_ALIGN_LEFT_MID, 10, 0);
     if(arrow){
         lv_obj_t *c = lv_label_create(r); lv_label_set_text(c, LV_SYMBOL_RIGHT);
@@ -241,9 +255,42 @@ void chome_set_now_playing(const char *title, const char *artist, int playing){
     (void)title; (void)artist; state_paint(playing);
 }
 
+/* ---- Bluetooth / Wi-Fi: the theme's header, a power row (scan, switch), the status line and a menu list ---- */
+void classic_radio_skin(lv_obj_t *root, const char *title, lv_obj_t *ring, lv_obj_t *glyph, lv_obj_t *name, lv_obj_t *sub,
+                        lv_obj_t *sw, lv_obj_t *scan, lv_obj_t *list){
+    lv_obj_set_style_bg_color(root, TC(CANVAS), 0); lv_obj_set_style_bg_opa(root, LV_OPA_COVER, 0);
+    lv_obj_add_flag(ring, LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(glyph, LV_OBJ_FLAG_HIDDEN);
+    classic_header(root, title, NULL);
+    lv_obj_t *pl = lv_label_create(root); kit_keep(pl); lv_label_set_text(pl, "Power");
+    lv_obj_set_style_text_font(pl, TF(UI_20), 0); lv_obj_set_style_text_color(pl, TC(TEXT_PRIMARY), 0);
+    lv_obj_set_pos(pl, 60, 84);
+    lv_obj_set_align(scan, LV_ALIGN_DEFAULT); lv_obj_set_size(scan, 70, 28); lv_obj_set_pos(scan, 166, 82); lv_obj_set_ext_click_area(scan, 8);
+    lv_obj_set_style_radius(scan, 14, 0); lv_obj_set_style_bg_opa(scan, LV_OPA_TRANSP, 0);
+    lv_obj_set_style_border_width(scan, 2, 0); lv_obj_set_style_border_color(scan, TC(TEXT_PRIMARY), 0);
+    lv_obj_t *cap = lv_obj_get_child(scan, 0);
+    if(cap){ lv_label_set_text(cap, "Scan"); lv_obj_set_style_text_font(cap, TF(UI_16), 0);
+             lv_obj_set_style_text_color(cap, TC(TEXT_PRIMARY), 0); lv_obj_center(cap); kit_keep(cap); }
+    invert_on_press(scan); kit_keep(scan);
+    lv_obj_set_align(sw, LV_ALIGN_DEFAULT); lv_obj_set_size(sw, 48, 26); lv_obj_set_pos(sw, 252, 83); lv_obj_set_ext_click_area(sw, 12);
+    lv_obj_set_style_bg_color(sw, TC(CANVAS), LV_PART_MAIN); lv_obj_set_style_bg_opa(sw, LV_OPA_COVER, LV_PART_MAIN);
+    lv_obj_set_style_border_width(sw, 2, LV_PART_MAIN); lv_obj_set_style_border_color(sw, TC(TEXT_PRIMARY), LV_PART_MAIN);
+    lv_obj_set_style_bg_color(sw, TC(TEXT_PRIMARY), (lv_style_selector_t)LV_PART_INDICATOR | LV_STATE_CHECKED);
+    lv_obj_set_style_bg_color(sw, TC(TEXT_PRIMARY), LV_PART_KNOB);
+    lv_obj_set_style_bg_color(sw, TC(CANVAS), (lv_style_selector_t)LV_PART_KNOB | LV_STATE_CHECKED);
+    kit_keep(sw);
+    lv_obj_set_style_text_font(name, TF(UI_16), 0); lv_obj_set_style_text_color(name, TC(TEXT_PRIMARY), 0);
+    lv_obj_set_width(name, 250); lv_obj_align(name, LV_ALIGN_TOP_MID, 0, 120);
+    lv_obj_set_style_text_font(sub, TF(UI_14), 0); lv_obj_set_style_text_color(sub, TC(TEXT_SECONDARY), 0);
+    lv_obj_set_width(sub, 250); lv_obj_align(sub, LV_ALIGN_TOP_MID, 0, 140);
+    rule(root, 160);
+    lv_obj_set_align(list, LV_ALIGN_DEFAULT); lv_obj_set_pos(list, CL_COL_X, 166); lv_obj_set_size(list, CL_COL_W, 186);
+    lv_obj_set_style_pad_row(list, 0, 0); lv_obj_set_style_pad_bottom(list, 30, 0);
+}
+
 /* ---- Now Playing chrome: title bar, "n of N", lyrics, decorative bars ---- */
 #define CL_BARS 16
-static lv_obj_t *g_np_state, *g_np_num, *g_bar[CL_BARS];
+static lv_obj_t *g_np_state, *g_np_num, *g_np_fmt, *g_bar[CL_BARS];
+static int bars_on(void){ return cfg_get_int("classic_bars", 1) != 0; }
 static lv_timer_t *g_bars_t;
 static uint32_t g_seed = 0x2545F491u;
 static int g_level[CL_BARS];
@@ -254,7 +301,7 @@ static void bars_tick(lv_timer_t *t){
     if(screen_current() != SCR_NOWPLAYING) return;
     int playing = ui_is_playing();
     if(g_np_state) lv_label_set_text(g_np_state, playing ? LV_SYMBOL_PLAY : LV_SYMBOL_PAUSE);
-    if(!playing) return;
+    if(!playing || !bars_on()) return;
     for(int i = 0; i < CL_BARS; i++){
         int peak = 38 - i * 26 / CL_BARS;                    /* low bands run taller, as on a real analyser */
         int target = 4 + (int)(rnd() % (unsigned)peak);
@@ -275,12 +322,12 @@ void classic_np_chrome(lv_obj_t *scr){
     lv_obj_set_style_text_font(g_np_num, TF(UI_14), 0); lv_obj_set_style_text_color(g_np_num, TC(TEXT_PRIMARY), 0);
     lv_obj_set_pos(g_np_num, 62, 80);
     lv_obj_t *ly = lv_button_create(scr); lv_obj_remove_style_all(ly); kit_keep(ly);
-    lv_obj_set_pos(ly, 262, 74); lv_obj_set_size(ly, 40, 28); lv_obj_set_ext_click_area(ly, 8);
-    lv_obj_set_style_radius(ly, 4, 0);
+    lv_obj_set_pos(ly, 230, 74); lv_obj_set_size(ly, 74, 26); lv_obj_set_ext_click_area(ly, 8);
+    lv_obj_set_style_radius(ly, 13, 0);
     lv_obj_set_style_bg_color(ly, TC(TEXT_PRIMARY), LV_STATE_PRESSED); lv_obj_set_style_bg_opa(ly, LV_OPA_COVER, LV_STATE_PRESSED);
     ui_on(ly, lyrics_cb, LV_EVENT_CLICKED, NULL, "np.classic.lyrics", UI_REACHABLE);
     lv_obj_t *lt = lv_label_create(ly); lv_label_set_text(lt, "Lyrics");
-    lv_obj_set_style_text_font(lt, TF(UI_12), 0); lv_obj_set_style_text_color(lt, TC(TEXT_MUTED), 0);
+    lv_obj_set_style_text_font(lt, TF(UI_16), 0); lv_obj_set_style_text_color(lt, TC(TEXT_PRIMARY), 0);
     lv_obj_set_style_text_color(lt, TC(CANVAS), LV_STATE_PRESSED); lv_obj_add_flag(lt, LV_OBJ_FLAG_EVENT_BUBBLE); lv_obj_center(lt);
     int x0 = 66, w = (294 - x0) / CL_BARS;
     for(int i = 0; i < CL_BARS; i++){
@@ -289,7 +336,23 @@ void classic_np_chrome(lv_obj_t *scr){
         lv_obj_set_pos(g_bar[i], x0 + i * w + 1, 222 - g_level[i]); lv_obj_set_size(g_bar[i], w - 3, g_level[i]);
         lv_obj_set_style_bg_opa(g_bar[i], LV_OPA_COVER, 0); lv_obj_set_style_bg_color(g_bar[i], TC(TEXT_PRIMARY), 0);
     }
+    g_np_fmt = lv_label_create(scr); kit_keep(g_np_fmt); lv_label_set_text(g_np_fmt, "");
+    lv_obj_set_style_text_font(g_np_fmt, TF(UI_16), 0); lv_obj_set_style_text_color(g_np_fmt, TC(TEXT_PRIMARY), 0);
+    lv_obj_set_style_text_align(g_np_fmt, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_set_width(g_np_fmt, 228); lv_label_set_long_mode(g_np_fmt, LV_LABEL_LONG_SCROLL_CIRCULAR);
+    lv_obj_set_pos(g_np_fmt, 66, 194);
+    classic_np_bars_apply();
     if(!g_bars_t) g_bars_t = lv_timer_create(bars_tick, 120, NULL);
+}
+/* Spectrum bars toggle: the bars, or the track's format in their place */
+void classic_np_bars_apply(void){
+    if(!g_np_fmt) return;
+    int on = bars_on();
+    for(int i = 0; i < CL_BARS; i++) if(g_bar[i]){ if(on) lv_obj_remove_flag(g_bar[i], LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(g_bar[i], LV_OBJ_FLAG_HIDDEN); }
+    if(on) lv_obj_add_flag(g_np_fmt, LV_OBJ_FLAG_HIDDEN); else lv_obj_remove_flag(g_np_fmt, LV_OBJ_FLAG_HIDDEN);
+}
+void classic_np_format(const char *fmt){
+    if(g_np_fmt && fmt && strcmp(lv_label_get_text(g_np_fmt), fmt)) lv_label_set_text(g_np_fmt, fmt);
 }
 /* "3/19" from the player -> "3 of 19" */
 void classic_np_num(const char *num){
@@ -306,7 +369,7 @@ static lv_obj_t *sv_label(lv_obj_t *root, const lv_font_t *f, lv_color_t c, int 
     lv_obj_t *l = lv_label_create(root); kit_keep(l); lv_label_set_text(l, "");
     lv_obj_set_style_text_font(l, f, 0); lv_obj_set_style_text_color(l, c, 0);
     lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_width(l, w); lv_label_set_long_mode(l, LV_LABEL_LONG_DOT);
+    lv_obj_set_size(l, w, lv_font_get_line_height(f)); lv_label_set_long_mode(l, LV_LABEL_LONG_DOT);
     lv_obj_align(l, LV_ALIGN_TOP_MID, 0, y);
     return l;
 }

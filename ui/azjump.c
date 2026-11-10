@@ -285,7 +285,7 @@ void azjump_position(azjump_t*a,char letter,int x,int y){
         (void)x;(void)y;return;
     }
     lv_obj_set_size(a->btn,28,28);lv_obj_set_pos(a->btn,x-14,y-14);
-    lv_obj_set_style_radius(a->btn,th_null()?0:LV_RADIUS_CIRCLE,0);
+    lv_obj_set_style_radius(a->btn,th_null()?0:th_classic()?4:LV_RADIUS_CIRCLE,0);
     lv_obj_set_style_bg_color(a->btn,TC(ACCENT_PRIMARY),0);lv_obj_set_style_bg_opa(a->btn,LV_OPA_COVER,0);kit_keep(a->btn);
     lv_obj_t*l=lv_obj_get_child(a->btn,0);char text[2]={wheel_glyph(wheel_letters[a->current]),0};lv_label_set_text(l,text);
     lv_obj_set_style_text_font(l,TF(UI_18),0);lv_obj_set_style_text_color(l,TC(ON_ACCENT),0);lv_obj_center(l);kit_keep(l);

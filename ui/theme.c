@@ -448,6 +448,7 @@ const lv_font_t *theme_font_substitute(const lv_font_t *f){
         { &lv_font_montserrat_40, THEME_FONT_UI_24 } };
     if(!g_def || !f) return NULL;
     if(th_null()||th_classic()){const int px[]={14,16,18,20};for(int k=0;k<4;k++)if(f==ui_font_cjk(px[k]))return theme_font((theme_font_role_t)(THEME_FONT_USER_14+k));}
+    if(th_classic()){if(f==ui_font_cjk(22))return theme_font(THEME_FONT_UI_22);if(f==ui_font_cjk(24))return theme_font(THEME_FONT_UI_24);if(f==ui_font_cjk(28))return theme_font(THEME_FONT_UI_28);}
     for(unsigned i = 0; i < sizeof T / sizeof T[0]; i++)
         if(T[i].m == f && g_tfp[T[i].r]) return g_tfp[T[i].r];
     return NULL;
@@ -671,7 +672,8 @@ static void classic_palettes_init(void){
   p[THEME_CLR_SWITCH_ON]=ink;p[THEME_CLR_SWITCH_OFF]=t35;p[THEME_CLR_SWITCH_KNOB]=bg;
   p[THEME_CLR_ACTION_SURFACE]=ink;p[THEME_CLR_ON_ACTION]=bg;p[THEME_CLR_SIGNAL_ACTIVE]=ink;p[THEME_CLR_SIGNAL_INACTIVE]=mid;
   p[THEME_CLR_GRABBER]=mid;p[THEME_CLR_DOT_GRID]=t12;p[THEME_CLR_STATUS_SUCCESS]=p[THEME_CLR_STATUS_INFO]=ink;
-  p[THEME_CLR_STATUS_WARNING]=ink;
+  p[THEME_CLR_STATUS_WARNING]=p[THEME_CLR_STATUS_DANGER]=p[THEME_CLR_STATUS_DANGER_STRONG]=ink;
+  p[THEME_CLR_DANGER_SURFACE]=p[THEME_CLR_DANGER_BUTTON_SURFACE]=p[THEME_CLR_DANGER_PANEL_SURFACE]=p[THEME_CLR_DANGER_DIALOG]=t12;p[THEME_CLR_DANGER_SURFACE_PRESSED]=t25;
   p[THEME_CLR_EQ_ZERO]=p[THEME_CLR_EQ_READONLY]=mid;p[THEME_CLR_EQ_SLOT]=t12;p[THEME_CLR_EQ_FADER]=ink;p[THEME_CLR_EQ_CHIP]=bg;
   p[THEME_CLR_EQ_FADER_DISABLED]=p[THEME_CLR_EQ_CAP_DISABLED]=t35;
   p[THEME_CLR_WEATHER_SUN]=p[THEME_CLR_WEATHER_MOON]=p[THEME_CLR_WEATHER_RAIN]=ink;p[THEME_CLR_WEATHER_BORDER]=t35;

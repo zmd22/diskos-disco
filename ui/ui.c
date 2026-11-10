@@ -1716,6 +1716,11 @@ static void np_mid_cb(lv_event_t *e){
         if(code==LV_EVENT_PRESSING&&in&&(abs(p.x-g_zmid_press.x)>16||abs(p.y-g_zmid_press.y)>16))g_zmid_moved=1;
         if(code!=LV_EVENT_CLICKED)return;
         if(in&&(g_zmid_rim||g_zmid_moved||abs(p.x-g_zmid_press.x)>16||abs(p.y-g_zmid_press.y)>16))return;
+    }else if(th_classic()){                                 /* hold: Immersive; tap: the actions menu */
+        static int held;
+        if(code==LV_EVENT_PRESSED){held=0;return;}
+        if(code==LV_EVENT_LONG_PRESSED){held=1;disco_open_np_immersive();return;}
+        if(code!=LV_EVENT_CLICKED||held)return;
     }else if(th_braun2()){                                  /* hold: Title hold (Immersive by default), as the other themes */
         static int held;
         if(code==LV_EVENT_PRESSED){held=0;return;}
@@ -1797,8 +1802,8 @@ int ui_accent_is_static(void);   /* fork: a colour picked in Accent wins over th
 static _Atomic int g_zart;       /* Zune: now playing takes its accent from the album art (cfg zune_accent_art) */
 void ui_zune_art_sync(void){ g_zart = cfg_get_int("zune_accent_art", 0) ? 1 : 0; }
 static lv_color_t np_col(void){ if(th_zune()) return (g_zart && np_acc_set) ? np_acc : TC(ACCENT_PRIMARY);
-                                if(th_braun_family()) return TC(ACCENT_PRIMARY); return ((g_np_poster || g_np_ring) && np_acc_set && !ui_accent_is_static()) ? np_acc : accent; }
-lv_color_t ui_media_accent(void){ if(th_zune()) return (g_zart && np_acc_set) ? np_acc : TC(ACCENT_PRIMARY); if(th_simple())return TC(ACCENT_PRIMARY); if(th_braun_family()) return TC(ACCENT_PRIMARY); return (np_acc_set && !ui_accent_is_static()) ? np_acc : accent; }   /* theme.h: media surfaces (Braun: orange) */
+                                if(th_braun_family() || th_classic()) return TC(ACCENT_PRIMARY); return ((g_np_poster || g_np_ring) && np_acc_set && !ui_accent_is_static()) ? np_acc : accent; }
+lv_color_t ui_media_accent(void){ if(th_zune()) return (g_zart && np_acc_set) ? np_acc : TC(ACCENT_PRIMARY); if(th_simple() || th_classic())return TC(ACCENT_PRIMARY); if(th_braun_family()) return TC(ACCENT_PRIMARY); return (np_acc_set && !ui_accent_is_static()) ? np_acc : accent; }   /* theme.h: media surfaces (Braun: orange) */
 static void apply_accent(void)
 {
     {   /* Squash following the Accent Colour: its orange roles too, and the parts already built */
@@ -1863,7 +1868,7 @@ lv_color_t ui_disco_fit_accent(lv_color_t c){
     }
     return c;
 }
-lv_color_t ui_current_accent(void){ if(th_simple() || th_null() || th_zune())return TC(ACCENT_PRIMARY); return th_braun_family() ? TC(ACCENT_PRIMARY) : ui_disco_fit_accent(accent); }   /* Braun: orange everywhere */
+lv_color_t ui_current_accent(void){ if(th_simple() || th_null() || th_zune() || th_classic())return TC(ACCENT_PRIMARY); return th_braun_family() ? TC(ACCENT_PRIMARY) : ui_disco_fit_accent(accent); }   /* Braun: orange everywhere */
 
 /* ---- shared standard header (back chevron + centred title) ------------------------------------- */
 static void ui_header_home_cb(lv_event_t *e){ if(lv_event_get_code(e)==LV_EVENT_CLICKED && screen_press_was_long()) screen_home(); }
@@ -4151,6 +4156,8 @@ const lv_font_t *ui_font_user(int size){
     int fs = theme_font_size();
     if(fs == 0 && size > 14) size -= 2;
     else if(fs == 2 && size < 20) size += 2;
+    if(th_classic())   /* rb_classic: every list size in ChicagoFLF (Large reaches 22) */
+        return size >= 24 ? TF(UI_24) : size >= 22 ? TF(UI_22) : theme_font((theme_font_role_t)(THEME_FONT_USER_14+(size>=20?3:size>=18?2:size>=16?1:0)));
     return ui_font_cjk(size);
 }
 void ui_create(lv_obj_t *root)
@@ -4717,7 +4724,7 @@ void ui_update(const track_state_t *st)
         char ab[240];
         if(!book_meta_line(st, ab, sizeof ab)){        /* not a book -> album + position */
             const char *alb = st->album;
-            if(th_classic()) classic_np_num(st->playing_num);
+            if(th_classic()){ char ft[96]; classic_np_num(st->playing_num); imm_tech_text(st, ft, sizeof ft); classic_np_format(ft); }
             if(alb[0] && st->playing_num[0] && !th_braun2() && !th_classic())   /* Braun 2.0, Classic: the album alone */
                 snprintf(ab, sizeof ab, "%s  \xC2\xB7  %s", alb, st->playing_num);          /* Album · 3/19 */
             else if(alb[0])
