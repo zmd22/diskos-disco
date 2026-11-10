@@ -7,6 +7,7 @@
 #include "musicdb.h"
 #include "config.h"
 #include "lrc.h"
+#include "lyrics_fx.h"
 #include "braun.h"
 #include "zune_dial.h"
 #include "theme_kit.h"
@@ -28,9 +29,28 @@ LV_FONT_DECLARE(font_zune_light_18)
 static lv_obj_t *g_scroll;
 static lv_obj_t *g_text;           /* plain lyrics / status messages */
 static lv_obj_t *g_lines_box;      /* timed lyrics: one label per line (hidden otherwise) */
+static lv_obj_t *g_zcur, *g_znext, *g_zbig, *g_zhint, *g_ztop;
 
 #define LY_MAXL 400
 static lrc_line_t g_ll[LY_MAXL];   /* the timed lines on screen (main thread only) */
+#define LY_MAX_WORDS 2048
+static lrc_word_t g_words[LY_MAX_WORDS];
+static lrc_word_t g_estimated_words[LYR_WORDS_MAX]; /* current line only; parsed timings stay unchanged */
+static int g_word_count;
+static lyrics_fx_t g_word_fx;
+static lv_timer_t *g_motion_timer;
+static int g_auto_scroll;
+static int g_reading_touch;
+static int g_pressed_line = -1;
+static unsigned g_pressed_request;
+static unsigned g_pressed_path_seq;
+static char g_pressed_path[256], g_pressed_title[200];
+static lv_point_t g_pressed_point;
+static int g_press_moved;
+static uint32_t g_seek_until;
+static long g_seek_target;
+static unsigned g_seek_sequence;
+static long g_follow_position = -1;
 static char g_ltext[16384];        /* their text */
 static char g_lplain[16384];       /* untimed rendering of a .lrc */
 static int g_nll = 0;              /* timed lines shown; 0 = block-text mode */
@@ -38,9 +58,13 @@ static int g_lcur = -2;            /* highlighted line (-1 = before the first, -
 static int g_holding = 0;          /* the user scrolled: no auto-scroll until g_hold_until */
 static uint32_t g_hold_until = 0;
 static int32_t g_scroll_target = -1; /* the scroll position last asked for (-1 = none) */
-static unsigned g_last_pos_seq = 0;
-static long g_pos_base = 0;        /* last reported position (a1 frames arrive about once a second) */
-static uint32_t g_pos_tick = 0;    /* ...and when it arrived, to interpolate between frames */
+static long g_pos_base = 0;        /* displayed anchor; repeated quantized a1 frames do not reset it */
+static uint32_t g_pos_tick = 0;
+static long g_reported_position;
+static int g_clock_valid, g_clock_playing;
+static int g_progressive = -1;
+static int g_estimate_words = -1;
+static long g_estimate_duration;
 
 /* worker->main handoff guarded by a mutex (volatile gives no cross-thread memory
  * ordering - on the dual-core X2000 the main thread could see g_lready set before the
@@ -57,6 +81,7 @@ static char g_q_title[512], g_q_artist[512];  /* url-encoded query (main thread 
                                                * expansion for %-encoded non-ASCII/CJK titles + margin */
 static char g_identity_title[200], g_identity_artist[200];
 static int g_identity_online=-1;
+static unsigned g_identity_path_seq;
 static unsigned g_irev, g_cached_req;
 static int g_cached_n;
 static lyr_line_t g_cached_lines[240];
@@ -70,6 +95,61 @@ typedef struct { unsigned req; int online; char title[512], artist[512], path[25
 
 
 static int timed_parse(const char *raw,lyr_line_t *out,int cap);
+static void lyrics_follow(void);
+static void lyric_tap(lv_event_t *e);
+
+static void lyric_scroll_exec(void *object, int32_t y)
+{
+    g_auto_scroll = 1;
+    lv_obj_scroll_to_y(object, y, LV_ANIM_OFF);
+    g_auto_scroll = 0;
+}
+
+static void lyric_fade_exec(void *object, int32_t opacity)
+{
+    lv_obj_set_style_text_opa(object, (lv_opa_t)opacity, 0);
+}
+
+static void lyric_emphasis(lv_obj_t *label, int current, int animate)
+{
+    lv_anim_delete(label, lyric_fade_exec);
+    lv_obj_set_style_text_color(label, current ? TC(TEXT_LYRICS) : TC(TEXT_MUTED), 0);
+    int target = current ? LV_OPA_COVER : 170;
+    if(!animate || !screen_get_anim()) { lyric_fade_exec(label, target); return; }
+    lv_anim_t a; lv_anim_init(&a);
+    lv_anim_set_var(&a, label); lv_anim_set_exec_cb(&a, lyric_fade_exec);
+    lv_anim_set_values(&a, lv_obj_get_style_text_opa(label, 0), target);
+    lv_anim_set_duration(&a, 360); lv_anim_set_path_cb(&a, lv_anim_path_ease_out);
+    lv_anim_start(&a);
+}
+
+static void lyric_motion_tick(lv_timer_t *timer)
+{
+    int ui_main_is_idle(void);
+    int on = screen_current() == SCR_LYRICS && g_nll && g_scroll && !ui_main_is_idle();
+    if(on){ lv_timer_set_period(timer, 40); lyrics_follow(); }
+    else {
+        lv_timer_pause(timer);
+        if(g_scroll) lv_anim_delete(g_scroll, lyric_scroll_exec);
+        g_scroll_target = -1;
+        if(g_lines_box) for(uint32_t i = 0; i < lv_obj_get_child_count(g_lines_box); i++){
+            lv_obj_t *label = lv_obj_get_child(g_lines_box, i);
+            lv_anim_delete(label, lyric_fade_exec);
+            lyric_fade_exec(label, (int)i == g_lcur ? LV_OPA_COVER : 170);
+        }
+    }
+}
+
+static void lyric_root_deleted(lv_event_t *e)
+{
+    (void)e;
+    lyrics_fx_unbind(&g_word_fx);
+    if(g_motion_timer) lv_timer_pause(g_motion_timer);
+    if(g_scroll) lv_anim_delete(g_scroll, lyric_scroll_exec);
+    g_scroll = g_text = g_lines_box = NULL;
+    g_zcur = g_znext = g_zbig = g_zhint = g_ztop = NULL;
+    g_nll = 0;
+}
 
 static void urlenc(const char *s, char *out, int cap)
 {
@@ -292,7 +372,6 @@ static void start_fetch(void)
 
 /* ---- Zune (Figma 12 + 67): the line being sung, huge and centred, the next one small under it; untimed lyrics as an
  * even list under "LYRICS · NOT SYNCED"; no lyrics as one quiet line and a hint. The rim keeps the track progress. ---- */
-static lv_obj_t *g_zcur, *g_znext, *g_zbig, *g_zhint, *g_ztop;
 static int g_zcur_i = -3;
 static void z_show(lv_obj_t *o, int on){ if(o){ if(on) lv_obj_remove_flag(o, LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(o, LV_OBJ_FLAG_HIDDEN); } }
 static void z_top(const char *t, int caps){
@@ -321,28 +400,15 @@ static void z_plain(const char *txt){                             /* untimed: th
     if(g_scroll) lv_obj_scroll_to_y(g_scroll, 0, LV_ANIM_OFF);
     z_top("LYRICS \xC2\xB7 NOT SYNCED", 1);
 }
-static void z_timed_paint(int idx){                               /* the current line and the next */
-    if(!g_zcur || idx == g_zcur_i) return;
-    g_zcur_i = idx;
-    const char *cur = (idx >= 0 && idx < g_nll) ? g_ltext + g_ll[idx].text : "";
-    const char *nxt = (idx + 1 >= 0 && idx + 1 < g_nll) ? g_ltext + g_ll[idx + 1].text : "";
-    if(idx < 0) cur = "\xE2\x80\xA6";                          /* before the first line: a quiet ellipsis */
-    if(!cur[0]) cur = "\xE2\x80\xA6";                          /* an instrumental gap */
-    const lv_font_t *big = zune_font(&font_zune_light_40);
-    lv_point_t sz; lv_text_get_size(&sz, cur, big, -1, 0, 270, LV_TEXT_FLAG_NONE);
-    if(sz.y > 2 * lv_font_get_line_height(big)) big = zune_font(&font_zune_light_32);   /* a long line: one size down */
-    lv_obj_set_style_text_font(g_zcur, big, 0);
-    lv_label_set_text(g_zcur, cur);
-    lv_label_set_text(g_znext, nxt);
-    lv_obj_update_layout(g_zcur);
-    lv_obj_align(g_zcur, LV_ALIGN_CENTER, 0, -14);
-    lv_obj_align_to(g_znext, g_zcur, LV_ALIGN_OUT_BOTTOM_MID, 0, 16);
-}
-
 /* block-text mode: one label (status messages, untimed lyrics) */
 static int g_zplain_next;                                          /* Zune: the next show_text is lyrics, not a message */
 static void show_text(const char *txt)
 {
+    lyrics_fx_unbind(&g_word_fx);
+    if(g_scroll) lv_anim_delete(g_scroll, lyric_scroll_exec);
+    g_word_count = 0; g_seek_until = 0; g_pressed_line = -1; g_follow_position = -1;
+    g_reading_touch = 0; g_clock_valid = 0;
+    if(!g_scroll){ g_nll = 0; g_lcur = -2; return; }
     if(th_zune()){ int plain = g_zplain_next; g_zplain_next = 0; g_nll = 0; g_lcur = -2; g_zcur_i = -3;
                    if(plain) z_plain(txt); else z_message_for(txt); return; }
     g_nll = 0; g_lcur = -2;
@@ -354,18 +420,21 @@ static void show_text(const char *txt)
 /* timed mode: one label per line in g_ll; returns 0 (and leaves the view alone) if the text isn't timed */
 static int show_timed(const char *lrc)
 {
+    lyrics_fx_unbind(&g_word_fx);
+    if(g_scroll) lv_anim_delete(g_scroll, lyric_scroll_exec);
     int synced = 0;
-    int n = lrc_parse(lrc, g_ll, LY_MAXL, g_ltext, sizeof g_ltext, g_lplain, sizeof g_lplain, &synced);
+    int n = lrc_parse_words(lrc, g_ll, LY_MAXL, g_ltext, sizeof g_ltext,
+                           g_lplain, sizeof g_lplain, &synced, g_words, LY_MAX_WORDS, &g_word_count);
     if(!synced || !g_lines_box){
         g_zplain_next = g_lplain[0] != 0;
         show_text(g_lplain[0] ? g_lplain : "No lyrics found.");
         return 0;
     }
-    if(th_zune()){                                     /* Zune: two labels follow the position instead of a list */
-        g_nll = n; g_lcur = -2; g_zcur_i = -3; g_holding = 0;
-        z_show(g_scroll, 0); z_show(g_zbig, 0); z_show(g_zhint, 0); z_show(g_zcur, 1); z_show(g_znext, 1);
-        z_top("", 0); z_timed_paint(-1);
-        return 1;
+    if(th_zune()){
+        /* The same continuous lyric list, in Zune's large typography. Keeping
+         * rows alive makes both forward and backward line taps predictable. */
+        z_show(g_scroll, 1); z_show(g_zbig, 0); z_show(g_zhint, 0);
+        z_show(g_zcur, 0); z_show(g_znext, 0); z_top("", 0);
     }
     lv_obj_clean(g_lines_box);
     for(int i = 0; i < n; i++){
@@ -373,60 +442,204 @@ static int show_timed(const char *lrc)
         lv_obj_set_width(l, 280);
         lv_label_set_long_mode(l, LV_LABEL_LONG_WRAP);
         lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, 0);
-        lv_obj_set_style_text_font(l, th_braun_family() ? br_font(20,0) : ui_font_cjk(20), 0);
+        lv_obj_set_style_text_font(l, th_zune() ? zune_font(&font_zune_light_32) :
+                                  th_braun_family() ? br_font(20,0) : ui_font_cjk(20), 0);
+        lv_obj_set_style_text_line_space(l, 6, 0);
         lv_obj_set_style_text_color(l, TC(TEXT_MUTED), 0);
+        lv_obj_set_style_text_opa(l, 170, 0);
         lv_label_set_text(l, g_ltext[g_ll[i].text] ? g_ltext + g_ll[i].text : " ");   /* an empty timed line is a pause */
+        if(g_ltext[g_ll[i].text]){
+            lv_obj_add_flag(l, LV_OBJ_FLAG_CLICKABLE);
+            lv_obj_add_event_cb(l, lyric_tap, LV_EVENT_ALL, (void *)(intptr_t)i);
+            lv_obj_set_ext_click_area(l, 4);
+        }
     }
-    g_nll = n; g_lcur = -2; g_holding = 0; g_scroll_target = -1;
+    g_nll = n; g_lcur = -2; g_holding = 0; g_scroll_target = -1; g_follow_position = -1;
+    g_pressed_line = -1;
     if(g_text) lv_obj_add_flag(g_text, LV_OBJ_FLAG_HIDDEN);
     lv_obj_remove_flag(g_lines_box, LV_OBJ_FLAG_HIDDEN);
     lv_obj_update_layout(g_scroll);
-    lv_obj_scroll_to_y(g_scroll, 0, LV_ANIM_OFF);
+    lyric_scroll_exec(g_scroll, 0);
+    if(g_motion_timer){ lv_timer_resume(g_motion_timer); lv_timer_set_period(g_motion_timer, 40); }
     return 1;
 }
 
-/* the playback position now: the last reported one, plus the time since it arrived while playing (capped) */
+/* Interpolate changed position reports, preserving forward motion across
+ * quantized repeats. Explicit seeks and decreasing reports still rebase. */
 static long lyrics_position(void)
 {
     track_state_t st; ipc_get_state(&st);
     uint32_t now = lv_tick_get();
-    if(st.pos_seq != g_last_pos_seq || st.position_ms != g_pos_base){   /* a new report (or a seeded/first one) */
-        g_last_pos_seq = st.pos_seq; g_pos_base = st.position_ms; g_pos_tick = now;
+    int playing = ui_is_playing();
+    int ignore_report = 0;
+    if(g_seek_until){
+        if((int32_t)(now - g_seek_until) >= 0 ||
+           (st.pos_seq != g_seek_sequence && labs(st.position_ms - g_seek_target) < 750)) {
+            g_seek_until = 0;
+            g_clock_valid = 0;
+        } else ignore_report = 1;
     }
+    /* A track-change message can precede its first position report. */
+    if(st.path_seq && st.pos_seq <= st.path_seq) st.position_ms = 0;
     long est = g_pos_base;
-    if(ui_is_playing()){ uint32_t d = now - g_pos_tick; est += d > 1500 ? 1500 : (long)d; }
+    if(g_clock_valid && g_clock_playing){
+        uint32_t d = now - g_pos_tick; est += d > 1500 ? 1500 : (long)d;
+    }
+    if(g_clock_valid && !ignore_report && est > g_reported_position && est - g_reported_position > 1500)
+        est = g_reported_position + 1500;
+    if(!g_clock_valid || (!ignore_report && st.position_ms != g_reported_position)){
+        long reported = st.position_ms;
+        /* A forward quantized report can trail our interpolation. Do not
+         * revisit the preceding lyric for that ordinary clock correction. */
+        if(g_clock_valid && playing && g_clock_playing && reported >= g_reported_position &&
+           reported < est && est - reported <= 1600) reported = est;
+        g_reported_position = st.position_ms;
+        g_pos_base = est = reported; g_pos_tick = now; g_clock_valid = 1;
+    } else if(playing != g_clock_playing){
+        /* Freeze the displayed position on pause, and resume from it. */
+        g_pos_base = est; g_pos_tick = now;
+    }
+    g_clock_playing = playing;
+    if(st.duration_ms > 0 && est > st.duration_ms) est = st.duration_ms;
     return est;
 }
 
 /* highlight the line at the playback position and keep it in the middle */
 static void lyrics_follow(void)
 {
-    if(th_zune()){ if(g_nll) z_timed_paint(lrc_index_at(g_ll, g_nll, lyrics_position())); return; }
     if(!g_nll || !g_lines_box) return;
-    int idx = lrc_index_at(g_ll, g_nll, lyrics_position());
-    if(idx != g_lcur){
-        if(g_lcur >= 0 && g_lcur < g_nll) lv_obj_set_style_text_color(lv_obj_get_child(g_lines_box, g_lcur), TC(TEXT_MUTED), 0);
-        g_lcur = idx;
-        if(idx >= 0) lv_obj_set_style_text_color(lv_obj_get_child(g_lines_box, idx), TC(TEXT_LYRICS), 0);
+    int progressive = cfg_get_int("lyrics_progressive", 1) != 0;
+    int estimate = cfg_get_int("lyrics_estimate_words", 1) != 0;
+    track_state_t st; ipc_get_state(&st);
+    long duration = st.have_track && st.path_seq == g_identity_path_seq &&
+        !strcmp(st.path, g_path) && !strcmp(st.title, g_identity_title) ? st.duration_ms : 0;
+    if(duration < 0) duration = 0;
+    int end_changed = progressive && estimate && g_lcur >= 0 && g_lcur == g_nll - 1 &&
+        !g_ll[g_lcur].word_count && !g_ll[g_lcur].has_word_timing && duration != g_estimate_duration;
+    if(progressive != g_progressive || estimate != g_estimate_words || end_changed){
+        lyrics_fx_unbind(&g_word_fx);
+        if(g_lcur >= 0 && g_lcur < g_nll)
+            lyric_emphasis(lv_obj_get_child(g_lines_box, g_lcur), 0, 0);
+        lv_anim_delete(g_scroll, lyric_scroll_exec);
+        g_lcur = -2; g_scroll_target = -1; g_follow_position = -1;
+        g_progressive = progressive;
+        g_estimate_words = estimate;
     }
+    g_estimate_duration = duration;
+    long position = lyrics_position();
+    int idx = lrc_index_at(g_ll, g_nll, position);
+    int discontinuity = g_follow_position >= 0 && (position < g_follow_position - 200 || position - g_follow_position > 1800);
+    int changed = idx != g_lcur;
+    int sequential = progressive && changed && g_lcur >= 0 && idx == g_lcur + 1 && !discontinuity;
+    g_follow_position = position;
+    if(changed){
+        lyrics_fx_unbind(&g_word_fx);
+        if(g_lcur >= 0 && g_lcur < g_nll) lyric_emphasis(lv_obj_get_child(g_lines_box, g_lcur), 0, sequential);
+        g_lcur = idx;
+        if(idx >= 0){
+            lv_obj_t *label = lv_obj_get_child(g_lines_box, idx);
+            lyric_emphasis(label, 1, sequential);
+            lrc_line_t *line = &g_ll[idx];
+            const lrc_word_t *words = NULL;
+            int count = 0;
+            if(line->word_count > 0 && line->word_first >= 0 && line->word_first + line->word_count <= g_word_count){
+                words = g_words + line->word_first; count = line->word_count;
+            } else if(progressive && estimate && !line->word_count && !line->has_word_timing){
+                long end = duration;
+                for(int i = idx + 1; i < g_nll; i++) if(g_ll[i].ms > line->ms){ end = g_ll[i].ms; break; }
+                if(duration > 0 && end > duration) end = duration;
+                count = lrc_estimate_line_words(g_ltext + line->text, (int)sizeof g_ltext - line->text,
+                    line->ms, end, g_estimated_words, LYR_WORDS_MAX);
+                words = g_estimated_words;
+            }
+            if(progressive && count > 0 &&
+               lyrics_fx_bind(&g_word_fx, label, words, count, TC(TEXT_LYRICS))){
+                lv_anim_delete(label, lyric_fade_exec);
+                lv_obj_set_style_text_color(label, TC(TEXT_MUTED), 0);
+                lv_obj_set_style_text_opa(label, LV_OPA_COVER, 0);
+            }
+        }
+    }
+    lyrics_fx_update(&g_word_fx, position);
     if(g_lcur < 0) return;
-    if(g_holding && (int32_t)(lv_tick_get() - g_hold_until) < 0) return;   /* the user is reading elsewhere */
+    if(g_holding && (g_reading_touch || (int32_t)(lv_tick_get() - g_hold_until) < 0)) return;
     if(g_holding){ g_holding = 0; g_scroll_target = -1; }                   /* hold over: come back to the line */
-    /* checked every poll, not only when the line changes: the first layout after a rebuild can still be settling */
+    if(!changed && g_scroll_target >= 0 && !discontinuity) return;
     lv_obj_update_layout(g_scroll);
     lv_obj_t *l = lv_obj_get_child(g_lines_box, g_lcur);
     lv_area_t la, sa;                               /* on-screen: how far the line's middle is from the view's middle */
     lv_obj_get_coords(l, &la); lv_obj_get_coords(g_scroll, &sa);
     int32_t y = lv_obj_get_scroll_y(g_scroll) + (la.y1 + la.y2) / 2 - (sa.y1 + sa.y2) / 2;
     if(y < 0) y = 0;
-    if(y != g_scroll_target){ g_scroll_target = y; lv_obj_scroll_to_y(g_scroll, y, LV_ANIM_ON); }
+    int32_t max_y = lv_obj_get_scroll_y(g_scroll) + lv_obj_get_scroll_bottom(g_scroll);
+    if(y > max_y) y = max_y > 0 ? max_y : 0;
+    if(y != g_scroll_target || discontinuity){
+        g_scroll_target = y;
+        lv_anim_delete(g_scroll, lyric_scroll_exec);
+        if(!screen_get_anim() || discontinuity || !sequential){ lyric_scroll_exec(g_scroll, y); return; }
+        lv_anim_t a; lv_anim_init(&a);
+        lv_anim_set_var(&a, g_scroll); lv_anim_set_exec_cb(&a, lyric_scroll_exec);
+        lv_anim_set_values(&a, lv_obj_get_scroll_y(g_scroll), y);
+        lv_anim_set_duration(&a, 480); lv_anim_set_path_cb(&a, lv_anim_path_ease_in_out);
+        lv_anim_start(&a);
+    }
 }
 
 static void scroll_cb(lv_event_t *e)
 {
     lv_event_code_t c = lv_event_get_code(e);
-    if(c == LV_EVENT_PRESSED || (c == LV_EVENT_SCROLL_BEGIN && lv_indev_active()))
-        { g_holding = 1; g_hold_until = lv_tick_get() + 4000; }
+    if(!g_auto_scroll && (c == LV_EVENT_PRESSED || (c == LV_EVENT_SCROLL_BEGIN && lv_indev_active()))) {
+        g_reading_touch = 1;
+        g_holding = 1; g_hold_until = lv_tick_get() + 4000;
+        lv_anim_delete(g_scroll, lyric_scroll_exec);
+    } else if(c == LV_EVENT_RELEASED || c == LV_EVENT_PRESS_LOST || c == LV_EVENT_SCROLL_END){
+        g_reading_touch = 0; g_hold_until = lv_tick_get() + 4000;
+    }
+}
+
+static void lyric_tap(lv_event_t *e)
+{
+    lv_event_code_t code = lv_event_get_code(e);
+    int index = (int)(intptr_t)lv_event_get_user_data(e);
+    lv_indev_t *input = lv_indev_active();
+    if(code == LV_EVENT_PRESSED){
+        track_state_t st; ipc_get_state(&st);
+        g_pressed_line = index; g_pressed_request = g_req; g_press_moved = 0;
+        g_pressed_path_seq = st.path_seq;
+        g_reading_touch = 1;
+        snprintf(g_pressed_path, sizeof g_pressed_path, "%s", st.path);
+        snprintf(g_pressed_title, sizeof g_pressed_title, "%s", st.title);
+        if(input) lv_indev_get_point(input, &g_pressed_point);
+        g_holding = 1; g_hold_until = lv_tick_get() + 4000;
+        lv_anim_delete(g_scroll, lyric_scroll_exec);
+    } else if(code == LV_EVENT_PRESSING && input){
+        lv_point_t p; lv_indev_get_point(input, &p);
+        if(abs(p.x - g_pressed_point.x) > 8 || abs(p.y - g_pressed_point.y) > 8) g_press_moved = 1;
+    } else if(code == LV_EVENT_PRESS_LOST || code == LV_EVENT_LONG_PRESSED){
+        g_press_moved = 1;
+        if(code == LV_EVENT_PRESS_LOST){ g_reading_touch = 0; g_hold_until = lv_tick_get() + 4000; }
+    } else if(code == LV_EVENT_RELEASED){
+        g_reading_touch = 0; g_hold_until = lv_tick_get() + 4000;
+    } else if(code == LV_EVENT_SHORT_CLICKED){
+        if(screen_current() != SCR_LYRICS || g_press_moved || screen_press_was_long() ||
+           index != g_pressed_line || g_pressed_request != g_req || index < 0 || index >= g_nll) return;
+        g_pressed_line = -1;
+        track_state_t st; ipc_get_state(&st);
+        char path[sizeof g_pressed_path]; snprintf(path, sizeof path, "%s", st.path);
+        if(st.path_seq != g_pressed_path_seq || strcmp(path, g_pressed_path) || strcmp(st.title, g_pressed_title) ||
+           strcmp(path, g_path) || st.duration_ms <= 0) return;
+        long target = g_ll[index].ms;
+        if(target >= st.duration_ms) target = st.duration_ms - 1;
+        if(target < 0) target = 0;
+        if(ui_seek_to(target) < 0){ ui_toast("Couldn't seek - try again"); return; }
+        ui_book_user_seeked(target);
+        g_seek_target = target; g_seek_sequence = st.pos_seq;
+        g_pos_tick = lv_tick_get(); g_seek_until = g_pos_tick + 2500;
+        g_pos_base = target; g_reported_position = st.position_ms;
+        g_clock_valid = 1; g_clock_playing = ui_is_playing();
+        g_holding = 0; g_reading_touch = 0; g_scroll_target = -1;
+        lyrics_follow();
+    }
 }
 
 static void request_current(int force)
@@ -448,12 +661,13 @@ static void request_current(int force)
     }
     int online=cfg_get_int("online_lyrics",1);
     if(!force && !strcmp(path,g_path) && !strcmp(title,g_identity_title) &&
-       !strcmp(artist,g_identity_artist) && online==g_identity_online) return;
+       !strcmp(artist,g_identity_artist) && online==g_identity_online && st.path_seq==g_identity_path_seq) return;
     g_req++; g_irev++; g_cached_n=0; g_cached_req=0;
     snprintf(g_path,sizeof g_path,"%s",path);
     snprintf(g_identity_title,sizeof g_identity_title,"%s",title);
     snprintf(g_identity_artist,sizeof g_identity_artist,"%s",artist);
     g_identity_online=online;
+    g_identity_path_seq=st.path_seq;
     if(screen_current()==SCR_LYRICS) show_text("Checking SD card...");
     urlenc(title,  g_q_title,  sizeof g_q_title);
     urlenc(artist, g_q_artist, sizeof g_q_artist);
@@ -488,8 +702,10 @@ void lyrics_poll(lv_timer_t *t)
         track_state_t st; ipc_get_state(&st);
         request_current(0);
     }
-    int on = screen_current() == SCR_LYRICS;
+    int ui_main_is_idle(void);
+    int on = screen_current() == SCR_LYRICS && !ui_main_is_idle();
     if(t) lv_timer_set_period(t, (on && g_nll) ? 200 : 500);   /* follow timed lines closely only while they show */
+    if(on && g_nll && g_motion_timer){ lv_timer_resume(g_motion_timer); lv_timer_set_period(g_motion_timer, 40); }
     if(on) lyrics_follow();
     int ready = 0, inflight, phase; unsigned done = 0;
     pthread_mutex_lock(&g_ly_mu);
@@ -498,7 +714,7 @@ void lyrics_poll(lv_timer_t *t)
     pthread_mutex_unlock(&g_ly_mu);
     if(!ready){
         /* still fetching: reflect the phase so the wait isn't a silent "Checking SD card..." */
-        if(inflight && th_zune()) z_message_for(phase ? "Searching online..." : "Checking SD card...");
+        if(inflight && th_zune() && g_scroll) z_message_for(phase ? "Searching online..." : "Checking SD card...");
         else if(inflight && g_text) lv_label_set_text(g_text, phase ? "Searching online..." : "Checking SD card...");
         return;
     }
@@ -519,6 +735,9 @@ void lyrics_poll(lv_timer_t *t)
 
 void lyrics_create(lv_obj_t *root)
 {
+    lv_obj_add_event_cb(root, lyric_root_deleted, LV_EVENT_DELETE, NULL);
+    if(!g_motion_timer) g_motion_timer = lv_timer_create(lyric_motion_tick, 500, NULL);
+    else lv_timer_resume(g_motion_timer);
     lv_obj_set_style_bg_color(root, TC(CANVAS), 0);
     lv_obj_set_style_bg_opa(root, LV_OPA_COVER, 0);
 
@@ -551,15 +770,19 @@ void lyrics_create(lv_obj_t *root)
     lv_obj_remove_style_all(g_lines_box);
     lv_obj_set_width(g_lines_box,280); lv_obj_set_height(g_lines_box,LV_SIZE_CONTENT);
     lv_obj_set_flex_flow(g_lines_box,LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_row(g_lines_box,th_braun_family() ? 8 : 6,0);
+    lv_obj_set_style_pad_row(g_lines_box,th_zune() ? 20 : 16,0);
     lv_obj_set_style_pad_top(g_lines_box,100,0);
     lv_obj_set_style_pad_bottom(g_lines_box,110,0);
     lv_obj_remove_flag(g_lines_box,LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_flag(g_lines_box,LV_OBJ_FLAG_HIDDEN);
     lv_obj_add_event_cb(g_scroll,scroll_cb,LV_EVENT_PRESSED,NULL);
     lv_obj_add_event_cb(g_scroll,scroll_cb,LV_EVENT_SCROLL_BEGIN,NULL);
+    lv_obj_add_event_cb(g_scroll,scroll_cb,LV_EVENT_RELEASED,NULL);
+    lv_obj_add_event_cb(g_scroll,scroll_cb,LV_EVENT_PRESS_LOST,NULL);
+    lv_obj_add_event_cb(g_scroll,scroll_cb,LV_EVENT_SCROLL_END,NULL);
     if(th_zune()){
         lv_obj_set_pos(g_scroll, 30, 56); lv_obj_set_size(g_scroll, 300, 270);       /* the untimed list */
+        lv_obj_set_x(g_lines_box, 10);
         lv_obj_set_style_pad_top(g_scroll, 22, 0); lv_obj_set_style_pad_bottom(g_scroll, 80, 0);
         lv_obj_set_width(g_text, 300);
         lv_obj_set_style_text_font(g_text, zune_font(&font_zune_light_18), 0);
@@ -604,17 +827,31 @@ void lyrics_create(lv_obj_t *root)
 /* B's parser handles offsets, enhanced tags and stable repeated timestamps for A's three-line renderer. */
 static int timed_parse(const char *raw,lyr_line_t *out,int cap){
     lrc_line_t lines[400]; char text[16384]; int synced=0;
+    lrc_word_t words[LY_MAX_WORDS]; int word_count = 0;
     if(!raw || !out || cap<=0) return 0;
-    int n=lrc_parse(raw,lines,400,text,sizeof text,NULL,0,&synced);
+    int n=lrc_parse_words(raw,lines,400,text,sizeof text,NULL,0,&synced,
+                          words,LY_MAX_WORDS,&word_count);
     if(!synced) return 0;
     if(n>cap) n=cap;
     for(int i=0;i<n;i++){
+        memset(&out[i], 0, sizeof out[i]);
         out[i].ms=lines[i].ms;
         const char *s=text+lines[i].text;
-        size_t k=strlen(s); if(k>=sizeof out[i].text) k=sizeof out[i].text-1;
+        size_t full_len=strlen(s),k=full_len; if(k>=sizeof out[i].text) k=sizeof out[i].text-1;
         /* A truncated prefix ends at a complete UTF-8 codepoint. */
         while(k>0 && ((unsigned char)s[k]&0xC0)==0x80) k--;
         memcpy(out[i].text,s,k); out[i].text[k]=0;
+        out[i].estimate_blocked=lines[i].has_word_timing || full_len>k;
+        int first = lines[i].word_first, count = lines[i].word_count;
+        if(count > 0 && count <= LYR_WORDS_MAX && first >= 0 && first + count <= word_count){
+            int valid = 1;
+            for(int w = 0; w < count; w++)
+                if(words[first+w].end_byte > (int)k) valid = 0;
+            if(valid){
+                out[i].word_count = count;
+                memcpy(out[i].words, words + first, (size_t)count * sizeof words[0]);
+            }
+        }
     }
     return n;
 }

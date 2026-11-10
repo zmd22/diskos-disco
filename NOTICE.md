@@ -5,6 +5,14 @@ separate program or loaded as a library; this document provides the required att
 to the corresponding source that ships alongside the binaries. The full verbatim license texts are in
 [`licenses/`](licenses/); this file is the component-to-license index.
 
+## Unicode data used by progressive lyrics
+
+The generated combining-mark ranges in `ui/lrc_estimate.h` use Unicode 16.0.0
+general-category data (Mn, Mc and Me), obtained through Python's `unicodedata`.
+Copyright © 1991-2026 Unicode, Inc. Distributed under the
+[Unicode License V3](licenses/UNICODE-LICENSE-V3.txt).
+The official notice is available at <https://www.unicode.org/license.txt>.
+
 ## Bundled native programs (called as subprocesses - mere aggregation)
 
 | Component | Purpose | License | Source |
