@@ -38,7 +38,7 @@ static int g_cat_base_y[6];                     /* tail, body, head, two ears, e
 static rn_obs_t g_obs[RN_MAX_OBS];
 static lv_timer_t *g_tick;
 static int g_state, g_best_v, g_frame, g_duck, g_held, g_gesture, g_night, g_last_hundred, g_blink;
-static float g_cat_y, g_vy, g_speed, g_dist, g_next_gap, g_dash_x[RN_DASHES];
+static float g_cat_y, g_vy, g_speed, g_dist, g_since, g_next_gap, g_dash_x[RN_DASHES];   /* g_since: travel since the last obstacle */
 static uint32_t g_last, g_duck_until, g_seed = 0x9E3779B9u;
 static lv_point_t g_press;
 
@@ -110,8 +110,9 @@ static void obs_spawn(rn_obs_t *b){
     lv_obj_set_style_bg_opa(b->o, LV_OPA_TRANSP, 0); lv_obj_set_style_border_width(b->o, 0, 0);
     if(b->kind == OB_PUDDLE){
         b->w = 34 + (int)(rnd() % 22); b->h = 8; b->y = RN_GROUND - b->h + 3;
-        lv_obj_set_style_radius(b->o, LV_RADIUS_CIRCLE, 0);
-        lv_obj_set_style_bg_color(b->o, TC(TEXT_SECONDARY), 0); lv_obj_set_style_bg_opa(b->o, LV_OPA_70, 0);
+        lv_obj_set_style_radius(b->o, LV_RADIUS_CIRCLE, 0);   /* inked rim, grey water: seen on light and dark */
+        lv_obj_set_style_border_width(b->o, 2, 0); lv_obj_set_style_border_color(b->o, ink(), 0);
+        lv_obj_set_style_bg_color(b->o, TC(TEXT_SECONDARY), 0); lv_obj_set_style_bg_opa(b->o, LV_OPA_50, 0);
     } else if(b->kind == OB_BIRD){
         b->w = 28; b->h = 16; b->y = RN_GROUND - 24 - b->h;          /* clears a ducking cat, not a standing one */
         blk(b->o, 4, 7, 20, 7, 3);                                      /* body */
@@ -137,30 +138,34 @@ static void score_paint(void){
 static void best_paint(void){ char b[24]; snprintf(b, sizeof b, "HI %05d", g_best_v); lv_label_set_text(g_best, b); }
 static void reset(void){
     set_night(0);
-    g_cat_y = RN_GROUND - RN_CAT_H; g_vy = 0; g_speed = 170; g_dist = 0; g_next_gap = 140; g_frame = 0;
+    g_cat_y = RN_GROUND - RN_CAT_H; g_vy = 0; g_speed = 170; g_dist = 0; g_since = 0; g_next_gap = 260; g_frame = 0;
     g_duck = 0; g_held = 0; g_gesture = 0; g_last_hundred = 0; g_blink = 0;
     lv_obj_set_style_opa(g_score, LV_OPA_COVER, 0);
     for(int i = 0; i < RN_MAX_OBS; i++){ g_obs[i].live = 0; if(g_obs[i].o) lv_obj_add_flag(g_obs[i].o, LV_OBJ_FLAG_HIDDEN); }
     lv_obj_set_pos(g_cat, RN_CAT_X, (int)g_cat_y); cat_pose(); score_paint();
 }
+/* a new best is kept as soon as the run stops - lost, or left for another screen */
+static void save_best(void){
+    int s = (int)(g_dist / 10);
+    if(s > g_best_v){ g_best_v = s; cfg_set_int("runner_best", s); best_paint(); }
+}
 static void over(void){
     g_state = RN_OVER; g_duck = 0; cat_pose();
     lv_obj_set_style_opa(g_score, LV_OPA_COVER, 0);
-    int s = (int)(g_dist / 10);
-    if(s > g_best_v){ g_best_v = s; cfg_set_int("runner_best", s); best_paint(); }
+    save_best();
     lv_label_set_text(g_msg, "Game over - tap to retry"); lv_obj_remove_flag(g_msg, LV_OBJ_FLAG_HIDDEN);
 }
 /* ~50 fps while the game is in front and running; the step uses the real elapsed time */
 static void tick(lv_timer_t *t){
     (void)t;
-    if(screen_current() != SCR_RUNNER){ if(g_state == RN_RUN){ g_state = RN_READY; g_duck = 0; lv_label_set_text(g_msg, "Paused - tap to go on");
+    if(screen_current() != SCR_RUNNER){ if(g_state == RN_RUN){ save_best(); g_state = RN_READY; g_duck = 0; lv_label_set_text(g_msg, "Paused - tap to go on");
                                         lv_obj_remove_flag(g_msg, LV_OBJ_FLAG_HIDDEN); } return; }
     uint32_t now = lv_tick_get(); float dt = (now - g_last) / 1000.0f; g_last = now;
     if(g_state != RN_RUN) return;
     if(dt > 0.05f) dt = 0.05f;
     g_frame++;
     g_speed += dt * 6.0f; if(g_speed > 420) g_speed = 420;     /* slowly faster */
-    g_dist += g_speed * dt;
+    g_dist += g_speed * dt; g_since += g_speed * dt;
     if(g_duck && !g_held && (int32_t)(now - g_duck_until) >= 0) g_duck = 0;
     g_vy += (g_duck ? 3.0f : 1.0f) * RN_GRAVITY * dt;          /* ducking in the air drops fast */
     g_cat_y += g_vy * dt;
@@ -178,21 +183,19 @@ static void tick(lv_timer_t *t){
     int d = g_duck && g_cat_y >= RN_GROUND - RN_CAT_H - 1;
     int cx0 = RN_CAT_X + 4, cx1 = RN_CAT_X + RN_CAT_W - 4 + (d ? 6 : 0);
     int cy0 = (int)g_cat_y + (d ? RN_DUCK : 0) + 3, cy1 = (int)g_cat_y + RN_CAT_H - 3;
-    float rightmost = 0;
     for(int i = 0; i < RN_MAX_OBS; i++){
         rn_obs_t *b = &g_obs[i]; if(!b->live) continue;
         b->x -= g_speed * dt * (b->kind == OB_BIRD ? 1.12f : 1.0f);   /* birds fly into the wind a little faster */
         if(b->x + b->w < RN_X0){ b->live = 0; lv_obj_add_flag(b->o, LV_OBJ_FLAG_HIDDEN); continue; }
         lv_obj_set_x(b->o, (int)b->x);
         if(b->wing) lv_obj_set_y(b->wing, ((g_frame / 6) & 1) ? 0 : 9);
-        if(b->x + b->w > rightmost) rightmost = b->x + b->w;
         int bx0 = (int)b->x + 3, bx1 = (int)b->x + b->w - 3;
         int by0 = b->y + (b->kind == OB_PUDDLE ? 1 : 2), by1 = b->y + b->h - 2;
         if(cx1 > bx0 && cx0 < bx1 && cy1 > by0 && cy0 < by1){ over(); return; }
     }
-    if(g_dist > 260 && RN_X1 - rightmost >= g_next_gap){       /* a short clear run first, then far enough to land between */
-        for(int i = 0; i < RN_MAX_OBS; i++) if(!g_obs[i].live){ obs_spawn(&g_obs[i]); break; }
-        g_next_gap = g_speed * (0.75f + (rnd() % 100) / 100.0f) + 60;
+    if(g_since >= g_next_gap){                                 /* the next one once the ground since the last is covered */
+        for(int i = 0; i < RN_MAX_OBS; i++) if(!g_obs[i].live){ obs_spawn(&g_obs[i]); g_since = 0; break; }
+        g_next_gap = g_speed * (0.75f + (rnd() % 100) / 100.0f) + 60;   /* 0.75 - 1.75 s of running, room to land */
     }
     score_paint();
 }
