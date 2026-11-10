@@ -1343,7 +1343,7 @@ LV_FONT_DECLARE(font_zune_light_28)
 LV_FONT_DECLARE(font_zune_light_72)
 const lv_font_t *zune_font(const lv_font_t *base);
 static lv_obj_t *g_zfmt;                                 /* (the Now Playing format line, defined below) */
-/* the immersive accent: rb_classic's ink is near black in Light, so over the dimmed art it reads white like the rest */
+/* the immersive accent: Graphite's ink is near black in Light, so over the dimmed art it reads white like the rest */
 static lv_color_t zi_accent(void){ return th_classic() ? TC(FIXED_MEDIA_WHITE) : TC(ACCENT_PRIMARY); }
 static lv_obj_t *g_zi_dim, *g_zi_ctl, *g_zi_title, *g_zi_artist, *g_zi_pp, *g_zi_times, *g_zi_fmt, *g_zi_lyr, *g_zi_big, *g_zi_of;
 static uint32_t g_zi_ctl_at, g_zi_hide_ms=3000;
@@ -4158,7 +4158,7 @@ const lv_font_t *ui_font_user(int size){
     int fs = theme_font_size();
     if(fs == 0 && size > 14) size -= 2;
     else if(fs == 2 && size < 20) size += 2;
-    if(th_classic())   /* rb_classic: every list size in ChicagoFLF (Large reaches 22) */
+    if(th_classic())   /* Graphite: every list size in ChicagoFLF (Large reaches 22) */
         return size >= 24 ? TF(UI_24) : size >= 22 ? TF(UI_22) : theme_font((theme_font_role_t)(THEME_FONT_USER_14+(size>=20?3:size>=18?2:size>=16?1:0)));
     return ui_font_cjk(size);
 }
@@ -4879,7 +4879,7 @@ static void vol_needle(int v){                               /* Braun: an orange
     lv_line_set_points(g_vol_needle, g_vol_np, 2);
 }
 static void dvol_paint(int v);
-static lv_obj_t *g_cvol_bar;   /* rb_classic: the pill bar in the box; drives the (invisible) rim arc */
+static lv_obj_t *g_cvol_bar;   /* Graphite: the pill bar in the box; drives the (invisible) rim arc */
 static void vol_arc_cb(lv_event_t *e);
 static void cvol_bar_cb(lv_event_t *e){
     lv_event_code_t code = lv_event_get_code(e);
@@ -5170,7 +5170,7 @@ void ui_show_volume(int vol)
             lv_obj_set_style_text_font(cap, TF(UI_14), 0); lv_obj_set_style_text_color(cap, TC(TEXT_SECONDARY), 0);
             lv_obj_t *mid = lv_obj_get_child(g_vol_panel, 1); (void)mid;
         }
-        if(th_classic()){   /* rb_classic: a framed box - "Volume", a small and a loud speaker, the theme's pill bar */
+        if(th_classic()){   /* Graphite: a framed box - "Volume", a small and a loud speaker, the theme's pill bar */
             lv_obj_set_style_bg_color(g_vol_panel, TC(CANVAS), 0); lv_obj_set_style_bg_opa(g_vol_panel, 140, 0);
             lv_obj_set_style_arc_opa(g_vol_arc, LV_OPA_TRANSP, LV_PART_MAIN); lv_obj_set_style_arc_opa(g_vol_arc, LV_OPA_TRANSP, LV_PART_INDICATOR);
             lv_obj_set_style_bg_opa(g_vol_arc, LV_OPA_TRANSP, LV_PART_KNOB); lv_obj_set_style_border_width(g_vol_arc, 0, LV_PART_KNOB);

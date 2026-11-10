@@ -115,7 +115,7 @@ static const scdef_t SC[] = {
 #define NSCDEF ((int)(sizeof SC / sizeof SC[0]))
 static const char *const SC_DEFAULT[NSC] = { "weather", "eq", "folders", "immersive", "allapps", "search" };
 typedef struct { const char *icon; char name[64]; int kind; int idx; int font; } aitem_t;  /* kind: 0 Last.fm, 1 app, 2 Settings, 3 shortcut */
-static aitem_t g_items[MAX_APPS + 2 + NSC];   /* rb_classic lists the shortcuts and every app together */
+static aitem_t g_items[MAX_APPS + 2 + NSC];   /* Graphite lists the shortcuts and every app together */
 static int g_nitems, g_page, g_all;          /* g_all: showing All apps instead of the shortcuts */
 static lv_obj_t *g_box;
 static orbit_t g_orb;
@@ -309,8 +309,8 @@ static void b2_build(void){
         ui_on(b, b2_pick_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i, "apps.pick", UI_CORE); br2_keep_tree(b);
     }
 }
-/* rb_classic: Shortcuts / All apps as its menu, every entry on one scrolling list */
-/* rb_classic: the built-in pastimes (Cat Dash, Disc Shelf) move up to the 4th and 5th rows; absent ones are skipped */
+/* Graphite: Shortcuts / All apps as its menu, every entry on one scrolling list */
+/* Graphite: the built-in pastimes (Cat Dash, Disc Shelf) move up to the 4th and 5th rows; absent ones are skipped */
 static void classic_promote(void){
     static const char *const FEAT[] = { "builtin:cat-dash", APP_BUILTIN_SHELF };
     int at = 3;
@@ -385,7 +385,7 @@ void apps_reload(void){
         }
         if(!th_classic()){ build_page(); return; }
     }
-    /* All apps: Last.fm, the homebrew apps, Settings (rb_classic: after the shortcuts, on the same list) */
+    /* All apps: Last.fm, the homebrew apps, Settings (Graphite: after the shortcuts, on the same list) */
     g_items[g_nitems].icon = LFM_ICON; g_items[g_nitems].font = 1; snprintf(g_items[g_nitems].name, sizeof g_items[0].name, "Last.fm"); g_items[g_nitems].kind = 0; g_items[g_nitems].idx = -1; g_nitems++;
     for(int i = 0; i < g_napps && g_nitems < MAX_APPS + 1 + NSC; i++){
         g_items[g_nitems].icon = app_glyph(i); g_items[g_nitems].font = 1; snprintf(g_items[g_nitems].name, sizeof g_items[0].name, "%.63s", g_apps[i].name);

@@ -938,7 +938,7 @@ static void add_net_row(const char *ssid, int signal, int secured, int connected
             lv_obj_align(o, LV_ALIGN_TOP_RIGHT, -(WROW_W - ox - ow) - 4, oy - 2);
         }
     }
-    if(th_classic()){   /* rb_classic: a 34 px menu row, the lock and bars at its right end, inverted while pressed */
+    if(th_classic()){   /* Graphite: a 34 px menu row, the lock and bars at its right end, inverted while pressed */
         lv_obj_set_size(r, 260, 34); lv_obj_set_style_bg_opa(r, LV_OPA_TRANSP, 0);
         uint32_t n = lv_obj_get_child_count(r);
         for(uint32_t k = 0; k < n; k++){

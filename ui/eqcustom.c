@@ -754,7 +754,7 @@ void eqcustom_create(lv_obj_t *root){
     g_glbl = centre_lbl(root, 8, glbl_cb);
     g_minus = round_btn(root, LV_SYMBOL_MINUS, -34, -1);
     g_plus  = round_btn(root, LV_SYMBOL_PLUS, 34, +1);
-    if(th_classic()){   /* rb_classic: finger-sized steps, framed in ink */
+    if(th_classic()){   /* Graphite: finger-sized steps, framed in ink */
         lv_obj_t *pm[2] = { g_minus, g_plus };
         for(int i = 0; i < 2; i++){
             lv_obj_set_size(pm[i], 42, 42); lv_obj_align(pm[i], LV_ALIGN_CENTER, i ? 40 : -40, 44);

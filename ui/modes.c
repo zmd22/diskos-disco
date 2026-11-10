@@ -295,7 +295,7 @@ static void icon_spin(lv_obj_t *l, int on){
     lv_anim_start(&a);
 }
 static void disco_paint(int slot, int pending){
-    if(th_classic()){   /* rb_classic: a tick (turning arrows while it switches) right of the active mode */
+    if(th_classic()){   /* Graphite: a tick (turning arrows while it switches) right of the active mode */
         for(int i = 0; i < N_MODES; i++){
             lv_obj_t *r = g_drow[i]; if(!r) continue;
             lv_obj_t *v = lv_obj_get_child(r, 1); int on = i == slot;
@@ -509,7 +509,7 @@ void modes_create(lv_obj_t *root){
 
     if(th_braun2()){ b2modes_create(root); return; }
     if(th_simple() || th_null()){squash_modes_create(root);return;}
-    if(th_classic()){   /* rb_classic: its header and menu list */
+    if(th_classic()){   /* Graphite: its header and menu list */
         static const char *NM[N_MODES] = { "Playback", "USB DAC", "Bluetooth DAC", "BT streaming", "AirPlay", "USB storage" };
         ui_header(root, "Working mode");
         lv_obj_t *list = classic_list(root, 78, 34 * 6);

@@ -197,7 +197,7 @@ void library_category_nav(lv_obj_t *root,int index,lv_obj_t *original){
     for(int d=-1;d<=1;d+=2){lv_obj_t*l=lv_label_create(row);kit_keep(l);char b[64];
         snprintf(b,sizeof b,d<0?LV_SYMBOL_LEFT " %s":"%s " LV_SYMBOL_RIGHT,tr(names[(index+d+4)%4]));lv_label_set_text(l,th_zune()?zlow(b):b);lv_label_set_long_mode(l,LV_LABEL_LONG_DOT);
         lv_obj_set_style_text_font(l,TF(UI_14),0);lv_obj_set_style_text_color(l,TC(TEXT_SECONDARY),0);lv_obj_set_style_text_align(l,d<0?LV_TEXT_ALIGN_LEFT:LV_TEXT_ALIGN_RIGHT,0);lv_obj_set_size(l,130,24);lv_obj_set_pos(l,d<0?0:182,0);
-        if(th_classic()){   /* rb_classic: finger-sized targets under the title bar */
+        if(th_classic()){   /* Graphite: finger-sized targets under the title bar */
             lv_obj_set_style_text_font(l,TF(UI_18),0);lv_obj_set_style_text_color(l,TC(TEXT_PRIMARY),0);
             lv_obj_set_size(l,130,lv_font_get_line_height(TF(UI_18)));lv_obj_set_x(l,d<0?0:150);lv_obj_set_ext_click_area(l,10);
         }
@@ -225,7 +225,7 @@ int library_wall_active(void){return g_view==VIEW_ALBUMS && simple_cfg_get_int("
 static int lib_row_h(void){
     if(th_braun2())return 56;
     if(library_wall_active())return 98;
-    if(th_classic())return 30;                       /* rb_classic: + the 4 px gap = its 34 px menu pitch */
+    if(th_classic())return 30;                       /* Graphite: + the 4 px gap = its 34 px menu pitch */
     if(!th_zune()) return th_null()?60:52;
     if(lib_zalbum()) return theme_font_size()==2?36:30;                             /* compact track rows under the album header */
     return theme_font_size()==2?64:54;
@@ -392,7 +392,7 @@ static void wheel_settle_rows(lv_timer_t *t){ (void)t; g_wheel_settle = 2; curve
 static void curve_rows(void){
     if(!g_list) return;
     if(library_wall_active())return;
-    if(th_classic())return;                          /* rb_classic: straight rows, like its menus */
+    if(th_classic())return;                          /* Graphite: straight rows, like its menus */
     if(th_zune()){ zcurve_rows(); return; }
     if(th_braun_family()){                                                  /* Braun: straight rows, restyled */
         for(uint32_t i = 0; i < lv_obj_get_child_count(g_list); i++){
@@ -457,7 +457,7 @@ static void pdots_update(void){
         if(row<0)row=0;if(row>=g_count)row=g_count-1;
         float fraction=tot>0?(float)sy/tot:0;if(fraction<0)fraction=0;if(fraction>1)fraction=1;
         float angle=(212-64*fraction)*3.14159265f/180;
-        int straight=th_null()||th_classic();   /* Null, rb_classic: a straight rail instead of the rim */
+        int straight=th_null()||th_classic();   /* Null, Graphite: a straight rail instead of the rim */
         int x=straight?30:disco_mx((int)(180+153*cosf(angle))-14,28)+14;
         int y=straight?108+(int)(140*fraction):(int)(180+153*sinf(angle));
         int at=row;   /* the selected row: the top one, or in Wheel the one in the middle (its padding makes scroll 0 = row 0 centred) */
@@ -510,7 +510,7 @@ static lv_obj_t *base_row(void){
  * 1.4.0 at every size). Montserrat -> Inter -> international -> CJK, like all user text. */
 static const lv_font_t *lib_font(int small_px){ return th_null()?theme_font(small_px>=18?THEME_FONT_USER_20:THEME_FONT_USER_18):ui_font_cjk(small_px + 2 * theme_font_size()); }
 static int *g_arep, g_arep_cap;   /* Artist -> Albums: one song id per album row, for its cover */
-/* rb_classic: one line like its menus (title, value on the right); the row inverts while pressed */
+/* Graphite: one line like its menus (title, value on the right); the row inverts while pressed */
 static void crow_one(lv_obj_t *r, const char *top, const char *right){
     int vw = 0;
     if(right && right[0]){

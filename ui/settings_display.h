@@ -171,7 +171,7 @@ static const char *settings_page_title(const char *page){
     if(th_simple())return "Squash settings";
     if(th_null())return "Null settings";
     if(th_zune())return "Zune settings";
-    if(th_classic())return "rb_classic settings";
+    if(th_classic())return "Graphite settings";
     if(th_braun2())return "Braun 2.0 settings";
     if(th_braun())return "Braun settings";
     if(theme_preset()==THEME_PRESET_RING)return "Ring settings";
@@ -183,7 +183,7 @@ static const char *settings_page(const setting_t *s){
     const char *page=d?d->page:s->group;
     if(!strcmp(k,"screenoff_idx")||!strcmp(k,"saver_idx")||!strcmp(k,"lock_on_timeout")||!strcmp(k,"clock_batt_pct"))return "Battery & power";
     if(!strcmp(k,"classic_backlight")||!strcmp(k,"classic_bars"))return "Theme settings";
-    if(th_classic()&&!strcmp(k,"outdoor"))return "Display";   /* rb_classic: beside Light / dark */   /* rb_classic's own option, in its settings */
+    if(th_classic()&&!strcmp(k,"outdoor"))return "Display";   /* Graphite: beside Light / dark */   /* Graphite's own option, in its settings */
     if(!strcmp(k,"sleep_idx")||!strcmp(k,"sleep_action"))return "Sleep timer";
     if(s->apply==apply_restart)return "Battery & power";
     if(!strcmp(k,"time_24h"))return "Date & Time";

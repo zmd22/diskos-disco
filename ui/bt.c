@@ -1749,7 +1749,7 @@ static void add_dev_row(const char *mac, const char *name, int connected, const 
     if(connected){ lv_obj_t *ch = lv_label_create(r); lv_label_set_text(ch, LV_SYMBOL_RIGHT);   /* opens its details */
                    lv_obj_align(ch, LV_ALIGN_RIGHT_MID, -16, 0); lv_obj_set_style_text_color(ch, TC(TEXT_DISABLED), 0);
                    if(th_classic()){ lv_obj_set_style_text_font(ch, TF(UI_14), 0); lv_obj_set_style_text_color(ch, TC(TEXT_PRIMARY), 0); lv_obj_align(ch, LV_ALIGN_RIGHT_MID, -10, 0); } }
-    if(th_classic()){   /* rb_classic: a 34 px menu row - the name, and the codec (or "On") when connected */
+    if(th_classic()){   /* Graphite: a 34 px menu row - the name, and the codec (or "On") when connected */
         lv_obj_set_size(r, 260, 34); lv_obj_set_style_bg_opa(r, LV_OPA_TRANSP, 0);
         lv_obj_add_flag(ic, LV_OBJ_FLAG_HIDDEN);
         lv_label_set_text(sl, connected ? ((codec && codec[0]) ? codec : "On") : "");

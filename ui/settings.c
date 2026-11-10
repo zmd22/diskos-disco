@@ -868,9 +868,9 @@ static const setting_t TABLE[] = {
     { "Theme Colours",  "Theme",       ST_CHOICE, "theme_preset", 0,0,0, theme_preset_names, THEME_PRESET_COUNT, NULL, apply_theme_preset, THEME_PRESET_DISCO,
       "Choose the UI theme. Restarts the screen; music continues.", NULL },
     { "Display", "Backlight", ST_CYCLER, "classic_backlight", 0,0,0, OPT_BACKLIGHT, 3, NULL, apply_backlight, 0,
-      "rb_classic: the LCD backlight colour in Light. Dark is always ink on black.", NULL },
+      "Graphite: the LCD backlight colour in Light. Dark is always ink on black.", NULL },
     { "Display", "Spectrum bars", ST_TOGGLE, "classic_bars", 0,1,1, NULL, 0, NULL, apply_classic_bars, 1,
-      "rb_classic: decorative bars on Now Playing. Off shows the track's format instead.", NULL },
+      "Graphite: decorative bars on Now Playing. Off shows the track's format instead.", NULL },
     { "Theme Colours",  "Appearance",  ST_CYCLER, "theme_variant", 0,0,0, OPT_APPEARANCE, 3, NULL, apply_appearance, 0,
       "For themes supporting light and dark appearances only. Auto uses Dark from 7pm to 7am and Light from 7am to 7pm, using the device clock. Automatic changes apply when the screen is off. Outdoor mode keeps Light on.", NULL },
     { "Theme Colours",  "Outdoor Mode", ST_TOGGLE, "outdoor",  0,1,1, NULL, 0, NULL, apply_outdoor, 0,
@@ -1438,7 +1438,7 @@ static void classic_choice_cb(lv_event_t *e){
     if(g_active && theme_outdoor() && g_active->cfg_key && !strcmp(g_active->cfg_key, "theme_variant")){ ui_toast("Outdoor Mode keeps Light on"); return; }
     detail_choice_cb(e);
 }
-/* rb_classic: a cycler / choice as its menu list, the current option ticked; Light / dark reads Light, Dark, Auto.
+/* Graphite: a cycler / choice as its menu list, the current option ticked; Light / dark reads Light, Dark, Auto.
  * Returns the y under the list (for the description), 0 when the setting keeps the shared layout. */
 static int classic_detail_list(const setting_t *s, int v){
     if(!th_classic() || !(s->type == ST_CYCLER || s->type == ST_CHOICE) || !s->opts || nav_setting(s)
@@ -1718,7 +1718,7 @@ void setting_detail_refresh(void){
     int v = nav_setting(s)?g_nav_pending:get_val(s);
     if(th_null() && s->cfg_key && !strcmp(s->cfg_key,"null_side"))v=0;
 
-    int clist = classic_detail_list(s, v);   /* rb_classic: every option as a menu row */
+    int clist = classic_detail_list(s, v);   /* Graphite: every option as a menu row */
     if(clist){}
     else if(s->type == ST_SLIDER){
         lv_obj_t *sl = lv_slider_create(g_detail_root);
@@ -2070,7 +2070,7 @@ void settings_row_values_refresh(void){
     for(int i=0;i<N_SETTINGS;i++) if(g_list_rows[i] && lv_obj_is_valid(g_list_rows[i])) setting_text_if_changed(g_list_rows[i], row_value(&TABLE[i],b,sizeof b));
 }
 
-/* rb_classic: one category as the theme's compact list, value right-aligned on each row */
+/* Graphite: one category as the theme's compact list, value right-aligned on each row */
 static void classic_setlist(void){
     lv_obj_t *list = classic_list(g_setlist_root, 78, 240);
     int indices[N_SETTINGS], count = settings_collect(g_active_group, indices);
@@ -2170,7 +2170,7 @@ void setlist_refresh(void){
     lv_obj_set_style_bg_color(g_setlist_root, TC(CANVAS), 0);
     lv_obj_set_style_bg_opa(g_setlist_root, LV_OPA_COVER, 0);
     const char *ttl = settings_page_title(g_active_group);
-    if(th_classic() && !strcmp(ttl, "rb_classic settings")) ttl = "rb_classic";   /* fits the title bar */
+    if(th_classic() && !strcmp(ttl, "Graphite settings")) ttl = "Graphite";   /* fits the title bar */
     ui_header_cb(g_setlist_root, ttl, list_back_cb);   /* title = category; back pops to categories */
 
     if(th_zune() && strcmp(g_active_group, "How to")){ lv_obj_clean(g_setlist_root); zsetlist(g_setlist_root); return; }

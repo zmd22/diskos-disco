@@ -202,7 +202,7 @@ static void query_changed(void){
     lv_obj_set_style_bg_color(g_go, on ? ui_current_accent() : TC(SURFACE), 0);
     if(th_simple())lv_obj_set_style_bg_color(g_go,theme_color_mix(TC(ACCENT_PRIMARY),TC(CANVAS),on?60:24),0);
     if(th_null())lv_obj_set_style_bg_opa(g_go,LV_OPA_TRANSP,0);
-    if(th_classic()){   /* rb_classic: a framed button, filled ink once there is something to search */
+    if(th_classic()){   /* Graphite: a framed button, filled ink once there is something to search */
         lv_obj_set_style_bg_color(g_go,TC(TEXT_PRIMARY),0);lv_obj_set_style_bg_opa(g_go,on?LV_OPA_COVER:LV_OPA_TRANSP,0);
         lv_obj_set_style_border_color(g_go,on?TC(TEXT_PRIMARY):TC(TEXT_MUTED),0);
         lv_obj_set_style_text_color(g_go_lbl,on?TC(CANVAS):TC(TEXT_MUTED),0);
@@ -463,7 +463,7 @@ void search_create(lv_obj_t *root){
     lv_obj_set_style_text_font(g_mode_lbl, TF(UI_14), 0);
     lv_obj_set_style_text_color(g_mode_lbl, TC(TEXT_SECONDARY), 0);
     lv_obj_center(g_mode_lbl);
-    if(th_classic()){   /* rb_classic: framed field and button, its own face */
+    if(th_classic()){   /* Graphite: framed field and button, its own face */
         lv_obj_set_size(g_field,210,36);lv_obj_align(g_field,LV_ALIGN_TOP_MID,0,28);
         lv_obj_set_style_radius(g_field,4,0);lv_obj_set_style_bg_opa(g_field,LV_OPA_TRANSP,0);
         lv_obj_set_style_border_width(g_field,2,0);lv_obj_set_style_border_color(g_field,TC(TEXT_PRIMARY),0);

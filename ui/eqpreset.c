@@ -165,7 +165,7 @@ static lv_obj_t *button(lv_obj_t *root,const char *text,int x,int y,int w,int h,
  lv_obj_t *l=lv_label_create(b);lv_label_set_text(l,text);lv_obj_set_style_text_font(l,TF(UI_18),0);lv_obj_set_style_text_color(l,TC(TEXT_PRIMARY),0);lv_obj_center(l);
  ui_on(b,cb,LV_EVENT_CLICKED,data,action,UI_CORE);return b;
 }
-/* rb_classic: one of its menu rows from a preset-screen button (caption left, optional value / chevron right) */
+/* Graphite: one of its menu rows from a preset-screen button (caption left, optional value / chevron right) */
 static lv_obj_t *ceq_row(lv_obj_t *b,int x,int y,int w,const char *cap,int chevron){
  lv_obj_set_align(b,LV_ALIGN_DEFAULT);lv_obj_set_pos(b,x,y);lv_obj_set_size(b,w,34);
  lv_obj_set_style_radius(b,4,0);lv_obj_set_style_bg_opa(b,LV_OPA_TRANSP,0);lv_obj_set_style_border_width(b,0,0);lv_obj_set_style_shadow_width(b,0,0);
@@ -230,7 +230,7 @@ void eqpreset_create(lv_obj_t *root){
   lv_obj_set_style_shadow_width(switch_button,0,0);lv_obj_set_style_border_width(switch_button,0,0);
   lv_obj_add_flag(switch_pointer,LV_OBJ_FLAG_HIDDEN);kit_keep(switch_button);kit_keep(switch_label);
  }
- if(th_classic()){   /* rb_classic: the Rockbox way - a menu: Equalizer On/Off, the preset between arrows, Edit, Rename */
+ if(th_classic()){   /* Graphite: a menu: Equalizer On/Off, the preset between arrows, Edit, Rename */
   lv_obj_add_flag(switch_pointer,LV_OBJ_FLAG_HIDDEN);
   ceq_row(switch_button,50,78,260,NULL,0);
   lv_obj_t *cap=lv_label_create(switch_button);lv_label_set_text(cap,"Equalizer");lv_obj_set_style_text_font(cap,TF(UI_20),0);

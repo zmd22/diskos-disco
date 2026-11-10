@@ -352,11 +352,11 @@ static const theme_preset_t PRESETS[THEME_PRESET_COUNT] = {
     [THEME_PRESET_NULL] = { "Null", FORK_NULL[0], FORK_NULL[1] },
     [THEME_PRESET_SIMPLE] = { "Squash", FORK_SIMPLE[0], FORK_SIMPLE[1] },
     [THEME_PRESET_ZUNE] = { "Zune", FORK_ZUNE[0], FORK_ZUNE[1] },
-    [THEME_PRESET_CLASSIC] = { "rb_classic", FORK_CLASSIC[0], FORK_CLASSIC[1] },
+    [THEME_PRESET_CLASSIC] = { "Graphite", FORK_CLASSIC[0], FORK_CLASSIC[1] },
 };
 _Static_assert(sizeof PRESETS / sizeof PRESETS[0] == THEME_PRESET_COUNT, "THEME_PRESET_COUNT (theme.h) is stale");
 const char *const theme_preset_names[THEME_PRESET_COUNT] = { THEME_PRESET_NAMES_GENERATED,
- [THEME_PRESET_RING]="Ring",[THEME_PRESET_BRAUN]="Braun",[THEME_PRESET_BRAUN2]="Braun 2.0",[THEME_PRESET_DISCO]="Disco",[THEME_PRESET_NULL]="Null",[THEME_PRESET_SIMPLE]="Squash",[THEME_PRESET_ZUNE]="Zune",[THEME_PRESET_CLASSIC]="rb_classic" };
+ [THEME_PRESET_RING]="Ring",[THEME_PRESET_BRAUN]="Braun",[THEME_PRESET_BRAUN2]="Braun 2.0",[THEME_PRESET_DISCO]="Disco",[THEME_PRESET_NULL]="Null",[THEME_PRESET_SIMPLE]="Squash",[THEME_PRESET_ZUNE]="Zune",[THEME_PRESET_CLASSIC]="Graphite" };
 int theme_preset_available(int preset){return preset>=0&&preset<THEME_PRESET_COUNT&&PRESETS[preset].name!=NULL;}
 static int g_preset;
 static uint32_t g_custom[2][THEME_CLR_COUNT];      /* the saved custom theme, fixed roles filled from Default */

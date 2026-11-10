@@ -585,7 +585,7 @@ static lv_obj_t *qrow(const char *t, const char *a, int now, int idx){
                lv_obj_t *g = lv_obj_get_child(h, 0); if(g) lv_obj_set_style_text_color(g, TC(TEXT_MUTED), 0); } }
         lv_obj_set_user_data(r, NULL);                       /* let the curve size it afresh */
     }
-    if(th_classic()){   /* rb_classic: a 34 px menu row - the title (a play mark on the current song), the handle */
+    if(th_classic()){   /* Graphite: a 34 px menu row - the title (a play mark on the current song), the handle */
         lv_obj_set_size(r, 260, 34); lv_obj_set_style_bg_opa(r, LV_OPA_TRANSP, 0); lv_obj_set_style_border_width(r, 0, 0);
         lv_obj_remove_flag(r, LV_OBJ_FLAG_USER_1);
         lv_obj_remove_event_cb(r, row_size_cb);
@@ -712,7 +712,7 @@ void queue_create(lv_obj_t *root){
     lv_obj_set_scroll_dir(g_list, LV_DIR_VER);
     lv_obj_set_scrollbar_mode(g_list, LV_SCROLLBAR_MODE_OFF);
     lv_obj_add_flag(g_list, LV_OBJ_FLAG_SCROLL_MOMENTUM);
-    if(th_classic()){   /* rb_classic: its header, the summary under the rule, framed buttons, a menu list */
+    if(th_classic()){   /* Graphite: its header, the summary under the rule, framed buttons, a menu list */
         lv_obj_add_flag(hb, LV_OBJ_FLAG_HIDDEN);
         ui_header_cb(root, "Queue", back_cb);
         lv_obj_set_style_text_font(g_sub, TF(UI_14), 0); lv_obj_align(g_sub, LV_ALIGN_TOP_MID, 0, 76);

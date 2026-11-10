@@ -238,7 +238,7 @@ void chome_create(lv_obj_t *root){
     lv_obj_set_style_text_font(g_home_state, TF(UI_14), 0); lv_obj_set_style_text_color(g_home_state, TC(TEXT_PRIMARY), 0);
     lv_obj_set_pos(g_home_state, 72, CL_TITLE_Y - 8);
     state_paint(ui_is_playing());
-    title_label(root, "rb_classic");
+    title_label(root, "Graphite");
     classic_battery(root, 258, CL_TITLE_Y - 7);
     rule(root, CL_RULE_Y);
     lv_obj_t *list = classic_list(root, CL_LIST_Y, CL_ROW_H * 6);   /* whole rows only */

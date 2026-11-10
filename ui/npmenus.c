@@ -455,7 +455,7 @@ __attribute__((unused)) static void track_actions(lv_obj_t *box,const track_stat
     _Static_assert(sizeof names/sizeof names[0]==SHEET_N && sizeof icons/sizeof icons[0]==SHEET_N,"sheet tables");
     track_sheet_build(box,st->title,st->artist,ui_current_cover_dsc(),names,icons,SHEET_N,sheet_pick,close_cb);
 }
-/* rb_classic: the actions as its menu - title bar, one row each, the pressed row inverted */
+/* Graphite: the actions as its menu - title bar, one row each, the pressed row inverted */
 static void classic_book_pick(lv_event_t *e){
     static lv_event_cb_t const CB[4] = { hub_chapters_cb, ctx_info_cb, hub_eq_open_cb, hub_fsart_cb };
     int i = (int)(intptr_t)lv_event_get_user_data(e); if(i >= 0 && i < 4) CB[i](e);

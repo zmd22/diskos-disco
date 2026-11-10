@@ -310,48 +310,52 @@ static void zframe(float t){
     lv_obj_set_style_opa(g_sp.root, (lv_opa_t)(255 * (1 - seg(t, 0.9f, 1))), 0);
 }
 
-/* ==== rb_classic: the LCD wakes - the RB logo (its ring drawing itself), "classic" under it, a pill bar filling;
- * then Home ==== */
-#define CL_LOGO 124
-LV_IMAGE_DECLARE(img_classic_logo);
-static lv_obj_t *g_clogo, *g_cmask, *g_cveil, *g_csub, *g_cbar;
+/* ==== Graphite: a seal - its ring drawing itself round the screen edge, the GR mark and the wordmark coming up,
+ * a pill bar between two dots filling; then Home ==== */
+LV_IMAGE_DECLARE(img_classic_mark);
+LV_IMAGE_DECLARE(img_classic_word);
+static lv_obj_t *g_cring, *g_cmark, *g_cword, *g_cbar, *g_cdot[2];
+static lv_obj_t *cimage(const lv_image_dsc_t *src, int y){
+    lv_obj_t *o = lv_image_create(g_sp.root); kit_keep(o);
+    lv_image_set_src(o, src);                                      /* A8 coverage: drawn in the recolour (ink) */
+    lv_obj_set_style_image_recolor(o, TC(TEXT_PRIMARY), 0); lv_obj_set_style_image_recolor_opa(o, LV_OPA_COVER, 0);
+    lv_obj_align(o, LV_ALIGN_TOP_MID, 0, y);
+    return o;
+}
 static int cbuild(void){
     g_sp.root = plain(lv_layer_top());
     lv_obj_set_size(g_sp.root, 360, 360);
     lv_obj_set_style_bg_color(g_sp.root, TC(CANVAS), 0); lv_obj_set_style_bg_opa(g_sp.root, LV_OPA_COVER, 0);
     lv_obj_add_flag(g_sp.root, LV_OBJ_FLAG_CLICKABLE);
-    g_clogo = lv_image_create(g_sp.root); kit_keep(g_clogo);
-    lv_image_set_src(g_clogo, &img_classic_logo);                 /* A8 coverage: drawn in the recolour (ink) */
-    lv_obj_set_style_image_recolor(g_clogo, TC(TEXT_PRIMARY), 0); lv_obj_set_style_image_recolor_opa(g_clogo, LV_OPA_COVER, 0);
-    lv_obj_align(g_clogo, LV_ALIGN_TOP_MID, 0, 66);
-    g_cmask = lv_arc_create(g_sp.root); kit_keep(g_cmask);        /* canvas over the ring, pulled back to draw it */
-    lv_obj_remove_style(g_cmask, NULL, LV_PART_KNOB); lv_obj_remove_flag(g_cmask, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_set_size(g_cmask, CL_LOGO, CL_LOGO); lv_obj_align(g_cmask, LV_ALIGN_TOP_MID, 0, 66);
-    lv_arc_set_rotation(g_cmask, 270); lv_arc_set_bg_angles(g_cmask, 0, 360); lv_arc_set_angles(g_cmask, 0, 360);
-    lv_obj_set_style_arc_opa(g_cmask, LV_OPA_TRANSP, LV_PART_MAIN);
-    lv_obj_set_style_arc_width(g_cmask, 8, LV_PART_INDICATOR); lv_obj_set_style_arc_color(g_cmask, TC(CANVAS), LV_PART_INDICATOR);
-    lv_obj_set_style_arc_rounded(g_cmask, false, LV_PART_INDICATOR);
-    g_cveil = plain(g_sp.root);                                    /* canvas over the letters, lifted to show them */
-    lv_obj_set_size(g_cveil, CL_LOGO - 16, CL_LOGO - 16); lv_obj_align(g_cveil, LV_ALIGN_TOP_MID, 0, 66 + 8);
-    lv_obj_set_style_radius(g_cveil, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(g_cveil, TC(CANVAS), 0); lv_obj_set_style_bg_opa(g_cveil, LV_OPA_COVER, 0);
-    g_csub = lv_label_create(g_sp.root); kit_keep(g_csub); lv_label_set_text(g_csub, "classic");
-    lv_obj_set_style_text_font(g_csub, TF(UI_24), 0); lv_obj_set_style_text_color(g_csub, TC(TEXT_PRIMARY), 0);
-    lv_obj_align(g_csub, LV_ALIGN_TOP_MID, 0, 202);
+    g_cring = lv_arc_create(g_sp.root); kit_keep(g_cring);
+    lv_obj_remove_style(g_cring, NULL, LV_PART_KNOB); lv_obj_remove_flag(g_cring, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_size(g_cring, 336, 336); lv_obj_center(g_cring);
+    lv_arc_set_rotation(g_cring, 270); lv_arc_set_bg_angles(g_cring, 0, 360); lv_arc_set_angles(g_cring, 0, 0);
+    lv_obj_set_style_arc_opa(g_cring, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_set_style_arc_width(g_cring, 7, LV_PART_INDICATOR); lv_obj_set_style_arc_color(g_cring, TC(TEXT_PRIMARY), LV_PART_INDICATOR);
+    lv_obj_set_style_arc_rounded(g_cring, false, LV_PART_INDICATOR);
+    g_cmark = cimage(&img_classic_mark, 74);
+    g_cword = cimage(&img_classic_word, 208);
     g_cbar = lv_bar_create(g_sp.root); lv_obj_remove_style_all(g_cbar); kit_keep(g_cbar);
-    lv_obj_set_size(g_cbar, 180, 14); lv_obj_align(g_cbar, LV_ALIGN_TOP_MID, 0, 248); lv_bar_set_range(g_cbar, 0, 1000);
+    lv_obj_set_size(g_cbar, 110, 14); lv_obj_align(g_cbar, LV_ALIGN_TOP_MID, 0, 270); lv_bar_set_range(g_cbar, 0, 1000);
     lv_obj_set_style_border_width(g_cbar, 2, LV_PART_MAIN); lv_obj_set_style_border_color(g_cbar, TC(TEXT_PRIMARY), LV_PART_MAIN);
     lv_obj_set_style_radius(g_cbar, 7, LV_PART_MAIN); lv_obj_set_style_pad_all(g_cbar, 3, LV_PART_MAIN);
     lv_obj_set_style_bg_opa(g_cbar, LV_OPA_COVER, LV_PART_INDICATOR); lv_obj_set_style_bg_color(g_cbar, TC(TEXT_PRIMARY), LV_PART_INDICATOR);
     lv_obj_set_style_radius(g_cbar, 4, LV_PART_INDICATOR);
+    for(int i = 0; i < 2; i++){                                    /* the dots either side of the bar */
+        g_cdot[i] = plain(g_sp.root); kit_keep(g_cdot[i]);
+        lv_obj_set_size(g_cdot[i], 8, 8); lv_obj_set_style_radius(g_cdot[i], LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_style_bg_color(g_cdot[i], TC(TEXT_PRIMARY), 0); lv_obj_set_style_bg_opa(g_cdot[i], LV_OPA_COVER, 0);
+        lv_obj_align(g_cdot[i], LV_ALIGN_TOP_MID, i ? 71 : -71, 273);
+    }
     return 1;
 }
 static void cframe(float t){
-    int drawn = (int)(360 * ease(seg(t, 0, 0.32f)));                /* the ring draws itself clockwise */
-    if(drawn >= 360) lv_obj_add_flag(g_cmask, LV_OBJ_FLAG_HIDDEN);
-    else lv_arc_set_angles(g_cmask, drawn, 360);
-    lv_obj_set_style_bg_opa(g_cveil, (lv_opa_t)(255 * (1 - smooth(seg(t, 0.15f, 0.42f)))), 0);   /* the letters come up */
-    lv_obj_set_style_opa(g_csub, (lv_opa_t)(255 * smooth(seg(t, 0.35f, 0.55f))), 0);
+    lv_arc_set_angles(g_cring, 0, (int)(360 * ease(seg(t, 0, 0.36f))));   /* the ring draws itself clockwise */
+    lv_obj_set_style_image_opa(g_cmark, (lv_opa_t)(255 * smooth(seg(t, 0.15f, 0.42f))), 0);
+    lv_obj_set_style_image_opa(g_cword, (lv_opa_t)(255 * smooth(seg(t, 0.3f, 0.5f))), 0);
+    lv_opa_t b = (lv_opa_t)(255 * smooth(seg(t, 0.28f, 0.38f)));
+    lv_obj_set_style_opa(g_cbar, b, 0); lv_obj_set_style_bg_opa(g_cdot[0], b, 0); lv_obj_set_style_bg_opa(g_cdot[1], b, 0);
     lv_bar_set_value(g_cbar, (int32_t)(1000 * ease(seg(t, 0.3f, 0.88f))), LV_ANIM_OFF);
     lv_obj_set_style_opa(g_sp.root, (lv_opa_t)(255 * (1 - seg(t, 0.9f, 1))), 0);
 }
