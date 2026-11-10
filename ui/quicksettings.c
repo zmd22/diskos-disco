@@ -848,7 +848,7 @@ static void cqs_paint(void){
         if(id == Q_SHUFFLE || id == Q_SLEEP) v = on ? "On" : "Off";
         if(id == T_WIFI || id == T_BT || id == Q_EQ || id == T_RESCAN) v = id == T_BT && bt_state() == BT_TURNING_ON ? "..." : on ? "On" : "Off";
         if(id == Q_EQ && on) v = ui_eq_name(simple_cfg_get_int("eq_preset", 0));
-        if(id == T_MODE) v = ui_get_source_mode() == 0 ? "Player" : ">";
+        if(id == T_MODE) v = ui_get_source_mode() == 0 ? "Playback" : ">";   /* the Working mode screen's own name */
         set_text_if(g_cq_val[i], v);
         lv_obj_set_style_opa(g_cq_row[i], zq_allowed(id) ? LV_OPA_COVER : LV_OPA_40, 0);
     }

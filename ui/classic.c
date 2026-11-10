@@ -190,9 +190,9 @@ static const citem_t ITEMS[] = {
     { "Queue",         "home.classic.queue",      go_queue,    1 },
     { "Equalizer",     "home.classic.eq",         go_eq,       1 },
     { "Modes",         "home.classic.modes",      go_modes,    1 },
+    { "Apps",          "home.classic.apps",       go_apps,     1 },
     { "Bluetooth",     "home.classic.bt",         go_bt,       1 },
     { "Wi-Fi",         "home.classic.wifi",       go_wifi,     1 },
-    { "Apps",          "home.classic.apps",       go_apps,     1 },
     { "Settings",      "home.classic.settings",   go_settings, 1 },
 };
 #define CN ((int)(sizeof ITEMS / sizeof ITEMS[0]))

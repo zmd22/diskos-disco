@@ -310,6 +310,17 @@ static void b2_build(void){
     }
 }
 /* rb_classic: Shortcuts / All apps as its menu, every entry on one scrolling list */
+/* rb_classic: the built-in pastimes (Cat Dash, Disc Shelf) move up to the 4th and 5th rows; absent ones are skipped */
+static void classic_promote(void){
+    static const char *const FEAT[] = { "builtin:cat-dash", APP_BUILTIN_SHELF };
+    int at = 3;
+    for(int f = 0; f < 2; f++) for(int i = 0; i < g_nitems; i++){
+        if(g_items[i].kind != 1 || g_items[i].idx < 0 || strcmp(g_apps[g_items[i].idx].exec, FEAT[f])) continue;
+        if(i > at){ aitem_t t = g_items[i]; memmove(&g_items[at + 1], &g_items[at], (size_t)(i - at) * sizeof t); g_items[at] = t; }
+        if(i >= at) at++;
+        break;
+    }
+}
 static void classic_build(void){
     g_page = 0;
     classic_header(g_box, "Apps", NULL);
@@ -381,6 +392,7 @@ void apps_reload(void){
         g_items[g_nitems].kind = 1; g_items[g_nitems].idx = i; g_nitems++;
     }
     g_items[g_nitems].icon = LV_SYMBOL_SETTINGS; g_items[g_nitems].font = 1; snprintf(g_items[g_nitems].name, sizeof g_items[0].name, "Settings"); g_items[g_nitems].kind = 2; g_items[g_nitems].idx = -1; g_nitems++;
+    if(th_classic()) classic_promote();
     build_page();
 }
 
