@@ -414,6 +414,7 @@ void screens_init(void)
     s_roots[SCR_APPPICK]   = screen_make_root(parent);
     s_roots[SCR_SPHERE]    = screen_make_root(parent);
     s_roots[SCR_SHELF] = screen_make_root(parent);
+    s_roots[SCR_RUNNER] = screen_make_root(parent);
     s_roots[SCR_UPNEXT] = screen_make_root(parent);
     s_roots[SCR_DATETIME] = screen_make_root(parent);
 
@@ -453,6 +454,7 @@ void screens_init(void)
     appshelf_pick_create(s_roots[SCR_APPPICK]);
     sphere_ui_create(s_roots[SCR_SPHERE]);
     discshelf_create(s_roots[SCR_SHELF]);
+    runner_create(s_roots[SCR_RUNNER]);
     search_create(s_roots[SCR_SEARCH]);
     saver_create(s_roots[SCR_SAVER]);
     quicksettings_create(s_roots[SCR_QUICK]);
