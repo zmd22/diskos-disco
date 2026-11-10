@@ -22,7 +22,8 @@ int main(int argc,char**argv){
  send(3,(request_t){.view=SMB_BROWSER,.offset=60},0);idle();assert(ds_shared.offset==60&&ds_shared.count>0);
  send(3,(request_t){.view=SMB_BROWSER,.letter='Z',.jump=1},0);idle();assert(ds_shared.offset>60);
  download(album,0);download(unowned,1); /* Unowned files are never replaced. */
- request_t folder={.view=SMB_BROWSER};strcpy(folder.id,album.id);send(1,folder,0);idle();assert(ds_shared.count==4);
+ request_t folder={.view=SMB_BROWSER};strcpy(folder.id,album.id);send(1,folder,0);idle();assert(ds_shared.count==6);
+ for(int i=0;i<ds_shared.count;i++)if(strstr(ds_shared.rows[i].name,"-large.m4a"))assert(ds_shared.rows[i].local==1);
  item_t track=lookup(d,"Album/01.flac",SMB_FILE);assert(ds_shared.rows[0].local==1||ds_shared.rows[1].local==1);
  char remote[1800];snprintf(remote,sizeof remote,"%s/Album/01.flac",argv[4]);FILE*f=fopen(remote,"w");assert(f);fputs("fLaCNEW CONTENT",f);fclose(f);download(track,0);download(track,1);
  /* Cancel an owned replacement after actual encrypted read progress. */
@@ -30,6 +31,6 @@ int main(int argc,char**argv){
  sqlite3_stmt*q=NULL;assert(sqlite3_prepare_v2(d,"INSERT OR REPLACE INTO downloads SELECT source,'ZZ-large.bin',8,0,0 FROM downloads LIMIT 1",-1,&q,NULL)==SQLITE_OK);assert(sqlite3_step(q)==SQLITE_DONE);sqlite3_finalize(q);
  pthread_mutex_lock(&ds_shared.mu);ds_shared.npicks=1;ds_shared.picks[0]=large;ds_shared.byte_done=0;pthread_mutex_unlock(&ds_shared.mu);send(2,(request_t){.view=SMB_BROWSER},1);
  int saw=0;for(int i=0;i<20000;i++){pthread_mutex_lock(&ds_shared.mu);long long n=ds_shared.byte_done;int busy=ds_shared.busy;pthread_mutex_unlock(&ds_shared.mu);if(n>0){saw=1;atomic_store(&ds_abort_job,1);break;}if(!busy)break;usleep(1000);}assert(saw);idle();assert(ds_shared.done==2);sqlite3_close(d);
- puts("PASS encrypted SMB3 listing, paging, A-Z, recursive/Unicode/empty downloads, owned replacement, unowned protection and mid-transfer cancel");
+ puts("PASS encrypted SMB3 listing, paging, A-Z, recursive/Unicode/empty and completed large downloads, owned replacement, unowned protection and mid-transfer cancel");
 close:ds_backend_stop();for(int i=0;!ds_backend_collect();i++){assert(i<3000);usleep(1000);}assert(!ds_context);return 0;
 }

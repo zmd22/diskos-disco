@@ -22,7 +22,7 @@ Browse by artist, album and track. Downloads fetch originals (no transcoding).
 
 ## SMB3 (experimental)
 
-Passes encrypted wire tests on the host but hasn't been validated against a real NAS from the Disc. Back up first.
+SMB3 support is experimental. Back up first.
 Bug reports: include NAS/server version, never passwords or auth URLs.
 
 - **Host or IP:** optional `:port`, no `smb://`.
@@ -34,6 +34,18 @@ Bug reports: include NAS/server version, never passwords or auth URLs.
 Requires SMB3 with encryption; no SMB1/2 fallback. Plain folder browser: no artist/album view, no streaming.
 Selecting a folder includes its subtree, layout preserved. Remote links are skipped. Over-long paths, deep trees or
 oversized listings fail rather than truncate.
+
+### Saving on older SD filesystems
+
+Some older FAT/exFAT drivers cannot move a completed temporary download into place without replacing an
+existing file. Disc Shelf then exclusively creates a new destination, copies the completed download into it,
+and flushes it before recording success. Existing files are never overwritten by this fallback. The progress
+page shows **Saving ... to SD...**; failures identify the operation and retain its original error through cleanup.
+
+This save step needs space for a second copy of the current file plus the usual reserve. Its destination name
+is visible while copying. Cancellation and I/O failures remove the partial file when it still belongs to this
+download; power loss can leave an incomplete, unrecorded destination. Remove that specific incomplete file
+before retrying. Unrecorded files are deliberately not overwritten automatically.
 
 ## File names
 
