@@ -159,6 +159,27 @@ static int read_int_file(const char *path){
     int v = -1; if(fscanf(f, "%d", &v) != 1) v = -1; fclose(f); return v;
 }
 
+/* Lock on Timeout: one power-button press written into the key device. The player is not its only reader and holds
+ * no grab (checked on the Disc), so it takes the press as the real button and runs its own lock: brightness 0, touch
+ * chip asleep, panel off, and its own lock state stays right, so the next real press unlocks. The key driver
+ * alternates codes 265 and 259 between real presses and the player toggles on either: a press TOGGLES, so it is only
+ * sent while the player is unlocked. Press and release go in one write, so the release can't be lost (a key left
+ * down would start the player's shutdown hold). */
+#define PLAYER_POWER_KEY 265
+static int player_power_press(void){
+    int fd = open("/dev/input/event0", O_WRONLY | O_CLOEXEC);
+    if(fd < 0){ fprintf(stderr, "lock: open event0: %s\n", strerror(errno)); return -1; }
+    struct input_event ev[4]; memset(ev, 0, sizeof ev);
+    ev[0].type = EV_KEY; ev[0].code = PLAYER_POWER_KEY; ev[0].value = 1;
+    ev[1].type = EV_SYN; ev[1].code = SYN_REPORT;
+    ev[2].type = EV_KEY; ev[2].code = PLAYER_POWER_KEY; ev[2].value = 0;
+    ev[3].type = EV_SYN; ev[3].code = SYN_REPORT;
+    ssize_t n = write(fd, ev, sizeof ev);
+    if(n != (ssize_t)sizeof ev) fprintf(stderr, "lock: write event0: %s\n", n < 0 ? strerror(errno) : "short write");
+    close(fd);
+    return n == (ssize_t)sizeof ev ? 0 : -1;
+}
+
 static void clock_tick(lv_timer_t *t){
     if(t && g_screen_off)return; /* Explicit refresh still works; wake refreshes immediately. */
     time_t now = time(NULL);
@@ -3442,6 +3463,7 @@ int main(int argc, char **argv){
     uint32_t touch_gate_wake = 0;   /* a waking touch still down: keep it off until the lift (tick | 1, 0 = none) */
     uint32_t last_blpoll = 0;   /* PW-10 backlight-rail poll cadence */
     int player_blanked = 0;     /* PW-10: we forced bl_power=4 because the player blanked via brightness=0 */
+    uint32_t lock_sent = 0;     /* Lock on Timeout: press sent, waiting for the player to lock (tick | 1, 0 = none) */
     unsigned last_vol_seq = 0;
     int last_volume = -1; /* first player report establishes a baseline, not user input */
     /* Start the boot splash HERE - after all the blocking startup init (hwclock, bt_boot_restore,
@@ -3900,6 +3922,14 @@ int main(int argc, char **argv){
             last_blpoll = lv_tick_get();
             int cbr = read_int_file("/sys/class/backlight/backlight/brightness");
             int cbp = read_int_file("/sys/class/backlight/backlight/bl_power");
+            if(lock_sent){
+                /* Lock on Timeout: the player has locked once brightness reads 0. From then on it is a player blank,
+                 * so the branch below brings the screen back on the next power press. Woken first, or no lock
+                 * within 3 s: drop it (a late lock on a lit screen is caught by the branch below as a player blank). */
+                if(bl_state != 2) lock_sent = 0;
+                else if(cbr == 0){ player_blanked = 1; lock_sent = 0; }
+                else if(lv_tick_elaps(lock_sent) > 3000){ fprintf(stderr, "lock: the player did not lock\n"); lock_sent = 0; }
+            }
             if(cbr == 0 && cbp == 0){
                 /* player blanked via brightness-only -> cut the rail. Won't re-fire (bl_power now 4). */
                 ui_backlight(0); bl_state = 2; player_blanked = 1;
@@ -3987,7 +4017,11 @@ int main(int argc, char **argv){
         if(kbinput_active() || ma_pairing_shown()) last_activity = lv_tick_get();   /* typing / a pairing code on screen: stay lit */
         if(g_wake_req){                                   /* something needs to be seen now (MA Sendspin pairing code) */
             g_wake_req = 0; last_activity = lv_tick_get();
-            if(bl_state){ ui_backlight(ui_effective_brightness()); bl_state = 0; player_blanked = 0; }
+            /* Lock on Timeout: a player lock leaves touch asleep, so a lit screen would ignore taps: unlock it too.
+             * player_blanked stays set, so the PW-10 poll puts diskOS's brightness back over the player's own level. */
+            int unlocking = player_blanked && simple_cfg_get_int("lock_on_timeout", 0)
+                && read_int_file("/sys/class/backlight/backlight/brightness") == 0 && player_power_press() == 0;
+            if(bl_state){ ui_backlight(ui_effective_brightness()); bl_state = 0; player_blanked = unlocking; }
             if(screen_current() == SCR_SAVER) screen_back();
         }
         {   /* Idle power-off (issue #17): only "idle" when playing music locally and nothing is playing. A working mode
@@ -4040,6 +4074,11 @@ int main(int argc, char **argv){
             int straight_off = !manual && saver_timeout == 0 && bl_state == 0;
             if((bl_state==1 || straight_off) && (manual || screenoff_extra > 0) && idle > off_at){
                 ui_backlight(0); bl_state = 2;
+                /* Lock on Timeout: the player locks itself (player_power_press). Only while it is unlocked: diskOS's
+                 * own off leaves brightness alone, so brightness > 0 means unlocked; a press now would otherwise wake it. */
+                if(simple_cfg_get_int("lock_on_timeout", 0) && !player_blanked
+                   && read_int_file("/sys/class/backlight/backlight/brightness") > 0 && player_power_press() == 0)
+                    lock_sent = lv_tick_get() | 1;
                 /* screen fully off -> STOP the screensaver. Leaving SCR_SAVER: (a) satisfies "the
                  * saver stops when the screen turns off"; (b) pops back to the screen shown BEFORE
                  * the saver, so a later wake lands there, not on the saver; (c) makes saver_anim_cb

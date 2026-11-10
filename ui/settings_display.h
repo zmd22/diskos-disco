@@ -40,6 +40,7 @@ static const display_entry_t DISPLAY_ENTRIES[]={
     {"imm_lyrics",NULL,"Immersive","Immersive lyrics"},
     {"saver_idx",NULL,"Standby","Screensaver delay"},
     {"screenoff_idx",NULL,"Standby","Screen-off delay"},
+    {"lock_on_timeout",NULL,"Standby","Lock on timeout"},
     {"saver_style",NULL,"Standby","Screensaver style"},
     {"disco_qs_style",NULL,"Quick settings","Layout"},
     {"null_qs_layout",NULL,"Quick settings","Layout"},
@@ -174,7 +175,7 @@ static const char *settings_page(const setting_t *s){
     const char *k=s->cfg_key?s->cfg_key:"";
     const display_entry_t *d=display_entry(s);
     const char *page=d?d->page:s->group;
-    if(!strcmp(k,"screenoff_idx")||!strcmp(k,"saver_idx")||!strcmp(k,"clock_batt_pct"))return "Battery & power";
+    if(!strcmp(k,"screenoff_idx")||!strcmp(k,"saver_idx")||!strcmp(k,"lock_on_timeout")||!strcmp(k,"clock_batt_pct"))return "Battery & power";
     if(!strcmp(k,"sleep_idx")||!strcmp(k,"sleep_action"))return "Sleep timer";
     if(s->apply==apply_restart)return "Battery & power";
     if(!strcmp(k,"time_24h"))return "Date & Time";
