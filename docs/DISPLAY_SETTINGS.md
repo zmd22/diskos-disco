@@ -9,7 +9,7 @@ All themes share seven root categories. Rows depend on theme and firmware: inapp
 | Display | Brightness, Theme, <theme> settings, Light / dark, Immersive, Library appearance, Navigation, QS style, Text & layout. |
 | Connectivity | Wi-Fi, Bluetooth (devices, codec), aptX, Quiet Wi-Fi for Bluetooth, MA Sendspin, Online services. See [Bluetooth](BLUETOOTH.md). |
 | System | Language, Controls, Date & Time, Library management, Maintenance. |
-| Battery & power | Details, Idle power-off, Restart, Screen-off delay, Screensaver delay, Shut down player, Sleep timer, battery percentage, Charging limit. |
+| Battery & power | Details, Idle power-off, Lock on timeout, Restart, Screen-off delay, Screensaver delay, Shut down player, Sleep timer, battery percentage, Charging limit. |
 | Help | How to, About, Interaction hints, Show hints again. |
 
 ## Display
@@ -41,6 +41,7 @@ All themes share seven root categories. Rows depend on theme and firmware: inapp
 - **Connectivity › Online services**: online artwork, online lyrics, artwork cache and weather.
 - **System › Date & Time**: date/time and 24-hour format.
 - **Battery & power**: delays (screen-off delay adds to the screensaver delay). Saver design is under **<theme> settings › Screensaver**.
+- **Battery & power › Lock on timeout** (Off by default): On, a screen that turns off by itself locks like the power button: touches can't wake it, one press does. Off, a tap wakes it.
 - **Battery & power › Sleep timer**: Duration and When sleep ends (separate from idle power-off).
 - **Help › About**: version and build ID.
 - **System › Maintenance**: SD update, reset, Debug Mode.

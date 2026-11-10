@@ -2,6 +2,13 @@
 
 User-facing changes in diskOS Disco!. Details of each release are in [docs/releases](docs/releases/); everything else is in the Git history. diskOS is beta software.
 
+## 3.5.1
+
+**Lock on timeout.** [Release notes](docs/releases/v3.5.1.md)
+
+- New **Settings › Battery & power › Lock on timeout** (Off by default). On: a screen that turns off by itself locks
+  like the power button. Touches can't wake it, and one press of the power button does (#18).
+
 ## 3.5.0
 
 **A polish pass:** clearer text, less wasted space and a round of fixes. [Release notes](docs/releases/v3.5.0.md)

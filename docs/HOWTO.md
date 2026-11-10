@@ -13,6 +13,7 @@
 | Configure QS items / shortcuts | Display > Navigation |
 | Configure theme menu / gestures | Display > selected theme settings > Navigation |
 | Set standby delays | Battery & power > Screensaver delay / Screen-off delay |
+| Lock the screen when it times out | Battery & power > Lock on timeout |
 | Set sleep timer | Battery & power > Sleep timer |
 | Configure online artwork / lyrics / weather | Connectivity > Online services |
 | Change clock format | System > Date & Time |

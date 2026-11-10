@@ -60,7 +60,7 @@ Typical loop:
 
 Notes and limits:
 - The cst816t is MT type-B on `/dev/input/event1`; `tinj` writes 32-bit `input_event`s there. Physical keys are on
-  `event0`, owned by the player, and can't be injected.
+  `event0`; the player reads it without a grab, so a written key reaches it (Lock on timeout sends the power key).
 - Taps hold ~90 ms. Small buttons are occasionally missed if press and release land in one input cycle; use a list
   row or swipe instead.
 - Horizontal swipes change pages; keep `y` near centre to avoid the Now Playing seek ring.

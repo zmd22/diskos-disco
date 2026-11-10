@@ -166,7 +166,7 @@ scaled cover or a dim backdrop under the LVGL UI) with no CPU blend. BUT:
 | Keys | `/dev/input/event0` - **x2000_key** | **physical buttons** (GPIO keys) |
 
 We can synthesize input by writing the 32-bit-ABI `input_event` (16-byte) MT-B sequence to
-`/dev/input/event1` - verified working (used to drive stock's UI pages over serial during RE). diskOS can also read the hardware keys via event0.
+`/dev/input/event1` - verified working (used to drive stock's UI pages over serial during RE). diskOS can also read the hardware keys via event0. The player reads event0 without a grab (checked on V2.57, 2026-11-10), so a key written there reaches it too: Lock on timeout sends the power key this way. The driver alternates codes 265 and 259 between power presses; the player toggles its lock on either.
 
 ---
 
