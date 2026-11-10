@@ -289,6 +289,7 @@ void classic_radio_skin(lv_obj_t *root, const char *title, lv_obj_t *ring, lv_ob
 
 /* ---- Now Playing chrome: title bar, "n of N", lyrics, decorative bars ---- */
 #define CL_BARS 16
+#define CL_FMT_W 260           /* the format line in place of the bars */
 static lv_obj_t *g_np_state, *g_np_num, *g_np_fmt, *g_bar[CL_BARS];
 static int bars_on(void){ return cfg_get_int("classic_bars", 1) != 0; }
 static lv_timer_t *g_bars_t;
@@ -339,8 +340,8 @@ void classic_np_chrome(lv_obj_t *scr){
     g_np_fmt = lv_label_create(scr); kit_keep(g_np_fmt); lv_label_set_text(g_np_fmt, "");
     lv_obj_set_style_text_font(g_np_fmt, TF(UI_16), 0); lv_obj_set_style_text_color(g_np_fmt, TC(TEXT_PRIMARY), 0);
     lv_obj_set_style_text_align(g_np_fmt, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_width(g_np_fmt, 228); lv_label_set_long_mode(g_np_fmt, LV_LABEL_LONG_SCROLL_CIRCULAR);
-    lv_obj_set_pos(g_np_fmt, 66, 194);
+    lv_obj_set_width(g_np_fmt, CL_FMT_W); lv_label_set_long_mode(g_np_fmt, LV_LABEL_LONG_CLIP);
+    lv_obj_set_pos(g_np_fmt, 180 - CL_FMT_W / 2, 194);
     classic_np_bars_apply();
     if(!g_bars_t) g_bars_t = lv_timer_create(bars_tick, 120, NULL);
 }
@@ -351,8 +352,25 @@ void classic_np_bars_apply(void){
     for(int i = 0; i < CL_BARS; i++) if(g_bar[i]){ if(on) lv_obj_remove_flag(g_bar[i], LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(g_bar[i], LV_OBJ_FLAG_HIDDEN); }
     if(on) lv_obj_add_flag(g_np_fmt, LV_OBJ_FLAG_HIDDEN); else lv_obj_remove_flag(g_np_fmt, LV_OBJ_FLAG_HIDDEN);
 }
+static int fmt_width(const char *t, const lv_font_t *f){
+    lv_point_t sz; lv_text_get_size(&sz, t, f, 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE); return sz.x;
+}
+static void drop_space_before(char *b, const char *word){   /* " kbps" -> "kbps" */
+    char *q = strstr(b, word); if(q && q > b && q[-1] == ' ') memmove(q - 1, q, strlen(q) + 1);
+}
+/* the whole line, never scrolling: compact ("FLAC/1411kbps/44.1kHz") and then a size smaller until it fits */
 void classic_np_format(const char *fmt){
-    if(g_np_fmt && fmt && strcmp(lv_label_get_text(g_np_fmt), fmt)) lv_label_set_text(g_np_fmt, fmt);
+    if(!g_np_fmt || !fmt) return;
+    char b[96]; snprintf(b, sizeof b, "%s", fmt);
+    const lv_font_t *f = TF(UI_16);
+    if(fmt_width(b, f) > CL_FMT_W){
+        drop_space_before(b, "kbps"); drop_space_before(b, "kHz");
+        char *q; while((q = strstr(b, " / "))){ q[0] = '/'; memmove(q + 1, q + 3, strlen(q + 3) + 1); }
+    }
+    if(fmt_width(b, f) > CL_FMT_W) f = TF(UI_14);
+    if(fmt_width(b, f) > CL_FMT_W) f = TF(UI_12);
+    if(lv_obj_get_style_text_font(g_np_fmt, 0) != f) lv_obj_set_style_text_font(g_np_fmt, f, 0);
+    if(strcmp(lv_label_get_text(g_np_fmt), b)) lv_label_set_text(g_np_fmt, b);
 }
 /* "3/19" from the player -> "3 of 19" */
 void classic_np_num(const char *num){
