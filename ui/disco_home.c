@@ -5,7 +5,7 @@
 /* Music / Home in the Disco theme (fork): the playing album's cover, sharp, across the whole screen; the clock with a
  * small weather icon and the temperature under it in a glass pill at the top (Settings > Display > Show Clock); the
  * title and artist next to the menu picker; previous / play-pause / next on an arc that runs with the progress arc on
- * the lower-right rim. Tapping the title opens the track overlay: Favourite, Play Mode, Up Next, Lyrics, Immersive.
+ * the lower-right rim. Title and artist taps open their Library pages; More opens the track actions.
  * Nothing moves while idle: the progress arc is updated once a second, only while Music is on screen. home.c forwards
  * its setters here when th_disco_family(). */
 #include "screens.h"
@@ -42,7 +42,7 @@ static void dl_scroll5(dlabel_t *d){
     for(int k = 0; k < 2; k++){ lv_obj_set_style_anim(l2[k], disco_scroll5(), 0); lv_label_set_long_mode(l2[k], LV_LABEL_LONG_SCROLL_CIRCULAR); }
 }
 static dlabel_t L_TIME, L_WX, L_STAT, L_TITLE, L_ARTIST, L_MODE, L_EL, L_RM;   /* EL/RM: elapsed / remaining under the line */
-static lv_obj_t *g_mode;
+static lv_obj_t *g_mode, *g_more;
 static void mode_paint(void);
 void disco_progress_apply(void);
 static void acc_paint(void);
@@ -160,40 +160,75 @@ static int gz_arc_point(int x, int y){                                 /* on the
 static void ov_open(void);
 static lv_timer_t *simple_tap_timer;
 static int simple_gz_moved,simple_gz_consumed;
-static void simple_tap_done(lv_timer_t*t){lv_timer_delete(t);simple_tap_timer=NULL;if(screen_current()==SCR_HOME&&!simple_nav_is_open())ov_open();}
+enum { TRACK_MENU = 2 };
+static ui_np_link_press_t track_press, simple_pending;
+static lv_point_t track_start;
+static int track_armed, track_cancel, track_target, simple_target;
+static int track_contains(lv_obj_t *o, const lv_point_t *p){
+    if(!o || lv_obj_has_flag(o,LV_OBJ_FLAG_HIDDEN))return 0;
+    lv_area_t a;lv_obj_get_coords(o,&a);
+    return p->x>=a.x1 && p->x<=a.x2 && p->y>=a.y1 && p->y<=a.y2;
+}
+static int track_link_at(const lv_point_t *p){
+    if(track_contains(L_ARTIST.fg,p))return UI_NP_LINK_ARTIST;
+    if(track_contains(L_TITLE.fg,p))return UI_NP_LINK_ALBUM;
+    return TRACK_MENU;
+}
+static void simple_tap_cancel(void){
+    if(simple_tap_timer){lv_timer_delete(simple_tap_timer);simple_tap_timer=NULL;}
+}
+static void track_open(const ui_np_link_press_t *press,int target){
+    if(screen_current()!=SCR_HOME || (th_simple() && simple_nav_is_open()) || !ui_np_link_current(press))return;
+    if(!press->track.have_track){screen_show(SCR_LIBRARY);return;}
+    if(target==TRACK_MENU)ov_open();else ui_np_link_open(press,target);
+}
+static void simple_tap_done(lv_timer_t*t){
+    lv_timer_delete(t);simple_tap_timer=NULL;g_gz_last=0;
+    track_open(&simple_pending,simple_target);
+}
 static void gz_cb(lv_event_t *e){
     lv_event_code_t c = lv_event_get_code(e);
     if(c == LV_EVENT_HIT_TEST){ lv_hit_test_info_t *h = lv_event_get_hit_test_info(e); if(gz_arc_point(h->point->x, h->point->y)) h->res = false; return; }
     lv_indev_t *in = lv_indev_active(); lv_point_t p = { 0, 0 }; if(in) lv_indev_get_point(in, &p);
-    if(th_simple()&&c==LV_EVENT_PRESSING){if(abs(p.x-g_gz_px)>18||abs(p.y-g_gz_py)>18)simple_gz_moved=1;return;}
+    if(th_simple()&&c==LV_EVENT_PRESS_LOST){simple_tap_cancel();g_gz_last=0;simple_gz_consumed=1;return;}
+    if(th_simple()&&c==LV_EVENT_PRESSING){if(abs(p.x-g_gz_px)>18||abs(p.y-g_gz_py)>18){simple_gz_moved=1;simple_tap_cancel();g_gz_last=0;}return;}
     if(th_simple()&&c==LV_EVENT_LONG_PRESSED){
-        if(simple_tap_timer){lv_timer_delete(simple_tap_timer);simple_tap_timer=NULL;}g_gz_last=0;
-        if(simple_gz_moved||!g_have)return;
+        simple_tap_cancel();g_gz_last=0;
+        if(simple_gz_moved||!g_have||!ui_np_link_current(&track_press))return;
         simple_gz_consumed=1;int hold=simple_cfg_get_int("disco_title_hold",0);if(hold==0)disco_open_np_immersive();else if(hold==1)ui_np_fav_toggle();return;
     }
-    if(c == LV_EVENT_PRESSED){ g_gz_px = p.x; g_gz_py = p.y; g_gz_t0 = lv_tick_get();simple_gz_moved=simple_gz_consumed=0;return; }
+    if(c == LV_EVENT_PRESSED){
+        g_gz_px=p.x;g_gz_py=p.y;g_gz_t0=lv_tick_get();simple_gz_moved=simple_gz_consumed=0;
+        if(th_simple()){
+            if(simple_tap_timer && (!ui_np_link_current(&simple_pending)||lv_tick_elaps(g_gz_last)>=400)){simple_tap_cancel();g_gz_last=0;}
+            else simple_tap_cancel(); /* a second press must finish before a pending single can navigate */
+            ui_np_link_capture(&track_press);track_target=track_link_at(&p);
+        }
+        return;
+    }
     if(th_simple()&&c==LV_EVENT_RELEASED){
         if(simple_gz_consumed)return;
-        if(g_idle){if(!simple_gz_moved&&lv_tick_elaps(g_gz_t0)<=400)screen_show(SCR_LIBRARY);return;}
+        if(g_idle){if(!simple_gz_moved&&lv_tick_elaps(g_gz_t0)<=400)track_open(&track_press,TRACK_MENU);return;}
+        if(!ui_np_link_current(&track_press)){simple_tap_cancel();g_gz_last=0;return;}
     }
     if(c != LV_EVENT_RELEASED || !g_have) return;
     int dx = p.x - g_gz_px, dy = p.y - g_gz_py, adx = dx < 0 ? -dx : dx, ady = dy < 0 ? -dy : dy;
     uint32_t now = lv_tick_get();
     if(adx >= 40 && adx > 2 * ady && now - g_gz_t0 < 700){            /* a swipe: right = next, left = previous */
         g_gz_last = 0;
-        if(simple_tap_timer){lv_timer_delete(simple_tap_timer);simple_tap_timer=NULL;}
+        simple_tap_cancel();
         if(dx > 0){ ui_transport_command("0201000C0001"); gz_flash(LV_SYMBOL_NEXT); }
         else      { ui_transport_command("0201000C0002"); gz_flash(LV_SYMBOL_PREV); }
         return;
     }
-    if(adx > 18 || ady > 18 || now - g_gz_t0 > 400) return;           /* not a tap */
+    if(adx > 18 || ady > 18 || now - g_gz_t0 > 400 || (th_simple() && simple_gz_moved)){simple_tap_cancel();g_gz_last=0;return;}
     if(g_gz_last && now - g_gz_last < 400){                            /* the second tap of a double tap */
         g_gz_last = 0;
-        if(simple_tap_timer){lv_timer_delete(simple_tap_timer);simple_tap_timer=NULL;}
+        simple_tap_cancel();
         track_state_t st; ipc_get_state(&st);
         gz_flash((th_simple()?ui_is_playing():st.state==2)?LV_SYMBOL_PAUSE:LV_SYMBOL_PLAY);
         ui_transport_command("0201000C0000");
-    } else {g_gz_last = now;if(th_simple()){if(simple_tap_timer)lv_timer_delete(simple_tap_timer);simple_tap_timer=lv_timer_create(simple_tap_done,410,NULL);}}
+    } else {g_gz_last=now;if(th_simple()){simple_pending=track_press;simple_target=track_target;simple_tap_timer=lv_timer_create(simple_tap_done,410,NULL);}}
 }
 static void gz_create(lv_obj_t *root){
     g_gz = lv_obj_create(root); lv_obj_remove_style_all(g_gz);
@@ -512,7 +547,7 @@ int dhome_owns_point(int x, int y){
  * its name as the caption. */
 static lv_obj_t *g_ov, *g_ov_btn[6], *g_ov_cap[6];
 static void ov_close(void){ if(g_ov){ lv_obj_delete(g_ov); g_ov = NULL; } }
-void dhome_overlay_close(void){if(th_simple()&&simple_tap_timer){lv_timer_delete(simple_tap_timer);simple_tap_timer=NULL;}ov_close(); }
+void dhome_overlay_close(void){simple_tap_cancel();g_gz_last=0;track_armed=0;simple_gz_consumed=1;ov_close();}
 int disco_track_overlay_visible(void){ return g_ov != NULL; }
 static lv_point_t ov_swipe_start;
 static uint32_t ov_swipe_at;
@@ -755,11 +790,23 @@ static void idle_eval(void){                                            /* switc
 }
 static void idle_timer_cb(lv_timer_t *t){ (void)t; idle_eval(); }
 static void title_cb(lv_event_t *e){
-    if(th_simple())return;
+    int more=lv_event_get_current_target(e)==g_more;
+    if(th_simple()&&!more)return;
     lv_event_code_t c = lv_event_get_code(e);
-    if(c == LV_EVENT_SHORT_CLICKED && g_idle){ screen_show(SCR_LIBRARY); return; }   /* idle: "Go to Library" */
-    if(c == LV_EVENT_SHORT_CLICKED) ov_open();                         /* not CLICKED: that also follows a hold */
-    else if(c == LV_EVENT_LONG_PRESSED && g_have && !g_ov){
+    if(c!=LV_EVENT_PRESSED&&c!=LV_EVENT_PRESSING&&c!=LV_EVENT_RELEASED&&c!=LV_EVENT_PRESS_LOST&&
+       c!=LV_EVENT_SHORT_CLICKED&&c!=LV_EVENT_LONG_PRESSED)return;
+    lv_indev_t *in=lv_indev_active();lv_point_t p={0,0};if(in)lv_indev_get_point(in,&p);
+    if(c==LV_EVENT_PRESSED){
+        simple_tap_cancel();g_gz_last=0;track_start=p;track_cancel=0;track_armed=1;
+        ui_np_link_capture(&track_press);track_target=more?TRACK_MENU:track_link_at(&p);return;
+    }
+    if(c==LV_EVENT_PRESS_LOST){track_cancel=1;return;}
+    if(in&&(abs(p.x-track_start.x)>18||abs(p.y-track_start.y)>18))track_cancel=1;
+    if(!track_armed||track_cancel||screen_current()!=SCR_HOME)return;
+    if(c==LV_EVENT_SHORT_CLICKED){track_armed=0;track_open(&track_press,track_target);}
+    else if(c == LV_EVENT_LONG_PRESSED){
+        track_cancel=1;
+        if(more||!g_have||g_ov||!ui_np_link_current(&track_press))return;
         int h = simple_cfg_get_int("disco_title_hold", 0);
         if(h == 0) disco_open_np_immersive();
         else if(h == 1) ui_np_fav_toggle();                             /* toasts Added / Removed */
@@ -777,7 +824,7 @@ void dhome_title_apply(void){
     for(int i = 0; i < 2; i++) for(int k = 0; k < 2; k++){
         lv_obj_t *l = k ? L[i]->fg : L[i]->sh; int d = k ? 0 : 1;
         lv_obj_set_style_text_align(l, left ? LV_TEXT_ALIGN_LEFT : LV_TEXT_ALIGN_CENTER, 0);
-        if(left) lv_obj_align(l, LV_ALIGN_TOP_LEFT, 14 + d, Y[i] + d); else lv_obj_align(l, LV_ALIGN_TOP_MID, d, Y[i] + d);
+        if(left) lv_obj_align(l, LV_ALIGN_TOP_LEFT, d, Y[i] + d); else lv_obj_align(l, LV_ALIGN_TOP_MID, d, Y[i] + d);
     }
 }
 /* the top of Music: a tap on the clock opens Weather; a hold shows or hides the clock and the status icons
@@ -838,13 +885,18 @@ void dhome_create(lv_obj_t *root){
     lv_obj_add_event_cb(g_pill, wx_cb, LV_EVENT_SHORT_CLICKED, NULL); lv_obj_add_event_cb(g_pill, wx_cb, LV_EVENT_LONG_PRESSED, NULL);
     if(!simple_cfg_get_int("disco_clock", 1)) lv_obj_add_flag(g_pill, LV_OBJ_FLAG_HIDDEN);
     dhome_clockinfo_apply();
-    /* title + artist across the wide middle; a tap opens the track overlay */
+    /* Reserve a separate More target beside the title and artist links. */
     g_trk = lv_obj_create(root); lv_obj_remove_style_all(g_trk);
-    lv_obj_set_pos(g_trk, disco_mirror() ? 42 : 18, 136); lv_obj_set_size(g_trk, 300, 66);   /* clear of the shard, wider on the free side */
+    lv_obj_set_pos(g_trk, disco_mirror() ? 98 : 18, 136); lv_obj_set_size(g_trk, 244, 70);
+    lv_obj_clear_flag(g_trk,LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_add_flag(g_trk, LV_OBJ_FLAG_CLICKABLE); lv_obj_add_event_cb(g_trk, title_cb, LV_EVENT_ALL, NULL);
-    g_title = dl_make(g_trk, &L_TITLE, ui_np_font(28), 296, 40, LV_ALIGN_TOP_MID, 0, 0, 0);
+    g_title = dl_make(g_trk, &L_TITLE, ui_np_font(28), 240, 38, LV_ALIGN_TOP_MID, 0, 0, 0);
     dl_text(&L_TITLE, "Not Playing");
-    g_artist = dl_make(g_trk, &L_ARTIST, ui_np_font(20), 284, 32, LV_ALIGN_TOP_MID, 0, 42, 1);
+    g_artist = dl_make(g_trk, &L_ARTIST, ui_np_font(20), 240, 32, LV_ALIGN_TOP_MID, 0, 38, 1);
+    g_more=glass_circle(root,disco_mirror()?70:290,169,40,"...");
+    lv_obj_set_ext_click_area(g_more,0);lv_obj_clear_flag(g_more,LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_flag(g_more,LV_OBJ_FLAG_HIDDEN);
+    ui_on(g_more,title_cb,LV_EVENT_ALL,NULL,"disco.track.more",UI_REACHABLE);
     dl_scroll5(&L_TITLE); dl_scroll5(&L_ARTIST);
     dhome_title_apply();
     underline_create(root);
@@ -921,6 +973,9 @@ void dhome_clockinfo_apply(void){
 }
 void dhome_set_now_playing(const char *title, const char *artist, lv_color_t accent, bool playing){
     g_have = title != NULL;
+    if(g_more){if(g_have)lv_obj_remove_flag(g_more,LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(g_more,LV_OBJ_FLAG_HIDDEN);}
+    if(simple_tap_timer&&!ui_np_link_current(&simple_pending)){simple_tap_cancel();g_gz_last=0;}
+    if(track_armed&&!ui_np_link_current(&track_press))track_cancel=1;
     g_acc = ui_disco_fit_accent(accent);
     if(!th_simple() && title && strcmp(L_TITLE.cur,title) && L_ARTIST.fg){ui_music_scroll(L_ARTIST.fg);ui_music_scroll(L_ARTIST.sh);}
     if(!(g_idle && !title)){ dl_text(&L_TITLE, title ? title : "Not Playing"); dl_text(&L_ARTIST, artist ? artist : ""); }
@@ -1020,9 +1075,9 @@ void dhome_test_zoom(int frac){ zoom_show(1, frac); }                  /* host r
 /* ---- Immersive: Music's pieces step aside (the clock up, the controls down, the rest fades) and come back ---- */
 static void (*g_imm_done)(void);
 static lv_obj_t *imm_part(int i, int *dy){                             /* the pieces and which way each one goes */
-    lv_obj_t *o[] = { g_pill, g_trk, g_ul_tr, g_ul_fill, g_ul_knob, L_EL.fg, L_EL.sh, L_RM.fg, L_RM.sh, g_btn[0], g_btn[1], g_btn[2], g_mode,
+    lv_obj_t *o[] = { g_pill, g_trk, g_ul_tr, g_ul_fill, g_ul_knob, L_EL.fg, L_EL.sh, L_RM.fg, L_RM.sh, g_btn[0], g_btn[1], g_btn[2], g_mode, g_more,
                       g_gz_hint[0], g_gz_hint[1], g_gz_hint[2], g_gz_hint[3] };
-    static const int D[] = { -26, 0, 0, 0, 0, 0, 0, 0, 0, 30, 34, 30, 30, 30, 30, 30, 30 };
+    static const int D[] = { -26, 0, 0, 0, 0, 0, 0, 0, 0, 30, 34, 30, 30, 0, 30, 30, 30, 30 };
     if(i >= (int)(sizeof D / sizeof D[0])) return (lv_obj_t *)-1;
     *dy = D[i]; return o[i];
 }
@@ -1090,8 +1145,8 @@ static void simple_music_layout(void){
  lv_obj_set_pos(g_pill,80,14);lv_obj_set_size(g_pill,200,82);lv_obj_set_pos(g_top_hit,80,14);lv_obj_set_size(g_top_hit,200,82);
  simple_label_pair(&L_STAT,0,0,200,20,TF(UI_16));simple_label_pair(&L_TIME,0,20,200,35,TF(UI_30));simple_label_pair(&L_WX,0,56,200,26,&g_wfont);   /* a touch larger, still inside the 82 px field */
  int aligned_left=simple_cfg_get_int("disco_title_al",0)==1;
- lv_obj_set_pos(g_trk,36,94);lv_obj_set_size(g_trk,288,136);
- simple_label_pair(&L_TITLE,0,0,288,SIMPLE_TEXT_Y,TF(MUSIC_TITLE));simple_label_pair(&L_ARTIST,0,SIMPLE_TEXT_Y,288,39,TF(MUSIC_ARTIST));   /* title, artist and album sit midway between the clock and the progress line */lv_label_set_long_mode(L_ARTIST.fg,LV_LABEL_LONG_DOT);
+ lv_obj_set_pos(g_trk,36,94);lv_obj_set_size(g_trk,240,136);
+ simple_label_pair(&L_TITLE,0,0,240,SIMPLE_TEXT_Y,TF(MUSIC_TITLE));simple_label_pair(&L_ARTIST,0,SIMPLE_TEXT_Y,240,39,TF(MUSIC_ARTIST));   /* More has its own column, clear of both text links. */lv_label_set_long_mode(L_ARTIST.fg,LV_LABEL_LONG_DOT);
  lv_obj_set_style_text_align(L_TITLE.fg,aligned_left?LV_TEXT_ALIGN_LEFT:LV_TEXT_ALIGN_CENTER,0);
  lv_obj_set_style_text_align(L_ARTIST.fg,aligned_left?LV_TEXT_ALIGN_LEFT:LV_TEXT_ALIGN_CENTER,0);
  if(!simple_album){simple_album=lv_label_create(lv_obj_get_parent(g_trk));lv_label_set_long_mode(simple_album,LV_LABEL_LONG_DOT);kit_keep(simple_album);}
@@ -1099,6 +1154,7 @@ static void simple_music_layout(void){
  lv_obj_set_style_text_align(simple_album,aligned_left?LV_TEXT_ALIGN_LEFT:LV_TEXT_ALIGN_CENTER,0);lv_obj_set_pos(simple_album,36,208);lv_obj_set_size(simple_album,288,35);   /* clear of the progress line */
  simple_music_content(1);
  lv_obj_set_pos(g_gz,36,94);lv_obj_set_size(g_gz,288,171);lv_obj_move_foreground(g_gz);
+ if(g_more){lv_obj_set_pos(g_more,284,120);lv_obj_move_foreground(g_more);kit_keep(g_more);}
  lv_label_set_text(g_gz_hint[0],LV_SYMBOL_LEFT LV_SYMBOL_LEFT);lv_obj_set_pos(g_gz_hint[0],112,306);
  lv_label_set_text(g_gz_hint[2],LV_SYMBOL_RIGHT LV_SYMBOL_RIGHT);lv_obj_set_pos(g_gz_hint[2],228,306);
  lv_obj_set_pos(g_gz_hint[3],172,270);lv_obj_add_flag(g_gz_hint[1],LV_OBJ_FLAG_HIDDEN);
@@ -1131,4 +1187,4 @@ static void simple_music_indicators(void){
  for(int k=0;k<4;k++)if(g_gz_hint[k]){if(hints&&k!=1)lv_obj_remove_flag(g_gz_hint[k],LV_OBJ_FLAG_HIDDEN);else lv_obj_add_flag(g_gz_hint[k],LV_OBJ_FLAG_HIDDEN);}
 }
 
-int simple_music_protected(lv_obj_t*o){return th_simple()&&(o==g_pill||o==g_trk||o==g_top_hit||o==g_gz||o==L_TITLE.fg||o==L_ARTIST.fg||o==simple_album||o==simple_play_state||o==simple_mode_state);}
+int simple_music_protected(lv_obj_t*o){return th_simple()&&(o==g_pill||o==g_trk||o==g_more||o==g_top_hit||o==g_gz||o==L_TITLE.fg||o==L_ARTIST.fg||o==simple_album||o==simple_play_state||o==simple_mode_state);}

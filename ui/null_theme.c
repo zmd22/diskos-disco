@@ -37,8 +37,12 @@ extern const lv_font_t null_fine_16, null_fine_18, diskos_mono_16, diskos_mono_1
 extern const lv_font_t null_jersey_42, null_pixelify_22, null_pixelify_20;
 extern const lv_font_t null_handjet_38, null_vt323_27, null_vt323_24, null_vt323_21, null_dot_36;
 static lv_font_t music_fonts[4][5];
-static lv_obj_t *qdate, *qbicon, *qsun, *track_hit, *album_hit, *gesture_feedback, *feedback_icon;
+static lv_obj_t *qdate, *qbicon, *qsun, *track_hit, *album_hit, *track_more, *gesture_feedback, *feedback_icon;
 static lv_timer_t *track_tap_timer;
+enum { TRACK_MENU = 2 };
+static ui_np_link_press_t track_press, track_pending;
+static lv_point_t track_start;
+static int track_armed, track_cancel, track_moved, track_target, pending_target;
 static lv_obj_t *music_weather,*saver_bg,*saver_wash;
 static char music_clock_text[32]="--:--";
 static const lv_font_t *music_font(int role)
@@ -209,24 +213,59 @@ static void cancel_track_tap(void)
 {
     if(track_tap_timer){lv_timer_delete(track_tap_timer);track_tap_timer=NULL;}
 }
+static int track_contains(lv_obj_t *o,const lv_point_t *p)
+{
+    if(!o||lv_obj_has_flag(o,LV_OBJ_FLAG_HIDDEN))return 0;
+    lv_area_t a;lv_obj_get_coords(o,&a);
+    return p->x>=a.x1&&p->x<=a.x2&&p->y>=a.y1&&p->y<=a.y2;
+}
+static int track_link_at(const lv_point_t *p)
+{
+    if(track_contains(artist,p))return UI_NP_LINK_ARTIST;
+    if(track_contains(title,p))return UI_NP_LINK_ALBUM;
+    return TRACK_MENU;
+}
+static void track_begin(const lv_point_t *p,int target)
+{
+    if(track_tap_timer&&(!ui_np_link_current(&track_pending)||lv_tick_elaps(gz_last)>=400))gz_last=0;
+    cancel_track_tap(); /* a second press owns the pending single until release */
+    track_start=*p;track_cancel=track_moved=0;track_armed=1;track_target=target;
+    ui_np_link_capture(&track_press);
+}
+static void track_open(const ui_np_link_press_t *press,int target)
+{
+    if(screen_current()!=SCR_HOME||!ui_np_link_current(press))return;
+    if(!press->track.have_track){screen_show(SCR_LIBRARY);return;}
+    if(target==TRACK_MENU)disco_track_overlay_open();else ui_np_link_open(press,target);
+}
 static void track_tap_later(lv_timer_t *t)
 {
     (void)t;track_tap_timer=NULL;gz_last=0;
-    if(screen_current()==SCR_HOME && have)disco_track_overlay_open();
+    track_open(&track_pending,pending_target);
 }
 static void track_event(lv_event_t *e)
 {
     if(screen_current()!=SCR_HOME)return;
-    if(!have){if(lv_event_get_code(e)==LV_EVENT_CLICKED && !screen_press_was_long())screen_show(SCR_LIBRARY);return;}
     lv_event_code_t c=lv_event_get_code(e);
+    if(c!=LV_EVENT_PRESSED&&c!=LV_EVENT_PRESSING&&c!=LV_EVENT_RELEASED&&c!=LV_EVENT_PRESS_LOST&&
+       c!=LV_EVENT_CLICKED&&c!=LV_EVENT_LONG_PRESSED)return;
+    lv_indev_t *in=lv_indev_active();lv_point_t p={0,0};if(in)lv_indev_get_point(in,&p);
+    int more=lv_event_get_current_target(e)==track_more;
+    if(c==LV_EVENT_PRESSED){track_begin(&p,more?TRACK_MENU:track_link_at(&p));if(more)gz_last=0;}
+    if(c==LV_EVENT_PRESS_LOST){track_cancel=1;cancel_track_tap();gz_last=0;return;}
+    if(in&&(abs(p.x-track_start.x)>18||abs(p.y-track_start.y)>18))track_moved=1;
+    if(!track_armed)return;
     if(c==LV_EVENT_LONG_PRESSED){
-        cancel_track_tap();gz_last=0;
+        cancel_track_tap();gz_last=0;track_cancel=1;
+        if(more||track_moved||!have||!ui_np_link_current(&track_press))return;
         int action=simple_cfg_get_int("null_title_hold",0);
         if(action==0)disco_open_np_immersive();else if(action==1)ui_np_fav_toggle();
         return;
     }
-    if(simple_cfg_get_int("null_controls",0)==2){gesture_event(e);return;}
-    if(c==LV_EVENT_CLICKED && !screen_press_was_long())disco_track_overlay_open();
+    if(!more&&have&&simple_cfg_get_int("null_controls",0)==2){gesture_event(e);return;}
+    if(c==LV_EVENT_CLICKED && !screen_press_was_long()){
+        track_armed=0;if(!track_cancel&&!track_moved)track_open(&track_press,track_target);
+    }
 }
 static void feedback_opa(void *o,int32_t v){lv_obj_set_style_opa(o,v,0);}
 static void feedback_done(lv_anim_t *a){lv_obj_add_flag(a->var,LV_OBJ_FLAG_HIDDEN);}
@@ -280,6 +319,7 @@ static void gesture_event(lv_event_t *e)
     uint32_t now = lv_tick_get();
     last_touch = now;
     if (c == LV_EVENT_PRESSED) {
+        if(lv_event_get_current_target(e)==gesture)track_begin(&p,TRACK_MENU);
         gz_start = p;
         gz_t0 = now;
         if (simple_cfg_get_int("null_controls", 0) == 1 && !ctl_shown) {
@@ -293,15 +333,19 @@ static void gesture_event(lv_event_t *e)
         wake_guard = 0;
         return;
     }
-    if(c==LV_EVENT_PRESS_LOST){cancel_track_tap();gz_last=0;return;}
+    if(c==LV_EVENT_PRESS_LOST){track_cancel=1;cancel_track_tap();gz_last=0;return;}
+    if(c==LV_EVENT_PRESSING&&(abs(p.x-gz_start.x)>18||abs(p.y-gz_start.y)>18)){
+        track_moved=1;cancel_track_tap();gz_last=0;
+    }
     if (c != LV_EVENT_RELEASED || simple_cfg_get_int("null_controls", 0) != 2)
         return;
+    if(track_cancel||!ui_np_link_current(&track_press)){cancel_track_tap();gz_last=0;return;}
     int dx = p.x - gz_start.x, dy = p.y - gz_start.y;
     if (abs(dx) >= 40 && abs(dx) > 2 * abs(dy) && now - gz_t0 < 700) {
         gz_last = 0;
         cancel_track_tap();
         if(ui_transport_command(dx > 0 ? "0201000C0001" : "0201000C0002")==0)gesture_show_icon(dx>0?NULL_ICON_NEXT:NULL_ICON_PREVIOUS);
-    } else if (abs(dx) < 18 && abs(dy) < 18 && now - gz_t0 < 400) {
+    } else if (!track_moved && abs(dx) < 18 && abs(dy) < 18 && now - gz_t0 < 400) {
         if (gz_last && now - gz_last < 400) {
             gz_last = 0;
             cancel_track_tap();
@@ -310,10 +354,11 @@ static void gesture_event(lv_event_t *e)
                 gesture_show_icon(playing?NULL_ICON_PAUSE:NULL_ICON_PLAY);
             }
         } else{
-            gz_last=now;cancel_track_tap();track_tap_timer=lv_timer_create(track_tap_later,400,NULL);
+            gz_last=now;cancel_track_tap();track_pending=track_press;pending_target=track_target;
+            track_tap_timer=lv_timer_create(track_tap_later,400,NULL);
             if(track_tap_timer)lv_timer_set_repeat_count(track_tap_timer,1);
         }
-    }
+    } else {cancel_track_tap();gz_last=0;}
 }
 static void layout_music(void)
 {
@@ -332,7 +377,8 @@ static void layout_music(void)
     for (int i = 0; i < 3; i++)
         lv_obj_set_y(buttons[i], 254 + drop);
     lv_obj_set_y(gesture, 248 + drop);
-    if(track_hit){lv_obj_set_y(track_hit,nav_value>0?64:106);lv_obj_set_size(track_hit,288,nav_value>0?68:100);}
+    if(track_hit){lv_obj_set_y(track_hit,nav_value>0?64:106);lv_obj_set_size(track_hit,240,nav_value>0?68:100);}
+    if(track_more)lv_obj_set_y(track_more,110-lift);
     if(album_hit)lv_obj_set_y(album_hit,174+drop);
 }
 static void nav_paint(void)
@@ -368,6 +414,7 @@ static void nav_anim(void *u, int32_t v)
 }
 static void nav_set(int on)
 {
+    cancel_track_tap();gz_last=0;track_cancel=1;
     nav_open = !!on;
     heartbeat_sync();
     onboarding_screen(screen_current(),nav_open);
@@ -552,22 +599,33 @@ void null_home_create(lv_obj_t *r)
     extern const lv_font_t font_weather16;
     weather_font=*TF(UI_16);weather_font.fallback=&font_weather16;   /* a touch larger */
     lv_obj_set_style_text_font(music_weather,&weather_font,0);
-    title = text(r, "NOT PLAYING", 36, 116, 288, TF(HEADER), TC(TEXT_PRIMARY));
-    artist = text(r, "", 36, 157, 288, &pixel14, TC(TEXT_SECONDARY));
+    title = text(r, "NOT PLAYING", 36, 116, 240, TF(HEADER), TC(TEXT_PRIMARY));
+    artist = text(r, "", 36, 157, 240, &pixel14, TC(TEXT_SECONDARY));
     album = text(r, "", 36, 180, 288, TF(UI_16), TC(TEXT_SECONDARY));
     lv_label_set_long_mode(title, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_label_set_long_mode(artist, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_label_set_long_mode(album, LV_LABEL_LONG_SCROLL_CIRCULAR);
-    track_hit=box(r,36,106,288,100);album_hit=box(r,36,174,288,30);
+    track_hit=box(r,36,106,240,100);album_hit=box(r,36,174,288,30);
     lv_obj_t *hits[]={track_hit,album_hit};
     for(int k=0;k<2;k++){
         lv_obj_set_style_bg_opa(hits[k],0,0);lv_obj_add_flag(hits[k],LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_PRESS_LOCK);
         ui_on(hits[k],track_event,LV_EVENT_CLICKED,NULL,k?"null.album.menu":"null.track.menu",UI_REACHABLE);
         ui_on(hits[k],track_event,LV_EVENT_LONG_PRESSED,NULL,k?"null.album.immersive":"null.track.immersive",UI_REACHABLE);
         lv_obj_add_event_cb(hits[k],track_event,LV_EVENT_PRESSED,NULL);
+        lv_obj_add_event_cb(hits[k],track_event,LV_EVENT_PRESSING,NULL);
         lv_obj_add_event_cb(hits[k],track_event,LV_EVENT_RELEASED,NULL);
         lv_obj_add_event_cb(hits[k],track_event,LV_EVENT_PRESS_LOST,NULL);
     }
+    track_more=box(r,284,110,40,40);
+    lv_obj_set_style_bg_color(track_more,TC(SURFACE),0);lv_obj_set_style_bg_opa(track_more,160,0);
+    lv_obj_set_style_bg_color(track_more,TC(SURFACE_RAISED),LV_STATE_PRESSED);
+    lv_obj_set_style_border_width(track_more,1,0);lv_obj_set_style_border_color(track_more,TC(TEXT_SECONDARY),0);
+    lv_obj_add_flag(track_more,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_HIDDEN);
+    for(int k=0;k<3;k++){
+        lv_obj_t *dot=box(track_more,11+k*7,18,3,3);
+        lv_obj_set_style_bg_color(dot,TC(TEXT_PRIMARY),0);
+    }
+    ui_on(track_more,track_event,LV_EVENT_ALL,NULL,"null.track.more",UI_REACHABLE);
     seek = box(r, 62, 204, 236, 32);
     lv_obj_set_style_bg_opa(seek, 0, 0);
     lv_obj_add_flag(seek, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_PRESS_LOCK);
@@ -608,6 +666,7 @@ static void idle_apply(void)
     if (idle == idle_shown)
         return;
     idle_shown = idle;
+    if(track_more){if(idle)lv_obj_add_flag(track_more,LV_OBJ_FLAG_HIDDEN);else lv_obj_remove_flag(track_more,LV_OBJ_FLAG_HIDDEN);}
     if (idle) {   /* the wide face: "28,619 SONGS", without "on the card" */
         snprintf(idle_count, sizeof idle_count, "%s", ui_idle_count_text());
         char *cut = strstr(idle_count, " on the card");
@@ -641,6 +700,8 @@ static void idle_apply(void)
 void null_home_update(const char *t, const char *a, int p)
 {
     have = t != NULL;
+    if(track_tap_timer&&!ui_np_link_current(&track_pending)){cancel_track_tap();gz_last=0;}
+    if(track_armed&&!ui_np_link_current(&track_press))track_cancel=1;
     playing = !!p;
     idle_apply();
     if (!t)
@@ -1134,7 +1195,7 @@ void null_screen_leaving(void)
     if (!th_null())
         return;
     dhome_overlay_close();
-    cancel_track_tap();gz_last=0;
+    cancel_track_tap();gz_last=0;track_cancel=1;track_armed=0;
     if(gesture_feedback){lv_anim_delete(gesture_feedback,NULL);lv_obj_add_flag(gesture_feedback,LV_OBJ_FLAG_HIDDEN);}
     if (nav)
         nav_set(0);

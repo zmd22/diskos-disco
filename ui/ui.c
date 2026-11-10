@@ -8,6 +8,7 @@
 /* Copyright (C) 2026 diskOS contributors */
 #include "ui.h"
 #include "lvgl/src/core/lv_obj_draw_private.h"   /* lv_obj_get_ext_draw_size: the snapshot margin (fork perf) */
+#include "lvgl/src/core/lv_obj_event_private.h"  /* transport hit-test exclusion for metadata links */
 #include "lvgl/lvgl.h"
 #include "lvgl/src/draw/lv_image_decoder_private.h"   /* poster: decode the cover once into RAM */
 #include "art.h"
@@ -123,7 +124,7 @@ static void imm_in_start(void);
 static lv_obj_t *imm_deco[6];  /* groove rings + label objects: only for the 148px fallback (baked otherwise) */
 static lv_obj_t *title_sh, *artist_sh;     /* poster: text drop shadows */
 static lv_obj_t *np_dots[2];                /* page dots (hidden in Poster: they sat on the volume arc) */
-static lv_obj_t *np_mid_btn;                /* poster: tap the title -> the album, this song highlighted */
+static lv_obj_t *np_mid_btn;                /* title / artist links in the larger playback layouts */
 static lv_timer_t *imm_timer;
 static int32_t imm_angle;
 static int imm_in_tag;
@@ -1700,47 +1701,101 @@ static void fsart_click_cb(lv_event_t *e){
 
 static void imm_btn_cb(lv_event_t *e){ (void)e; ui_np_fsart_open(); }
 static int zune_on_rim(int x,int y);
-static lv_point_t g_zmid_press;static int g_zmid_rim,g_zmid_moved;
+static lv_point_t g_mid_press;
+static int g_mid_active, g_mid_rim, g_mid_moved, g_mid_held, g_mid_target;
+static ui_np_link_press_t g_mid_track;
 void disco_open_np_immersive(void);
 static void br2_np_hold(void){   /* Braun 2.0 Music: a hold does what Title hold says (0 Immersive, 1 Favourite) */
     track_state_t st; ipc_get_state(&st); if(!st.have_track) return;
-    if(simple_cfg_get_int("disco_title_hold", 0) == 1) ui_np_fav_toggle(); else disco_open_np_immersive();
+    int action = simple_cfg_get_int("disco_title_hold", 0);
+    if(action == 1) ui_np_fav_toggle(); else if(action == 0) disco_open_np_immersive();
 }
 static void br2_np_root_hold(lv_event_t *e){ if(lv_event_get_target(e) == lv_event_get_current_target(e)) br2_np_hold(); }   /* a hold on the screen itself */
+/* The layout/font can change the two labels' positions and heights. Hit their
+ * actual bounds, not a fixed half of the shared transparent button. */
+static int np_link_at(lv_point_t p){
+    lv_obj_t *labels[] = { title, artist };
+    for(int i = 1; i >= 0; i--){
+        lv_obj_t *label = labels[i];
+        if(!label || lv_obj_has_flag(label, LV_OBJ_FLAG_HIDDEN)) continue;
+        lv_area_t a; lv_obj_get_coords(label, &a);
+        if(p.x >= a.x1 && p.x <= a.x2 && p.y >= a.y1 && p.y <= a.y2) return i;
+    }
+    return -1;
+}
 static void np_mid_cb(lv_event_t *e){
-    lv_event_code_t code=lv_event_get_code(e);
-    if(th_zune()){
-        lv_indev_t *in=lv_indev_active();lv_point_t p={0,0};if(in)lv_indev_get_point(in,&p);
-        if(code==LV_EVENT_PRESSED){g_zmid_press=p;g_zmid_rim=in&&zune_on_rim(p.x,p.y);g_zmid_moved=0;return;}
-        if(code==LV_EVENT_PRESSING&&in&&(abs(p.x-g_zmid_press.x)>16||abs(p.y-g_zmid_press.y)>16))g_zmid_moved=1;
-        if(code!=LV_EVENT_CLICKED)return;
-        if(in&&(g_zmid_rim||g_zmid_moved||abs(p.x-g_zmid_press.x)>16||abs(p.y-g_zmid_press.y)>16))return;
-    }else if(th_braun2()){                                  /* hold: Title hold (Immersive by default), as the other themes */
-        static int held;
-        if(code==LV_EVENT_PRESSED){held=0;return;}
-        if(code==LV_EVENT_LONG_PRESSED){held=1;br2_np_hold();return;}
-        if(code!=LV_EVENT_CLICKED||held)return;
-    }else if(code!=LV_EVENT_CLICKED)return;
-    track_state_t st;ipc_get_state(&st);
-    if(!st.have_track){screen_show(SCR_LIBRARY);return;}
-    if(th_zune()){screen_show(SCR_NPMENU);return;}
-    if(th_braun2()){songmenu_open_song(st.path[0]?st.path:g_np_curpath);return;}   /* Braun 2.0: the track popup, as the other themes */
-    if(st.album[0])library_open_album_focus(st.album,st.artist,g_np_curpath);
-    else if(st.artist[0])library_open_artist(st.artist);
-    screen_show(SCR_LIBRARY);
+    lv_event_code_t code = lv_event_get_code(e);
+    if(code != LV_EVENT_PRESSED && code != LV_EVENT_PRESSING && code != LV_EVENT_RELEASED &&
+       code != LV_EVENT_PRESS_LOST && code != LV_EVENT_SHORT_CLICKED && code != LV_EVENT_LONG_PRESSED) return;
+    lv_indev_t *in = lv_indev_active(); lv_point_t p = {0, 0};
+    if(in) lv_indev_get_point(in, &p);
+    if(code == LV_EVENT_PRESSED){
+        g_mid_press = p; g_mid_active = 1; g_mid_moved = g_mid_held = 0;
+        g_mid_rim = th_zune() && in && zune_on_rim(p.x, p.y);
+        g_mid_target = in ? np_link_at(p) : lv_event_get_current_target(e) == artist ? UI_NP_LINK_ARTIST : UI_NP_LINK_ALBUM;
+        ui_np_link_capture(&g_mid_track);
+        return;
+    }
+    if(!g_mid_active) return;
+    if(code == LV_EVENT_PRESS_LOST){ g_mid_active = 0; return; }
+    if(in && (abs(p.x - g_mid_press.x) > 16 || abs(p.y - g_mid_press.y) > 16)) g_mid_moved = 1;
+    if(code == LV_EVENT_LONG_PRESSED){
+        g_mid_held = 1;
+        if(th_braun2() && !g_mid_rim && !g_mid_moved && ui_np_link_current(&g_mid_track)) br2_np_hold();
+        return;
+    }
+    if(code != LV_EVENT_SHORT_CLICKED) return;   /* CLICKED also follows a hold */
+    g_mid_active = 0;
+    if(g_mid_rim || g_mid_moved || g_mid_held || g_mid_target < 0 || screen_current() != SCR_NOWPLAYING) return;
+    if(in && np_link_at(p) != g_mid_target) return;
+    if(!g_mid_track.track.have_track && ui_np_link_current(&g_mid_track)){ screen_show(SCR_LIBRARY); return; }
+    ui_np_link_open(&g_mid_track, g_mid_target);
 }
 
-void ui_np_open_album(void){                       /* Disco title popup: Album */
-    track_state_t st; ipc_get_state(&st);
-    if(!st.have_track || !st.album[0]){ ui_toast("No album tag"); return; }
-    library_open_album_focus(st.album, st.artist, g_np_curpath);
-    screen_show(SCR_LIBRARY);
+void ui_np_link_capture(ui_np_link_press_t *press){
+    if(!press) return;
+    ipc_get_state(&press->track);
+    press->external = ipc_external_active();
 }
-void ui_np_open_artist(void){                      /* Disco title popup: Artist, this song's album focused */
-    track_state_t st; ipc_get_state(&st);
-    if(!st.have_track || !st.artist[0]){ ui_toast("No artist tag"); return; }
-    library_open_artist_focus(st.artist, st.album);
+int ui_np_link_current(const ui_np_link_press_t *press){
+    if(!press) return 0;
+    track_state_t now; ipc_get_state(&now);
+    const track_state_t *was = &press->track;
+    return press->external == ipc_external_active() && now.have_track == was->have_track &&
+        now.path_seq == was->path_seq && now.pos_id == was->pos_id &&
+        !strcmp(now.path, was->path) && !strcmp(now.title, was->title) &&
+        !strcmp(now.artist, was->artist) && !strcmp(now.album, was->album);
+}
+int ui_np_link_open(const ui_np_link_press_t *press, int target){
+    if(!press || (target != UI_NP_LINK_ALBUM && target != UI_NP_LINK_ARTIST)) return 0;
+    if(!ui_np_link_current(press)){ ui_toast("Track changed - tap again"); return 0; }
+    const track_state_t *st = &press->track;
+    if(!st->have_track){ ui_toast("Nothing playing"); return 0; }
+    if(press->external){ ui_toast("Not a local library track"); return 0; }
+    if(!ui_local_playback_allowed()){ ui_toast("SD card unavailable"); return 0; }
+    if(mdb_is_book_path(st->path)){ ui_toast("Find this book in Books"); return 0; }
+    mdb_song_t song; int unique_path = 0;
+    int found = mdb_song_navigation(st->path, st->pos_id, st->title, &song, &unique_path);
+    if(found < 0){ ui_toast(found == -2 ? "Couldn't identify this track" : "Library unavailable - try again"); return 0; }
+    if(!found){ ui_toast("Track is not in the library"); return 0; }
+    char key[MDB_STR] = {0};
+    if(mdb_artist_mode()) snprintf(key, sizeof key, "%s", song.artist_group);
+    else { char first[1][MDB_STR]; if(mdb_split_artists(song.artist, first, 1)) snprintf(key, sizeof key, "%s", first[0]); }
+    if(target == UI_NP_LINK_ALBUM && !song.album[0]){ ui_toast("No album tag"); return 0; }
+    if(target == UI_NP_LINK_ARTIST && !key[0]){ ui_toast("No artist tag"); return 0; }
+    if(!ui_np_link_current(press)){ ui_toast("Track changed - tap again"); return 0; }
+    if(target == UI_NP_LINK_ALBUM) library_open_album_focus(song.album, key, unique_path ? st->path : NULL);
+    else library_open_artist_focus(key, song.album);
     screen_show(SCR_LIBRARY);
+    return 1;
+}
+void ui_np_open_album(void){
+    ui_np_link_press_t press; ui_np_link_capture(&press);
+    ui_np_link_open(&press, UI_NP_LINK_ALBUM);
+}
+void ui_np_open_artist(void){
+    ui_np_link_press_t press; ui_np_link_capture(&press);
+    ui_np_link_open(&press, UI_NP_LINK_ARTIST);
 }
 #define ZNP_RIM_IN 132                                   /* Zune: the rim band starts this far from the centre */
 static int g_zcover_rim;
@@ -1771,10 +1826,17 @@ static void cover_click_cb(lv_event_t *e)
      * Options -> Full-screen Art). The PRESSED tracking above + main.c's cover-tap
      * seek-skip remain so a tap on the cover can't accidentally seek. */
 }
+static void np_transport_hit(lv_event_t *e){
+    lv_hit_test_info_t *hit = lv_event_get_hit_test_info(e);
+    /* Expanded transport targets must not cover a visible metadata link (the
+     * Braun play button's 18 px margin reaches into its artist line). */
+    if(np_link_at(*hit->point) >= 0) hit->res = false;
+}
 static void make_clickable(lv_obj_t *o, const char *cmd)
 {
-    lv_obj_add_flag(o, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_flag(o, LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_ADV_HITTEST);
     lv_obj_set_ext_click_area(o, 18);
+    lv_obj_add_event_cb(o, np_transport_hit, LV_EVENT_HIT_TEST, NULL);
     char name[40]; ui_on(o,transport_cb,LV_EVENT_CLICKED,(void *)cmd,ui_transport_action(cmd,"np",name,sizeof name),UI_CORE);
 }
 
@@ -4370,6 +4432,8 @@ void ui_create(lv_obj_t *root)
     lv_label_set_long_mode(title, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_label_set_text(title, "No Track");
     lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 198);
+    lv_obj_add_flag(title, LV_OBJ_FLAG_CLICKABLE);
+    ui_on(title, np_mid_cb, LV_EVENT_ALL, NULL, "nowplaying.album", UI_CORE);
 
     artist = lv_label_create(scr);
     lv_obj_set_width(artist, 238);
@@ -4377,6 +4441,8 @@ void ui_create(lv_obj_t *root)
     lv_label_set_long_mode(artist, LV_LABEL_LONG_SCROLL_CIRCULAR);
     lv_label_set_text(artist, "");
     lv_obj_align(artist, LV_ALIGN_TOP_MID, 0, 226);
+    lv_obj_add_flag(artist, LV_OBJ_FLAG_CLICKABLE);
+    ui_on(artist, np_mid_cb, LV_EVENT_ALL, NULL, "nowplaying.artist", UI_CORE);
 
     album = lv_label_create(scr);
     lv_obj_set_width(album, 218);
@@ -4385,12 +4451,12 @@ void ui_create(lv_obj_t *root)
     lv_label_set_text(album, "");
     lv_obj_align(album, LV_ALIGN_TOP_MID, 0, 246);
 
-    /* Poster: tap anywhere on the title / artist block to open this song's album, highlighted */
+    /* Poster/Ring/Braun/Zune: the shared hit area routes by the live label bounds. */
     np_mid_btn = lv_button_create(scr);
     lv_obj_remove_style_all(np_mid_btn);
     lv_obj_set_size(np_mid_btn, 236, 108);
     lv_obj_align(np_mid_btn, LV_ALIGN_TOP_MID, 0, 140);
-    lv_obj_add_event_cb(np_mid_btn,np_mid_cb,LV_EVENT_ALL,NULL);
+    ui_on(np_mid_btn, np_mid_cb, LV_EVENT_ALL, NULL, "nowplaying.metadata", UI_CORE);
     lv_obj_add_flag(np_mid_btn, LV_OBJ_FLAG_HIDDEN);
 
     btn_prev = lv_label_create(scr);

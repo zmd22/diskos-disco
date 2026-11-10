@@ -216,7 +216,7 @@ static lv_obj_t *g_box_menu, *g_box_hub;
 static void build_menu(lv_obj_t *box);
 void npmenu_refresh_art(void){ build_menu(g_box_menu); }   /* SCR_NPMENU shown */
 /* ---- Zune: the actions menu and the play-mode list, as dials (Figma: 11 "Now playing - actions", 16 "Play mode") ----
- * Tapping the title on Now Playing (or swiping to the hub) opens the actions; "play mode" swaps the same screen to the
+ * Swiping from the right edge of Now Playing opens the actions; "play mode" swaps the same screen to the
  * mode list, and picking a mode returns to Now Playing. */
 static lv_obj_t *g_zbox;
 static void zune_actions(lv_obj_t *box, const track_state_t *st);

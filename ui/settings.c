@@ -955,7 +955,7 @@ static const setting_t TABLE[] = {
     { "Music Screen", "Title Position", ST_CYCLER, "disco_title_al", 0,0,0, OPT_DTAL, 2, NULL, apply_disco_title, 0,
       "Where the title and artist sit on Music: centred, or from the left.", NULL },
     { "Music Screen", "Title Hold", ST_CYCLER, "disco_title_hold", 0,0,0, OPT_DHOLD, 3, NULL, apply_disco_hold, 0,
-      "Hold the title for Immersive, favourite/unfavourite, or nothing. Tap still opens track actions.", NULL },
+      "Hold the title for Immersive, favourite/unfavourite, or nothing. Tap title for its album; tap artist to browse. Track actions: More (...) or a right-edge swipe on Now Playing.", NULL },
     { "Music Screen", "Controls", ST_CYCLER, "braun2_controls", 0,0,0, OPT_B2CTRL, 2, NULL, apply_braun2_np, 0,
       "Buttons, or Gestures at the bottom: double-tap play/pause; swipe right next, left previous.", NULL },
     { "Music Screen", "Layout", ST_CYCLER, "braun2_layout", 0,0,0, OPT_B2LAYOUT, 2, NULL, apply_braun2_np, 0,
@@ -2045,7 +2045,7 @@ static void howto_body(lv_obj_t *root){
     int hold=simple_cfg_get_int(th_null()?"null_title_hold":"disco_title_hold",0);
     int mode=simple_cfg_get_int(th_null()?"null_controls":"disco_controls",0);
     snprintf(nav,sizeof nav,"%s",th_null()?"Side arrow: open menu. Drag text or handle. Hold handle ends to scroll; double-tap / hold its centre for your shortcuts.":"Side tab: open menu. Arrows: browse. Centre icon: open. Double-tap / hold the centre for your chosen shortcuts.");
-    snprintf(music,sizeof music,"Title tap: track actions / Mood. Hold: %s. %s",hold==0?"Immersive":hold==1?"favourite / unfavourite":"no action",mode==2?"Double-tap the gesture field: play/pause. Swipe right: next; left: previous.":mode==1?"Auto-fade: tap once to reveal controls, then tap a button.":"Use the previous, play/pause and next buttons.");
+    snprintf(music,sizeof music,"Title: album. Artist: artist's albums. %s Hold: %s. %s",(th_disco_family()||th_null())?"More (...): actions / Mood.":"Swipe from the right edge for actions.",hold==0?"Immersive":hold==1?"favourite / unfavourite":"no action",mode==2?"Double-tap the gesture field: play/pause. Swipe right: next; left: previous.":mode==1?"Auto-fade: tap once to reveal controls, then tap a button.":"Use the previous, play/pause and next buttons.");
     snprintf(quick,sizeof quick,"%sTap Wi-Fi / BT to toggle; hold for connections. Tap EQ to switch it on or off; hold for the Equalizer. Drag brightness. %s",
              simple_cfg_get_int("qs_style",0)==1?"Shade: pull down for what's playing (tap the cover: play/pause; the title: its album), pull again for QS. ":"",
              th_null()?"Tap outside / bottom arrow, or swipe up beside the panel to close.":"Swipe up to close.");
@@ -2062,7 +2062,7 @@ static void howto_body(lv_obj_t *root){
         snprintf(nav,sizeof nav,"Tap D! to open. Drag the wheel to browse; release to snap. Tap the icon to open. D! closes; double-tap D! / hold either icon for your shortcuts.");
         snprintf(quick,sizeof quick,"%sEight icon slots. Tap Wi-Fi / Bluetooth to toggle; hold for connections. Tap EQ to switch it; hold for the Equalizer. Hold other icons for names. Drag the sun arc for brightness; battery arc shows charge.",simple_cfg_get_int("qs_style",0)==1?"Shade: pull down for what's playing, again for QS. ":"");
         bodies[7]="Clock: tap for Weather; hold the top strip to hide/show. Drag the bottom volume arc. Tap D! / outside to close; it auto-hides after input stops.";
-        bodies[1]=nav;bodies[2]="Tap track text for actions / Mood. Double-tap: play/pause. Swipe right: next; left: previous. Hold uses your Title hold setting.";bodies[4]=quick;
+        bodies[1]=nav;bodies[2]="Tap title for its album; artist for the artist. More (...): actions / Mood. Double-tap: play/pause. Swipe right: next; left: previous. Hold uses your Title hold setting.";bodies[4]=quick;
     }
     lv_obj_t *list=lv_obj_create(root);lv_obj_remove_style_all(list);
     lv_obj_set_pos(list,42,th_zune()?104:72);lv_obj_set_size(list,276,th_zune()?208:240);

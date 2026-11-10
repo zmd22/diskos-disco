@@ -529,6 +529,13 @@ lv_obj_t *disco_title(lv_obj_t *root, const char *t);
 lv_obj_t *squash_menu_row(lv_obj_t *root,int slot,const char *glyph,const lv_font_t *font,const char *name,lv_event_cb_t cb,void *ud);
 void ui_np_open_album(void);    /* the playing song's album in the Library, the song focused */
 void ui_np_open_artist(void);   /* the playing song's artist, its album focused */
+enum { UI_NP_LINK_ALBUM, UI_NP_LINK_ARTIST };
+/* Keep one capture per press (also across a deferred single tap). Releasing on
+ * another track/source must never open or act on that new track by accident. */
+typedef struct { track_state_t track; int external; } ui_np_link_press_t;
+void ui_np_link_capture(ui_np_link_press_t *press);
+int ui_np_link_current(const ui_np_link_press_t *press);  /* silent identity check */
+int ui_np_link_open(const ui_np_link_press_t *press, int target); /* 1 navigated, 0 stayed */
 void library_open_artist_focus(const char *artist, const char *album);
 void library_open_artists(void); void library_open_songs(void);   /* Library at Artists / Songs (Disco menu) */
 void albumwall_visible(int visible);

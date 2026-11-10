@@ -20,7 +20,7 @@ static const char *hint_key(const char *key){
 }
 static const char *keys[] = {"hint_menu", "hint_nav", "hint_library", "hint_music", "hint_shortcuts", "hint_lock","hint_back","hint_home","hint_quick","hint_radio_hold","hint_seek","hint_precision","hint_music_gestures","hint_clock","hint_volume","hint_az","hint_flow","hint_immersive","hint_popup","hint_handle","hint_eq","hint_rim","hint_brightness","hint_pick","hint_shelf_pick"};
 static const int limits[] = {2, 2, 1, 1, 1, 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
-static const char *text[] = {NULL, "Arrows: sections\nTap icon: open", "Hold an item\nfor actions", "Tap title for more", NULL,
+static const char *text[] = {NULL, "Arrows: sections\nTap icon: open", "Hold an item\nfor actions", "Title / artist: browse", NULL,
                                        "Tip: the power button locks\nthe screen in a pocket","Swipe inward from the back edge\nto return one screen.","On other screens, swipe up\nfrom the bottom to reach Music.","Pull down from the top\nfor Quick Settings.","Tap Wi-Fi, BT or EQ to switch.\nHold to open its settings.","Tap or drag progress\nto seek through the track.","Hold the progress line or arc:\nlet go where you want to be.","Double-tap: play / pause.\nSwipe right: next; left: previous.","Hold the clock/status area\nto hide it. Hold again to show.","Drag the volume control.\nTap outside it to dismiss.","Tap A-Z, then a letter\nto jump through the list.","Drag covers to browse. Tap to\nopen tracks; hold to play album.","Tap the full-screen artwork\nto return to Music.","Tap the middle of the menu\nto go back.","Drag menu text to browse. Hold\nhandle ends for continuous scroll.","Tap a band, then drag or use +/-.\nTap frequency / gain to edit either.","Drag the rim to scroll fast.\nHold it still to pick a letter.","Drag the brightness bar or arc\nto adjust the screen.","Swipe across an item\nto pick several.","Swipe from the middle\nto select"};
 _Static_assert(sizeof keys/sizeof *keys==HINT_COUNT,"hint keys");
 _Static_assert(sizeof limits/sizeof *limits==HINT_COUNT,"hint limits");
@@ -47,7 +47,7 @@ const char *onboarding_gesture_text(int id){
     }
     if(id==HINT_MUSIC){
         int action=simple_cfg_get_int(th_null()?"null_title_hold":"disco_title_hold",0);
-        return action==0?"Tap the title for track actions and Mood. Hold for Immersive.":action==1?"Tap the title for track actions and Mood. Hold to favourite / unfavourite.":"Tap the title for track actions and Mood. Title hold is disabled.";
+        return action==0?"Tap title for its album; artist to browse. More opens track actions. Hold for Immersive.":action==1?"Tap title for its album; artist to browse. More opens track actions. Hold to favourite / unfavourite.":"Tap title for its album; artist to browse. More opens track actions. Title hold is disabled.";
     }
     if(id==HINT_SHORTCUTS)return disco_mirror()?"Swipe right across Music to open Shortcuts.":"Swipe left across Music to open Shortcuts.";
     if(id==HINT_MUSIC_GESTURES)return th_null()?"In Gestures mode: double-tap track text to play/pause; swipe right for next, left for previous.":"In Gestures mode: double-tap the lower field to play/pause; swipe right for next, left for previous.";
@@ -130,7 +130,7 @@ static void show_pill(int id){
     const char *message=onboarding_gesture_text(id);
     if(id==HINT_MENU){w=158;h=42;y=159;x=disco_mirror()?54:148;message=disco_mirror()?LV_SYMBOL_LEFT " Tap for menu":"Tap for menu " LV_SYMBOL_RIGHT;}
     if(id==HINT_MUSIC){y=104;x=82;w=196;
-        if(simple_cfg_get_int(th_null()?"null_title_hold":"disco_title_hold",0)==0)message="Tap title for more\nHold it for full screen";}   /* Title Hold: Immersive */
+        message="Title / artist: open library\nMore: track actions";}
     if(id==HINT_SHORTCUTS){y=104;x=82;w=196;message=disco_mirror()?"Swipe right for shortcuts":"Swipe left for shortcuts";}
     if(th_null() && id==HINT_NAV)message="Drag text to browse\nHandle: double tap / hold";
     if(th_null() && id==HINT_MENU){x=disco_mirror()?54:148;message=disco_mirror()?LV_SYMBOL_LEFT " Open drawer":"Open drawer " LV_SYMBOL_RIGHT;}
