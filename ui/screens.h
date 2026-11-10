@@ -4,13 +4,18 @@
 #define SCREENS_H
 #include "lvgl/lvgl.h"
 #include "ipc.h"
+#include "lyrics_timing.h"
 
 /* diskOS red: the single UI accent (switches, sliders, "on" states, Settings row bars, default
  * accent colour). Ported from our fork's theme. */
 #define UI_RED 0xE4122C
 
 /* synced lyrics for the immersive view: one line per timestamp, sorted by time */
-typedef struct { long ms; char text[120]; } lyr_line_t;
+#define LYR_WORDS_MAX 24
+typedef struct {
+    long ms; char text[120]; int word_count; lrc_word_t words[LYR_WORDS_MAX];
+    int estimate_blocked; /* source has exact word tags, or this display text was truncated */
+} lyr_line_t;
 int lyrics_timed_load(const char *path, lyr_line_t *out, int cap);
 int lyrics_immersive_load(lyr_line_t *out,int cap,unsigned *revision); /* main thread, asynchronous sources */
 void lyrics_invalidate_current(void);

@@ -234,7 +234,7 @@ static const char *const RESET_KEYS[] = {
     "brightness", "swipe_thresh", "saver_idx", "saver_style", "screenoff_idx", "lock_on_timeout",
     "anim", "time_24h", "disc_colour", "accent_mode", "accent_color", "np_style", "theme_preset", "theme_variant",
     "outdoor", "boot_default", "weather_on", "weather_loc", "artcache", "sleep_idx", "sleep_action", "idle_off_idx",
-    "qs_transport", "track_numbers", "album_view", "online_art", "online_lyrics",
+    "qs_transport", "track_numbers", "album_view", "online_art", "online_lyrics", "lyrics_progressive", "lyrics_estimate_words",
     "up_next", "ui_theme", "theme_auto", "np_poster_v1", "saver_ring_v1", "accent_red_v1", NULL
 };
 int sys_reset_match(const char *key){
