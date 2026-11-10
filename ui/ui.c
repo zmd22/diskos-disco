@@ -1343,6 +1343,8 @@ LV_FONT_DECLARE(font_zune_light_28)
 LV_FONT_DECLARE(font_zune_light_72)
 const lv_font_t *zune_font(const lv_font_t *base);
 static lv_obj_t *g_zfmt;                                 /* (the Now Playing format line, defined below) */
+/* the immersive accent: rb_classic's ink is near black in Light, so over the dimmed art it reads white like the rest */
+static lv_color_t zi_accent(void){ return th_classic() ? TC(FIXED_MEDIA_WHITE) : TC(ACCENT_PRIMARY); }
 static lv_obj_t *g_zi_dim, *g_zi_ctl, *g_zi_title, *g_zi_artist, *g_zi_pp, *g_zi_times, *g_zi_fmt, *g_zi_lyr, *g_zi_big, *g_zi_of;
 static uint32_t g_zi_ctl_at, g_zi_hide_ms=3000;
 static char g_zi_title_input[160],g_zi_artist_input[160];
@@ -1359,7 +1361,7 @@ static void zi_lyr_paint(void){
     if(!g_zi_lyr) return;
     int on = simple_cfg_get_int("imm_lyrics", 1) != 0;
     lv_label_set_text(g_zi_lyr, on ? "lyrics on" : "lyrics off");
-    lv_obj_set_style_text_color(g_zi_lyr, on ? TC(ACCENT_PRIMARY) : TC(FIXED_MEDIA_WHITE), 0);
+    lv_obj_set_style_text_color(g_zi_lyr, on ? zi_accent() : TC(FIXED_MEDIA_WHITE), 0);
     lv_obj_set_style_text_opa(g_zi_lyr, on ? LV_OPA_COVER : 153, 0);
 }
 static void zi_controls(int on){
@@ -1505,10 +1507,10 @@ static void imm_controls_build(lv_obj_t *fs){
     zi_btn(g_zi_ctl, LV_SYMBOL_NEXT, 78, 52, "0201000C0001", "imm.zune.next", 0);
     g_zi_times = zi_label(g_zi_ctl, TF(UI_12), TC(FIXED_MEDIA_WHITE), 0, 258);
     lv_obj_set_style_text_letter_space(g_zi_times, 1, 0);
-    g_zi_fmt = zi_label(g_zi_ctl, TF(UI_10), TC(ACCENT_PRIMARY), 300, 282);
+    g_zi_fmt = zi_label(g_zi_ctl, TF(UI_10), zi_accent(), 300, 282);
     lv_obj_set_height(g_zi_fmt,lv_font_get_line_height(TF(UI_10)));
     lv_obj_set_style_text_letter_space(g_zi_fmt, 1, 0);
-    g_zi_lyr = zi_label(g_zi_ctl, TF(UI_14), TC(ACCENT_PRIMARY), 0, 310);      /* lyrics on / off */
+    g_zi_lyr = zi_label(g_zi_ctl, TF(UI_14), zi_accent(), 0, 310);      /* lyrics on / off */
     lv_obj_add_flag(g_zi_lyr, LV_OBJ_FLAG_CLICKABLE); lv_obj_set_ext_click_area(g_zi_lyr, 14);
     ui_on(g_zi_lyr, zi_lyr_cb, LV_EVENT_CLICKED, NULL, "imm.zune.lyrics", UI_REACHABLE);
     lv_obj_add_flag(g_zi_ctl, LV_OBJ_FLAG_HIDDEN);
@@ -1819,7 +1821,7 @@ static void apply_accent(void)
         lv_obj_set_style_arc_color(ring, np_col(), LV_PART_INDICATOR);
     }
     if(vol_arc) lv_obj_set_style_arc_color(vol_arc, np_col(), LV_PART_INDICATOR);
-    if(imm_prog) lv_obj_set_style_arc_color(imm_prog, np_col(), LV_PART_INDICATOR);
+    if(imm_prog) lv_obj_set_style_arc_color(imm_prog, th_classic() ? TC(FIXED_MEDIA_WHITE) : np_col(), LV_PART_INDICATOR);
 
     if(cover_note) {
         lv_obj_set_style_text_color(cover_note, TC(FIXED_MEDIA_WHITE), LV_PART_MAIN);
@@ -4567,7 +4569,7 @@ void ui_create(lv_obj_t *root)
     lv_obj_set_size(imm_prog, 344, 344); lv_obj_center(imm_prog);
     lv_arc_set_rotation(imm_prog, 208); lv_arc_set_bg_angles(imm_prog, 0, 124); lv_arc_set_range(imm_prog, 0, 1000);
     lv_obj_set_style_arc_width(imm_prog, 3, LV_PART_MAIN); lv_obj_set_style_arc_color(imm_prog, TC(FIXED_MEDIA_TRACK), LV_PART_MAIN);
-    lv_obj_set_style_arc_width(imm_prog, 3, LV_PART_INDICATOR); lv_obj_set_style_arc_color(imm_prog, accent, LV_PART_INDICATOR);
+    lv_obj_set_style_arc_width(imm_prog, 3, LV_PART_INDICATOR); lv_obj_set_style_arc_color(imm_prog, th_classic() ? TC(FIXED_MEDIA_WHITE) : accent, LV_PART_INDICATOR);
 
     /* bottom scrim so title/artist stay legible over any cover */
     lv_obj_t *scrim = lv_obj_create(fsart);
