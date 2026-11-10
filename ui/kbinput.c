@@ -41,7 +41,7 @@ static void bk_paint(void){
             lv_obj_set_user_data(k, (void *)(uintptr_t)(unsigned char)ch);
             lv_obj_set_pos(k, x, BK_Y + r * BK_P); x += BKW[r] + 4;
             lv_obj_t *l = g_bk.lbl[r][c]; char t[2] = { ch, 0 };
-            if(ch == ' '){ lv_label_set_text(l, "space"); lv_obj_set_style_text_font(l, TF(UI_12), 0); lv_obj_set_style_text_color(l, TC(TEXT_SECONDARY), 0); }
+            if(ch == ' '){ lv_label_set_text(l, th_classic() ? "SPC" : "space"); lv_obj_set_style_text_font(l, TF(UI_12), 0); lv_obj_set_style_text_color(l, TC(TEXT_SECONDARY), 0); }
             else if(ch == BK_BKSP){ lv_label_set_text(l, LV_SYMBOL_BACKSPACE); lv_obj_set_style_text_font(l, TF(UI_18), 0); lv_obj_set_style_text_color(l, TC(TEXT_SECONDARY), 0); }
             else { lv_label_set_text(l, t); lv_obj_set_style_text_font(l, TF(UI_24), 0); lv_obj_set_style_text_color(l, TC(TEXT_PRIMARY), 0); }
         }

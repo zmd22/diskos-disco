@@ -10,6 +10,7 @@
 #include "fork_build.h"
 #include "braun.h"
 #include "theme.h"
+#include "classic.h"
 #include "curvelist.h"
 #include "orbit.h"
 #include "theme_kit.h"
@@ -185,6 +186,7 @@ static void theme_reload_or_revert(const char *key){
     if(g_reload_tm) lv_timer_set_repeat_count(g_reload_tm, 1); else reload_go(NULL);
 }
 static void apply_appearance(int v){ (void)v; theme_reload_or_revert("theme_variant"); }
+static void apply_backlight(int v){ (void)v; theme_reload_or_revert("classic_backlight"); }
 static void apply_outdoor(int v){ (void)v; theme_reload_or_revert("outdoor"); }
 static void apply_theme_preset(int v){ (void)v; theme_reload_or_revert("theme_preset"); }
 static void apply_simple_background(int v){(void)v;theme_reload_or_revert("simple_background");}
@@ -719,6 +721,7 @@ static const char *const OPT_IDLE_OFF[POWER_IDLE_N] = { "Off","5 min","10 min","
 static const char *const OPT_POWER[] = { "Off","30 sec","1 min","2 min","5 min" };  /* idx->TMAP secs in main.c */
 static const char *const OPT_NPSTYLE[] = { "Cover", "Vinyl", "Poster", "Ring" };
 static const char *const OPT_APPEARANCE[] = { "Dark", "Light", "Auto" };
+static const char *const OPT_BACKLIGHT[] = { "White", "Grey", "Amber" };
 static const char *const OPT_NPFONT[] = {"Original", "Inter Semibold", "Nunito Bold"};
 static const char *const OPT_FONTSIZE[] = { "Small", "Medium", "Large" };
 static const char *const OPT_ALBUMVIEW[] = { "List", "Wall", "Coverflow" };
@@ -863,6 +866,8 @@ static const setting_t TABLE[] = {
       "Online album art and lyrics, the art cache, weather on Home, Shortcuts and the album view.", NULL },
     { "Theme Colours",  "Theme",       ST_CHOICE, "theme_preset", 0,0,0, theme_preset_names, THEME_PRESET_COUNT, NULL, apply_theme_preset, THEME_PRESET_DISCO,
       "Choose the UI theme. Restarts the screen; music continues.", NULL },
+    { "Display", "Backlight", ST_CYCLER, "classic_backlight", 0,0,0, OPT_BACKLIGHT, 3, NULL, apply_backlight, 0,
+      "rb_classic: the LCD backlight colour in Light. Dark is always ink on black.", NULL },
     { "Theme Colours",  "Appearance",  ST_CYCLER, "theme_variant", 0,0,0, OPT_APPEARANCE, 3, NULL, apply_appearance, 0,
       "For themes supporting light and dark appearances only. Auto uses Dark from 7pm to 7am and Light from 7am to 7pm, using the device clock. Automatic changes apply when the screen is off. Outdoor mode keeps Light on.", NULL },
     { "Theme Colours",  "Outdoor Mode", ST_TOGGLE, "outdoor",  0,1,1, NULL, 0, NULL, apply_outdoor, 0,
@@ -1423,7 +1428,7 @@ static void list_back_cb(lv_event_t *e);
 static lv_obj_t *make_list(lv_obj_t *root);
 /* Themes offered: Disco first; the other presets stay in the code and keep working if already selected, but are not
  * offered here for now (retired IDs have no name). Rows still carry the real preset index. */
-static const int THEME_SHOWN[] = { THEME_PRESET_DISCO, THEME_PRESET_NULL, THEME_PRESET_SIMPLE, THEME_PRESET_ZUNE, THEME_PRESET_RING, THEME_PRESET_BRAUN, THEME_PRESET_BRAUN2, THEME_PRESET_STONE };
+static const int THEME_SHOWN[] = { THEME_PRESET_DISCO, THEME_PRESET_NULL, THEME_PRESET_SIMPLE, THEME_PRESET_ZUNE, THEME_PRESET_RING, THEME_PRESET_BRAUN, THEME_PRESET_BRAUN2, THEME_PRESET_STONE, THEME_PRESET_CLASSIC };
 #define N_THEME_SHOWN ((int)(sizeof THEME_SHOWN / sizeof THEME_SHOWN[0]))
 static void zlower(char *o, size_t n, const char *s){
     size_t i = 0; for(; s && s[i] && i + 1 < n; i++) o[i] = (s[i] >= 'A' && s[i] <= 'Z') ? s[i] + 32 : s[i]; o[i] = 0;
@@ -1981,6 +1986,9 @@ void settings_create(lv_obj_t *root){
         for(int g=0;g<N_GROUPS;g++){lv_obj_t *r=setting_card(list);ui_on(r,disco_cat_cb,LV_EVENT_CLICKED,(void*)(intptr_t)g,"settings.category",UI_CORE);
             lv_obj_t *n=lv_label_create(r);lv_label_set_text(n,GROUPS[g]);lv_obj_set_pos(n,24,16);lv_obj_set_width(n,222);lv_label_set_long_mode(n,LV_LABEL_LONG_DOT);theme_list_row(r);}
         curvelist_update(&cl);return;}
+    if(th_classic()){ ui_header(root,"Settings"); lv_obj_t *list=classic_list(root,78,240);   /* Classic: the categories as its menu */
+        for(int g=0;g<N_GROUPS;g++){lv_obj_t *r=classic_row(list,GROUPS[g],1);ui_on(r,disco_cat_cb,LV_EVENT_CLICKED,(void*)(intptr_t)g,"settings.category",UI_CORE);}
+        return;}
     if(th_disco_family() || th_null()){ settings_disco_list(root); return; }
     if(th_zune()) return;                                   /* Zune: the dial is built on every entry */
     /* The same seven categories, presented with this theme's circular controls. */

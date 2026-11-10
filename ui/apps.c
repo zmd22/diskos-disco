@@ -3,6 +3,7 @@
 /* Copyright (C) 2026 diskOS contributors */
 #include "screens.h"
 #include "theme.h"
+#include "classic.h"
 #include "theme_kit.h"
 #include "anim.h"
 #include "theme.h"
@@ -308,11 +309,28 @@ static void b2_build(void){
         ui_on(b, b2_pick_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i, "apps.pick", UI_CORE); br2_keep_tree(b);
     }
 }
+/* rb_classic: Shortcuts / All apps as its menu, every entry on one scrolling list */
+static void classic_build(void){
+    g_page = 0;
+    classic_header(g_box, g_all ? "All apps" : "Shortcuts", NULL);
+    if(g_nitems < 1){
+        lv_obj_t *l = lv_label_create(g_box); lv_label_set_text(l, "Choose shortcuts in\nSettings > Display > Shortcuts");
+        lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, 0); lv_obj_set_style_text_color(l, TC(TEXT_SECONDARY), 0);
+        lv_obj_align(l, LV_ALIGN_CENTER, 0, 0);
+        return;
+    }
+    lv_obj_t *list = classic_list(g_box, 78, 34 * 6);
+    for(int i = 0; i < g_nitems; i++){
+        lv_obj_t *r = classic_row(list, g_items[i].name, 1);
+        ui_on(r, b2_pick_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i, "apps.pick", UI_CORE);
+    }
+}
 static void build_page(void){
     if(!g_box) return;
     lv_obj_clean(g_box);
     memset(&g_orb, 0, sizeof g_orb);
     if(th_zune()){ zune_build(); return; }
+    if(th_classic()){ classic_build(); return; }
     if(th_braun2()){ b2_build(); return; }
     if((th_disco_family() || th_null())){ disco_build(); return; }
     int per = g_all ? PER_PAGE : sc_count();

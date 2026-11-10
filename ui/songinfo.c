@@ -323,6 +323,17 @@ void songinfo_create(lv_obj_t *root)
         if(i == F_TITLE || i == F_ARTIST) lv_obj_add_flag(cell, LV_OBJ_FLAG_HIDDEN);   /* shown in the header instead */
     }
     if(th_zune()){ zsi_build(root, list); return; }
+    if(th_classic()){   /* Classic: under the title bar, a square cover stamp beside the title and artist, then the fields */
+        lv_obj_add_flag(g_ring, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_size(g_cover, 52, 52); lv_obj_align(g_cover, LV_ALIGN_TOP_LEFT, 58, 80);
+        lv_obj_set_style_radius(g_cover, 0, 0); lv_obj_set_style_border_width(g_cover, 2, 0); lv_obj_set_style_border_color(g_cover, TC(TEXT_PRIMARY), 0);
+        lv_obj_set_width(g_title, 178); lv_obj_set_style_text_font(g_title, TF(UI_18), 0);
+        lv_obj_set_style_text_align(g_title, LV_TEXT_ALIGN_LEFT, 0); lv_obj_align(g_title, LV_ALIGN_TOP_LEFT, 122, 82);
+        lv_obj_set_width(g_artist, 178); lv_obj_set_style_text_font(g_artist, TF(UI_14), 0);
+        lv_obj_set_style_text_align(g_artist, LV_TEXT_ALIGN_LEFT, 0); lv_obj_align(g_artist, LV_ALIGN_TOP_LEFT, 122, 108);
+        lv_obj_set_pos(list, 58, 142); lv_obj_set_size(list, 244, 160);
+        return;
+    }
     if(th_disco_family()){
         /* Album back sleeve: a compact artwork stamp and a roomy metadata panel.
          * The existing metadata worker and pinned-track handling stay shared. */

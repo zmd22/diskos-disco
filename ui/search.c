@@ -317,7 +317,7 @@ static void paint_keys(void){
             lv_obj_set_pos(k, x, GRID_Y + r * ROW_P); x += kw + g;
             char s[2] = { ch, 0 };
             lv_obj_t *l = g_key_lbl[r][c];
-            if(ch == '_'){ lv_label_set_text(l, "space"); lv_obj_set_style_text_font(l, TF(UI_12), 0); lv_obj_set_style_text_color(l, TC(TEXT_SECONDARY), 0); }
+            if(ch == '_'){ lv_label_set_text(l, th_classic() ? "SPC" : "space"); lv_obj_set_style_text_font(l, TF(UI_12), 0); lv_obj_set_style_text_color(l, TC(TEXT_SECONDARY), 0); }
             else if(ch == BKSP){ lv_label_set_text(l, LV_SYMBOL_BACKSPACE); lv_obj_set_style_text_font(l, TF(UI_18), 0); lv_obj_set_style_text_color(l, TC(TEXT_SECONDARY), 0); }
             else { lv_label_set_text(l, s); lv_obj_set_style_text_font(l, TF(UI_24), 0); lv_obj_set_style_text_color(l, TC(TEXT_PRIMARY), 0); }
         }

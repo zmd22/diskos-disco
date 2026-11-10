@@ -341,7 +341,7 @@ static void b2modes_create(lv_obj_t *root){
 static void paint(int slot, const char *glyph){
     if(th_braun2()){ b2modes_paint(slot, glyph && !strcmp(glyph, LV_SYMBOL_REFRESH)); return; }
     if(th_zune()){zmodes_paint(slot,glyph && !strcmp(glyph,LV_SYMBOL_REFRESH));return;}   /* slot = orbit index, or -1 for none */
-    if((th_disco_family() || th_null())){ disco_paint(slot, glyph && !strcmp(glyph, LV_SYMBOL_REFRESH)); return; }
+    if((th_disco_family() || th_null() || th_classic())){ disco_paint(slot, glyph && !strcmp(glyph, LV_SYMBOL_REFRESH)); return; }
     int pending = (glyph && !strcmp(glyph, LV_SYMBOL_REFRESH));
     lv_color_t acc = TC(ACCENT_PRIMARY);
     if(pending){                                  /* the tapped mode gets a ring; the hub's ring spins */
@@ -499,7 +499,7 @@ void modes_create(lv_obj_t *root){
 
     if(th_braun2()){ b2modes_create(root); return; }
     if(th_simple() || th_null()){squash_modes_create(root);return;}
-    if((th_disco_family() || th_null())){
+    if((th_disco_family() || th_null() || th_classic())){
         disco_title(root, "Working mode");
         static const char *NM[N_MODES] = { "Playback", "USB DAC", "Bluetooth DAC", "BT streaming", "AirPlay", "USB storage" };
         memset(g_drow, 0, sizeof g_drow);

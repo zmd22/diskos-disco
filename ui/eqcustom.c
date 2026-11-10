@@ -343,9 +343,9 @@ static uint32_t c32(lv_color_t c){ return ((uint32_t)c.red << 16) | ((uint32_t)c
 static void paint_band(int b, uint32_t *fb){
     int grey = !g_editable, s = (b == g_sel), disco = (th_disco_family() || th_null() || th_zune());
     lv_color_t accc = grey ? TC(EQ_READONLY) : (th_null()?TC(TEXT_PRIMARY):ui_current_accent());
-    uint32_t acc = c32(accc), empty = theme_ring_light()?c32(TC(SURFACE_RAISED)):0x1A1A1C,
-             lineE = theme_ring_light()?c32(TC(CONTROL_TRACK_STRONG)):0x2E2E32,
-             dash = theme_ring_light()?c32(TC(TEXT_MUTED)):0x78787C;
+    uint32_t acc = c32(accc), empty = (theme_ring_light()||th_classic())?c32(TC(SURFACE_RAISED)):0x1A1A1C,
+             lineE = (theme_ring_light()||th_classic())?c32(TC(CONTROL_TRACK_STRONG)):0x2E2E32,
+             dash = (theme_ring_light()||th_classic())?c32(TC(TEXT_MUTED)):0x78787C;
     uint32_t soft = mix32(empty, acc, s ? 171 : 110), bright = s ? acc : mix32(empty, acc, 220);
     int lvl16 = (int)(rr(clampi(g_t[b], -GMAX, GMAX)) * 16.0f + 0.5f), r0_16 = R0 * 16;
     for(int i = g_bstart[b]; i < g_bstart[b + 1]; i++){
