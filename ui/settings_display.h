@@ -61,6 +61,8 @@ static const display_entry_t DISPLAY_ENTRIES[]={
     {"disco_scroll",NULL,"Text & layout","List motion"},
     {"null_scroll",NULL,"Text & layout","List motion"},
     {"anim",NULL,"Text & layout","Screen transitions"},
+    {"lyrics_progressive",NULL,"Text & layout","Progressive lyrics"},
+    {"lyrics_estimate_words",NULL,"Text & layout","Estimate word timing"},
     {"track_numbers",NULL,"Text & layout","Album track numbers"},
     {"album_view",NULL,"Text & layout","Album view"},
     {"online_art",NULL,"Online services","Online album art"},

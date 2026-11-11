@@ -4,13 +4,18 @@
 #define SCREENS_H
 #include "lvgl/lvgl.h"
 #include "ipc.h"
+#include "lyrics_timing.h"
 
 /* diskOS red: the single UI accent (switches, sliders, "on" states, Settings row bars, default
  * accent colour). Ported from our fork's theme. */
 #define UI_RED 0xE4122C
 
 /* synced lyrics for the immersive view: one line per timestamp, sorted by time */
-typedef struct { long ms; char text[120]; } lyr_line_t;
+#define LYR_WORDS_MAX 24
+typedef struct {
+    long ms; char text[120]; int word_count; lrc_word_t words[LYR_WORDS_MAX];
+    int estimate_blocked; /* source has exact word tags, or this display text was truncated */
+} lyr_line_t;
 int lyrics_timed_load(const char *path, lyr_line_t *out, int cap);
 int lyrics_immersive_load(lyr_line_t *out,int cap,unsigned *revision); /* main thread, asynchronous sources */
 void lyrics_invalidate_current(void);
@@ -524,6 +529,13 @@ lv_obj_t *disco_title(lv_obj_t *root, const char *t);
 lv_obj_t *squash_menu_row(lv_obj_t *root,int slot,const char *glyph,const lv_font_t *font,const char *name,lv_event_cb_t cb,void *ud);
 void ui_np_open_album(void);    /* the playing song's album in the Library, the song focused */
 void ui_np_open_artist(void);   /* the playing song's artist, its album focused */
+enum { UI_NP_LINK_ALBUM, UI_NP_LINK_ARTIST };
+/* Keep one capture per press (also across a deferred single tap). Releasing on
+ * another track/source must never open or act on that new track by accident. */
+typedef struct { track_state_t track; int external; } ui_np_link_press_t;
+void ui_np_link_capture(ui_np_link_press_t *press);
+int ui_np_link_current(const ui_np_link_press_t *press);  /* silent identity check */
+int ui_np_link_open(const ui_np_link_press_t *press, int target); /* 1 navigated, 0 stayed */
 void library_open_artist_focus(const char *artist, const char *album);
 void library_open_artists(void); void library_open_songs(void);   /* Library at Artists / Songs (Disco menu) */
 void albumwall_visible(int visible);

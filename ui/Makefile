@@ -35,6 +35,7 @@ APP_SRCS  := $(APP)/font_simple_nunito_28.c $(APP)/font_simple_nunito_32.c $(APP
 APP_SRCS += $(APP)/discshelf/ui.c $(APP)/discshelf/landing.c $(APP)/discshelf/style.c $(APP)/discshelf/setup.c $(APP)/discshelf/lifecycle.c $(APP)/discshelf/engine.c $(APP)/discshelf/net.c $(APP)/discshelf/json.c $(APP)/discshelf/connection.c $(APP)/discshelf/smb.c
 # Monocypher (BSD-2-Clause / CC0, vendor/monocypher/README.md): X25519, ChaCha20-Poly1305 and SHA-512 for MA Sendspin
 APP_SRCS += $(APP)/vendor/monocypher/monocypher.c $(APP)/vendor/monocypher/monocypher-ed25519.c
+APP_SRCS += $(APP)/lyrics_fx.c
 # the aptX BlueALSA files carried inside mq_ui (vendor/aptx/README.md); rebuilt when they change
 APP_SRCS += $(APP)/aptx_blob.c
 $(APP)/aptx_blob.o: CFLAGS += -DAPTX_DIR='"$(APP)/vendor/aptx"'

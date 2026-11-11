@@ -17,7 +17,9 @@ Appearance, accents, fonts and shortcuts: **Settings › Display**.
 
 ## Music and Immersive
 
-Tap the title for the track menu: Favourite, Lyrics, Album, Artist, View queue, Info, +Queue, +Playlist.
+Tap the song title to open its album, or the artist to browse its albums in the Library.
+More (...) opens the track menu in Disco, Null and Squash; other Now Playing layouts retain the right-edge swipe
+for track actions: Favourite, Lyrics, Album, Artist, View queue, Info, +Queue, +Playlist.
 [Immersive](IMMERSIVE_CONTROLS.md) shows a spinning record, CD or cover with lyrics.
 
 ## Library

@@ -57,6 +57,10 @@ int               mdb_song_id_by_path(const char *path);   /* SONG.ID for an abs
 /* On-demand ALBUM for a song ID. 1 if a non-empty album was found. */
 int               mdb_song_album(int id, char *out, int cap);
 int               mdb_song_meta_by_path(const char *path, char *album, int acap, char *artist, int arcap);
+/* Canonical cached Library row for the playing file. Shared CUE/ISO paths require
+ * a queue row matching pos_id, path and title. unique_path is safe for path-only
+ * row highlighting. Returns 1 found, 0 not indexed, -1 unavailable, -2 ambiguous. */
+int               mdb_song_navigation(const char *path, int pos_id, const char *title, mdb_song_t *out, int *unique_path);
 int               mdb_tag_title_by_path(const char *path, char *out, int cap);   /* tag TITLE of a plain-file row; 1 = found. Safe off the UI thread */
 int               mdb_track_no_by_path(const char *path);   /* SONG.TRACK of a plain file, 0 = none */
 /* 1-based position of a song within the player's rebuilt list for a given

@@ -458,6 +458,56 @@ int mdb_song_meta_by_path(const char *path, char *album, int acap, char *artist,
     return found;
 }
 
+/* Resolve against the same cached rows and grouping keys used by Library. A
+ * path alone cannot choose a CUE/ISO sub-track, and a queue position alone can
+ * be stale after the player replaces its queue. Do not guess either identity. */
+int mdb_song_navigation(const char *path, int pos_id, const char *title, mdb_song_t *out, int *unique_path){
+    if(unique_path) *unique_path = 0;
+    if(!path || !path[0] || !out) return 0;
+    if(!sd_io_begin()) return -1;
+    sqlite3 *d = db_read(); sqlite3_stmt *st = NULL;
+    int result = -1, id = 0, unique = 0;
+    if(!d || sqlite3_prepare_v2(d, "SELECT ID FROM SONG WHERE PATH=?1 LIMIT 2;", -1, &st, NULL) != SQLITE_OK) goto done;
+    sqlite3_bind_text(st, 1, path, -1, SQLITE_STATIC);
+    int rc = sqlite3_step(st);
+    if(rc == SQLITE_DONE){ result = 0; goto done; }
+    if(rc != SQLITE_ROW) goto done;
+    id = sqlite3_column_int(st, 0);
+    rc = sqlite3_step(st);
+    if(rc != SQLITE_DONE && rc != SQLITE_ROW) goto done;
+    unique = rc == SQLITE_DONE;
+    sqlite3_finalize(st); st = NULL;
+    if(!unique){
+        result = -2;
+        if(pos_id <= 0 || !title || !title[0]) goto done;
+        if(sqlite3_prepare_v2(d,
+            "SELECT S.ID FROM SONG S JOIN LIST_SONG_0 Q ON Q.ID=?2 AND Q.PATH=S.PATH "
+            "AND Q.TRACK IS S.TRACK AND Q.IS_CUE IS S.IS_CUE AND Q.IS_ISO IS S.IS_ISO "
+            "WHERE S.PATH=?1 AND (Q.TITLE=?3 OR Q.NAME=?3) "
+            "AND (IFNULL(Q.IS_CUE,0)!=0 OR IFNULL(Q.IS_ISO,0)!=0) LIMIT 2;", -1, &st, NULL) != SQLITE_OK) goto done;
+        sqlite3_bind_text(st, 1, path, -1, SQLITE_STATIC);
+        sqlite3_bind_int(st, 2, pos_id);
+        sqlite3_bind_text(st, 3, title, -1, SQLITE_STATIC);
+        rc = sqlite3_step(st);
+        if(rc == SQLITE_DONE) goto done;
+        if(rc != SQLITE_ROW){ result = -1; goto done; }
+        id = sqlite3_column_int(st, 0);
+        rc = sqlite3_step(st);
+        if(rc == SQLITE_ROW) goto done;
+        if(rc != SQLITE_DONE){ result = -1; goto done; }
+    }
+    result = 0;
+    for(int i = 0; i < g_n; i++) if(g_songs[i].id == id){
+        *out = g_songs[i];
+        if(unique_path) *unique_path = unique;
+        result = 1; break;
+    }
+done:
+    if(st) sqlite3_finalize(st);
+    sd_io_end();
+    return result;
+}
+
 /* The tag TITLE of the plain-file row for `path`: non-empty and not the scanner's filename fallback (NAME minus
  * its extension). Stock V2.57 reports the bare filename as song_name when its decoder wrapper reads no title
  * (it does for Ogg Opus, even with an OpusTags TITLE the scanner stored). CUE/ISO rows are skipped: their

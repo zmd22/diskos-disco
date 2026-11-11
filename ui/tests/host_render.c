@@ -15,6 +15,7 @@
 #include "lvgl/src/misc/lv_timer_private.h"
 #include "null_theme.h"
 #include "screens.h"
+#include "lyrics_fx.h"
 #include "onboarding.h"
 #include "quicksettings.h"
 lv_obj_t *quicksettings_test_button(int slot);
@@ -66,6 +67,7 @@ int __wrap_ssdb_open(void){guard_db_opens++;return getenv("REVIEW_GUARD")?0:__re
 /* Host-only controlled failure: hold album B's load while the UI returns to A. */
 static void volume_concept(int);
 void settings_open_group(const char *);
+void ui_imm_style_apply(void);
 static atomic_int race_waiting, race_release,art_decode_calls;
 static const char *race_path="/tmp/diskos-art-race-unreadable.mp3";
 int __real_art_make_all_ex_gen(const char *,const char *,const char *,const char *,int,unsigned);
@@ -89,7 +91,7 @@ static int scrub_seek_calls,scrub_volume_calls,scrub_send_fail;
 static long scrub_last_seek;
 static int scrub_last_volume;
 int __real_ui_seek_to(long ms);int __real_ui_set_volume(int v);
-int __wrap_ui_seek_to(long ms){if(getenv("REVIEW_SCRUB")||getenv("REVIEW_BRAUN2")){scrub_seek_calls++;scrub_last_seek=ms;return scrub_send_fail?-1:0;}return __real_ui_seek_to(ms);}
+int __wrap_ui_seek_to(long ms){if(getenv("REVIEW_NP_LINKS")||getenv("REVIEW_SCRUB")||getenv("REVIEW_BRAUN2")||getenv("REVIEW_LYRICS_MOTION")){scrub_seek_calls++;scrub_last_seek=ms;return scrub_send_fail?-1:0;}return __real_ui_seek_to(ms);}
 int __wrap_ui_set_volume(int v){if(getenv("REVIEW_SCRUB")||getenv("REVIEW_ZUNE_VOLUME")){scrub_volume_calls++;scrub_last_volume=v;return scrub_send_fail?-1:0;}return __real_ui_set_volume(v);}
 int __real_ui_is_playing(void);
 int __wrap_ui_is_playing(void){const char*p=getenv("NP_PLAYING");return p?atoi(p):__real_ui_is_playing();}
@@ -147,11 +149,12 @@ static int test_style_events;
 static void count_style_event(lv_event_t *e){(void)e;test_style_events++;}
 static void watch_styles(lv_obj_t *o){lv_obj_add_event_cb(o,count_style_event,LV_EVENT_STYLE_CHANGED,NULL);for(uint32_t i=0;i<lv_obj_get_child_count(o);i++)watch_styles(lv_obj_get_child(o,i));}
 static int fixture, send_result, send_count;static char last_sent[32];
+static int np_links_local_allowed=1;
 int __real_ui_local_playback_allowed(void);
-int __wrap_ui_local_playback_allowed(void){return (getenv("REVIEW_BRAUN2")||getenv("REVIEW_ZUNE")||getenv("REVIEW_ZUNE_BACK"))?1:__real_ui_local_playback_allowed();}
+int __wrap_ui_local_playback_allowed(void){if(getenv("REVIEW_NP_LINKS"))return np_links_local_allowed;return (getenv("REVIEW_BRAUN2")||getenv("REVIEW_ZUNE")||getenv("REVIEW_ZUNE_BACK")||getenv("REVIEW_LYRICS_MOTION"))?1:__real_ui_local_playback_allowed();}
 static int null_transport_calls;static char null_last_command[24];
 int __real_ui_transport_command(const char*);
-int __wrap_ui_transport_command(const char*cmd){if(getenv("REVIEW_BRAUN2")||getenv("REVIEW_ZQS_BANNER")||getenv("REVIEW_ZUNE")||getenv("REVIEW_ZUNE_BACK")||getenv("REVIEW_SHELF_PLAYER")||getenv("REVIEW_NULL")||getenv("REVIEW_NULL_GESTURES")||getenv("REVIEW_SQUASH_HOLD")||getenv("REVIEW_SIMPLE_PERF")||getenv("REVIEW_SIMPLE")){null_transport_calls++;snprintf(null_last_command,sizeof null_last_command,"%s",cmd);return 0;}return __real_ui_transport_command(cmd);}
+int __wrap_ui_transport_command(const char*cmd){if(getenv("REVIEW_NP_LINKS")||getenv("REVIEW_BRAUN2")||getenv("REVIEW_ZQS_BANNER")||getenv("REVIEW_ZUNE")||getenv("REVIEW_ZUNE_BACK")||getenv("REVIEW_SHELF_PLAYER")||getenv("REVIEW_NULL")||getenv("REVIEW_NULL_GESTURES")||getenv("REVIEW_SQUASH_HOLD")||getenv("REVIEW_SIMPLE_PERF")||getenv("REVIEW_SIMPLE")){null_transport_calls++;snprintf(null_last_command,sizeof null_last_command,"%s",cmd);return 0;}return __real_ui_transport_command(cmd);}
 int __real_ipc_send_cmd(const char *frame);
 int __wrap_ipc_send_cmd(const char *frame){send_count++;snprintf(last_sent,sizeof last_sent,"%s",frame);return fixture?send_result:__real_ipc_send_cmd(frame);}
 int __real_fw_custom_peq_writable(void);
@@ -701,6 +704,643 @@ static void theme_scroll_audit(void){
     }
 }
 
+/* Deterministic local sidecars and the real async worker/render/input paths. */
+static const char *motion_lrc =
+    "[00:01.00]<00:01.00>A <00:02.00>quiet <00:03.00>beginning<00:04.00>\n"
+    "[00:04.00]<00:04.00>Every <00:04.80>small <00:05.60>moment<00:07.00>\n"
+    "[00:07.00]<00:07.00>Café déjà vu carries every small moment into the light<00:11.00>\n"
+    "[00:11.00]The next line waits below\n"
+    "[00:14.00]\n"
+    "[00:17.00]And the words return\n";
+static const char *motion_first="A quiet beginning", *motion_second="Every small moment";
+static const char *motion_wrapped="Café déjà vu carries every small moment into the light";
+static void motion_sidecar(const char *body){
+    char path[512];snprintf(path,sizeof path,"%s",test_track_state.path);
+    char *dot=strrchr(path,'.');assert(dot);strcpy(dot,".lrc");
+    FILE*f=fopen(path,"wb");assert(f);assert(fwrite(body,1,strlen(body),f)==strlen(body));assert(!fclose(f));
+}
+static lv_obj_t *motion_wait_text(const char *text){
+    lv_obj_t *label=NULL;
+    for(int i=0;i<600;i++){
+        lyrics_poll(NULL);nav_wait(10);usleep(1000);
+        label=find_text(screen_get_root(SCR_LYRICS),text);
+        if(label&&lyrics_immersive_load(NULL,0,NULL)>=0)break;
+        label=NULL;
+    }
+    if(!label)fprintf(stderr,"lyrics fixture timed out waiting for [%s] on screen %d\n",text,screen_current());
+    assert(label);nav_wait(600);return label;
+}
+static void motion_position(long position){
+    test_track_state.position_ms=position;test_track_state.pos_seq++;
+    lyrics_poll(NULL);lv_obj_update_layout(lv_screen_active());
+}
+static void motion_frame(const char *base,const char *tag){
+    char path[768];snprintf(path,sizeof path,"%s.%s.ppm",base,tag);
+    lv_refr_now(NULL);FILE*f=fopen(path,"wb");assert(f);
+    assert(fprintf(f,"P6\n360 360\n255\n")>0);
+    assert(fwrite(pixels,1,sizeof pixels,f)==sizeof pixels);assert(!fclose(f));
+}
+static void motion_hash(char result[33]){lv_refr_now(NULL);md5_hex(pixels,sizeof pixels,result);}
+static void motion_label_hash(lv_obj_t *label,char result[33]){
+    static unsigned char crop[sizeof pixels];lv_area_t a;lv_obj_get_coords(label,&a);lv_refr_now(NULL);
+    if(a.x1<0)a.x1=0;
+    if(a.y1<0)a.y1=0;
+    if(a.x2>359)a.x2=359;
+    if(a.y2>359)a.y2=359;
+    size_t n=0;for(int y=a.y1;y<=a.y2;y++){
+        size_t width=(size_t)(a.x2-a.x1+1)*3;memcpy(crop+n,pixels+(y*360+a.x1)*3,width);n+=width;
+    }
+    assert(n);md5_hex(crop,n,result);
+}
+static lv_point_t motion_center(lv_obj_t *o){
+    assert(o);lv_obj_update_layout(o);lv_area_t a;lv_obj_get_coords(o,&a);
+    return (lv_point_t){(a.x1+a.x2)/2,(a.y1+a.y2)/2};
+}
+static void motion_press(lv_obj_t *o){
+    nav_pointer=(lv_indev_data_t){.point=motion_center(o),.state=LV_INDEV_STATE_PRESSED};nav_wait(30);
+}
+static void motion_release(void){nav_pointer.state=LV_INDEV_STATE_RELEASED;nav_wait(50);}
+static void review_estimated_lyrics(const char *out){
+    const char *estimated="Estimated words flow across this line";
+    const char *exact="Exact timed words";
+    const char *rejected="Rejected source timing stays whole";
+    const char *capped="a b c d e f g h i j k l m n o p q r s t u v w x y";
+    const char *last="Final words need a known end";
+    char body[2048];int used=snprintf(body,sizeof body,
+        "[00:01.00]Estimated words flow across this line\n"
+        "[00:06.00]<00:06.00>Exact <00:07.50>timed <00:09.00>words<00:11.00>\n"
+        "[00:11.00]<00:12.00>Rejected source <00:11.00>timing stays whole\n[00:16.00]");
+    for(int i=0;i<25;i++)used+=snprintf(body+used,sizeof body-(size_t)used,
+        "<00:%02d.%02d>%c%s",16+i/10,(i%10)*10,'a'+i,i==24?"":" ");
+    used+=snprintf(body+used,sizeof body-(size_t)used,"<00:19.00>\n[00:21.00]Final words need a known end\n");
+    assert(used>0&&(size_t)used<sizeof body);motion_sidecar(body);
+    setenv("NP_PLAYING","0",1);test_track_state.state=1;test_track_state.duration_ms=28000;
+    ui_update(&test_track_state);screen_set_anim(0);
+    cfg_set_int_deferred("lyrics_progressive",1);cfg_set_int_deferred("lyrics_estimate_words",1);
+    motion_position(1400);lyrics_open();lv_obj_t *label=motion_wait_text(estimated);
+    lv_obj_t *root=screen_get_root(SCR_LYRICS);char a[33],b[33];
+    lyr_line_t source[6];unsigned revision;
+    assert(lyrics_immersive_load(source,6,&revision)==5);
+    assert(!source[0].word_count&&source[1].word_count==3&&!source[2].word_count&&!source[3].word_count&&!source[4].word_count);
+    assert(source[2].estimate_blocked&&source[3].estimate_blocked);
+    motion_label_hash(label,a);motion_frame(out,"estimated-standalone-early");
+    motion_position(4000);nav_wait(100);motion_label_hash(label,b);assert(strcmp(a,b));
+    motion_frame(out,"estimated-standalone-late");
+
+    /* Disable estimates in-place: line-only text stops sweeping, exact spans remain. */
+    cfg_set_int_deferred("lyrics_estimate_words",0);lyrics_poll(NULL);nav_wait(100);
+    motion_position(1400);nav_wait(100);motion_label_hash(label,a);
+    motion_position(4000);nav_wait(100);motion_label_hash(label,b);assert(!strcmp(a,b));
+    motion_position(6400);nav_wait(100);label=find_text(root,exact);assert(label);motion_label_hash(label,a);
+    motion_position(7200);nav_wait(100);motion_label_hash(label,b);assert(strcmp(a,b));
+    lv_indev_t *input=lv_indev_create();lv_indev_set_type(input,LV_INDEV_TYPE_POINTER);
+    lv_indev_set_read_cb(input,nav_read);lv_indev_set_long_press_time(input,400);
+    lv_timer_set_period(lv_indev_get_read_timer(input),10);
+    motion_position(1400);nav_wait(100);label=find_text(root,estimated);assert(label);
+    int seeks=scrub_seek_calls;nav_touch_object(label,80);
+    assert(scrub_seek_calls==seeks+1&&scrub_last_seek==1000);motion_position(1000);nav_wait(100);
+
+    cfg_set_int_deferred("lyrics_estimate_words",1);cfg_set_int_deferred("lyrics_progressive",0);
+    lyrics_poll(NULL);motion_position(1400);nav_wait(100);motion_label_hash(label,a);
+    motion_position(4000);nav_wait(100);motion_label_hash(label,b);assert(!strcmp(a,b));
+    cfg_set_int_deferred("lyrics_progressive",1);lyrics_poll(NULL);
+    /* Rejected exact timing must never silently become guessed timing. */
+    motion_position(11400);nav_wait(100);label=find_text(root,rejected);assert(label);motion_label_hash(label,a);
+    motion_position(14000);nav_wait(100);motion_label_hash(label,b);assert(!strcmp(a,b));
+    /* Standalone retains this valid25-span line; Immersive has a24-span limit. */
+    motion_position(16400);nav_wait(100);label=find_text(root,capped);assert(label);motion_label_hash(label,a);
+    motion_position(18200);nav_wait(100);motion_label_hash(label,b);assert(strcmp(a,b));
+    test_track_state.duration_ms=0;ui_update(&test_track_state);
+    motion_position(22000);nav_wait(100);label=find_text(root,last);assert(label);motion_label_hash(label,a);
+    motion_position(24000);nav_wait(100);motion_label_hash(label,b);assert(!strcmp(a,b));
+    /* A duration learned after opening supplies a bounded final-line interval. */
+    test_track_state.duration_ms=25000;ui_update(&test_track_state);
+    motion_position(22000);nav_wait(100);motion_label_hash(label,a);
+    motion_position(24000);nav_wait(100);motion_label_hash(label,b);assert(strcmp(a,b));
+
+    test_track_state.duration_ms=28000;ui_update(&test_track_state);motion_position(1400);
+    simple_cfg_set_int_deferred("imm_style",0);
+    if(th_disco_family()||th_null())disco_open_np_immersive();
+    else {screen_show(SCR_NOWPLAYING);ui_np_fsart_open();}
+    for(int i=0;i<100;i++){lyrics_poll(NULL);nav_wait(10);usleep(1000);}
+    root=ui_action_find("imm.control");assert(root&&ui_np_fsart_active());
+    label=find_text(root,estimated);assert(label);motion_label_hash(label,a);
+    motion_frame(out,"estimated-immersive-early");
+    motion_position(4000);nav_wait(300);motion_label_hash(label,b);assert(strcmp(a,b));
+    motion_frame(out,"estimated-immersive-late");
+    cfg_set_int_deferred("lyrics_estimate_words",0);ui_imm_style_apply();nav_wait(300);
+    motion_position(1400);nav_wait(300);label=find_text(root,estimated);assert(label);motion_label_hash(label,a);
+    motion_position(4000);nav_wait(300);motion_label_hash(label,b);assert(!strcmp(a,b));
+    motion_position(6400);nav_wait(300);label=find_text(root,exact);assert(label);motion_label_hash(label,a);
+    motion_position(7200);nav_wait(300);motion_label_hash(label,b);assert(strcmp(a,b));
+    motion_position(1400);nav_wait(300);label=find_text(root,estimated);assert(label);
+    seeks=scrub_seek_calls;nav_touch_object(label,80);
+    assert(scrub_seek_calls==seeks+1&&scrub_last_seek==1000);motion_position(1000);nav_wait(300);
+
+    cfg_set_int_deferred("lyrics_estimate_words",1);cfg_set_int_deferred("lyrics_progressive",0);
+    ui_imm_style_apply();motion_position(1400);nav_wait(300);label=find_text(root,estimated);assert(label);
+    motion_label_hash(label,a);motion_position(4000);nav_wait(300);motion_label_hash(label,b);assert(!strcmp(a,b));
+    cfg_set_int_deferred("lyrics_progressive",1);ui_imm_style_apply();
+    motion_position(11400);nav_wait(300);label=find_text(root,rejected);assert(label);motion_label_hash(label,a);
+    motion_position(14000);nav_wait(300);motion_label_hash(label,b);assert(!strcmp(a,b));
+    motion_position(16400);nav_wait(300);label=find_text(root,capped);assert(label);motion_label_hash(label,a);
+    motion_position(18200);nav_wait(300);motion_label_hash(label,b);assert(!strcmp(a,b));
+    test_track_state.duration_ms=0;ui_update(&test_track_state);
+    motion_position(22000);nav_wait(300);label=find_text(root,last);assert(label);motion_label_hash(label,a);
+    motion_position(24000);nav_wait(300);motion_label_hash(label,b);assert(!strcmp(a,b));
+    test_track_state.duration_ms=25000;ui_update(&test_track_state);
+    motion_position(22000);nav_wait(300);motion_label_hash(label,a);
+    motion_position(24000);nav_wait(300);motion_label_hash(label,b);assert(strcmp(a,b));
+    assert(lyrics_immersive_load(source,6,&revision)==5);
+    assert(!source[0].word_count&&source[1].word_count==3&&!source[2].word_count&&!source[3].word_count&&!source[4].word_count);
+    ui_np_fsart_close();lv_indev_delete(input);test_track_state.duration_ms=21000;
+    ui_update(&test_track_state);
+}
+static void review_lyrics_motion(const char *out){
+    setenv("REVIEW_LYRICS_MOTION","1",1);setenv("NP_PLAYING","0",1);
+    fixture=1;sd_io_init(media_local);assert(sd_io_resume());
+    cfg_set_int_deferred("online_lyrics",0);cfg_set_int_deferred("online_art",0);
+    cfg_set_int_deferred("lyrics_progressive",1);
+    cfg_set_int_deferred("lyrics_estimate_words",0); /* baseline exact-only fixtures below */
+    cfg_set_int_deferred("onboarding_done",1);simple_cfg_set_int_deferred("imm_lyrics",1);
+    simple_cfg_set_int_deferred("imm_style",2);simple_cfg_set_int_deferred("imm_scrub",0);
+    screen_set_anim(0);screens_init();screen_show(SCR_NOWPLAYING);
+    memset(&test_track_state,0,sizeof test_track_state);
+    snprintf(test_track_state.path,sizeof test_track_state.path,"%s",out);
+    char *dot=strrchr(test_track_state.path,'.');assert(dot);strcpy(dot,".png");
+    snprintf(test_track_state.title,sizeof test_track_state.title,"Lyrics motion fixture");
+    snprintf(test_track_state.artist,sizeof test_track_state.artist,"Local test");
+    test_track_state.have_track=1;test_track_state.duration_ms=21000;
+    test_track_state.state=1;test_track_state.position_ms=1400;test_track_state.pos_seq=1;
+    test_track_override=1;motion_sidecar(motion_lrc);ipc_seed_state(&test_track_state);
+    ui_update(&test_track_state);
+    /* Settle artwork after SD initialization, before another worker can access it. */
+    for(int i=0;i<1000&&!ui_current_cover_dsc();i++){ui_art_poll(NULL);usleep(2000);}
+    assert(ui_current_cover_dsc());
+    lyrics_open();lv_obj_t *first=motion_wait_text(motion_first);
+    lv_obj_t *root=screen_get_root(SCR_LYRICS),*box=lv_obj_get_parent(first),*scroll=lv_obj_get_parent(box);
+    lv_obj_t *second=find_text(root,motion_second),*wrapped=find_text(root,motion_wrapped);assert(second&&wrapped);
+    assert(lv_obj_get_height(wrapped)>lv_font_get_line_height(lv_obj_get_style_text_font(wrapped,0)));
+    lyr_line_t lines[8];unsigned revision;
+    assert(lyrics_immersive_load(lines,8,&revision)==6&&lines[0].word_count==3&&lines[2].word_count==1);
+    assert(!strcmp(lines[2].text,motion_wrapped)&&lines[2].words[0].end_byte==(int)strlen(motion_wrapped));
+    lyrics_fx_t probe={0};assert(lyrics_fx_bind(&probe,wrapped,lines[2].words,1,TC(TEXT_LYRICS)));
+    lyrics_fx_set_draw(&probe,0);assert(probe.fragment_count>1);
+    lyrics_fx_update(&probe,7500);lv_area_t early[16],late[16];
+    int ne=lyrics_fx_get_clips(&probe,early,16);lyrics_fx_update(&probe,10000);
+    int nl=lyrics_fx_get_clips(&probe,late,16);assert(ne>0&&nl>=ne);
+    int early_area=0,late_area=0;
+    for(int i=0;i<ne;i++)early_area+=(early[i].x2-early[i].x1+1)*(early[i].y2-early[i].y1+1);
+    for(int i=0;i<nl;i++)late_area+=(late[i].x2-late[i].x1+1)*(late[i].y2-late[i].y1+1);
+    assert(late_area>early_area);lyrics_fx_unbind(&probe);
+    lv_obj_t *too_tall=lv_label_create(root);lv_obj_set_width(too_tall,14);
+    lv_label_set_long_mode(too_tall,LV_LABEL_LONG_WRAP);
+    lv_label_set_text(too_tall,"a\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na\na");
+    lrc_word_t tall_word={1000,2000,0,(int)strlen(lv_label_get_text(too_tall))};
+    assert(!lyrics_fx_bind(&probe,too_tall,&tall_word,1,TC(TEXT_LYRICS)));lv_obj_delete(too_tall);
+    char a[33],b[33];motion_position(1400);motion_frame(out,"word-040");motion_label_hash(first,a);
+    motion_position(1900);motion_frame(out,"word-090");motion_label_hash(first,b);assert(strcmp(a,b));
+
+    screen_set_anim(1);motion_position(3900);nav_wait(600);
+    int start=lv_obj_get_scroll_y(scroll);motion_position(4000);motion_frame(out,"slide-000");
+    nav_wait(120);int middle=lv_obj_get_scroll_y(scroll);motion_frame(out,"slide-120");
+    nav_wait(120);motion_frame(out,"slide-240");nav_wait(120);motion_frame(out,"slide-360");
+    nav_wait(180);int end=lv_obj_get_scroll_y(scroll);motion_frame(out,"slide-540");
+    assert(start<middle&&middle<end);nav_wait(200);assert(lv_obj_get_scroll_y(scroll)==end);
+    /* Leaving during a scroll cancels it; returning must recenter the same active row. */
+    screen_set_anim(0);motion_position(3900);screen_set_anim(1);motion_position(4000);nav_wait(120);
+    screen_set_anim(0);screen_home();nav_wait(100);screen_show(SCR_LYRICS);lyrics_poll(NULL);nav_wait(100);
+    assert(lv_obj_get_scroll_y(scroll)==end);screen_set_anim(1);
+
+    /* Pause freezes interpolated words instead of jumping back to the last IPC sample. */
+    motion_position(4300);setenv("NP_PLAYING","1",1);nav_wait(120);
+    setenv("NP_PLAYING","0",1);nav_wait(40);motion_hash(a);nav_wait(240);motion_hash(b);assert(!strcmp(a,b));
+    lv_indev_t *input=lv_indev_create();lv_indev_set_type(input,LV_INDEV_TYPE_POINTER);
+    lv_indev_set_read_cb(input,nav_read);lv_indev_set_long_press_time(input,400);
+    lv_timer_set_period(lv_indev_get_read_timer(input),10);
+
+    /* A previous, visible line is a real tap target with its exact LRC timestamp. */
+    int seeks=scrub_seek_calls;nav_touch_object(first,80);
+    assert(scrub_seek_calls==seeks+1&&scrub_last_seek==1000);
+    int sought_y=lv_obj_get_scroll_y(scroll);
+    motion_position(4300);nav_wait(160);assert(lv_obj_get_scroll_y(scroll)==sought_y); /* old seek echo */
+    motion_position(1000);nav_wait(120);assert(lv_obj_get_scroll_y(scroll)==sought_y); /* ack */
+    seeks=scrub_seek_calls;motion_press(first);nav_pointer.point.x+=25;nav_wait(40);motion_release();
+    assert(scrub_seek_calls==seeks);
+    nav_touch_object(first,650);assert(scrub_seek_calls==seeks);
+    motion_press(first);test_track_state.path[0]='!';motion_release();test_track_state.path[0]=out[0];
+    assert(scrub_seek_calls==seeks);
+    /* A held reading touch suspends auto-follow even beyond the normal 4s grace. */
+    motion_press(first);motion_position(7000);nav_wait(4200);
+    assert(lv_obj_get_scroll_y(scroll)==sought_y);motion_release();assert(scrub_seek_calls==seeks);
+    nav_wait(4100);assert(lv_obj_get_scroll_y(scroll)>sought_y);
+
+    screen_set_anim(0);screen_home();nav_wait(80);lyrics_open();first=motion_wait_text(motion_first);
+    root=screen_get_root(SCR_LYRICS);box=lv_obj_get_parent(first);scroll=lv_obj_get_parent(box);
+    motion_position(3900);start=lv_obj_get_scroll_y(scroll);motion_position(4000);end=lv_obj_get_scroll_y(scroll);
+    assert(end>start);nav_wait(200);assert(lv_obj_get_scroll_y(scroll)==end); /* animation-off snap */
+    motion_position(14000);lv_obj_t *blank=lv_obj_get_child(box,4);assert(!lv_obj_has_flag(blank,LV_OBJ_FLAG_CLICKABLE));
+    motion_frame(out,"empty-line");
+
+    motion_sidecar("[00:01.00]Ordinary timed lyrics\n[00:04.00]Still easy to tap\n");
+    motion_position(1400);lyrics_open();lv_obj_t *ordinary=motion_wait_text("Ordinary timed lyrics");
+    assert(lyrics_immersive_load(lines,8,&revision)==2&&!lines[0].word_count&&!lines[1].word_count);
+    motion_label_hash(ordinary,a);motion_position(1800);nav_wait(200);motion_label_hash(ordinary,b);assert(!strcmp(a,b));
+    seeks=scrub_seek_calls;nav_touch_object(ordinary,80);assert(scrub_seek_calls==seeks+1&&scrub_last_seek==1000);
+    motion_sidecar("Untimed words stay readable\nA second plain line\n");lyrics_open();
+    lv_obj_t *plain=motion_wait_text("Untimed words stay readable\nA second plain line\n");
+    assert(!lv_obj_has_flag(plain,LV_OBJ_FLAG_CLICKABLE));seeks=scrub_seek_calls;
+    nav_touch_object(plain,80);assert(scrub_seek_calls==seeks);motion_frame(out,"plain");
+    motion_sidecar("");lyrics_open();motion_wait_text(th_zune()?"no lyrics":"No lyrics found.");
+
+    /* The user's rendering preference removes both motion and word sweeps; seek stays useful. */
+    motion_sidecar(motion_lrc);motion_position(1400);lyrics_open();first=motion_wait_text(motion_first);
+    scroll=lv_obj_get_parent(lv_obj_get_parent(first));screen_set_anim(1);
+    cfg_set_int_deferred("lyrics_progressive",0);lyrics_poll(NULL);nav_wait(600);
+    motion_label_hash(first,a);motion_position(1900);nav_wait(100);motion_label_hash(first,b);assert(!strcmp(a,b));
+    motion_position(3900);start=lv_obj_get_scroll_y(scroll);motion_position(4000);end=lv_obj_get_scroll_y(scroll);
+    assert(end>start);nav_wait(120);assert(lv_obj_get_scroll_y(scroll)==end);
+    seeks=scrub_seek_calls;nav_touch_object(first,80);assert(scrub_seek_calls==seeks+1&&scrub_last_seek==1000);
+    cfg_set_int_deferred("lyrics_progressive",1);lyrics_poll(NULL);screen_set_anim(0);
+
+    /* Use the same sidecar with the real Immersive compositor and root gestures. */
+    motion_sidecar(motion_lrc);motion_position(4300);lyrics_open();motion_wait_text(motion_second);
+    ui_set_np_style(2);
+    if(th_disco_family()||th_null())disco_open_np_immersive();
+    else {screen_show(SCR_NOWPLAYING);ui_np_fsart_open();}
+    for(int i=0;i<100;i++){lyrics_poll(NULL);nav_wait(10);usleep(1000);}
+    lv_obj_t *immersive=ui_action_find("imm.control");assert(immersive&&ui_np_fsart_active());
+    lv_obj_t *current=find_text(immersive,motion_second);
+    if(!current){
+        fprintf(stderr,"Immersive cache=%d position=%ld screen=%d\n",lyrics_immersive_load(lines,8,&revision),test_track_state.position_ms,screen_current());
+        for(uint32_t i=0;i<lv_obj_get_child_count(immersive);i++){
+            lv_obj_t *c=lv_obj_get_child(immersive,i);if(lv_obj_check_type(c,&lv_label_class))fprintf(stderr,"Immersive label=[%s]\n",lv_label_get_text(c));
+        }
+    }
+    assert(current);motion_frame(out,"immersive");
+    motion_position(4100);nav_wait(300);motion_frame(out,"immersive-word-100");motion_label_hash(current,a);
+    motion_position(4400);nav_wait(300);motion_frame(out,"immersive-word-400");motion_label_hash(current,b);assert(strcmp(a,b));
+    motion_position(4700);nav_wait(300);motion_frame(out,"immersive-word-700");
+    motion_position(3900);nav_wait(300);lv_obj_t *upcoming=find_text(immersive,motion_second);assert(upcoming);
+    int from_y=motion_center(upcoming).y;screen_set_anim(1);motion_position(4000);
+    for(int i=0;i<30;i++){nav_wait(10);current=find_text(immersive,motion_second);if(current!=upcoming)break;}
+    assert(current&&current!=upcoming);int moving_y=motion_center(current).y;assert(abs(moving_y-from_y)<=3);
+    motion_frame(out,"immersive-slide-000");nav_wait(120);int between_y=motion_center(current).y;
+    motion_frame(out,"immersive-slide-120");nav_wait(400);int final_y=motion_center(current).y;
+    assert(final_y<between_y&&between_y<moving_y);motion_frame(out,"immersive-slide-520");screen_set_anim(0);
+    /* Tap a moving current row, then pause before a nearby old report can acknowledge it. */
+    motion_position(3900);nav_wait(300);upcoming=find_text(immersive,motion_second);
+    test_track_state.state=2;ui_update(&test_track_state);screen_set_anim(1);
+    for(int i=0;i<50;i++){nav_wait(10);current=find_text(immersive,motion_second);if(current!=upcoming)break;}
+    assert(current&&current!=upcoming);seeks=scrub_seek_calls;nav_touch_object(current,60);
+    assert(scrub_seek_calls==seeks+1&&scrub_last_seek==4000);
+    test_track_state.state=1;ui_update(&test_track_state);nav_wait(300);
+    assert(!strcmp(lv_label_get_text(current),motion_second));motion_label_hash(current,a);
+    nav_wait(300);motion_label_hash(current,b);assert(!strcmp(a,b));
+    test_track_state.state=2;ui_update(&test_track_state);nav_wait(200);
+    assert(!strcmp(lv_label_get_text(current),motion_second));
+    motion_position(4000);test_track_state.state=1;ui_update(&test_track_state);nav_wait(300);screen_set_anim(0);
+    seeks=scrub_seek_calls;nav_touch_object(current,80);assert(scrub_seek_calls==seeks+1&&scrub_last_seek==4000);
+    motion_position(4000);nav_wait(160);current=find_text(immersive,motion_second);assert(current);
+    seeks=scrub_seek_calls;motion_press(current);nav_pointer.point.x+=25;nav_wait(40);motion_release();
+    assert(scrub_seek_calls==seeks);nav_touch_object(current,650);assert(scrub_seek_calls==seeks);
+    motion_press(current);test_track_state.path[0]='!';nav_wait(280);motion_release();test_track_state.path[0]=out[0];
+    assert(scrub_seek_calls==seeks);
+    /* The periodic Immersive cache check may have observed the temporary new track. */
+    for(int i=0;i<100;i++){lyrics_poll(NULL);nav_wait(10);usleep(1000);}
+    /* Disabling progressive rendering is visible immediately and preserves line seeking. */
+    cfg_set_int_deferred("lyrics_progressive",0);ui_imm_style_apply();nav_wait(300);
+    motion_position(4100);nav_wait(300);current=find_text(immersive,motion_second);assert(current);
+    assert(lv_color_eq(lv_obj_get_style_text_color(current,0),TC(FIXED_MEDIA_LYRIC_CURRENT)));
+    motion_label_hash(current,a);motion_position(4700);nav_wait(300);motion_label_hash(current,b);assert(!strcmp(a,b));
+    motion_frame(out,"immersive-classic");
+    seeks=scrub_seek_calls;nav_touch_object(current,80);
+    if(scrub_seek_calls!=seeks+1||scrub_last_seek!=4000)fprintf(stderr,"classic tap calls %d -> %d last=%ld center=%d,%d screen=%d\n",seeks,scrub_seek_calls,scrub_last_seek,motion_center(current).x,motion_center(current).y,screen_current());
+    assert(scrub_seek_calls==seeks+1&&scrub_last_seek==4000);
+    cfg_set_int_deferred("lyrics_progressive",1);ui_imm_style_apply();motion_position(4000);nav_wait(300);
+    ui_np_fsart_close();nav_wait(100);
+    if(th_disco_family()||th_null())disco_open_np_immersive();else ui_np_fsart_open();
+    nav_wait(600);assert(ui_np_fsart_active());
+    assert(find_text(immersive,motion_second));ui_np_fsart_close();lv_indev_delete(input);
+
+    /* The stock player can repeat a quantized timestamp in new a1 frames.
+     * Fractional LRC boundaries must be crossed once while playing, including
+     * when the next advancing report is slightly behind our prediction. */
+    const char *clock_text[]={"Clock first line","Clock fractional line","Clock advancing line","Clock final line"};
+    motion_sidecar("[00:01.00]Clock first line\n[00:03.10]Clock fractional line\n"
+                   "[00:04.10]Clock advancing line\n[00:08.00]Clock final line\n");
+    setenv("NP_PLAYING","0",1);test_track_state.state=1;ui_update(&test_track_state);
+    screen_set_anim(0);motion_position(3000);lyrics_open();first=motion_wait_text(clock_text[0]);
+    scroll=lv_obj_get_parent(lv_obj_get_parent(first));int clock_start=lv_obj_get_scroll_y(scroll);
+    int last_y=clock_start;screen_set_anim(1);
+    setenv("NP_PLAYING","1",1);test_track_state.state=2;ui_update(&test_track_state);
+    for(int i=1;i<=30;i++){
+        if(i%5==0)motion_position(3000); /* same time, fresh position sequence */
+        nav_wait(40);int y=lv_obj_get_scroll_y(scroll);
+        if(y<last_y)fprintf(stderr,"Standalone quantized clock rewound at frame %d: %d -> %d\n",i,last_y,y);
+        assert(y>=last_y);last_y=y;
+    }
+    assert(last_y>clock_start);
+    motion_position(4000);nav_wait(40);assert(lv_obj_get_scroll_y(scroll)>=last_y);
+    /* A genuinely decreasing report still honors a backward seek. */
+    motion_position(1500);nav_wait(40);assert(lv_obj_get_scroll_y(scroll)==clock_start);
+
+    setenv("NP_PLAYING","0",1);test_track_state.state=1;ui_update(&test_track_state);
+    screen_set_anim(0);motion_position(3000);nav_wait(100);
+    simple_cfg_set_int_deferred("imm_style",0); /* user's Vinyl renderer */
+    if(th_disco_family()||th_null())disco_open_np_immersive();
+    else {screen_show(SCR_NOWPLAYING);ui_np_fsart_open();}
+    for(int i=0;i<100;i++){lyrics_poll(NULL);nav_wait(10);usleep(1000);}
+    immersive=ui_action_find("imm.control");assert(immersive&&ui_np_fsart_active());
+    current=find_text(immersive,clock_text[0]);assert(current);
+    screen_set_anim(1);test_track_state.state=2;ui_update(&test_track_state);
+    setenv("NP_PLAYING","1",1);int last_line=0;
+    for(int i=1;i<=30;i++){
+        if(i%5==0)motion_position(3000);
+        nav_wait(40);int line=-1;
+        for(int j=0;j<4;j++)if(!strcmp(lv_label_get_text(current),clock_text[j]))line=j;
+        if(line<last_line)fprintf(stderr,"Immersive quantized clock rewound at frame %d: %d -> %d\n",i,last_line,line);
+        assert(line>=last_line);last_line=line;
+    }
+    assert(last_line==2);motion_frame(out,"immersive-vinyl-quantized");
+    motion_position(4000);nav_wait(40);assert(!strcmp(lv_label_get_text(current),clock_text[2]));
+    motion_position(1500);nav_wait(40);assert(!strcmp(lv_label_get_text(current),clock_text[0]));
+    setenv("NP_PLAYING","0",1);test_track_state.state=1;ui_update(&test_track_state);
+    screen_set_anim(0);ui_np_fsart_close();
+    review_estimated_lyrics(out);
+    setlist_open("Display");settings_open_group("Text & layout");nav_wait(100);
+    root=screen_get_root(SCR_SETLIST);
+    for(int i=0;i<2;i++){
+        lv_obj_t *toggle=find_text(root,th_zune()?"progressive lyrics":"Progressive lyrics");assert(toggle);
+        lv_obj_send_event(lv_obj_get_parent(toggle),LV_EVENT_CLICKED,NULL);
+        assert(cfg_get_int("lyrics_progressive",-1)==i);nav_wait(40);
+    }
+    for(int i=0;i<2;i++){
+        lv_obj_t *estimate=find_text(root,th_zune()?"estimate word timing":"Estimate word timing");assert(estimate);
+        lv_obj_send_event(lv_obj_get_parent(estimate),LV_EVENT_CLICKED,NULL);
+        assert(cfg_get_int("lyrics_estimate_words",-1)==i);nav_wait(40);
+    }
+    lv_obj_t *toggle=find_text(root,th_zune()?"progressive lyrics":"Progressive lyrics");assert(toggle);
+    lv_obj_scroll_to_view(lv_obj_get_parent(toggle),LV_ANIM_OFF);nav_wait(100);motion_frame(out,"settings");
+    puts("PASS: async lyrics, UTF-8 wraps, exact/estimated word sweeps, estimate toggle and unknown-end fallback, interpolated scrolling, pause freeze, exact tap seek, stale echo/track rejection, drag/hold suppression, reading hold, animation-off snap, plain/empty lyrics, lyric settings and standalone/Immersive reopen");
+}
+
+/* A dedicated compile-time DB_PATH keeps this integration fixture away from
+ * the device's database. The Python driver creates only that explicit fixture. */
+#ifndef DB_PATH
+#define DB_PATH "/usr/data/fiio/db/song.db"
+#endif
+static int np_links_surface;
+static track_state_t np_links_track;
+static void np_links_path(char *out,size_t capacity,const char *base,const char *suffix){
+    size_t n=strlen(base),m=strlen(suffix);assert(n+m<capacity);
+    memcpy(out,base,n);memcpy(out+n,suffix,m+1);
+}
+static lv_obj_t *np_links_text(lv_obj_t *root,const char *text){
+    if(!root||!lv_obj_is_visible(root))return NULL;
+    if(lv_obj_check_type(root,&lv_label_class)&&!strcasecmp(lv_label_get_text(root),text))return root;
+    for(uint32_t i=0;i<lv_obj_get_child_count(root);i++){
+        lv_obj_t *found=np_links_text(lv_obj_get_child(root,i),text);if(found)return found;
+    }
+    return NULL;
+}
+static void np_links_dump(lv_obj_t *root){
+    if(!lv_obj_is_visible(root))return;
+    if(lv_obj_check_type(root,&lv_label_class))fprintf(stderr,"Library label: [%s]\n",lv_label_get_text(root));
+    for(uint32_t i=0;i<lv_obj_get_child_count(root);i++)np_links_dump(lv_obj_get_child(root,i));
+}
+static void np_links_prefix(char out[6],const char *text){
+    int n=0;for(;*text&&n<5;text++){
+        unsigned char c=(unsigned char)*text;if(c==' '||c=='\n'||c=='\r'||c=='\t')continue;
+        out[n++]=c>='A'&&c<='Z'?c+('a'-'A'):c;
+    }out[n]=0;
+}
+static lv_obj_t *np_links_wrapped(lv_obj_t *root,const char *prefix){
+    if(!lv_obj_is_visible(root))return NULL;
+    if(lv_obj_check_type(root,&lv_label_class)){
+        char shown[6];np_links_prefix(shown,lv_label_get_text(root));if(!strcmp(shown,prefix))return root;
+    }
+    for(uint32_t i=0;i<lv_obj_get_child_count(root);i++){
+        lv_obj_t *found=np_links_wrapped(lv_obj_get_child(root,i),prefix);if(found)return found;
+    }return NULL;
+}
+static lv_point_t np_links_point(int artist_link){
+    lv_obj_t *root=screen_get_root(np_links_surface);
+    lv_obj_update_layout(root);
+    const char *text=artist_link?test_track_state.artist:test_track_state.title;
+    lv_obj_t *label=np_links_surface==SCR_NOWPLAYING?ui_action_find(artist_link?"nowplaying.artist":"nowplaying.album"):np_links_text(root,text);
+    if(!label){char prefix[6];np_links_prefix(prefix,text);label=np_links_wrapped(root,prefix);}
+    assert(label&&lv_obj_is_visible(label));
+    lv_area_t a;lv_obj_get_coords(label,&a);
+    lv_point_t point={(a.x1+a.x2)/2,(a.y1+a.y2)/2};
+    assert(point.x>=0&&point.x<360&&point.y>=0&&point.y<360);
+    return point;
+}
+static void np_links_present(const track_state_t *track){
+    songmenu_close();dhome_overlay_close();
+    if(ui_np_fsart_active())ui_np_fsart_close();
+    test_track_state=*track;ipc_seed_state(track);ui_update(track);
+    home_set_now_playing(track->title,track->artist,ui_current_accent(),true);
+    if(np_links_surface==SCR_HOME)screen_home();else screen_show(np_links_surface);
+    nav_wait(600);
+    assert(screen_current()==np_links_surface);
+}
+static void np_links_tap(int artist_link){
+    int commands=send_count,transport=null_transport_calls,seeks=scrub_seek_calls;
+    lv_point_t point=np_links_point(artist_link);nav_touch(point,70);nav_wait(520);
+    if(send_count!=commands||null_transport_calls!=transport||scrub_seek_calls!=seeks)
+        fprintf(stderr,"Unexpected command preset=%d artist=%d point=%d,%d screen=%d send=%d/%d [%s] transport=%d/%d [%s] seek=%d/%d\n",
+                theme_preset(),artist_link,(int)point.x,(int)point.y,screen_current(),send_count,commands,last_sent,
+                null_transport_calls,transport,null_last_command,scrub_seek_calls,seeks);
+    assert(send_count==commands&&null_transport_calls==transport&&scrub_seek_calls==seeks);
+}
+static void np_links_back(void){
+    assert(screen_current()==SCR_LIBRARY);
+    assert(!library_back());screen_back();nav_wait(150);
+    assert(screen_current()==np_links_surface);
+}
+static void np_links_album(const char *album){
+    assert(screen_current()==SCR_LIBRARY);
+    int kind=0;char name[MDB_STR];
+    assert(library_drill_context(&kind,name,sizeof name)&&kind==3&&!strcmp(name,album));
+    assert(np_links_text(screen_get_root(SCR_LIBRARY),album));
+}
+static void np_links_artist(const char *other_album){
+    assert(screen_current()==SCR_LIBRARY);
+    lv_obj_t *root=screen_get_root(SCR_LIBRARY);
+    int kind;char name[MDB_STR];assert(!library_drill_context(&kind,name,sizeof name));
+    lv_obj_t *list=library_scroller();lv_obj_scroll_to_y(list,0,LV_ANIM_OFF);nav_wait(80);
+    int canonical=0,other=0;
+    for(int y=0;y<=600&&!(canonical&&other);y+=100){
+        lv_obj_scroll_to_y(list,y,LV_ANIM_OFF);nav_wait(50);
+        canonical|=np_links_text(root,"Core Album")!=NULL;
+        other|=np_links_text(root,other_album)!=NULL;
+    }
+    if(!(canonical&&other)){fprintf(stderr,"Expected artist albums: Core Album=%d %s=%d\n",canonical,other_album,other);np_links_dump(root);}
+    assert(canonical&&other);
+}
+static lv_obj_t *np_links_up(void){
+    lv_obj_t *root=screen_get_root(SCR_LIBRARY);
+    for(int i=0;i<100;i++){
+        char action[40];snprintf(action,sizeof action,"%s#%d",th_zune()?"zune.pivot.back":"nav.back",i);
+        lv_obj_t *button=ui_action_find(action);if(!button)break;
+        if(!lv_obj_is_visible(button))continue;
+        for(lv_obj_t *p=button;p;p=lv_obj_get_parent(p))if(p==root)return button;
+    }
+    return NULL;
+}
+static void review_np_links(const char *output){
+    assert(getenv("NP_LINKS_DB")&&!strcmp(getenv("NP_LINKS_DB"),DB_PATH));
+    assert(strncmp(DB_PATH,"/tmp/",5)==0); /* never accept a real device database */
+    fixture=1;test_track_override=1;
+    sd_io_init(media_local);assert(sd_io_resume());assert(mdb_load()>=9);
+    cfg_set_int_deferred("online_art",0);cfg_set_int_deferred("online_lyrics",0);
+    cfg_set_int_deferred("disco_nav_hint",1);cfg_set_int_deferred("disco_side",0);
+    cfg_set_int_deferred("null_controls",getenv("NP_LINKS_GESTURES")?2:0);
+    simple_cfg_set_int_deferred("disco_title_hold",2);cfg_set_int_deferred("null_title_hold",2);
+    assert(simple_cfg_get_int("disco_title_hold",-1)==2&&simple_cfg_get_int("null_title_hold",-1)==2);
+    screen_set_anim(0);screens_init();
+    ui_set_np_style(getenv("NP_LINKS_STYLE")?atoi(getenv("NP_LINKS_STYLE")):1);
+    np_links_surface=(th_disco_family()||th_null())?SCR_HOME:SCR_NOWPLAYING;
+    snprintf(np_links_track.path,sizeof np_links_track.path,"%s",output);
+    char *dot=strrchr(np_links_track.path,'.');assert(dot);strcpy(dot,".png");
+    snprintf(np_links_track.title,sizeof np_links_track.title,"Visible Track");
+    snprintf(np_links_track.artist,sizeof np_links_track.artist,"Visible Artist");
+    snprintf(np_links_track.album,sizeof np_links_track.album,"Incorrect IPC Album");
+    if(getenv("NP_LINKS_LONG")){
+        snprintf(np_links_track.title,sizeof np_links_track.title,"A Very Long Song Title Wrapping Across Multiple Lines Of The Now Playing Screen");
+        snprintf(np_links_track.artist,sizeof np_links_track.artist,"A Long Visible Artist Collaboration With Another Artist");
+    }
+    np_links_track.have_track=1;np_links_track.state=2;np_links_track.duration_ms=240000;
+    np_links_track.position_ms=92000;np_links_track.path_seq=10;np_links_track.pos_seq=11;
+    np_links_present(&np_links_track);
+    for(int i=0;i<300&&!ui_current_cover_dsc();i++){ui_art_poll(NULL);usleep(10000);}
+    assert(ui_current_cover_dsc());
+    ui_publish_art_surfaces(&np_links_track,1);nav_wait(100);
+    lv_indev_t *pointer=lv_indev_create();lv_indev_set_type(pointer,LV_INDEV_TYPE_POINTER);
+    lv_indev_set_read_cb(pointer,nav_read);lv_indev_set_long_press_time(pointer,400);
+    lv_timer_set_period(lv_indev_get_read_timer(pointer),10);
+
+    /* IPC strings deliberately disagree with the indexed row. Actual label hits
+     * must open canonical database destinations and retain ordinary Back. */
+    puts("CHECK canonical title and artist links");fflush(stdout);
+    mdb_set_artist_mode(0);np_links_tap(0);np_links_album("Core Album");
+    assert(np_links_text(screen_get_root(SCR_LIBRARY),"Canonical Track"));np_links_back();
+    np_links_tap(1);np_links_artist("Lead LP");np_links_back();
+    mdb_set_artist_mode(1);np_links_tap(1);np_links_artist("Group LP");np_links_back();
+    mdb_set_artist_mode(0);
+    if(th_zune()){np_links_tap(1);np_links_artist("Lead LP");} /* album's full-cover view has no Up control */
+    else {np_links_tap(0);np_links_album("Core Album");}
+    lv_obj_t *up=np_links_up();assert(up);nav_touch_object(up,70);nav_wait(100);
+    assert(screen_current()==SCR_LIBRARY);
+    int kind;char key[MDB_STR];assert(!library_drill_context(&kind,key,sizeof key));
+    screen_back();nav_wait(150);assert(screen_current()==np_links_surface);
+
+    /* A drag away and back still is not a tap. A held label may run its existing
+     * hold action, but it must never jump into a library destination. */
+    puts("CHECK drag, hold, changed-track and screen-leave rejection");fflush(stdout);
+    lv_point_t p=np_links_point(0);
+    nav_pointer=(lv_indev_data_t){.point=p,.state=LV_INDEV_STATE_PRESSED};nav_wait(40);
+    nav_pointer.point.x+=35;nav_wait(40);nav_pointer.point=p;nav_wait(40);
+    nav_pointer.state=LV_INDEV_STATE_RELEASED;nav_wait(550);assert(screen_current()!=SCR_LIBRARY);
+    np_links_present(&np_links_track);nav_touch(np_links_point(0),650);nav_wait(550);
+    assert(screen_current()==np_links_surface&&!ui_np_fsart_active());np_links_present(&np_links_track);
+    p=np_links_point(1);nav_pointer=(lv_indev_data_t){.point=p,.state=LV_INDEV_STATE_PRESSED};nav_wait(40);
+    test_track_state.path_seq++; /* even A -> B -> A invalidates the old press */
+    nav_pointer.state=LV_INDEV_STATE_RELEASED;nav_wait(550);assert(screen_current()!=SCR_LIBRARY);
+    np_links_present(&np_links_track);
+    p=np_links_point(0);nav_pointer=(lv_indev_data_t){.point=p,.state=LV_INDEV_STATE_PRESSED};nav_wait(40);
+    screen_show(SCR_SETTINGS);nav_wait(50);nav_pointer.state=LV_INDEV_STATE_RELEASED;nav_wait(550);
+    assert(screen_current()==SCR_SETTINGS);np_links_present(&np_links_track);
+
+    /* Unsupported identities must stay put, including an indexed row whose
+     * relevant canonical tag is absent despite visible IPC metadata. */
+    puts("CHECK missing, unindexed and external tracks");fflush(stdout);
+    const char *suffix[]={"-noalbum","-noartist","-unindexed"};
+    for(int i=0;i<3;i++){
+        track_state_t other=np_links_track;np_links_path(other.path,sizeof other.path,np_links_track.path,suffix[i]);
+        other.path_seq+=20+i;np_links_present(&other);np_links_tap(i==1);
+        assert(screen_current()==np_links_surface);
+    }
+    np_links_present(&np_links_track);
+    ipc_set_external("External","Stream","Remote","remote",240000,90000,0,1000);
+    np_links_tap(0);assert(screen_current()==np_links_surface);ipc_clear_external();
+    np_links_present(&np_links_track);
+    np_links_local_allowed=0;np_links_tap(0);assert(screen_current()==np_links_surface);
+    np_links_local_allowed=1;
+    p=np_links_point(0);nav_pointer=(lv_indev_data_t){.point=p,.state=LV_INDEV_STATE_PRESSED};nav_wait(40);
+    test_track_state.have_track=0;nav_pointer.state=LV_INDEV_STATE_RELEASED;nav_wait(550);
+    assert(screen_current()!=SCR_LIBRARY);np_links_present(&np_links_track);
+
+    /* The duplicate-path CUE fixture resolves by queue identity, never the first
+     * matching path. A stale queue title cannot pick a plausible wrong album. */
+    puts("CHECK duplicate-path queue identity");fflush(stdout);
+    track_state_t cue=np_links_track;np_links_path(cue.path,sizeof cue.path,np_links_track.path,"-cue");
+    snprintf(cue.title,sizeof cue.title,"Cue Two");cue.pos_id=41;cue.path_seq+=50;
+    np_links_present(&cue);np_links_tap(0);np_links_album("Cue Album Two");np_links_back();
+    cue.pos_id=999;np_links_present(&cue);np_links_tap(0);assert(screen_current()==np_links_surface);
+    np_links_present(&np_links_track);
+
+    /* Delayed gesture themes preserve their double tap transport action rather
+     * than allowing a pending single tap to navigate afterwards. */
+    if(th_simple()||(th_null()&&getenv("NP_LINKS_GESTURES"))){
+        puts("CHECK delayed double tap");fflush(stdout);
+        int commands=null_transport_calls;p=np_links_point(0);
+        nav_touch(p,60);nav_wait(80);nav_touch(p,60);nav_wait(600);
+        assert(screen_current()==np_links_surface&&null_transport_calls==commands+1);
+        np_links_present(&np_links_track);
+        /* A held second press owns the pending first tap, even after its timer
+         * would have elapsed. Identity/screen changes cancel released taps too. */
+        p=np_links_point(0);nav_touch(p,60);nav_wait(70);
+        nav_pointer=(lv_indev_data_t){.point=p,.state=LV_INDEV_STATE_PRESSED};nav_wait(450);
+        assert(screen_current()!=SCR_LIBRARY);
+        nav_pointer.state=LV_INDEV_STATE_RELEASED;nav_wait(500);assert(screen_current()!=SCR_LIBRARY);
+        np_links_present(&np_links_track);nav_touch(np_links_point(0),60);
+        test_track_state.path_seq++;nav_wait(550);assert(screen_current()==np_links_surface);
+        np_links_present(&np_links_track);nav_touch(np_links_point(0),60);
+        screen_show(SCR_SETTINGS);nav_wait(550);assert(screen_current()==SCR_SETTINGS);
+        np_links_present(&np_links_track);
+    }
+    lv_obj_t *more=ui_action_find(th_null()?"null.track.more":"disco.track.more");
+    if(more&&lv_obj_is_visible(more)){
+        puts("CHECK More remains accessible");fflush(stdout);
+        nav_touch_object(more,650);nav_wait(100);
+        assert(!disco_track_overlay_visible()&&screen_current()==np_links_surface);
+        nav_touch_object(more,70);nav_wait(150);
+        assert(screen_current()!=SCR_LIBRARY);
+        assert(disco_track_overlay_visible()||screen_current()==SCR_NPMENU||screen_current()==SCR_NPHUB);
+        lv_obj_t *info=ui_action_find("disco.track.info");
+        if(!info||!lv_obj_is_visible(info)){
+            lv_obj_t *icon=np_links_text(screen_get_root(screen_current()),LV_SYMBOL_FILE);
+            assert(icon);info=lv_obj_get_parent(icon); /* existing 3.5 track-action orbit */
+        }
+        assert(lv_obj_is_visible(info));
+        nav_touch_object(info,70);nav_wait(150);assert(screen_current()==SCR_SONGINFO);
+        screen_back();nav_wait(100);
+        np_links_present(&np_links_track);
+    }
+    if(np_links_surface==SCR_NOWPLAYING){
+        const char *actions[]={"np.prev","np.pp","np.next"};
+        const char *commands[]={"0201000C0002","0201000C0000","0201000C0001"};
+        for(int i=0;i<3;i++){
+            lv_obj_t *button=ui_action_find(actions[i]);assert(button&&lv_obj_is_visible(button));
+            int before=send_count+null_transport_calls;nav_touch_object(button,70);nav_wait(500); /* normal skip pacing */
+            if(send_count+null_transport_calls!=before+1){lv_area_t a;lv_obj_get_coords(button,&a);
+                fprintf(stderr,"Transport %s bounds=%d,%d,%d,%d calls=%d/%d screen=%d\n",actions[i],a.x1,a.y1,a.x2,a.y2,send_count+null_transport_calls,before,screen_current());}
+            assert(send_count+null_transport_calls==before+1);
+            assert(!strcmp(last_sent,commands[i])||!strcmp(null_last_command,commands[i]));
+            assert(screen_current()==np_links_surface);
+        }
+        track_state_t idle={0};np_links_present(&idle);
+        lv_obj_t *idle_label=np_links_text(screen_get_root(np_links_surface),"Nothing playing");assert(idle_label);
+        nav_touch_object(idle_label,70);nav_wait(100);assert(screen_current()==SCR_LIBRARY);
+        screen_back();nav_wait(100);np_links_present(&np_links_track);
+    }
+    lv_indev_delete(pointer);
+    printf("PASS now-playing links: preset=%d style=%s canonical album/artist, grouping, pointer guards and queue identity\n",
+           theme_preset(),getenv("NP_LINKS_STYLE")?getenv("NP_LINKS_STYLE"):"1");
+}
+
 int main(int argc, char **argv){
     if(argc != 6){ fprintf(stderr,"usage: host-render PRESET VARIANT home|np|actions UP_NEXT OUT.ppm\n"); return 2; }
     setenv("TZ","UTC",1); tzset();
@@ -784,6 +1424,8 @@ int main(int argc, char **argv){
     /* Set before theme_init so website captures use the real Zune palette. */
     if(getenv("SITE_ACCENT"))cfg_set_int_deferred("zune_accent",(int)strtoul(getenv("SITE_ACCENT"),NULL,16));
     theme_init();
+    if(!strcmp(argv[3],"lyrics-motion")){review_lyrics_motion(argv[5]);return 0;}
+    if(!strcmp(argv[3],"now-playing-links")){review_np_links(argv[5]);goto render;}
     if(!strcmp(argv[3],"theme-retirement")){
         int requested=atoi(argv[1]),expected=theme_preset_available(requested)?requested:THEME_PRESET_DISCO;
         assert(theme_preset()==expected&&cfg_get_int("theme_preset",-1)==expected);
@@ -1719,7 +2361,7 @@ int main(int argc, char **argv){
             nav_touch((lv_point_t){180,154},60);nav_wait(80);nav_touch((lv_point_t){180,154},60);
             assert(null_transport_calls==n+1 && !strcmp(null_last_command,"0201000C0000"));
             nav_wait(450);assert(!disco_track_overlay_visible());
-            nav_touch((lv_point_t){180,120},60);nav_wait(450);assert(disco_track_overlay_visible());dhome_overlay_close();nav_wait(60);
+            nav_touch_object(ui_action_find("null.track.more"),60);nav_wait(150);assert(disco_track_overlay_visible()||screen_current()==SCR_NPMENU);screen_back();nav_wait(60);assert(screen_current()==SCR_HOME);
             nav_pointer=(lv_indev_data_t){.point={100,188},.state=LV_INDEV_STATE_PRESSED};nav_wait(50);
             nav_pointer.point.x=240;nav_wait(50);nav_pointer.state=LV_INDEV_STATE_RELEASED;nav_wait(40);
             assert(null_transport_calls==n+2 && !strcmp(null_last_command,"0201000C0001"));
@@ -1727,7 +2369,7 @@ int main(int argc, char **argv){
             nav_pointer=(lv_indev_data_t){.point={240,130},.state=LV_INDEV_STATE_PRESSED};nav_wait(50);
             nav_pointer.point.x=100;nav_wait(50);nav_pointer.state=LV_INDEV_STATE_RELEASED;nav_wait(40);
             assert(null_transport_calls==n+3 && !strcmp(null_last_command,"0201000C0002"));
-            puts("PASS: Null metadata double-tap, delayed popup tap, album next swipe, title previous swipe");
+            puts("PASS: Null metadata double-tap, More actions, album next swipe, title previous swipe");
             goto render;
         }
         if(getenv("REVIEW_NULL_VOLUME")){
@@ -2058,8 +2700,9 @@ int main(int argc, char **argv){
             screen_show(SCR_NOWPLAYING);nav_wait(500);lv_indev_t *in=lv_indev_create();lv_indev_set_type(in,LV_INDEV_TYPE_POINTER);lv_indev_set_read_cb(in,nav_read);lv_timer_set_period(lv_indev_get_read_timer(in),10);
             nav_touch((lv_point_t){320,170},50);nav_wait(100);assert(screen_current()==SCR_NOWPLAYING);
             nav_pointer=(lv_indev_data_t){.point={200,170},.state=LV_INDEV_STATE_PRESSED};nav_wait(30);for(int x=200;x<=260;x+=5){nav_pointer.point.x=x;nav_wait(15);}nav_pointer.state=LV_INDEV_STATE_RELEASED;nav_wait(100);assert(screen_current()==SCR_NOWPLAYING);
-            nav_touch((lv_point_t){200,170},50);nav_wait(300);assert(screen_current()==SCR_NPMENU);lv_indev_delete(in);screen_back();nav_wait(500);
-            puts("PASS Zune metadata hit area: ordinary tap opens actions; rim tap and drag do not");
+            nav_touch((lv_point_t){200,170},50);nav_wait(300);assert(screen_current()==SCR_NOWPLAYING); /* preview track is unindexed */
+            screen_show(SCR_NPMENU);nav_wait(100);assert(screen_current()==SCR_NPMENU);lv_indev_delete(in);screen_back();nav_wait(500);
+            puts("PASS Zune metadata hit area: unindexed title stays put, rim/drag rejected, actions screen opens");
         }
         if(getenv("REVIEW_ZUNE_METADATA_WORK")){
             assert(th_zune());screen_show(SCR_NOWPLAYING);nav_wait(500);for(int i=0;i<3;i++)watch_styles(ui_test_zune_np_part(i));test_style_events=0;
@@ -2287,14 +2930,18 @@ int main(int argc, char **argv){
             else if(!strcmp(which,"confirm"))fileops_confirm("Remove this track?","The file will stay on your SD card","Remove",NULL);
             for(int i=0;i<20;i++){lv_tick_inc(10);lv_timer_handler();}
         }
-        if(getenv("DISCO_OV")){                      /* fork: Disco - tap the title on Music: the track overlay */
-            lv_obj_t *t=find_text(screen_get_root(SCR_HOME),st.title); assert(t); lv_obj_send_event(lv_obj_get_parent(t),LV_EVENT_SHORT_CLICKED,NULL);
-            for(int i=0;i<20;i++){lv_tick_inc(10);lv_timer_handler();}
-        }
-        if(getenv("DISCO_HOLD")){                    /* fork: Disco - hold the title (Title Hold: DISCO_HOLD=0 Immersive, 1 Favourite) */
-            cfg_set_int_deferred("disco_title_hold",atoi(getenv("DISCO_HOLD")));
-            lv_obj_t *t=find_text(screen_get_root(SCR_HOME),st.title); assert(t); lv_obj_send_event(lv_obj_get_parent(t),LV_EVENT_LONG_PRESSED,NULL);
-            for(int i=0;i<60;i++){lv_tick_inc(10);lv_timer_handler();}
+        if(getenv("DISCO_OV")||getenv("DISCO_HOLD")){ /* actual press capture; More opens actions, title retains Hold */
+            lv_indev_t *in=lv_indev_create();lv_indev_set_type(in,LV_INDEV_TYPE_POINTER);lv_indev_set_read_cb(in,nav_read);
+            lv_indev_set_long_press_time(in,400);lv_timer_set_period(lv_indev_get_read_timer(in),10);
+            if(getenv("DISCO_OV")){
+                nav_touch_object(ui_action_find(th_null()?"null.track.more":"disco.track.more"),70);nav_wait(200);
+                assert(disco_track_overlay_visible()||screen_current()==SCR_NPMENU);
+            }
+            if(getenv("DISCO_HOLD")){
+                simple_cfg_set_int_deferred("disco_title_hold",atoi(getenv("DISCO_HOLD")));
+                lv_obj_t *t=find_text(screen_get_root(SCR_HOME),st.title);assert(t);nav_touch_object(t,650);nav_wait(600);
+            }
+            lv_indev_delete(in);
         }
         if(getenv("DISCO_IMM")){ void ui_imm_style_apply(void); ui_imm_style_apply(); disco_open_np_immersive(); for(int i=0;i<60;i++){lv_tick_inc(10);lv_timer_handler();} assert(ui_np_fsart_active()); }
         if(getenv("REVIEW_MA")){

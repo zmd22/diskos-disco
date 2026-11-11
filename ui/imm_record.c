@@ -6,11 +6,26 @@
 static int smoothing=1,lyric_offset;
 void imm_record_set_lyric_offset(int offset){lyric_offset=offset;}
 static imm_overlay_t ovl[IMM_MAX_OVERLAYS]; static int novl;
+static int ovl_y[IMM_MAX_OVERLAYS],ovl_opa[IMM_MAX_OVERLAYS];
+static imm_lyric_clip_t lyric_clips[IMM_MAX_LYRIC_CLIPS];
+static int lyric_clip_n,lyric_highlight=-1,lyric_dim=90;
 void imm_record_set_overlays(const imm_overlay_t *o,int n){
-    if(n<0)n=0;
+    if(n<0||!o)n=0;
     if(n>IMM_MAX_OVERLAYS)n=IMM_MAX_OVERLAYS;
-    for(int i=0;i<n;i++)ovl[i]=o[i];
+    for(int i=0;i<n;i++){ovl[i]=o[i];ovl_y[i]=0;ovl_opa[i]=255;}
     novl=n;
+    lyric_highlight=-1;lyric_clip_n=0;
+}
+void imm_record_set_overlay_motion(int index,int y_offset,int opacity){
+    if(index<0||index>=novl)return;
+    ovl_y[index]=y_offset;ovl_opa[index]=opacity<0?0:opacity>255?255:opacity;
+}
+void imm_record_set_lyric_highlight(int index,const imm_lyric_clip_t *clips,int n,int dim_opacity){
+    lyric_highlight=index>=0&&index<novl?index:-1;
+    if(n<0||!clips)n=0;
+    if(n>IMM_MAX_LYRIC_CLIPS)n=IMM_MAX_LYRIC_CLIPS;
+    for(int i=0;i<n;i++)lyric_clips[i]=clips[i];
+    lyric_clip_n=n;lyric_dim=dim_opacity<0?0:dim_opacity>255?255:dim_opacity;
 }
 /* the progress ring: an arc of the 344 px circle (outer r 172, 3 px wide) from 208 deg clockwise over 124 deg,
  * exactly where the LVGL arc sat. Pixels + their position along the arc + edge coverage, built once. */
@@ -47,10 +62,17 @@ static void bake_extras(uint32_t *out){
     for(int k=0;k<novl;k++){
         const imm_overlay_t *o=&ovl[k]; if(!o->px)continue;
         for(int y=0;y<o->h;y++){
-            int oy=o->y+y+(o->slide?lyric_offset:0); if(oy<0||oy>=360)continue;
+            int oy=o->y+y+ovl_y[k]+(o->slide?lyric_offset:0); if(oy<0||oy>=360)continue;
             const uint32_t *s=o->px+(size_t)y*o->stride; uint32_t *d=out+oy*360;
             for(int x=0;x<o->w;x++){
                 uint32_t p=s[x]; unsigned a=p>>24; if(!a)continue;
+                a=(a*(unsigned)ovl_opa[k]+127)/255;
+                if(k==lyric_highlight){
+                    int sung=0;
+                    for(int c=0;c<lyric_clip_n;c++)if(x>=lyric_clips[c].x1&&x<=lyric_clips[c].x2&&y>=lyric_clips[c].y1&&y<=lyric_clips[c].y2){sung=1;break;}
+                    if(!sung)a=(a*(unsigned)lyric_dim+127)/255;
+                }
+                if(!a)continue;
                 int ox=o->x+x; if(ox<0||ox>=360)continue;
                 d[ox]=a==255?(p|0xFF000000u):mix(d[ox],p,a);
             }

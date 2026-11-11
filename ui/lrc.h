@@ -6,17 +6,25 @@
  * own entry and the entries are sorted by time (stable, so equal times keep file order). Accepted time tags:
  * [m:ss] [mm:ss.x] [mm:ss.xx] [mm:ss.xxx] and [mm:ss:xx]; minutes may exceed 59. An [offset:+/-N] tag (ms) shifts
  * every time: positive = lyrics shown earlier (the LRC convention). Other [..] groups (ar/ti/al/by/length, section
- * names) are dropped. Enhanced word-timing tags "<mm:ss.xx>" inside the text are removed. Lines without a time tag
+ * names) are dropped. Enhanced word-timing tags "<mm:ss.xx>" inside the text are removed from visible text;
+ * lrc_parse_words retains their explicit span timing and normalized UTF-8 byte ranges. Lines without a time tag
  * are kept only for the plain rendering. A file is "synced" when it yields at least two timed entries. */
 #ifndef DISKOS_LRC_H
 #define DISKOS_LRC_H
 #include <stddef.h>
 #include <string.h>
+#include "lyrics_timing.h"
+#include "lrc_estimate.h"
 
-typedef struct { long ms; int text; } lrc_line_t;   /* text = offset of its NUL-terminated text in the text buffer */
+typedef struct {
+    long ms;
+    int text;                       /* offset of NUL-terminated text in the text buffer */
+    int word_first, word_count;     /* caller's word slice; zero = no usable spans, see has_word_timing */
+    int has_word_timing;            /* source had an inline timestamp, even if its spans did not fit */
+} lrc_line_t;
 
-/* "[mm:ss.xx]" at s (s[0] == '['): the time in ms, its length in *len; -1 if s is not a time tag */
-static long lrc_time_tag(const char *s, int *len){
+/* Shared bracket/angle timestamp syntax; callers check the opening delimiter. */
+static long lrc_time_tag_end(const char *s, int *len, char end){
     const char *p = s + 1;
     long mins = 0; int nd = 0;
     while(*p >= '0' && *p <= '9' && nd < 4){ mins = mins * 10 + (*p - '0'); p++; nd++; }
@@ -36,9 +44,24 @@ static long lrc_time_tag(const char *s, int *len){
         }
         if(nd == 0) return -1;
     }
-    if(*p != ']') return -1;
+    if(*p != end) return -1;
     *len = (int)(p - s) + 1;
     return mins * 60000L + secs * 1000L + frac;
+}
+
+/* "[mm:ss.xx]" at s (s[0] == '['): time in ms and tag length; -1 if invalid. */
+static long lrc_time_tag(const char *s, int *len){ return lrc_time_tag_end(s, len, ']'); }
+
+/* Preserve exact-timing provenance independently of output capacity. A later
+ * invalid tag must not make a partly enhanced line eligible for estimates. */
+static int lrc_has_word_timing(const char *src, int n){
+    for(int i = 0; i < n; i++){
+        if(src[i] == '<'){
+            int len = 0;
+            if(lrc_time_tag_end(src + i, &len, '>') >= 0 && len <= n - i) return 1;
+        }
+    }
+    return 0;
 }
 
 /* "[offset:-250]": 1 and the value in *ms if s is an offset tag */
@@ -85,15 +108,72 @@ static int lrc_put_text(const char *src, int n, char *text, int cap, int *used){
     return at;
 }
 
-/* Parse LRC `src` into up to `maxl` timed entries (sorted) and a plain rendering (`plain`, lines without tags,
- * '\n'-separated; may be NULL). Returns the number of timed entries; *synced = 1 when there are at least two. */
-static int lrc_parse(const char *src, lrc_line_t *lines, int maxl, char *text, int tcap,
-                     char *plain, int pcap, int *synced){
-    int n = 0, used = 0, plen = 0;
+/* Collect inline timing while mirroring lrc_put_text's normalization exactly.
+ * Each tag starts a span; the following tag ends it. A leading untagged span
+ * starts at the line timestamp. There is no allocation or guessed word split.
+ * -1 rejects all word timing for this line (the visible text is still usable). */
+static int lrc_scan_words(const char *src, int n, long line_ms, lrc_word_t *words, int cap){
+    while(n > 0 && (*src == ' ' || *src == '\t')){ src++; n--; }
+    while(n > 0 && (src[n - 1] == ' ' || src[n - 1] == '\t')) n--;
+    int count = 0, pos = 0, first = -1, last = -1, tagged = 0;
+    char prev = 0;
+    long start_ms = line_ms;
+    for(int i = 0; i < n; ){
+        if(src[i] == '<'){
+            int j = i + 1;
+            while(j < n && ((src[j] >= '0' && src[j] <= '9') || src[j] == ':' || src[j] == '.')) j++;
+            if(j < n && src[j] == '>' && j > i + 1){
+                int len = 0;
+                long t = lrc_time_tag_end(src + i, &len, '>');
+                if(t < 0 || len != j - i + 1 || t < start_ms) return -1;
+                tagged = 1;
+                if(first >= 0){
+                    if(t <= start_ms || count >= cap) return -1;
+                    words[count++] = (lrc_word_t){ start_ms, t, first, last };
+                }
+                start_ms = t; first = last = -1;
+                i = j + 1;
+                continue;
+            }
+            /* A broken numeric tag must not turn into a plausibly timed word.
+             * Literal angle-bracket text remains ordinary visible text. */
+            if(i + 1 < n && src[i + 1] >= '0' && src[i + 1] <= '9') return -1;
+        }
+        char c = src[i++];
+        if(c == ' ' && (pos == 0 || prev == ' ')) continue;
+        if(c != ' ' && c != '\t'){
+            if(first < 0) first = pos;
+            last = pos + 1;
+        }
+        prev = c; pos++;
+    }
+    if(!tagged) return 0;
+    if(first >= 0){
+        if(count >= cap) return -1;
+        words[count++] = (lrc_word_t){ start_ms, -1, first, last };
+    }
+    return count;
+}
+
+/* Parse sorted line entries and optionally retain enhanced-LRC span timing.
+ * word_first/count index the caller's flat array; byte ranges are line-local.
+ * A malformed/nonmonotonic or capacity-limited source line falls back entirely
+ * to line timing. Repeated line timestamps repeat its words with the same
+ * relative timing, and the file offset applies to both lines and words.
+ * A final span without an explicit end tag keeps end_ms == -1.
+ * Plain output and all visible text are identical to legacy lrc_parse. */
+static int lrc_parse_words(const char *src, lrc_line_t *lines, int maxl, char *text, int tcap,
+                          char *plain, int pcap, int *synced,
+                          lrc_word_t *words, int word_cap, int *word_count){
+    int n = 0, used = 0, plen = 0, wused = 0;
     long offset = 0;
     long times[16];
     if(plain && pcap > 0) plain[0] = 0;
-    if(tcap > 0) text[0] = 0;
+    if(text && tcap > 0) text[0] = 0;
+    if(synced) *synced = 0;
+    if(word_count) *word_count = 0;
+    if(!src || maxl < 0 || (maxl > 0 && !lines) || !text || tcap <= 0) return 0;
+    if(!words || word_cap < 0) word_cap = 0;
     /* the offset tag applies to the whole file wherever it appears: find it first */
     for(const char *q = src; (q = strstr(q, "[offset:")) != NULL; q++){
         long v; int l;
@@ -117,12 +197,40 @@ static int lrc_parse(const char *src, lrc_line_t *lines, int maxl, char *text, i
         }
         int rest = (int)(s + ll - p);
         if(nt > 0){
+            int has_word_timing = lrc_has_word_timing(p, rest);
             int off = lrc_put_text(p, rest, text, tcap, &used);
             if(off < 0) break;
+            int copies = nt < maxl - n ? nt : maxl - n;
+            int nw = 0, first_word = wused;
+            if(word_cap > wused && copies > 0){
+                nw = lrc_scan_words(p, rest, times[0], words + wused, word_cap - wused);
+                if(nw < 0 || nw > (word_cap - wused) / copies) nw = 0;
+            }
+            /* Copy later repeats before adjusting the first raw span, so offset
+             * clamping at zero cannot shift a later repeat's timestamps. */
+            if(nw > 0){
+                for(int k = copies - 1; k >= 0; k--){
+                    long delta = times[k] - times[0] - offset;
+                    for(int j = 0; j < nw; j++){
+                        lrc_word_t v = words[first_word + j];
+                        v.start_ms += delta;
+                        if(v.start_ms < 0) v.start_ms = 0;
+                        if(v.end_ms >= 0){
+                            v.end_ms += delta;
+                            if(v.end_ms < 0) v.end_ms = 0;
+                        }
+                        words[first_word + k * nw + j] = v;
+                    }
+                }
+                wused += copies * nw;
+            }
             for(int k = 0; k < nt && n < maxl; k++){
                 long t = times[k] - offset;
                 lines[n].ms = t < 0 ? 0 : t;
                 lines[n].text = off;
+                lines[n].word_first = nw > 0 ? first_word + k * nw : 0;
+                lines[n].word_count = nw;
+                lines[n].has_word_timing = has_word_timing;
                 n++;
             }
         }
@@ -144,7 +252,15 @@ static int lrc_parse(const char *src, lrc_line_t *lines, int maxl, char *text, i
         lines[j] = v;
     }
     if(synced) *synced = n >= 2;
+    if(word_count) *word_count = wused;
     return n;
+}
+
+/* Legacy line/plain API: callers that do not request words have unchanged text
+ * and timestamp behavior, with zero word_count on every line. */
+static int lrc_parse(const char *src, lrc_line_t *lines, int maxl, char *text, int tcap,
+                     char *plain, int pcap, int *synced){
+    return lrc_parse_words(src, lines, maxl, text, tcap, plain, pcap, synced, NULL, 0, NULL);
 }
 
 /* The entry to highlight at playback position `ms`: the last entry whose time is <= ms, or -1 before the first. */

@@ -21,7 +21,8 @@
 | Update from SD | System > Maintenance > Update from SD Card |
 | Restore contextual hints | Help > Show hints again, on supported themes |
 
-- Track actions: tap the Music title (Disco, Null, Squash). Context menu: hold a library item.
+- On playback, tap the song title for its album or the artist for its library page.
+- Track actions: tap More (...) in Disco, Null or Squash, or swipe from the right edge of Now Playing. Context menu: hold a library item.
 - **Queue** is your explicit up-next list; **Up Next** is the player's current playback context.
 - Disc Shelf, SongSphere, Album Roulette, Listening Stats and Boomshine are built in.
 - Controls that don't apply to the current firmware or theme are hidden or disabled.
