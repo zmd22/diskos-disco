@@ -470,7 +470,7 @@ static void classic_actions(lv_obj_t *box, const track_state_t *st, int book){
     g_zbox = box; npmenu_set(st, 1, NULL); g_cl_fav = NULL;
     lv_obj_set_style_bg_color(box, TC(CANVAS), 0); lv_obj_set_style_bg_opa(box, LV_OPA_COVER, 0);
     classic_header(box, book ? "Audiobook" : "Actions", close_cb);
-    lv_obj_t *list = classic_list(box, 78, 34 * 6);
+    lv_obj_t *list = classic_list(box, CLASSIC_LIST_Y, CLASSIC_LIST_H);
     if(book){
         static const char *const bn[4] = { "Chapters", "Details", "Equalizer", "Full art" };
         for(int i = 0; i < 4; i++){ lv_obj_t *r = classic_row(list, bn[i], 1); ui_on(r, classic_book_pick, LV_EVENT_CLICKED, (void *)(intptr_t)i, "npmenu.classic.book", UI_CORE); }

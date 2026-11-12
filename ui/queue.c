@@ -727,8 +727,9 @@ void queue_create(lv_obj_t *root){
             else lv_obj_center(lv_obj_get_child(b, 0));
             kit_keep(b);
         }
-        lv_obj_set_pos(g_list, 50, 136); lv_obj_set_size(g_list, 260, 224);
-        lv_obj_set_style_pad_row(g_list, 0, 0); lv_obj_set_style_pad_bottom(g_list, 60, 0);
+        int ly = CLASSIC_LIST_END - 5 * CLASSIC_ROW_H;   /* the menu box: whole rows to its end */
+        lv_obj_set_pos(g_list, 50, ly); lv_obj_set_size(g_list, 260, CLASSIC_LIST_END - ly);
+        lv_obj_set_style_pad_row(g_list, 0, 0); lv_obj_set_style_pad_bottom(g_list, CLASSIC_ROW_H, 0);
     }
     if(th_zune()){
         lv_obj_add_flag(hb, LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(g_sub, LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(g_play_btn, LV_OBJ_FLAG_HIDDEN);

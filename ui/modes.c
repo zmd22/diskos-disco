@@ -512,7 +512,7 @@ void modes_create(lv_obj_t *root){
     if(th_classic()){   /* Graphite: its header and menu list */
         static const char *NM[N_MODES] = { "Playback", "USB DAC", "Bluetooth DAC", "BT streaming", "AirPlay", "USB storage" };
         ui_header(root, "Working mode");
-        lv_obj_t *list = classic_list(root, 78, 34 * 6);
+        lv_obj_t *list = classic_list(root, CLASSIC_LIST_Y, CLASSIC_LIST_H);
         memset(g_drow, 0, sizeof g_drow);
         for(int k = 0; k < N_DISCO; k++){
             int i = DISCO_ORD[k];

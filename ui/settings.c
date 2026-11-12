@@ -2022,7 +2022,7 @@ void settings_create(lv_obj_t *root){
         for(int g=0;g<N_GROUPS;g++){lv_obj_t *r=setting_card(list);ui_on(r,disco_cat_cb,LV_EVENT_CLICKED,(void*)(intptr_t)g,"settings.category",UI_CORE);
             lv_obj_t *n=lv_label_create(r);lv_label_set_text(n,GROUPS[g]);lv_obj_set_pos(n,24,16);lv_obj_set_width(n,222);lv_label_set_long_mode(n,LV_LABEL_LONG_DOT);theme_list_row(r);}
         curvelist_update(&cl);return;}
-    if(th_classic()){ ui_header(root,"Settings"); lv_obj_t *list=classic_list(root,78,240);   /* Classic: the categories as its menu */
+    if(th_classic()){ ui_header(root,"Settings"); lv_obj_t *list=classic_list(root,CLASSIC_LIST_Y,CLASSIC_LIST_H);   /* Classic: the categories as its menu */
         for(int g=0;g<N_GROUPS;g++){lv_obj_t *r=classic_row(list,GROUPS[g],1);ui_on(r,disco_cat_cb,LV_EVENT_CLICKED,(void*)(intptr_t)g,"settings.category",UI_CORE);}
         return;}
     if(th_disco_family() || th_null()){ settings_disco_list(root); return; }
@@ -2072,7 +2072,7 @@ void settings_row_values_refresh(void){
 
 /* Graphite: one category as the theme's compact list, value right-aligned on each row */
 static void classic_setlist(void){
-    lv_obj_t *list = classic_list(g_setlist_root, 78, 240);
+    lv_obj_t *list = classic_list(g_setlist_root, CLASSIC_LIST_Y, CLASSIC_LIST_H);
     int indices[N_SETTINGS], count = settings_collect(g_active_group, indices);
     for(int ri = 0; ri < count; ri++){
         int i = indices[ri]; const setting_t *s = &TABLE[i];

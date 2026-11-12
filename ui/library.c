@@ -193,7 +193,8 @@ void library_category_nav(lv_obj_t *root,int index,lv_obj_t *original){
     }
     static const char *const names[]={"Songs","Albums","Artists","Genres"};
     lv_obj_t *row=lv_obj_create(root);lv_obj_remove_style_all(row);kit_keep(row);lv_obj_set_pos(row,24,76);lv_obj_set_size(row,312,26);
-    if(th_classic()){lv_obj_set_pos(row,40,76);lv_obj_set_size(row,280,28);lv_obj_add_flag(row,LV_OBJ_FLAG_OVERFLOW_VISIBLE);}lv_obj_remove_flag(row,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
+    if(th_classic()){lv_obj_set_pos(row,40,CLASSIC_LIST_Y+(CLASSIC_ROW_H-28)/2);lv_obj_set_size(row,280,28);   /* the menu box's first row */
+        lv_obj_add_flag(row,LV_OBJ_FLAG_OVERFLOW_VISIBLE);}lv_obj_remove_flag(row,LV_OBJ_FLAG_CLICKABLE|LV_OBJ_FLAG_SCROLLABLE);
     for(int d=-1;d<=1;d+=2){lv_obj_t*l=lv_label_create(row);kit_keep(l);char b[64];
         snprintf(b,sizeof b,d<0?LV_SYMBOL_LEFT " %s":"%s " LV_SYMBOL_RIGHT,tr(names[(index+d+4)%4]));lv_label_set_text(l,th_zune()?zlow(b):b);lv_label_set_long_mode(l,LV_LABEL_LONG_DOT);
         lv_obj_set_style_text_font(l,TF(UI_14),0);lv_obj_set_style_text_color(l,TC(TEXT_SECONDARY),0);lv_obj_set_style_text_align(l,d<0?LV_TEXT_ALIGN_LEFT:LV_TEXT_ALIGN_RIGHT,0);lv_obj_set_size(l,130,24);lv_obj_set_pos(l,d<0?0:182,0);
@@ -216,6 +217,10 @@ static void category_refresh(void){
         lv_obj_set_flex_align(g_list,LV_FLEX_ALIGN_START,library_wall_active()?LV_FLEX_ALIGN_START:LV_FLEX_ALIGN_CENTER,LV_FLEX_ALIGN_CENTER);
     }
     if(library_wall_active()){lv_obj_set_width(g_list,360);lv_obj_set_x(g_list,0);}
+    else if(th_classic()){   /* Graphite: the menu box - whole rows, ending where every other menu ends */
+        int y=k>=0?CLASSIC_LIST_Y+CLASSIC_ROW_H:CLASSIC_LIST_Y;   /* under the category row */
+        lv_obj_set_y(g_list,y);lv_obj_set_height(g_list,CLASSIC_LIST_END-y);
+    }
 }
 
 static int *g_zrep, *g_zac, *g_zsc;    /* album tile covers (a song per album); artist album / song counts (-1 = not yet) */
@@ -1294,6 +1299,20 @@ static void play_list_mode(int mode){
 static void play_all_cb(lv_event_t *e){    if(lv_event_get_code(e)==LV_EVENT_CLICKED) play_list_mode(0); } /* sequential */
 static void shuffle_all_cb(lv_event_t *e){ if(lv_event_get_code(e)==LV_EVENT_CLICKED) play_list_mode(1); } /* shuffle */
 
+/* Graphite: a pill the height of a menu row, filled in ink (the main action) or framed, like the Queue's */
+static void cpill_btn(lv_obj_t *row, int x, int w, const char *txt, int fill, lv_event_cb_t cb){
+    lv_obj_t *b = lv_button_create(row); lv_obj_remove_style_all(b); kit_keep(b);
+    lv_obj_set_size(b, w, ROW_H); lv_obj_set_pos(b, x, 0);
+    lv_obj_set_style_radius(b, ROW_H / 2, 0);
+    lv_obj_set_style_border_width(b, 2, 0); lv_obj_set_style_border_color(b, TC(TEXT_PRIMARY), 0);
+    lv_obj_set_style_bg_color(b, TC(TEXT_PRIMARY), 0); lv_obj_set_style_bg_opa(b, fill ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
+    lv_obj_set_style_bg_opa(b, fill ? LV_OPA_70 : LV_OPA_40, LV_STATE_PRESSED);
+    lv_obj_add_flag(b, LV_OBJ_FLAG_USER_4);
+    lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, NULL);
+    lv_obj_t *l = lv_label_create(b); kit_keep(l); lv_label_set_text(l, txt);
+    lv_obj_set_style_text_font(l, TF(UI_16), 0); lv_obj_set_style_text_color(l, fill ? TC(CANVAS) : TC(TEXT_PRIMARY), 0);
+    lv_obj_center(l);
+}
 static void hdr_btn(lv_obj_t *row, int x, const char *txt, lv_event_cb_t cb){
     lv_obj_t *b = lv_button_create(row);
     lv_obj_remove_style_all(b);
@@ -1461,6 +1480,12 @@ static void add_play_header(int centered){
         lv_obj_set_height(r, 48);
         wheel_pill_btn(r, cx - 60, 4, LV_SYMBOL_PLAY, "Play", 1, play_all_cb, "library.play_all");
         wheel_pill_btn(r, cx + 60, 4, LV_SYMBOL_SHUFFLE, "Shuffle", 0, shuffle_all_cb, "library.shuffle");
+        g_has_header = 1; return;
+    }
+    if(th_classic()){                             /* Graphite: the pair fills one menu row */
+        lv_obj_set_width(r, 260);
+        cpill_btn(r, 0, 128, tr_sym(LV_SYMBOL_PLAY, "Play All"), 1, play_all_cb);
+        cpill_btn(r, 136, 124, tr_sym(LV_SYMBOL_SHUFFLE, "Shuffle"), 0, shuffle_all_cb);
         g_has_header = 1; return;
     }
     int base = centered ? 16 : 0;                 /* r-local 16 => screen-centre (list is at x30/w286) */

@@ -330,7 +330,7 @@ static void classic_build(void){
         lv_obj_align(l, LV_ALIGN_CENTER, 0, 0);
         return;
     }
-    lv_obj_t *list = classic_list(g_box, 78, 34 * 6);
+    lv_obj_t *list = classic_list(g_box, CLASSIC_LIST_Y, CLASSIC_LIST_H);
     for(int i = 0; i < g_nitems; i++){
         lv_obj_t *r = classic_row(list, g_items[i].name, 1);
         ui_on(r, b2_pick_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i, "apps.pick", UI_CORE);

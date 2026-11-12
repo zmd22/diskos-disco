@@ -264,7 +264,7 @@ void home_set_clock(const char *time_text, const char *sub_text)
 {
     if(th_braun_family()){ bhome_set_clock(time_text, sub_text); return; }
     if(th_zune()){ zhome_set_clock(time_text, sub_text); return; }
-    if(th_classic()) return;
+    if(th_classic()){ chome_set_clock(time_text); return; }
     if(th_null()){ null_home_clock(time_text); return; }
     if(th_disco_family()){ dhome_set_clock(time_text, sub_text); return; }
     if (g_clock) lv_label_set_text(g_clock, time_text ? time_text : "--:--");

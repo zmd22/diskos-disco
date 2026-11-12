@@ -13,8 +13,8 @@
 
 #define CL_TITLE_Y 52          /* title bar centre line */
 #define CL_RULE_Y 70           /* the rule under the title bar */
-#define CL_ROW_H 34
-#define CL_LIST_Y 78
+#define CL_ROW_H CLASSIC_ROW_H
+#define CL_LIST_Y CLASSIC_LIST_Y
 #define CL_COL_X 50            /* the menu column, fixed for every row */
 #define CL_COL_W 260
 
@@ -197,6 +197,7 @@ static const citem_t ITEMS[] = {
 };
 #define CN ((int)(sizeof ITEMS / sizeof ITEMS[0]))
 static lv_obj_t *g_home_state;   /* play / pause glyph at the left of Home's title bar */
+static lv_obj_t *g_home_clock;   /* Home's title: the time */
 
 static void item_cb(lv_event_t *e){
     if(screen_press_was_long()) return;
@@ -238,15 +239,16 @@ void chome_create(lv_obj_t *root){
     lv_obj_set_style_text_font(g_home_state, TF(UI_14), 0); lv_obj_set_style_text_color(g_home_state, TC(TEXT_PRIMARY), 0);
     lv_obj_set_pos(g_home_state, 72, CL_TITLE_Y - 8);
     state_paint(ui_is_playing());
-    title_label(root, "Graphite");
+    g_home_clock = title_label(root, "Graphite");
     classic_battery(root, 258, CL_TITLE_Y - 7);
     rule(root, CL_RULE_Y);
-    lv_obj_t *list = classic_list(root, CL_LIST_Y, CL_ROW_H * 6);   /* whole rows only */
+    lv_obj_t *list = classic_list(root, CL_LIST_Y, CLASSIC_LIST_H);   /* whole rows only */
     for(int i = 0; i < CN; i++){
         lv_obj_t *r = classic_row(list, ITEMS[i].label, ITEMS[i].arrow);
         ui_on(r, item_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i, ITEMS[i].action, UI_CORE);
     }
 }
+void chome_set_clock(const char *t){ if(g_home_clock && t) lv_label_set_text(g_home_clock, t); }
 void chome_set_status(int batt, int charging){
     g_batt_pct = batt; g_batt_chg = charging;
     for(int i = 0; i < CL_BATT_MAX; i++) if(g_batt[i]) batt_paint(g_batt[i]);
@@ -279,12 +281,13 @@ void classic_radio_skin(lv_obj_t *root, const char *title, lv_obj_t *ring, lv_ob
     lv_obj_set_style_bg_color(sw, TC(CANVAS), (lv_style_selector_t)LV_PART_KNOB | LV_STATE_CHECKED);
     kit_keep(sw);
     lv_obj_set_style_text_font(name, TF(UI_16), 0); lv_obj_set_style_text_color(name, TC(TEXT_PRIMARY), 0);
-    lv_obj_set_width(name, 250); lv_obj_align(name, LV_ALIGN_TOP_MID, 0, 120);
+    lv_obj_set_width(name, 250); lv_obj_align(name, LV_ALIGN_TOP_MID, 0, 116);
     lv_obj_set_style_text_font(sub, TF(UI_14), 0); lv_obj_set_style_text_color(sub, TC(TEXT_SECONDARY), 0);
-    lv_obj_set_width(sub, 250); lv_obj_align(sub, LV_ALIGN_TOP_MID, 0, 140);
-    rule(root, 160);
-    lv_obj_set_align(list, LV_ALIGN_DEFAULT); lv_obj_set_pos(list, CL_COL_X, 166); lv_obj_set_size(list, CL_COL_W, 186);
-    lv_obj_set_style_pad_row(list, 0, 0); lv_obj_set_style_pad_bottom(list, 30, 0);
+    lv_obj_set_width(sub, 250); lv_obj_align(sub, LV_ALIGN_TOP_MID, 0, 136);
+    rule(root, 172);
+    int ly = CLASSIC_LIST_END - 4 * CL_ROW_H;   /* the menu box: power row, status, then whole rows to its end */
+    lv_obj_set_align(list, LV_ALIGN_DEFAULT); lv_obj_set_pos(list, CL_COL_X, ly); lv_obj_set_size(list, CL_COL_W, CLASSIC_LIST_END - ly);
+    lv_obj_set_style_pad_row(list, 0, 0); lv_obj_set_style_pad_bottom(list, CL_ROW_H, 0);
 }
 
 /* ---- Now Playing chrome: title bar, "n of N", lyrics, decorative bars ---- */
