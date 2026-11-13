@@ -20,7 +20,7 @@ All themes share seven root categories. Rows depend on theme and firmware: inapp
 - **Immersive** Style (Vinyl/CD/Cover), lyrics, Circular control (Duration/Volume).
 - **Library appearance** List/Wall/Coverflow, album track numbers.
 - **Navigation** shared Quick settings items, Shortcuts, Back-swipe distance. Theme menus and gestures are under the theme's own Navigation page.
-- **Text & layout** text size, rotation, transitions. Music-title font is set separately.
+- **Text & layout** text size, rotation, transitions, Progressive lyrics and Estimate word timing (word highlights in Lyrics and Immersive). Music-title font is set separately.
 - **QS style** Classic or Shade. Shade's first pull shows now playing (except on Music); a second pull or the handle opens Quick Settings.
 
 **List motion** (**Display › <theme> settings › Navigation**; Disco, Null, Squash): Classic, Straight, Disco, Wheel. Wheel scales and tints rows around the centre row while keeping headers and action rows (e.g. an album's Play / Shuffle) in place. Main library lists show their item count above the first row.

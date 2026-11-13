@@ -1,16 +1,16 @@
 {
-  "version": "3.5.1",
-  "revision": "Lock on timeout (Battery & power, Off by default): a screen that turns off by itself locks like the power button, by a power-button press written to the key device so the player runs its own lock (touch asleep, panel off) and one real press wakes it (#18)",
-  "baseline": "v3.5.0",
-  "ui_source_sha256": "6b484f28cf48020b856f0e50dd53273d70364e45d7b3a7ffa502bd21eca04fb4",
+  "version": "3.6.0",
+  "revision": "Progressive lyrics in Lyrics and Immersive: smooth line motion, Enhanced LRC word timing, optional estimated word timing, tap a timed line to seek (#29, without its Now Playing links); Cat Dash, a built-in endless runner (#26); Zune ignores a saved Outdoor mode and the RTC is read before the Auto appearance (#27); Disc Shelf SMB downloads complete on older FAT/exFAT cards by an exclusive bounded copy, with operation-specific errors (#28)",
+  "baseline": "v3.5.1",
+  "ui_source_sha256": "807f6027c1bd3a71c6209d76e4cef2ef5484699903cb23f0fc1b88e3d29ad9a4",
   "ui_source_hash_recipe": "sorted tracked ui paths: path + NUL + file bytes + NUL",
   "compiler": "musl-cross-make GCC 11.2.0, musl 1.2.6; mipsel-linux-musl, -ffp-contract=off",
   "abi": "static little-endian MIPS32r2, o32, FP64, NaN2008",
-  "status": "Fresh static MIPS build from a clean export of source_base_commit. The same source with the test label \"lock2\" was signed as 3.5.0-lock2 and put on a Disc: Off unchanged, On locks with no touch interrupts, one press wakes, a screensaver-stage tap still wakes, the button lock is unchanged, and it held under load. This exact binary has not itself been physically tested.",
+  "status": "Fresh static MIPS build from a clean export of source_base_commit. Host tests (theme check, lyrics, SMB publication and encrypted SMB3 integration) passed. The same source with the test label \"dev1\" was signed as 3.5.1-dev1 and run on a Disc: clean start, no stalls or crashes, memory steady, Immersive with progressive lyrics on and off measured. This exact binary has not itself been physically tested.",
   "binary": {
-    "sha256": "1c3ed27db4840d26c6213b1b0228a4399af178db8e3c65575c7e3f75db484829",
-    "md5": "05112587146d3da792a0dbd17495b8e3",
-    "bytes": 7822080
+    "sha256": "8701f47f67041e6000404ef7301fbcddf990d43bbc91c8dbb76045600d96823b",
+    "md5": "03c56e54a255f1f3df115176b38ab2c5",
+    "bytes": 7859716
   },
   "artwork_helper": {
     "bytes": 119424,
@@ -26,10 +26,10 @@
     "bluealsa": "BlueALSA 4.0.0 (MIT) with build/bluealsa-aptx/patches/0001-0003, embedded in mq_ui",
     "libfreeaptx": "0.1.1 (LGPL-2.1-or-later), embedded as a separate shared library; source in ui/vendor/aptx"
   },
-  "baseline_commit": "58795504ac136ea62a4579a3aaad868f1eb05af9",
-  "source_identity": "Built from source_base_commit (DISCO_VERSION 3.5.1, empty test label). ui_source_sha256 identifies the exact tracked UI snapshot.",
-  "release_tag": "v3.5.1",
-  "source_base_commit": "1ac6dc5a0c7732d874e45db0e654a7c1aa554bfa",
+  "baseline_commit": "c8441a037466a0bf1a72f95b62df511391e975fa",
+  "source_identity": "Built from source_base_commit (DISCO_VERSION 3.6.0, empty test label). ui_source_sha256 identifies the exact tracked UI snapshot.",
+  "release_tag": "v3.6.0",
+  "source_base_commit": "167dcac58ff65ccb22ca3a3bc7f1e6847a70b06b",
   "crypto": "Monocypher 4.0.2 (BSD-2-Clause or CC0-1.0), unmodified, in ui/vendor/monocypher",
   "flac": "dr_flac 0.13.4 (Unlicense or MIT-0), unmodified, in ui/vendor/dr_flac"
 }

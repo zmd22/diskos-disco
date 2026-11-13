@@ -1,4 +1,4 @@
-# Disco 3.5.1 tour
+# Disco 3.6.0 tour
 
 Touch UI for the round Snowsky Disc. FiiO's stock player handles audio; Disco handles browsing, controls and built-in
 apps. Full menus: [Settings](DISPLAY_SETTINGS.md).
@@ -19,6 +19,7 @@ Appearance, accents, fonts and shortcuts: **Settings › Display**.
 
 Tap the title for the track menu: Favourite, Lyrics, Album, Artist, View queue, Info, +Queue, +Playlist.
 [Immersive](IMMERSIVE_CONTROLS.md) shows a spinning record, CD or cover with lyrics.
+With Progressive lyrics, lines glide and words light up as they're sung; tap a timed line to jump there.
 
 ## Library
 
@@ -47,6 +48,7 @@ charging. The Sleep timer pauses or powers off.
 | SongSphere | Place music by mood, pick a spot, get a mix. |
 | Album Roulette | A random album. |
 | Boomshine | Chain-reaction game. |
+| Cat Dash | Endless runner: tap to jump, swipe down to duck. |
 | Disc Shelf | Downloads from Navidrome or SMB3 ([setup](DISC_SHELF_INSTALL.md)). |
 
 Installed apps can be added to the menu and Shortcuts.

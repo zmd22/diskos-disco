@@ -1,4 +1,4 @@
-# Development targets after Disco 3.5.1
+# Development targets after Disco 3.6.0
 
 Targets below are proposals or verification work, not shipped features. Work belongs on dev; changes, builds and releases follow maintainer direction.
 

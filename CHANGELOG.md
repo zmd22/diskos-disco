@@ -2,6 +2,17 @@
 
 User-facing changes in diskOS Disco!. Details of each release are in [docs/releases](docs/releases/); everything else is in the Git history. diskOS is beta software.
 
+## 3.6.0
+
+**Progressive lyrics and Cat Dash.** [Release notes](docs/releases/v3.6.0.md)
+
+- Lyrics and Immersive: smooth line motion and word-by-word highlights (exact Enhanced LRC timing, or an optional
+  estimate for line-timed lyrics); tap a timed line to seek. **Settings › Display › Text & layout › Progressive
+  lyrics / Estimate word timing**, both On (#29, by @Grippy98).
+- **Cat Dash**, a built-in endless runner, in Apps and Shortcuts (#26, by @ericklv).
+- Zune no longer gets stuck in Light after Outdoor mode was turned on in another theme (#27, by @ericklv).
+- Disc Shelf SMB downloads finish on older FAT/exFAT cards; errors name the failed step (#28, by @Grippy98).
+
 ## 3.5.1
 
 **Lock on timeout.** [Release notes](docs/releases/v3.5.1.md)
