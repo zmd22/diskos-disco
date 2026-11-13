@@ -149,8 +149,10 @@ static void save_best(void){
     int s = (int)(g_dist / 10);
     if(s > g_best_v){ g_best_v = s; cfg_set_int("runner_best", s); best_paint(); }
 }
+/* the frame timer runs only during a run: idle, it would wake mq_ui 50 times a second on every screen */
+static void run_timer(int on){ if(g_tick){ if(on) lv_timer_resume(g_tick); else lv_timer_pause(g_tick); } }
 static void over(void){
-    g_state = RN_OVER; g_duck = 0; cat_pose();
+    g_state = RN_OVER; run_timer(0); g_duck = 0; cat_pose();
     lv_obj_set_style_opa(g_score, LV_OPA_COVER, 0);
     save_best();
     lv_label_set_text(g_msg, "Game over - tap to retry"); lv_obj_remove_flag(g_msg, LV_OBJ_FLAG_HIDDEN);
@@ -159,9 +161,9 @@ static void over(void){
 static void tick(lv_timer_t *t){
     (void)t;
     if(screen_current() != SCR_RUNNER){ if(g_state == RN_RUN){ save_best(); g_state = RN_READY; g_duck = 0; lv_label_set_text(g_msg, "Paused - tap to go on");
-                                        lv_obj_remove_flag(g_msg, LV_OBJ_FLAG_HIDDEN); } return; }
+                                        lv_obj_remove_flag(g_msg, LV_OBJ_FLAG_HIDDEN); } run_timer(0); return; }
     uint32_t now = lv_tick_get(); float dt = (now - g_last) / 1000.0f; g_last = now;
-    if(g_state != RN_RUN) return;
+    if(g_state != RN_RUN){ run_timer(0); return; }
     if(dt > 0.05f) dt = 0.05f;
     g_frame++;
     g_speed += dt * 6.0f; if(g_speed > 420) g_speed = 420;     /* slowly faster */
@@ -202,7 +204,7 @@ static void tick(lv_timer_t *t){
 static int on_ground(void){ return g_cat_y >= RN_GROUND - RN_CAT_H - 1; }
 static void start(void){
     if(g_state == RN_OVER) reset();
-    g_state = RN_RUN; lv_obj_add_flag(g_msg, LV_OBJ_FLAG_HIDDEN); g_last = lv_tick_get();
+    g_state = RN_RUN; lv_obj_add_flag(g_msg, LV_OBJ_FLAG_HIDDEN); g_last = lv_tick_get(); run_timer(1);
 }
 /* press: note where; drag: a swipe up jumps long, a swipe down ducks (held while the finger stays); release: a tap jumps */
 static void touch_cb(lv_event_t *e){
@@ -257,24 +259,15 @@ void runner_create(lv_obj_t *root){
     lv_obj_add_event_cb(root, touch_cb, LV_EVENT_RELEASED, NULL);
     lv_obj_add_event_cb(root, touch_cb, LV_EVENT_PRESS_LOST, NULL);
     g_state = RN_READY; reset(); runner_open_text();
-    if(!g_tick) g_tick = lv_timer_create(tick, 20, NULL);
+    if(!g_tick){ g_tick = lv_timer_create(tick, 20, NULL); run_timer(0); }
 }
 /* the landing page's Play: a fresh run, waiting for the first touch */
 void runner_open(void){
-    g_state = RN_READY; reset(); runner_open_text();
+    g_state = RN_READY; run_timer(0); reset(); runner_open_text();
     g_seed ^= lv_tick_get() | 1u;
     screen_show(SCR_RUNNER);
 }
 void runner_landing(void){
     applanding_show("Cat Dash", "Jump the boxes, duck the birds.",
                     "Tap to jump, swipe up for a long jump, swipe down to duck. It gets faster the longer you run.", "Play", APP_BUILTIN_RUNNER);
-}
-/* host renders: jump to pts points (night follows), duck, and put a bird at x (0: none) */
-void runner_test(int pts, int duck, int bird_x){
-    g_state = RN_RUN; lv_obj_add_flag(g_msg, LV_OBJ_FLAG_HIDDEN);
-    g_dist = pts * 10.0f; g_duck = duck; g_held = duck;
-    set_night(pts % RN_NIGHT_EVERY >= RN_NIGHT_FROM); score_paint();
-    if(bird_x){ g_dist = pts * 10.0f + 2000; obs_spawn(&g_obs[0]); while(g_obs[0].kind != OB_BIRD) obs_spawn(&g_obs[0]);
-                g_obs[0].x = bird_x; lv_obj_set_x(g_obs[0].o, bird_x); g_dist = pts * 10.0f; }
-    cat_pose();
 }

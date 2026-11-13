@@ -64,6 +64,9 @@ static void scan(void){
         snprintf(a->icon, sizeof a->icon, "%s", m->icon);
         if(!strcmp(m->exec,APP_BUILTIN_SHELF))a->vec="@shelf";
     }
+    if(g_nall < MAXA)   /* last, so the default five pins stay as they were; same id as its Shortcuts entry (apps.c) */
+        add_builtin("cat-dash", "Cat Dash", "Jump the boxes, duck the birds.", "Tap to jump, swipe up for a long jump,\nswipe down to duck.",
+                    "Play", APP_BUILTIN_RUNNER, NULL);
 }
 static int find_id(const char *id){ for(int i = 0; i < g_nall; i++) if(id[0] && !strcmp(g_all[i].id, id)) return i; return -1; }
 static void pins_load(void){
