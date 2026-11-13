@@ -106,6 +106,9 @@ static int display_variant_hidden(const setting_t *s){
     if(s->cfg_key&&!strncmp(s->cfg_key,"braun2_",7)&&!th_braun2())return 1;   /* Braun 2.0 Music options, only there */
     if(s->cfg_key&&th_zune()&&!strcmp(s->cfg_key,"saver_style"))return 1;
     if(s->apply==apply_grp_zune&&!th_zune())return 1;
+    if(s->cfg_key&&!th_classic()&&(!strcmp(s->cfg_key,"classic_backlight")||!strcmp(s->cfg_key,"classic_bars")))return 1;
+    if(th_classic()&&(s->apply==apply_open_colorpick||s->apply==apply_grp_musicscreen))return 1;   /* Classic: ink accent, one Music layout */
+    if(th_classic()&&s->cfg_key&&(!strcmp(s->cfg_key,"np_style")||!strcmp(s->cfg_key,"qs_style")))return 1;
     if(s->cfg_key&&th_zune()&&!strcmp(s->cfg_key,"np_style"))return 1;
     if(s->cfg_key&&!th_zune()&&!strncmp(s->cfg_key,"zune_",5))return 1;
     if(s->cfg_key&&!th_zune()&&(!strcmp(s->cfg_key,"zune_nav_hold")||!strncmp(s->cfg_key,"zlock_",6)))return 1;
@@ -168,6 +171,7 @@ static const char *settings_page_title(const char *page){
     if(th_simple())return "Squash settings";
     if(th_null())return "Null settings";
     if(th_zune())return "Zune settings";
+    if(th_classic())return "Graphite settings";
     if(th_braun2())return "Braun 2.0 settings";
     if(th_braun())return "Braun settings";
     if(theme_preset()==THEME_PRESET_RING)return "Ring settings";
@@ -178,6 +182,8 @@ static const char *settings_page(const setting_t *s){
     const display_entry_t *d=display_entry(s);
     const char *page=d?d->page:s->group;
     if(!strcmp(k,"screenoff_idx")||!strcmp(k,"saver_idx")||!strcmp(k,"lock_on_timeout")||!strcmp(k,"clock_batt_pct"))return "Battery & power";
+    if(!strcmp(k,"classic_backlight")||!strcmp(k,"classic_bars"))return "Theme settings";
+    if(th_classic()&&!strcmp(k,"outdoor"))return "Display";   /* Graphite: beside Light / dark */   /* Graphite's own option, in its settings */
     if(!strcmp(k,"sleep_idx")||!strcmp(k,"sleep_action"))return "Sleep timer";
     if(s->apply==apply_restart)return "Battery & power";
     if(!strcmp(k,"time_24h"))return "Date & Time";

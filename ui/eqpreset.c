@@ -2,6 +2,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 #include "screens.h"
 #include "braun.h"
+#include "classic.h"
 #include "theme.h"
 #include "theme_kit.h"
 #include "config.h"
@@ -143,6 +144,7 @@ void eqpreset_refresh(void){
  lv_obj_set_style_bg_color(switch_button,p?ui_current_accent():TC(SURFACE),0);
  lv_obj_set_style_text_color(switch_label,p?theme_on_color(ui_current_accent()):TC(TEXT_PRIMARY),0);
  if(th_simple()){if(p)lv_obj_add_state(switch_button,LV_STATE_CHECKED);else lv_obj_remove_state(switch_button,LV_STATE_CHECKED);lv_obj_set_style_bg_grad_dir(switch_button,LV_GRAD_DIR_NONE,0);lv_obj_set_style_bg_color(switch_button,p?TC(ACCENT_PRIMARY):theme_color_mix(TC(ACCENT_PRIMARY),TC(CANVAS),24),0);lv_obj_set_style_text_color(switch_label,p?theme_on_color(TC(ACCENT_PRIMARY)):TC(TEXT_PRIMARY),0);lv_obj_add_flag(switch_pointer,LV_OBJ_FLAG_HIDDEN);}
+ if(th_classic()){lv_obj_set_style_bg_opa(switch_button,LV_OPA_TRANSP,0);lv_obj_set_style_text_color(switch_label,TC(TEXT_SECONDARY),0);}
  if(th_null()){
   lv_obj_set_style_bg_opa(switch_button,0,0);lv_obj_set_style_border_width(switch_button,1,0);
   lv_obj_set_style_border_color(switch_button,p?TC(TEXT_PRIMARY):TC(TEXT_SECONDARY),0);
@@ -162,6 +164,18 @@ static lv_obj_t *button(lv_obj_t *root,const char *text,int x,int y,int w,int h,
  lv_obj_set_style_bg_color(b,TC(SURFACE),0);lv_obj_set_style_radius(b,w==h?LV_RADIUS_CIRCLE:14,0);lv_obj_set_style_border_width(b,0,0);
  lv_obj_t *l=lv_label_create(b);lv_label_set_text(l,text);lv_obj_set_style_text_font(l,TF(UI_18),0);lv_obj_set_style_text_color(l,TC(TEXT_PRIMARY),0);lv_obj_center(l);
  ui_on(b,cb,LV_EVENT_CLICKED,data,action,UI_CORE);return b;
+}
+/* Graphite: one of its menu rows from a preset-screen button (caption left, optional value / chevron right) */
+static lv_obj_t *ceq_row(lv_obj_t *b,int x,int y,int w,const char *cap,int chevron){
+ lv_obj_set_align(b,LV_ALIGN_DEFAULT);lv_obj_set_pos(b,x,y);lv_obj_set_size(b,w,34);
+ lv_obj_set_style_radius(b,4,0);lv_obj_set_style_bg_opa(b,LV_OPA_TRANSP,0);lv_obj_set_style_border_width(b,0,0);lv_obj_set_style_shadow_width(b,0,0);
+ lv_obj_set_style_opa(b,LV_OPA_40,LV_STATE_DISABLED);
+ lv_obj_t *l=lv_obj_get_child(b,0);
+ if(cap){lv_label_set_text(l,cap);lv_obj_set_style_text_font(l,TF(UI_20),0);lv_obj_set_style_text_color(l,TC(TEXT_PRIMARY),0);lv_obj_align(l,LV_ALIGN_LEFT_MID,10,0);}
+ else{lv_obj_set_style_text_font(l,TF(UI_14),0);lv_obj_set_style_text_color(l,TC(TEXT_PRIMARY),0);lv_obj_center(l);}
+ if(chevron){lv_obj_t *c=lv_label_create(b);lv_label_set_text(c,LV_SYMBOL_RIGHT);lv_obj_set_style_text_font(c,TF(UI_14),0);
+  lv_obj_set_style_text_color(c,TC(TEXT_PRIMARY),0);lv_obj_align(c,LV_ALIGN_RIGHT_MID,-10,0);kit_keep(c);}
+ kit_keep(b);kit_keep(l);classic_row_style(b);return b;
 }
 void eqpreset_create(lv_obj_t *root){
  if(th_zune()){ g_zroot=root; return; }
@@ -215,6 +229,18 @@ void eqpreset_create(lv_obj_t *root){
   lv_obj_set_size(switch_button,64,64);lv_obj_align(switch_button,LV_ALIGN_TOP_MID,0,272);
   lv_obj_set_style_shadow_width(switch_button,0,0);lv_obj_set_style_border_width(switch_button,0,0);
   lv_obj_add_flag(switch_pointer,LV_OBJ_FLAG_HIDDEN);kit_keep(switch_button);kit_keep(switch_label);
+ }
+ if(th_classic()){   /* Graphite: a menu: Equalizer On/Off, the preset between arrows, Edit, Rename */
+  lv_obj_add_flag(switch_pointer,LV_OBJ_FLAG_HIDDEN);
+  ceq_row(switch_button,50,78,260,NULL,0);
+  lv_obj_t *cap=lv_label_create(switch_button);lv_label_set_text(cap,"Equalizer");lv_obj_set_style_text_font(cap,TF(UI_20),0);
+  lv_obj_set_style_text_color(cap,TC(TEXT_PRIMARY),0);lv_obj_align(cap,LV_ALIGN_LEFT_MID,10,0);kit_keep(cap);
+  lv_obj_set_style_text_font(switch_label,TF(UI_16),0);lv_obj_align(switch_label,LV_ALIGN_RIGHT_MID,-10,0);
+  ceq_row(prev_b,50,112,40,NULL,0);ceq_row(next_b,270,112,40,NULL,0);
+  lv_obj_set_align(name_label,LV_ALIGN_DEFAULT);lv_obj_set_pos(name_label,90,112+(34-lv_font_get_line_height(TF(UI_20)))/2);
+  lv_obj_set_size(name_label,180,lv_font_get_line_height(TF(UI_20)));lv_obj_set_style_text_font(name_label,TF(UI_20),0);lv_label_set_long_mode(name_label,LV_LABEL_LONG_DOT);kit_keep(name_label);
+  ceq_row(edit_button,50,146,260,"Edit bands",1);ceq_row(rename_button,50,180,260,"Rename",1);
+  lv_obj_set_style_text_font(note_label,TF(UI_14),0);lv_obj_set_width(note_label,240);lv_obj_align(note_label,LV_ALIGN_TOP_MID,0,226);
  }
  if(!profile_timer)profile_timer=lv_timer_create(profile_poll,100,NULL);
  /* Screen entry schedules a read; this page never waits on SQLite. */

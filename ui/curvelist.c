@@ -4,6 +4,7 @@
 #include "lvgl/src/misc/lv_area_private.h"   /* lv_area_intersect */
 #include "null_theme.h"
 #include "theme.h"
+#include "classic.h"
 #include "braun.h"
 #include "config.h"
 int disco_clear_left(int y1, int y2); int disco_clear_right(int y1, int y2); int disco_mirror(void);   /* disco.c: rows clear of the Disco menu picker (0 = no limit) */
@@ -294,6 +295,18 @@ static void curve(curvelist_t *c){
         }
         return;
     }
+    if(th_classic()){                                                    /* Graphite: one straight column, rows invert */
+        uint32_t n = lv_obj_get_child_count(c->list);
+        for(uint32_t i = 0; i < n; i++){
+            lv_obj_t *r = lv_obj_get_child(c->list, i);
+            if(!lv_obj_has_flag(r, LV_OBJ_FLAG_USER_1)) continue;
+            lv_area_t a; lv_obj_get_coords(r, &a);
+            if(a.y2 < -40 || a.y1 > 400) continue;
+            if(lv_obj_get_width(r) != c->full_w) lv_obj_set_width(r, c->full_w);
+            classic_row_style(r);
+        }
+        return;
+    }
     if(th_braun_family()){                                               /* Braun: straight rows, restyled */
         uint32_t n = lv_obj_get_child_count(c->list);
         for(uint32_t i = 0; i < n; i++){
@@ -364,6 +377,7 @@ static void curve(curvelist_t *c){
 }
 static void dots(curvelist_t *c){
     if(th_braun_family()) return;                                       /* Braun: no position dots */
+    if(th_classic()){ if(c->cur != -3){ c->cur = -3; for(int k = 0; k < 11; k++) if(c->dot[k]) lv_obj_add_flag(c->dot[k], LV_OBJ_FLAG_HIDDEN); } return; }   /* Graphite: none */
     if(th_zune()){ if(c->cur != -3){ c->cur = -3; for(int k = 0; k < 11; k++) if(c->dot[k]) lv_obj_add_flag(c->dot[k], LV_OBJ_FLAG_HIDDEN); } return; }   /* Zune: none either (hidden once, not on every scroll step) */
     int32_t sy = lv_obj_get_scroll_y(c->list), sb = lv_obj_get_scroll_bottom(c->list), tot = sy + sb;
     if(th_null() && !c->disco_style){null_scroll_line(c->dot,11,sy,tot);return;}

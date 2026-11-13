@@ -43,7 +43,10 @@ int         theme_variant(void);                    /* 0 dark, 1 light (the acti
 int         theme_outdoor(void);                    /* 1 = Outdoor mode (light variant + full backlight) this run */
 /* Built-in presets keep their shipped configuration IDs. Retired slots are unavailable.
  * Each active preset has dark/light palettes; Appearance / Outdoor selects the variant. */
-#define THEME_PRESET_COUNT 15 /* saved-ID capacity, including retired holes */
+#define THEME_PRESET_COUNT 16 /* saved-ID capacity, including retired holes */
+#define THEME_PRESET_CLASSIC 15   /* fork: monochrome-LCD list theme in ChicagoFLF */
+int th_classic(void);
+int theme_classic_backlight(void);   /* cfg classic_backlight: 0 white, 1 grey, 2 amber (light variant) */
 #define THEME_PRESET_BRAUN2 14
 int th_braun2(void); int th_braun_family(void);
 #define THEME_PRESET_ZUNE 13   /* fork: Zune HD / Metro-inspired round theme */

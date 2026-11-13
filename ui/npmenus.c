@@ -8,6 +8,7 @@
 #include "orbit.h"
 #include "curvelist.h"
 #include "theme.h"
+#include "classic.h"
 #include <stdlib.h>
 #include <string.h>
 #include "anim.h"
@@ -454,6 +455,39 @@ __attribute__((unused)) static void track_actions(lv_obj_t *box,const track_stat
     _Static_assert(sizeof names/sizeof names[0]==SHEET_N && sizeof icons/sizeof icons[0]==SHEET_N,"sheet tables");
     track_sheet_build(box,st->title,st->artist,ui_current_cover_dsc(),names,icons,SHEET_N,sheet_pick,close_cb);
 }
+/* Graphite: the actions as its menu - title bar, one row each, the pressed row inverted */
+static void classic_book_pick(lv_event_t *e){
+    static lv_event_cb_t const CB[4] = { hub_chapters_cb, ctx_info_cb, hub_eq_open_cb, hub_fsart_cb };
+    int i = (int)(intptr_t)lv_event_get_user_data(e); if(i >= 0 && i < 4) CB[i](e);
+}
+static lv_obj_t *g_cl_fav;
+static void classic_pick(lv_event_t *e){
+    int k = (int)(intptr_t)lv_event_get_user_data(e);
+    if(k >= 0 && k < SHEET_N && SHEET_ORDER[k] == ZA_FAV){ zune_run(ctx_fav_cb); if(g_cl_fav) lv_label_set_text(g_cl_fav, g_fav ? "On" : "Off"); return; }
+    sheet_pick(e);
+}
+static void classic_actions(lv_obj_t *box, const track_state_t *st, int book){
+    g_zbox = box; npmenu_set(st, 1, NULL); g_cl_fav = NULL;
+    lv_obj_set_style_bg_color(box, TC(CANVAS), 0); lv_obj_set_style_bg_opa(box, LV_OPA_COVER, 0);
+    classic_header(box, book ? "Audiobook" : "Actions", close_cb);
+    lv_obj_t *list = classic_list(box, CLASSIC_LIST_Y, CLASSIC_LIST_H);
+    if(book){
+        static const char *const bn[4] = { "Chapters", "Details", "Equalizer", "Full art" };
+        for(int i = 0; i < 4; i++){ lv_obj_t *r = classic_row(list, bn[i], 1); ui_on(r, classic_book_pick, LV_EVENT_CLICKED, (void *)(intptr_t)i, "npmenu.classic.book", UI_CORE); }
+        return;
+    }
+    static const char *const names[] = {"Favourite","Go to Album","Go to Artist","Add to Playlist","Queue","Play Mode","Lyrics","Immersive","Song Info","Sleep Timer","Equalizer","Tags"};
+    _Static_assert(sizeof names / sizeof names[0] == SHEET_N, "classic action names");
+    for(int k = 0; k < SHEET_N; k++){
+        lv_obj_t *r = classic_row(list, names[k], SHEET_ORDER[k] != ZA_FAV);
+        if(SHEET_ORDER[k] == ZA_FAV){
+            lv_obj_t *v = lv_label_create(r); lv_label_set_text(v, st->is_favorite ? "On" : "Off"); g_cl_fav = v;
+            lv_obj_set_style_text_font(v, TF(UI_20), 0); lv_obj_set_style_text_color(v, TC(TEXT_PRIMARY), 0);
+            lv_obj_align(v, LV_ALIGN_RIGHT_MID, -10, 0);
+        }
+        ui_on(r, classic_pick, LV_EVENT_CLICKED, (void *)(intptr_t)k, "npmenu.classic.item", UI_CORE);
+    }
+}
 static int g_zsleep_direct;
 void npmenu_open_sleep(void){ g_zsleep_direct = 1; screen_show(SCR_NPMENU); }   /* Zune Quick Settings: straight to the timer */
 static void build_menu(lv_obj_t *box){
@@ -467,6 +501,7 @@ static void build_menu(lv_obj_t *box){
     if(th_zune() && g_zsleep_direct){ g_zsleep_direct = 0; g_zbox = box; npmenu_set(&st, 1, NULL);
         lv_obj_set_style_bg_color(box, TC(CANVAS), 0); lv_obj_set_style_bg_opa(box, LV_OPA_COVER, 0); zune_sleep(box); return; }
     int ring = !book && (th_disco()||th_simple()||th_null());   /* the round menu, as the Library's album menu */
+    if(th_classic()){ classic_actions(box, &st, book); return; }
     if(th_zune() && !book){ zune_actions(box, &st); return; }   /* Zune: the actions as a dial (audiobooks keep their own four) */
     g_menu_bg = lv_image_create(box);                           /* the album's blurred wash, dimmed */
     lv_obj_set_size(g_menu_bg, 360, 360); lv_obj_clear_flag(g_menu_bg, LV_OBJ_FLAG_CLICKABLE); lv_obj_add_flag(g_menu_bg, LV_OBJ_FLAG_HIDDEN);

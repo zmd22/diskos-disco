@@ -10,6 +10,7 @@
  * Other text entry (Wi-Fi passwords, playlist names) keeps the full QWERTY keyboard in kbinput.c. */
 #include "screens.h"
 #include "theme_kit.h"
+#include "classic.h"
 #include "theme.h"
 #include "musicdb.h"
 #include "curvelist.h"
@@ -201,6 +202,12 @@ static void query_changed(void){
     lv_obj_set_style_bg_color(g_go, on ? ui_current_accent() : TC(SURFACE), 0);
     if(th_simple())lv_obj_set_style_bg_color(g_go,theme_color_mix(TC(ACCENT_PRIMARY),TC(CANVAS),on?60:24),0);
     if(th_null())lv_obj_set_style_bg_opa(g_go,LV_OPA_TRANSP,0);
+    if(th_classic()){   /* Graphite: a framed button, filled ink once there is something to search */
+        lv_obj_set_style_bg_color(g_go,TC(TEXT_PRIMARY),0);lv_obj_set_style_bg_opa(g_go,on?LV_OPA_COVER:LV_OPA_TRANSP,0);
+        lv_obj_set_style_border_color(g_go,on?TC(TEXT_PRIMARY):TC(TEXT_MUTED),0);
+        lv_obj_set_style_text_color(g_go_lbl,on?TC(CANVAS):TC(TEXT_MUTED),0);
+        return;
+    }
     lv_obj_set_style_text_color(g_go_lbl, (th_null()||th_simple())?(on?TC(TEXT_PRIMARY):TC(TEXT_SECONDARY)):(on?TC(ON_ACCENT):TC(TEXT_DISABLED)), 0);
 }
 static void bksp(int all){
@@ -317,7 +324,7 @@ static void paint_keys(void){
             lv_obj_set_pos(k, x, GRID_Y + r * ROW_P); x += kw + g;
             char s[2] = { ch, 0 };
             lv_obj_t *l = g_key_lbl[r][c];
-            if(ch == '_'){ lv_label_set_text(l, "space"); lv_obj_set_style_text_font(l, TF(UI_12), 0); lv_obj_set_style_text_color(l, TC(TEXT_SECONDARY), 0); }
+            if(ch == '_'){ lv_label_set_text(l, th_classic() ? "SPC" : "space"); lv_obj_set_style_text_font(l, TF(UI_12), 0); lv_obj_set_style_text_color(l, TC(TEXT_SECONDARY), 0); }
             else if(ch == BKSP){ lv_label_set_text(l, LV_SYMBOL_BACKSPACE); lv_obj_set_style_text_font(l, TF(UI_18), 0); lv_obj_set_style_text_color(l, TC(TEXT_SECONDARY), 0); }
             else { lv_label_set_text(l, s); lv_obj_set_style_text_font(l, TF(UI_24), 0); lv_obj_set_style_text_color(l, TC(TEXT_PRIMARY), 0); }
         }
@@ -456,6 +463,18 @@ void search_create(lv_obj_t *root){
     lv_obj_set_style_text_font(g_mode_lbl, TF(UI_14), 0);
     lv_obj_set_style_text_color(g_mode_lbl, TC(TEXT_SECONDARY), 0);
     lv_obj_center(g_mode_lbl);
+    if(th_classic()){   /* Graphite: framed field and button, its own face */
+        lv_obj_set_size(g_field,210,36);lv_obj_align(g_field,LV_ALIGN_TOP_MID,0,28);
+        lv_obj_set_style_radius(g_field,4,0);lv_obj_set_style_bg_opa(g_field,LV_OPA_TRANSP,0);
+        lv_obj_set_style_border_width(g_field,2,0);lv_obj_set_style_border_color(g_field,TC(TEXT_PRIMARY),0);
+        lv_obj_set_style_text_color(mg,TC(TEXT_PRIMARY),0);lv_obj_align(mg,LV_ALIGN_LEFT_MID,10,0);
+        lv_obj_set_style_max_width(g_query_lbl,150,0);lv_obj_set_style_text_font(g_query_lbl,TF(UI_20),0);
+        lv_obj_set_style_bg_color(g_caret,TC(TEXT_PRIMARY),0);
+        lv_obj_set_size(g_go,124,32);lv_obj_align(g_go,LV_ALIGN_TOP_MID,0,74);
+        lv_obj_set_style_radius(g_go,16,0);lv_obj_set_style_border_width(g_go,2,0);
+        lv_obj_set_style_bg_color(g_go,TC(TEXT_PRIMARY),LV_STATE_PRESSED);lv_obj_set_style_bg_opa(g_go,LV_OPA_COVER,LV_STATE_PRESSED);
+        lv_label_set_text(g_go_lbl,"Search");lv_obj_set_style_text_font(g_go_lbl,TF(UI_18),0);kit_keep(g_go);kit_keep(g_go_lbl);
+    }
     if(th_simple()){
         lv_obj_set_size(g_field,200,42);lv_obj_align(g_field,LV_ALIGN_TOP_MID,0,28);
         lv_obj_set_style_max_width(g_query_lbl,142,0);lv_obj_set_style_text_font(g_query_lbl,TF(UI_20),0);

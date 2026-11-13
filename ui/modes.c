@@ -6,6 +6,7 @@
 #include "braun2.h"
 #include <string.h>
 #include "orbit.h"
+#include "classic.h"
 #include "theme.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -294,6 +295,15 @@ static void icon_spin(lv_obj_t *l, int on){
     lv_anim_start(&a);
 }
 static void disco_paint(int slot, int pending){
+    if(th_classic()){   /* Graphite: a tick (turning arrows while it switches) right of the active mode */
+        for(int i = 0; i < N_MODES; i++){
+            lv_obj_t *r = g_drow[i]; if(!r) continue;
+            lv_obj_t *v = lv_obj_get_child(r, 1); int on = i == slot;
+            lv_label_set_text(v, on ? (pending ? LV_SYMBOL_REFRESH : LV_SYMBOL_OK) : "");
+            icon_spin(v, on && pending);
+        }
+        return;
+    }
     lv_color_t acc = ui_current_accent();
     for(int i = 0; i < N_MODES; i++){
         lv_obj_t *r = g_drow[i]; if(!r) continue;
@@ -341,7 +351,7 @@ static void b2modes_create(lv_obj_t *root){
 static void paint(int slot, const char *glyph){
     if(th_braun2()){ b2modes_paint(slot, glyph && !strcmp(glyph, LV_SYMBOL_REFRESH)); return; }
     if(th_zune()){zmodes_paint(slot,glyph && !strcmp(glyph,LV_SYMBOL_REFRESH));return;}   /* slot = orbit index, or -1 for none */
-    if((th_disco_family() || th_null())){ disco_paint(slot, glyph && !strcmp(glyph, LV_SYMBOL_REFRESH)); return; }
+    if((th_disco_family() || th_null() || th_classic())){ disco_paint(slot, glyph && !strcmp(glyph, LV_SYMBOL_REFRESH)); return; }
     int pending = (glyph && !strcmp(glyph, LV_SYMBOL_REFRESH));
     lv_color_t acc = TC(ACCENT_PRIMARY);
     if(pending){                                  /* the tapped mode gets a ring; the hub's ring spins */
@@ -499,6 +509,22 @@ void modes_create(lv_obj_t *root){
 
     if(th_braun2()){ b2modes_create(root); return; }
     if(th_simple() || th_null()){squash_modes_create(root);return;}
+    if(th_classic()){   /* Graphite: its header and menu list */
+        static const char *NM[N_MODES] = { "Playback", "USB DAC", "Bluetooth DAC", "BT streaming", "AirPlay", "USB storage" };
+        ui_header(root, "Working mode");
+        lv_obj_t *list = classic_list(root, CLASSIC_LIST_Y, CLASSIC_LIST_H);
+        memset(g_drow, 0, sizeof g_drow);
+        for(int k = 0; k < N_DISCO; k++){
+            int i = DISCO_ORD[k];
+            lv_obj_t *r = g_drow[i] = classic_row(list, NM[i], 0);
+            ui_on(r, disco_row_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i, "modes.select", UI_CORE);
+            lv_obj_t *v = lv_label_create(r); lv_label_set_text(v, "");
+            lv_obj_set_style_text_font(v, TF(UI_16), 0); lv_obj_set_style_text_color(v, TC(TEXT_PRIMARY), 0);
+            lv_obj_align(v, LV_ALIGN_RIGHT_MID, -10, 0);
+        }
+        mark_selected();
+        return;
+    }
     if((th_disco_family() || th_null())){
         disco_title(root, "Working mode");
         static const char *NM[N_MODES] = { "Playback", "USB DAC", "Bluetooth DAC", "BT streaming", "AirPlay", "USB storage" };

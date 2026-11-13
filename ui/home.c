@@ -12,6 +12,7 @@ void bhome_set_status(int batt, int charging, int wifi, int bt); void bhome_set_
 void zhome_set_clock(const char *t, const char *s); void zhome_set_weather(const char *s);
 void zhome_set_status(int batt, int charging, int wifi, int bt); void zhome_set_now_playing(const char *title, const char *artist, bool playing);
 #include "theme.h"
+#include "classic.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -263,6 +264,7 @@ void home_set_clock(const char *time_text, const char *sub_text)
 {
     if(th_braun_family()){ bhome_set_clock(time_text, sub_text); return; }
     if(th_zune()){ zhome_set_clock(time_text, sub_text); return; }
+    if(th_classic()){ chome_set_clock(time_text); return; }
     if(th_null()){ null_home_clock(time_text); return; }
     if(th_disco_family()){ dhome_set_clock(time_text, sub_text); return; }
     if (g_clock) lv_label_set_text(g_clock, time_text ? time_text : "--:--");
@@ -281,6 +283,7 @@ void home_set_weather(const char *text)
     char s[96]; wx_short(text, s, sizeof s);
     if(th_braun_family()){ const char *p = s; while(*p == ' ') p++; bhome_set_weather(p); return; }
     if(th_zune()){ zhome_set_weather(s); return; }
+    if(th_classic()) return;
     if(th_null()){ null_home_weather(s); return; }
     if(th_disco_family()){ dhome_set_weather(s); return; }
     if (g_weather) lv_label_set_text(g_weather, s);          /* icon + temperature, above the clock */
@@ -339,6 +342,7 @@ void home_set_status(int batt, int charging, int wifi, int bt)
 {
     if(th_braun_family()){ bhome_set_status(batt, charging, wifi, bt); return; }
     if(th_zune()){ zhome_set_status(batt, charging, wifi, bt); return; }
+    if(th_classic()){ chome_set_status(batt, charging); return; }
     if(th_null()){ null_home_status(batt, charging, wifi, bt); return; }
     if(th_disco_family()){void dsaver_set_status(int,int,int,int);dsaver_set_status(batt,charging,wifi,bt);dhome_set_status(batt, charging, wifi, bt); return; }
     if (!g_status) return;
@@ -364,6 +368,7 @@ void home_set_now_playing(const char *title, const char *artist,
 {
     if(th_braun_family()){ bhome_set_now_playing(title, artist, playing); return; }
     if(th_zune()){ zhome_set_now_playing(title, artist, playing); return; }
+    if(th_classic()){ chome_set_now_playing(title, artist, playing); return; }
     if(th_null()){ null_home_update(title,artist,playing);return; }
     if(th_disco_family()){ dhome_set_now_playing(title, artist, accent, playing); return; }
     g_accent = accent;

@@ -422,6 +422,7 @@ static const lv_image_dsc_t *cover_image(const char *path, int size){
 }
 /* the cover's colour, for the Wrapped dots: the thumb's most colourful pixels, lifted so a dot reads on the canvas */
 static lv_color_t cover_colour(const char *path){
+    if(th_classic()) return TC(TEXT_PRIMARY);   /* Graphite: one ink, never the cover's colour */
     const lv_image_dsc_t *img = cover_image(path, 42);
     if(!img) return TC(ACCENT_PRIMARY);
     long acc[3] = { 0, 0, 0 }, wsum = 0;

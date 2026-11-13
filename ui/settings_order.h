@@ -7,6 +7,7 @@ static int settings_hidden(const setting_t *s){
     if(s->apply==apply_grp_zune)return 1;
     if(s->apply==apply_grp_musicprogress && th_null())return 1;
     if(!strcmp(k,"outdoor")&&(th_null()||th_zune()))return 1;
+    if(s->apply==apply_grp_discocolours&&th_classic())return 1;   /* Graphite: Appearance held only Outdoor */
     if(s->apply==apply_theme_navigation && !(th_disco_family()||th_null()||th_zune()))return 1;
     if(!strcmp(k,"disco_times") && !(th_disco_family()))return 1;
     if((!strcmp(k,"clock_weather")||!strcmp(k,"clock_batt_pct")) && !(th_disco_family()||th_null()))return 1;
@@ -35,6 +36,7 @@ static int setting_order_band(const setting_t *s){
     if(!strcmp(k,"theme_preset"))return -29;
     if(s->apply==apply_theme_settings)return -28;
     if(!strcmp(k,"theme_variant"))return -27;
+    if(th_classic()&&!strcmp(k,"outdoor"))return -26;   /* Graphite: right under Light / dark */
     if(s->apply==apply_wifi||s->apply==apply_battery||s->apply==apply_open_datetime||s->apply==apply_volkeys_group||s->apply==apply_rescan||s->apply==system_update_sd_open||s->apply==apply_howto||s->apply==apply_ma_server||s->apply==apply_bluetooth_connection)return -20;
     if(s->apply==apply_bluetooth_settings||!strcmp(k,"idle_off_idx"))return -19;
     if(!strcmp(k,"language")||!strcmp(k,"font_size")||!strcmp(k,"album_view")||!strcmp(k,"imm_style")||!strcmp(k,"sleep_idx"))return -20;

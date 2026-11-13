@@ -3,6 +3,7 @@
 #include "screens.h"
 #include "zune_dial.h"
 #include "braun.h"
+#include "classic.h"
 #include "theme.h"
 #include "null_theme.h"
 #include "simple_theme.h"
@@ -937,6 +938,22 @@ static void add_net_row(const char *ssid, int signal, int secured, int connected
             lv_obj_align(o, LV_ALIGN_TOP_RIGHT, -(WROW_W - ox - ow) - 4, oy - 2);
         }
     }
+    if(th_classic()){   /* Graphite: a 34 px menu row, the lock and bars at its right end, inverted while pressed */
+        lv_obj_set_size(r, 260, 34); lv_obj_set_style_bg_opa(r, LV_OPA_TRANSP, 0);
+        uint32_t n = lv_obj_get_child_count(r);
+        for(uint32_t k = 0; k < n; k++){
+            lv_obj_t *o = lv_obj_get_child(r, (int32_t)k);
+            if(o == t) continue;
+            if(lv_obj_check_type(o, &lv_label_class)){ lv_obj_set_style_text_color(o, TC(TEXT_PRIMARY), 0); lv_obj_set_pos(o, 10, 9); continue; }
+            lv_obj_set_pos(o, lv_obj_get_style_x(o, 0) - 8, lv_obj_get_style_y(o, 0) - 7);
+            if(lv_obj_get_style_border_width(o, 0)) lv_obj_set_style_border_color(o, TC(TEXT_PRIMARY), 0);
+            else if(lv_obj_get_width(o) == 10) lv_obj_set_style_bg_color(o, TC(TEXT_PRIMARY), 0);   /* the padlock body */
+        }
+        lv_obj_set_style_text_font(t, ui_font_cjk(20), 0); lv_label_set_long_mode(t, LV_LABEL_LONG_DOT);
+        lv_obj_set_size(t, 196 - (connected ? 30 : 10), lv_font_get_line_height(ui_font_cjk(20)));
+        lv_obj_align(t, LV_ALIGN_LEFT_MID, connected ? 30 : 10, 0);
+        classic_row_style(r);
+    }
 }
 
 /* one de-duplicated network of a scan */
@@ -1200,6 +1217,7 @@ void wifi_create(lv_obj_t *root){
     if(th_simple())simple_radio_skin(g_hring,g_hglyph,g_hname,g_hsub,g_sw,rb,g_list);
     if(th_null())null_radio_skin(root,"WI-FI",g_hring,g_hglyph,g_hname,g_hsub,g_sw,rb,g_list);
     if(th_zune())zune_radio_skin(root,"wi-fi","wi-fi on","scan again",g_hring,g_hglyph,g_hname,g_hsub,g_sw,rb,g_list);
+    if(th_classic())classic_radio_skin(root,"Wi-Fi",g_hring,g_hglyph,g_hname,g_hsub,g_sw,rb,g_list);
     g_b2 = th_simple() || th_disco();
     if(g_b2){                                                  /* Squash / Disco: the B2 header (see b2_ring), as on BT */
         const int cy = 52;

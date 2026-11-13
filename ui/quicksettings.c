@@ -54,7 +54,7 @@ static const qs_item_t CATALOG[Q_COUNT]={
     {"p","Play mode",LV_SYMBOL_LOOP},
     {"g","Gain",LV_SYMBOL_CHARGE},{"j","Shuffle",LV_SYMBOL_SHUFFLE},{"t","Sleep","\xEF\x86\x86"}
 };
-static const char *qs_config_key(void){return th_braun2()?"braun2_qs_items":th_zune()?"zune_qs_items":th_null()?"null_qs_items":th_disco_family()?"disco_qs_items":"qs_items";}
+static const char *qs_config_key(void){return th_braun2()?"braun2_qs_items":th_zune()?"zune_qs_items":th_classic()?"classic_qs_items":th_null()?"null_qs_items":th_disco_family()?"disco_qs_items":"qs_items";}
 int quicksettings_item_count(void){return Q_COUNT;}
 int quicksettings_item_limit(void){return (th_null()||th_simple()||th_braun2())?8:th_disco()?7:6;}
 int quicksettings_playback_item(void){return Q_PLAYBACK;}
@@ -75,7 +75,7 @@ int quicksettings_items_load(int *out){
     if(!code || (code[0] && !n)){
         if(th_null()||th_simple()){static const int nd[]={T_WIFI,T_BT,T_MODE,Q_EQ,T_RESCAN,Q_SEARCH,Q_WEATHER,T_SET};memcpy(out,nd,sizeof nd);return 8;}
         if(th_braun2()){static const int bd[]={T_WIFI,T_BT,Q_SLEEP,Q_SHUFFLE,Q_FAVS,Q_EQ,T_MODE,T_SET};memcpy(out,bd,sizeof bd);return 8;}
-        if(th_zune()){static const int zd[]={T_WIFI,T_BT,Q_GAIN,Q_SHUFFLE,Q_SLEEP,T_MODE};memcpy(out,zd,sizeof zd);return 6;}
+        if(th_zune()||th_classic()){static const int zd[]={T_WIFI,T_BT,Q_GAIN,Q_SHUFFLE,Q_SLEEP,T_MODE};memcpy(out,zd,sizeof zd);return 6;}
         if(!th_disco_family()){for(int i=0;i<T_N;i++)out[i]=i;return T_N;}
         static const int defaults[]={T_WIFI,T_BT,T_MODE,T_LIB,Q_EQ,Q_SEARCH,T_SET};
         memcpy(out,defaults,sizeof defaults);return sizeof defaults/sizeof defaults[0];
@@ -128,9 +128,13 @@ static lv_obj_t *g_br2qs_btn[QS_MAX_ITEMS],*g_br2qs_status;
 static int g_br2qs_pct=-1,g_br2qs_chg;
 static void zqs_paint(void);
 static void zqs_track(const char*,const char*,int);
+static void cqs_paint(void);
+static void cqs_items_build(void);
+static void cqs_create(lv_obj_t *root);
 static void paint_radios(void){
     if(th_braun2()){br2qs_paint();return;}
     if(th_zune()){zqs_paint();return;}
+    if(th_classic()){cqs_paint();return;}
     if(th_disco_family()){dq_paint();return;}
     lv_color_t acc = th_ringlike()?ui_current_accent():TC(ACCENT_PRIMARY);
     int pending=-1;
@@ -402,6 +406,7 @@ void quicksettings_create(lv_obj_t *root)
     g_root=root;
     if(th_braun2()){br2qs_create(root);return;}
     if(th_zune()){ zqs_create(root); return; }
+    if(th_classic()){ cqs_create(root); return; }
     if(th_simple()){simple_qs_create(root);return;}
     if(th_null()){null_qs_create(root);return;}
     lv_obj_set_style_bg_color(root, TC(CANVAS), 0);
@@ -586,6 +591,7 @@ void quicksettings_refresh(int playing)
     if(th_simple()){simple_qs_refresh(playing);return;}
     if(th_null()){null_qs_refresh();return;}
     if(th_zune()){ zqs_track(NULL,NULL,playing);zqs_paint(); return; }
+    if(th_classic()){ cqs_paint(); return; }
     if(!g_prog)return;
     if(g_pp_glyph) lv_label_set_text(g_pp_glyph, playing ? LV_SYMBOL_PAUSE : LV_SYMBOL_PLAY);
     if(g_bright && !lv_obj_has_state(g_bright, LV_STATE_PRESSED))   /* don't fight an active drag */
@@ -604,6 +610,7 @@ void quicksettings_build(void){
     if(th_null()){null_qs_build();return;}
     if(!g_root)return;
     if(th_zune()){zqs_items_build();zqs_paint();return;}
+    if(th_classic()){cqs_items_build();cqs_paint();return;}
     if(!th_disco_family()){base_build();return;}
     int style=simple_cfg_get_int("disco_qs_style",1)==1;
     if(style!=g_style_raw || strcmp(g_codes,simple_cfg_get_str(qs_config_key(),"wbmlefs")))controls_build(g_root);
@@ -632,7 +639,7 @@ void qsconfig_create(lv_obj_t *root){
 void qsconfig_refresh(void){ }
 
 /* Host regression seams; no hardware commands are issued by these helpers. */
-lv_obj_t *quicksettings_test_button(int slot){extern lv_obj_t*null_test_qs_field(int);if(th_simple())return simple_test_qs_button(slot);if(th_null())return null_test_qs_field(slot);if(th_zune())return zqs_test_button(slot);if(th_braun2())return slot>=0&&slot<g_nitems?g_br2qs_btn[slot]:NULL;return slot>=0&&slot<g_nitems?(th_disco()?g_dq_row[slot]:g_orb.btn[slot]):NULL;}
+lv_obj_t *quicksettings_test_button(int slot){extern lv_obj_t*null_test_qs_field(int);if(th_simple())return simple_test_qs_button(slot);if(th_null())return null_test_qs_field(slot);if(th_zune())return zqs_test_button(slot);if(th_classic()){extern lv_obj_t*cqs_test_button(int);return cqs_test_button(slot);}if(th_braun2())return slot>=0&&slot<g_nitems?g_br2qs_btn[slot]:NULL;return slot>=0&&slot<g_nitems?(th_disco()?g_dq_row[slot]:g_orb.btn[slot]):NULL;}
 lv_obj_t *quicksettings_test_disc(void){return g_cover_clip;}
 
 void quicksettings_null_action(int id,int hold){if(hold && (id==T_WIFI || id==T_BT))onboarding_discovered(HINT_RADIO_HOLD);if(hold&&id==T_WIFI)wifi_open();else if(hold&&id==T_BT)bt_open();else if(hold&&id==Q_EQ)screen_show(SCR_EQ);else if(hold && id>=0 && id<Q_COUNT)ui_toast(CATALOG[id].name);else if(!hold)pick_cb(id);}
@@ -823,3 +830,75 @@ static void br2qs_create(lv_obj_t *root){
     lv_obj_t *max=br_label(root,"100",br_font(12,0),BR_TXT2);lv_obj_set_pos(max,269,279);kit_keep(max);
     br2qs_build();lv_timer_create(br2qs_timer,1000,NULL);
 }
+
+/* ==== Classic: the drawer as a settings list - name left, state right, the pressed row inverted - and brightness as
+ * the theme's pill bar between a small and a large sun. Taps and holds act as in Zune. ==== */
+#include "classic.h"
+enum { CQ_ROW_H = 30, CQ_TOP = 78 };
+static lv_obj_t *g_cq_row[QS_TILES_MAX + 2], *g_cq_val[QS_TILES_MAX + 2], *g_cq_list, *g_cq_bright;
+static const char *cq_name(int id){
+    static const char *names[] = {"Wi-Fi","Bluetooth","Library","Scan","Modes","Settings","Equalizer","Search","Queue","Up Next","Shortcuts","Weather","Lyrics","Info","Immersive","Folders","Favourites","Play Mode","Gain","Shuffle","Sleep"};
+    return id >= 0 && id < (int)(sizeof names / sizeof names[0]) ? names[id] : "";
+}
+static void cqs_paint(void){
+    for(int i = 0; i < g_nitems && i < QS_TILES_MAX + 2; i++){
+        if(!g_cq_val[i]) continue;
+        int id = g_items[i], on = quicksettings_item_active(id); const char *v = "";
+        if(id == Q_GAIN) v = on ? "High" : "Low";
+        if(id == Q_SHUFFLE || id == Q_SLEEP) v = on ? "On" : "Off";
+        if(id == T_WIFI || id == T_BT || id == Q_EQ || id == T_RESCAN) v = id == T_BT && bt_state() == BT_TURNING_ON ? "..." : on ? "On" : "Off";
+        if(id == Q_EQ && on) v = ui_eq_name(simple_cfg_get_int("eq_preset", 0));
+        if(id == T_MODE) v = ui_get_source_mode() == 0 ? "Playback" : ">";   /* the Working mode screen's own name */
+        set_text_if(g_cq_val[i], v);
+        lv_obj_set_style_opa(g_cq_row[i], zq_allowed(id) ? LV_OPA_COVER : LV_OPA_40, 0);
+    }
+    if(g_cq_bright && !lv_obj_has_state(g_cq_bright, LV_STATE_PRESSED) && lv_slider_get_value(g_cq_bright) != ui_get_brightness())
+        lv_slider_set_value(g_cq_bright, ui_get_brightness(), LV_ANIM_OFF);
+}
+static void cq_tap(lv_event_t *e){ int i = (int)(intptr_t)lv_event_get_user_data(e); if(i < 0 || i >= g_nitems || !zq_allowed(g_items[i])) return; quicksettings_null_action(g_items[i], 0); cqs_paint(); }
+static void cqs_items_build(void){
+    if(!g_cq_list) return;
+    lv_obj_clean(g_cq_list); memset(g_cq_row, 0, sizeof g_cq_row); memset(g_cq_val, 0, sizeof g_cq_val);
+    g_nitems = quicksettings_items_load(g_items);
+    for(int i = 0; i < g_nitems && i < QS_TILES_MAX + 2; i++){
+        lv_obj_t *r = classic_row(g_cq_list, cq_name(g_items[i]), 0);
+        lv_obj_set_height(r, CQ_ROW_H);
+        ui_on(r, cq_tap, LV_EVENT_SHORT_CLICKED, (void *)(intptr_t)i, "qs.classic.item", UI_CORE);
+        lv_obj_add_event_cb(r, zq_hold, LV_EVENT_LONG_PRESSED, (void *)(intptr_t)i);
+        lv_obj_t *v = lv_label_create(r); kit_keep(v); lv_label_set_text(v, "");
+        lv_obj_set_style_text_font(v, TF(UI_20), 0); lv_obj_set_style_text_color(v, TC(TEXT_PRIMARY), 0);
+        lv_obj_align(v, LV_ALIGN_RIGHT_MID, -10, 0);
+        g_cq_row[i] = r; g_cq_val[i] = v;
+    }
+}
+static void cq_bright_change(lv_event_t *e){ ui_backlight(lv_slider_get_value(lv_event_get_target(e))); }
+static void cq_bright_release(lv_event_t *e){ ui_set_brightness(lv_slider_get_value(lv_event_get_target(e))); }
+static lv_obj_t *cq_sun(lv_obj_t *root, int cx, int cy, int r){
+    lv_obj_t *o = zq_plain(root, cx - r, cy - r, 2 * r, 2 * r);
+    lv_obj_set_style_radius(o, LV_RADIUS_CIRCLE, 0); lv_obj_set_style_border_width(o, 2, 0);
+    lv_obj_set_style_border_color(o, TC(TEXT_PRIMARY), 0);
+    return o;
+}
+static void cqs_create(lv_obj_t *root){
+    g_root = root; lv_obj_set_style_bg_color(root, TC(CANVAS), 0); lv_obj_set_style_bg_opa(root, LV_OPA_COVER, 0);
+    lv_obj_t *t = classic_header(root, "Quick Settings", NULL);
+    if(t && lv_obj_get_index(t) > 0) lv_obj_add_flag(lv_obj_get_child(root, lv_obj_get_index(t) - 1), LV_OBJ_FLAG_HIDDEN);   /* a drawer: no back */
+    g_cq_list = classic_list(root, CQ_TOP, CQ_ROW_H * 6);
+    lv_obj_set_style_pad_bottom(g_cq_list, 0, 0);
+    cqs_items_build();
+    int y = CQ_TOP + CQ_ROW_H * 6 + 14;
+    cq_sun(root, 70, y + 7, 4); cq_sun(root, 290, y + 7, 7);
+    lv_obj_t *s = lv_slider_create(root); lv_obj_remove_style_all(s); kit_keep(s);
+    lv_obj_set_pos(s, 84, y); lv_obj_set_size(s, 192, 14); lv_slider_set_range(s, 4, 40); lv_slider_set_value(s, ui_get_brightness(), LV_ANIM_OFF);
+    lv_obj_set_style_border_width(s, 2, LV_PART_MAIN); lv_obj_set_style_border_color(s, TC(TEXT_PRIMARY), LV_PART_MAIN);
+    lv_obj_set_style_radius(s, 7, LV_PART_MAIN); lv_obj_set_style_pad_all(s, 3, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(s, LV_OPA_COVER, LV_PART_INDICATOR); lv_obj_set_style_bg_color(s, TC(TEXT_PRIMARY), LV_PART_INDICATOR);
+    lv_obj_set_style_radius(s, 4, LV_PART_INDICATOR); lv_obj_set_style_bg_opa(s, LV_OPA_TRANSP, LV_PART_KNOB);
+    lv_obj_set_ext_click_area(s, 16);
+    ui_on(s, cq_bright_change, LV_EVENT_VALUE_CHANGED, NULL, "qs.classic.brightness", UI_CORE);
+    lv_obj_add_event_cb(s, cq_bright_release, LV_EVENT_RELEASED, NULL); lv_obj_add_event_cb(s, cq_bright_release, LV_EVENT_PRESS_LOST, NULL);
+    g_cq_bright = s;
+    lv_obj_t *l = zq_label(root, "Brightness", 110, y + 22, 140, TF(UI_14), TC(TEXT_MUTED)); lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, 0);
+    cqs_paint();
+}
+lv_obj_t *cqs_test_button(int slot){ return slot >= 0 && slot < g_nitems && slot < QS_TILES_MAX + 2 ? g_cq_row[slot] : NULL; }

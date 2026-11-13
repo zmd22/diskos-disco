@@ -29,6 +29,7 @@
 #include "braun.h"
 #include "braun2.h"
 #include "theme.h"
+#include "classic.h"
 #include "onboarding.h"
 #include "anim.h"
 #include "fonts_intl.h"   /* Cyrillic/Greek/Latin-ext fallback (issue #3) */
@@ -1342,6 +1343,8 @@ LV_FONT_DECLARE(font_zune_light_28)
 LV_FONT_DECLARE(font_zune_light_72)
 const lv_font_t *zune_font(const lv_font_t *base);
 static lv_obj_t *g_zfmt;                                 /* (the Now Playing format line, defined below) */
+/* the immersive accent: Graphite's ink is near black in Light, so over the dimmed art it reads white like the rest */
+static lv_color_t zi_accent(void){ return th_classic() ? TC(FIXED_MEDIA_WHITE) : TC(ACCENT_PRIMARY); }
 static lv_obj_t *g_zi_dim, *g_zi_ctl, *g_zi_title, *g_zi_artist, *g_zi_pp, *g_zi_times, *g_zi_fmt, *g_zi_lyr, *g_zi_big, *g_zi_of;
 static uint32_t g_zi_ctl_at, g_zi_hide_ms=3000;
 static char g_zi_title_input[160],g_zi_artist_input[160];
@@ -1358,7 +1361,7 @@ static void zi_lyr_paint(void){
     if(!g_zi_lyr) return;
     int on = simple_cfg_get_int("imm_lyrics", 1) != 0;
     lv_label_set_text(g_zi_lyr, on ? "lyrics on" : "lyrics off");
-    lv_obj_set_style_text_color(g_zi_lyr, on ? TC(ACCENT_PRIMARY) : TC(FIXED_MEDIA_WHITE), 0);
+    lv_obj_set_style_text_color(g_zi_lyr, on ? zi_accent() : TC(FIXED_MEDIA_WHITE), 0);
     lv_obj_set_style_text_opa(g_zi_lyr, on ? LV_OPA_COVER : 153, 0);
 }
 static void zi_controls(int on){
@@ -1504,10 +1507,10 @@ static void imm_controls_build(lv_obj_t *fs){
     zi_btn(g_zi_ctl, LV_SYMBOL_NEXT, 78, 52, "0201000C0001", "imm.zune.next", 0);
     g_zi_times = zi_label(g_zi_ctl, TF(UI_12), TC(FIXED_MEDIA_WHITE), 0, 258);
     lv_obj_set_style_text_letter_space(g_zi_times, 1, 0);
-    g_zi_fmt = zi_label(g_zi_ctl, TF(UI_10), TC(ACCENT_PRIMARY), 300, 282);
+    g_zi_fmt = zi_label(g_zi_ctl, TF(UI_10), zi_accent(), 300, 282);
     lv_obj_set_height(g_zi_fmt,lv_font_get_line_height(TF(UI_10)));
     lv_obj_set_style_text_letter_space(g_zi_fmt, 1, 0);
-    g_zi_lyr = zi_label(g_zi_ctl, TF(UI_14), TC(ACCENT_PRIMARY), 0, 310);      /* lyrics on / off */
+    g_zi_lyr = zi_label(g_zi_ctl, TF(UI_14), zi_accent(), 0, 310);      /* lyrics on / off */
     lv_obj_add_flag(g_zi_lyr, LV_OBJ_FLAG_CLICKABLE); lv_obj_set_ext_click_area(g_zi_lyr, 14);
     ui_on(g_zi_lyr, zi_lyr_cb, LV_EVENT_CLICKED, NULL, "imm.zune.lyrics", UI_REACHABLE);
     lv_obj_add_flag(g_zi_ctl, LV_OBJ_FLAG_HIDDEN);
@@ -1715,6 +1718,11 @@ static void np_mid_cb(lv_event_t *e){
         if(code==LV_EVENT_PRESSING&&in&&(abs(p.x-g_zmid_press.x)>16||abs(p.y-g_zmid_press.y)>16))g_zmid_moved=1;
         if(code!=LV_EVENT_CLICKED)return;
         if(in&&(g_zmid_rim||g_zmid_moved||abs(p.x-g_zmid_press.x)>16||abs(p.y-g_zmid_press.y)>16))return;
+    }else if(th_classic()){                                 /* hold: Immersive; tap: the actions menu */
+        static int held;
+        if(code==LV_EVENT_PRESSED){held=0;return;}
+        if(code==LV_EVENT_LONG_PRESSED){held=1;disco_open_np_immersive();return;}
+        if(code!=LV_EVENT_CLICKED||held)return;
     }else if(th_braun2()){                                  /* hold: Title hold (Immersive by default), as the other themes */
         static int held;
         if(code==LV_EVENT_PRESSED){held=0;return;}
@@ -1723,7 +1731,7 @@ static void np_mid_cb(lv_event_t *e){
     }else if(code!=LV_EVENT_CLICKED)return;
     track_state_t st;ipc_get_state(&st);
     if(!st.have_track){screen_show(SCR_LIBRARY);return;}
-    if(th_zune()){screen_show(SCR_NPMENU);return;}
+    if(th_zune()||th_classic()){screen_show(SCR_NPMENU);return;}
     if(th_braun2()){songmenu_open_song(st.path[0]?st.path:g_np_curpath);return;}   /* Braun 2.0: the track popup, as the other themes */
     if(st.album[0])library_open_album_focus(st.album,st.artist,g_np_curpath);
     else if(st.artist[0])library_open_artist(st.artist);
@@ -1796,8 +1804,8 @@ int ui_accent_is_static(void);   /* fork: a colour picked in Accent wins over th
 static _Atomic int g_zart;       /* Zune: now playing takes its accent from the album art (cfg zune_accent_art) */
 void ui_zune_art_sync(void){ g_zart = cfg_get_int("zune_accent_art", 0) ? 1 : 0; }
 static lv_color_t np_col(void){ if(th_zune()) return (g_zart && np_acc_set) ? np_acc : TC(ACCENT_PRIMARY);
-                                if(th_braun_family()) return TC(ACCENT_PRIMARY); return ((g_np_poster || g_np_ring) && np_acc_set && !ui_accent_is_static()) ? np_acc : accent; }
-lv_color_t ui_media_accent(void){ if(th_zune()) return (g_zart && np_acc_set) ? np_acc : TC(ACCENT_PRIMARY); if(th_simple())return TC(ACCENT_PRIMARY); if(th_braun_family()) return TC(ACCENT_PRIMARY); return (np_acc_set && !ui_accent_is_static()) ? np_acc : accent; }   /* theme.h: media surfaces (Braun: orange) */
+                                if(th_braun_family() || th_classic()) return TC(ACCENT_PRIMARY); return ((g_np_poster || g_np_ring) && np_acc_set && !ui_accent_is_static()) ? np_acc : accent; }
+lv_color_t ui_media_accent(void){ if(th_zune()) return (g_zart && np_acc_set) ? np_acc : TC(ACCENT_PRIMARY); if(th_simple() || th_classic())return TC(ACCENT_PRIMARY); if(th_braun_family()) return TC(ACCENT_PRIMARY); return (np_acc_set && !ui_accent_is_static()) ? np_acc : accent; }   /* theme.h: media surfaces (Braun: orange) */
 static void apply_accent(void)
 {
     {   /* Squash following the Accent Colour: its orange roles too, and the parts already built */
@@ -1813,7 +1821,7 @@ static void apply_accent(void)
         lv_obj_set_style_arc_color(ring, np_col(), LV_PART_INDICATOR);
     }
     if(vol_arc) lv_obj_set_style_arc_color(vol_arc, np_col(), LV_PART_INDICATOR);
-    if(imm_prog) lv_obj_set_style_arc_color(imm_prog, np_col(), LV_PART_INDICATOR);
+    if(imm_prog) lv_obj_set_style_arc_color(imm_prog, th_classic() ? TC(FIXED_MEDIA_WHITE) : np_col(), LV_PART_INDICATOR);
 
     if(cover_note) {
         lv_obj_set_style_text_color(cover_note, TC(FIXED_MEDIA_WHITE), LV_PART_MAIN);
@@ -1862,7 +1870,7 @@ lv_color_t ui_disco_fit_accent(lv_color_t c){
     }
     return c;
 }
-lv_color_t ui_current_accent(void){ if(th_simple() || th_null() || th_zune())return TC(ACCENT_PRIMARY); return th_braun_family() ? TC(ACCENT_PRIMARY) : ui_disco_fit_accent(accent); }   /* Braun: orange everywhere */
+lv_color_t ui_current_accent(void){ if(th_simple() || th_null() || th_zune() || th_classic())return TC(ACCENT_PRIMARY); return th_braun_family() ? TC(ACCENT_PRIMARY) : ui_disco_fit_accent(accent); }   /* Braun: orange everywhere */
 
 /* ---- shared standard header (back chevron + centred title) ------------------------------------- */
 static void ui_header_home_cb(lv_event_t *e){ if(lv_event_get_code(e)==LV_EVENT_CLICKED && screen_press_was_long()) screen_home(); }
@@ -1987,7 +1995,7 @@ static void fav_refresh(int on, int have)
 {
     g_np_fav = on; g_np_have = have;
     if(!btn_fav || !fav_icon) return;
-    if(have && !th_zune()) lv_obj_remove_flag(btn_fav, LV_OBJ_FLAG_HIDDEN);   /* Zune: Favourite lives in the hub */
+    if(have && !th_zune() && !th_classic()) lv_obj_remove_flag(btn_fav, LV_OBJ_FLAG_HIDDEN);   /* Zune: Favourite lives in the hub */
     else     lv_obj_add_flag(btn_fav, LV_OBJ_FLAG_HIDDEN);
     lv_label_set_text(fav_icon, HEART_FILLED);                     /* theme: solid, colour carries the state */
     lv_obj_set_style_text_color(fav_icon, on ? np_col() : th_braun_family() ? TC(TEXT_SECONDARY) : (g_np_poster || g_np_ring) ? TC(TEXT_PRIMARY) : TC(TEXT_MUTED), LV_PART_MAIN);
@@ -2100,6 +2108,7 @@ static int g_np_idle = -1;                                 /* Now Playing shows 
 static void np_idle_apply(int idle, int force);
 void kit_fork_np_braun(void);
 void kit_fork_np_zune(void);
+void kit_fork_np_classic(void);
 static void zune_title_fit_text(const char *t);
 static void zune_album_fit(const char *t);
 static void zune_idle(int idle);
@@ -2828,6 +2837,75 @@ void kit_fork_np_zune(void){
     }
     zune_col_chain();
     { track_state_t zs; ipc_get_state(&zs); if(!zs.have_track){ g_zidle = -1; zune_idle(1); } }   /* nothing loaded: applied again, this layout pass has just reset the column */
+}
+/* Classic: a title bar, "n of N", three centred lines, decorative bars, a pill seek bar, times, prev / play / next */
+void kit_fork_np_classic(void){
+    if(!th_classic() || !g_np_scr) return;
+    static lv_obj_t *seek;
+    ui_np_backdrop_enabled(0);
+    lv_obj_set_style_bg_color(g_np_scr, TC(CANVAS), LV_PART_MAIN);
+    SHOW(np_dots[0], 0); SHOW(np_dots[1], 0); SHOW(cover, 0); SHOW(ring, 0); SHOW(t_sep, 0); SHOW(album, 1);
+    SHOW(btn_fav, 0); SHOW(btn_queue, 0); SHOW(btn_mode, 0); SHOW(btn_sleep, 0);   /* in the actions menu: tap the title */
+    lv_obj_t *lines[3] = { title, artist, album };
+    const lv_font_t *fonts[3] = { TF(MUSIC_TITLE), TF(MUSIC_ARTIST), TF(MUSIC_ALBUM) };
+    const int ys[3] = { 106, 136, 162 };
+    for(int i = 0; i < 3; i++) if(lines[i]){
+        lv_obj_set_style_text_font(lines[i], fonts[i], 0);
+        lv_obj_set_style_text_color(lines[i], i == 2 ? TC(TEXT_MUTED) : TC(TEXT_PRIMARY), 0);
+        lv_obj_set_style_text_align(lines[i], LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_size(lines[i], 260, lv_font_get_line_height(fonts[i]));
+        lv_label_set_long_mode(lines[i], LV_LABEL_LONG_DOT);
+        lv_obj_align(lines[i], LV_ALIGN_TOP_MID, 0, ys[i]);
+    }
+    SHOW(np_mid_btn, 1);
+    if(np_mid_btn){ lv_obj_set_size(np_mid_btn, 260, 80); lv_obj_align(np_mid_btn, LV_ALIGN_TOP_MID, 0, 104); }
+    if(!seek){
+        seek = lv_slider_create(g_np_scr); lv_obj_remove_style_all(seek); kit_keep(seek);
+        lv_obj_set_size(seek, 240, 14); lv_obj_set_pos(seek, 60, 230);
+        lv_obj_set_style_border_width(seek, 2, LV_PART_MAIN); lv_obj_set_style_border_color(seek, TC(TEXT_PRIMARY), LV_PART_MAIN);
+        lv_obj_set_style_radius(seek, 7, LV_PART_MAIN); lv_obj_set_style_pad_all(seek, 3, LV_PART_MAIN);
+        lv_obj_set_style_bg_opa(seek, LV_OPA_COVER, LV_PART_INDICATOR); lv_obj_set_style_bg_color(seek, TC(TEXT_PRIMARY), LV_PART_INDICATOR);
+        lv_obj_set_style_radius(seek, 4, LV_PART_INDICATOR);
+        lv_obj_set_style_bg_opa(seek, LV_OPA_TRANSP, LV_PART_KNOB);
+        lv_obj_set_ext_click_area(seek, 18);
+        lv_obj_remove_flag(seek, LV_OBJ_FLAG_CLICKABLE);   /* the shared recognizer seeks; the bar only shows */
+    }
+    ui_np_seek_line(seek);
+    lv_obj_t *tm[2] = { t_elapsed, t_remain };
+    for(int i = 0; i < 2; i++) if(tm[i]){
+        lv_obj_set_style_text_font(tm[i], TF(UI_18), 0); lv_obj_set_style_text_color(tm[i], TC(TEXT_PRIMARY), 0);
+        lv_obj_set_width(tm[i], LV_SIZE_CONTENT);
+    }
+    if(t_elapsed) lv_obj_align(t_elapsed, LV_ALIGN_TOP_LEFT, 62, 252);
+    if(t_remain) lv_obj_align(t_remain, LV_ALIGN_TOP_RIGHT, -62, 252);
+    lv_obj_t *side[2] = { btn_prev, btn_next };
+    for(int i = 0; i < 2; i++) if(side[i]){
+        lv_obj_set_style_bg_opa(side[i], LV_OPA_TRANSP, 0); lv_obj_set_style_border_width(side[i], 0, 0);
+        lv_obj_set_style_shadow_width(side[i], 0, 0);
+        lv_obj_set_style_text_font(side[i], TF(UI_20), 0); lv_obj_set_style_text_color(side[i], TC(TEXT_PRIMARY), 0);
+        lv_obj_set_style_bg_color(side[i], TC(TEXT_PRIMARY), LV_STATE_PRESSED); lv_obj_set_style_bg_opa(side[i], LV_OPA_COVER, LV_STATE_PRESSED);
+        lv_obj_set_style_text_color(side[i], TC(CANVAS), LV_STATE_PRESSED);
+        lv_obj_set_style_radius(side[i], LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_size(side[i], 48, 48); lv_obj_set_style_pad_all(side[i], 0, 0);
+        lv_obj_set_style_text_align(side[i], LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_style_pad_top(side[i], (48 - lv_font_get_line_height(TF(UI_20))) / 2, 0);
+        lv_obj_align(side[i], LV_ALIGN_CENTER, i ? 76 : -76, 300 - 180);
+    }
+    if(btn_pp){
+        lv_obj_set_style_text_font(btn_pp, TF(UI_20), 0); lv_obj_set_style_text_color(btn_pp, TC(TEXT_PRIMARY), 0);
+        lv_obj_set_style_bg_opa(btn_pp, LV_OPA_TRANSP, 0); lv_obj_set_style_shadow_width(btn_pp, 0, 0);
+        lv_obj_set_style_border_color(btn_pp, TC(TEXT_PRIMARY), 0); lv_obj_set_style_border_width(btn_pp, 2, 0);
+        lv_obj_set_style_border_opa(btn_pp, LV_OPA_COVER, 0);
+        lv_obj_set_style_bg_color(btn_pp, TC(TEXT_PRIMARY), LV_STATE_PRESSED); lv_obj_set_style_bg_opa(btn_pp, LV_OPA_COVER, LV_STATE_PRESSED);
+        lv_obj_set_style_text_color(btn_pp, TC(CANVAS), LV_STATE_PRESSED);
+        lv_obj_set_style_radius(btn_pp, LV_RADIUS_CIRCLE, 0); lv_obj_set_style_pad_all(btn_pp, 0, 0);
+        lv_obj_set_size(btn_pp, 50, 50); lv_obj_set_style_text_align(btn_pp, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_style_pad_top(btn_pp, (50 - lv_font_get_line_height(TF(UI_20))) / 2 - 1, 0);
+        lv_obj_set_style_pad_left(btn_pp, 2, 0);
+        lv_obj_align(btn_pp, LV_ALIGN_CENTER, 0, 300 - 180);
+    }
+    g_ring_cx = 180; g_ring_cy = 180; g_ring_r = 0; g_tol_grab = 18; g_tol_wander = 30;
+    classic_np_chrome(g_np_scr);
 }
 static void np_layout(int poster){
     if(!poster&&g_posterx){if(poster_img)lv_image_set_src(poster_img,NULL);lv_image_cache_drop(&g_posterxdsc);free(g_posterx);g_posterx=NULL;g_poster_baked=0;}
@@ -4080,6 +4158,8 @@ const lv_font_t *ui_font_user(int size){
     int fs = theme_font_size();
     if(fs == 0 && size > 14) size -= 2;
     else if(fs == 2 && size < 20) size += 2;
+    if(th_classic())   /* Graphite: every list size in ChicagoFLF (Large reaches 22) */
+        return size >= 24 ? TF(UI_24) : size >= 22 ? TF(UI_22) : theme_font((theme_font_role_t)(THEME_FONT_USER_14+(size>=20?3:size>=18?2:size>=16?1:0)));
     return ui_font_cjk(size);
 }
 void ui_create(lv_obj_t *root)
@@ -4489,7 +4569,7 @@ void ui_create(lv_obj_t *root)
     lv_obj_set_size(imm_prog, 344, 344); lv_obj_center(imm_prog);
     lv_arc_set_rotation(imm_prog, 208); lv_arc_set_bg_angles(imm_prog, 0, 124); lv_arc_set_range(imm_prog, 0, 1000);
     lv_obj_set_style_arc_width(imm_prog, 3, LV_PART_MAIN); lv_obj_set_style_arc_color(imm_prog, TC(FIXED_MEDIA_TRACK), LV_PART_MAIN);
-    lv_obj_set_style_arc_width(imm_prog, 3, LV_PART_INDICATOR); lv_obj_set_style_arc_color(imm_prog, accent, LV_PART_INDICATOR);
+    lv_obj_set_style_arc_width(imm_prog, 3, LV_PART_INDICATOR); lv_obj_set_style_arc_color(imm_prog, th_classic() ? TC(FIXED_MEDIA_WHITE) : accent, LV_PART_INDICATOR);
 
     /* bottom scrim so title/artist stay legible over any cover */
     lv_obj_t *scrim = lv_obj_create(fsart);
@@ -4646,11 +4726,12 @@ void ui_update(const track_state_t *st)
         char ab[240];
         if(!book_meta_line(st, ab, sizeof ab)){        /* not a book -> album + position */
             const char *alb = st->album;
-            if(alb[0] && st->playing_num[0] && !th_braun2())   /* Braun 2.0: the album alone, under the scale */
+            if(th_classic()){ char ft[96]; classic_np_num(st->playing_num); imm_tech_text(st, ft, sizeof ft); classic_np_format(ft); }
+            if(alb[0] && st->playing_num[0] && !th_braun2() && !th_classic())   /* Braun 2.0, Classic: the album alone */
                 snprintf(ab, sizeof ab, "%s  \xC2\xB7  %s", alb, st->playing_num);          /* Album · 3/19 */
             else if(alb[0])
                 snprintf(ab, sizeof ab, "%s", alb);                                         /* Album */
-            else if(st->playing_num[0] && !th_braun2()){
+            else if(st->playing_num[0] && !th_braun2() && !th_classic()){
                 const char *sl = strchr(st->playing_num, '/');
                 if(sl && sl[1]) snprintf(ab, sizeof ab, "%.*s / %s", (int)(sl - st->playing_num), st->playing_num, sl + 1);  /* 3 / 19 */
                 else            snprintf(ab, sizeof ab, "%s", st->playing_num);
@@ -4681,11 +4762,11 @@ void ui_update(const track_state_t *st)
         if(is_book){
             lv_obj_add_flag(btn_fav, LV_OBJ_FLAG_HIDDEN);
             lv_obj_add_flag(btn_mode, LV_OBJ_FLAG_HIDDEN);
-            if(!th_braun2()) lv_obj_remove_flag(btn_sleep, LV_OBJ_FLAG_HIDDEN);   /* moon replaces the heart for books (Braun 2.0: the track menu) */
+            if(!th_braun2() && !th_classic()) lv_obj_remove_flag(btn_sleep, LV_OBJ_FLAG_HIDDEN);   /* moon replaces the heart for books (Braun 2.0: the track menu) */
             int armed = ui_sleep_state(NULL);                   /* accent the moon while a timer is set */
             lv_obj_set_style_text_color(sleep_icon, armed ? accent : TC(TEXT_MUTED), LV_PART_MAIN);
         } else {
-            if(!th_zune()) lv_obj_remove_flag(btn_mode, LV_OBJ_FLAG_HIDDEN);   /* Zune: play mode lives in the actions menu */
+            if(!th_zune() && !th_classic()) lv_obj_remove_flag(btn_mode, LV_OBJ_FLAG_HIDDEN);   /* Zune: play mode lives in the actions menu */
             lv_obj_add_flag(btn_sleep, LV_OBJ_FLAG_HIDDEN);
             ui_np_close_overlays();   /* not a book -> dismiss any open sleep popover (its context is gone) */
         }
@@ -4798,6 +4879,14 @@ static void vol_needle(int v){                               /* Braun: an orange
     lv_line_set_points(g_vol_needle, g_vol_np, 2);
 }
 static void dvol_paint(int v);
+static lv_obj_t *g_cvol_bar;   /* Graphite: the pill bar in the box; drives the (invisible) rim arc */
+static void vol_arc_cb(lv_event_t *e);
+static void cvol_bar_cb(lv_event_t *e){
+    lv_event_code_t code = lv_event_get_code(e);
+    if(g_vol_suppress || !g_vol_arc) return;
+    lv_arc_set_value(g_vol_arc, lv_slider_get_value(g_cvol_bar));
+    lv_obj_send_event(g_vol_arc, code, NULL);
+}
 static void vol_arc_cb(lv_event_t *e)
 {
     lv_event_code_t code = lv_event_get_code(e);
@@ -5081,12 +5170,41 @@ void ui_show_volume(int vol)
             lv_obj_set_style_text_font(cap, TF(UI_14), 0); lv_obj_set_style_text_color(cap, TC(TEXT_SECONDARY), 0);
             lv_obj_t *mid = lv_obj_get_child(g_vol_panel, 1); (void)mid;
         }
+        if(th_classic()){   /* Graphite: a framed box - "Volume", a small and a loud speaker, the theme's pill bar */
+            lv_obj_set_style_bg_color(g_vol_panel, TC(CANVAS), 0); lv_obj_set_style_bg_opa(g_vol_panel, 140, 0);
+            lv_obj_set_style_arc_opa(g_vol_arc, LV_OPA_TRANSP, LV_PART_MAIN); lv_obj_set_style_arc_opa(g_vol_arc, LV_OPA_TRANSP, LV_PART_INDICATOR);
+            lv_obj_set_style_bg_opa(g_vol_arc, LV_OPA_TRANSP, LV_PART_KNOB); lv_obj_set_style_border_width(g_vol_arc, 0, LV_PART_KNOB);
+            lv_obj_add_flag(lv_obj_get_parent(g_vol_num), LV_OBJ_FLAG_HIDDEN);
+            lv_obj_t *box = lv_obj_create(g_vol_panel); lv_obj_remove_style_all(box);
+            lv_obj_set_size(box, 280, 68); lv_obj_align(box, LV_ALIGN_CENTER, 0, 20);
+            lv_obj_set_style_bg_color(box, TC(CANVAS), 0); lv_obj_set_style_bg_opa(box, LV_OPA_COVER, 0);
+            lv_obj_set_style_border_width(box, 2, 0); lv_obj_set_style_border_color(box, TC(TEXT_PRIMARY), 0); lv_obj_set_style_radius(box, 6, 0);
+            lv_obj_clear_flag(box, LV_OBJ_FLAG_SCROLLABLE);
+            lv_obj_t *cap = lv_label_create(box); lv_label_set_text(cap, "Volume");
+            lv_obj_set_style_text_font(cap, TF(UI_14), 0); lv_obj_set_style_text_color(cap, TC(TEXT_PRIMARY), 0); lv_obj_align(cap, LV_ALIGN_TOP_MID, 0, 6);
+            lv_obj_t *lo = lv_label_create(box); lv_label_set_text(lo, LV_SYMBOL_VOLUME_MID);
+            lv_obj_set_style_text_font(lo, TF(UI_14), 0); lv_obj_set_style_text_color(lo, TC(TEXT_PRIMARY), 0); lv_obj_align(lo, LV_ALIGN_BOTTOM_LEFT, 10, -10);
+            lv_obj_t *hi = lv_label_create(box); lv_label_set_text(hi, LV_SYMBOL_VOLUME_MAX);
+            lv_obj_set_style_text_font(hi, TF(UI_20), 0); lv_obj_set_style_text_color(hi, TC(TEXT_PRIMARY), 0); lv_obj_align(hi, LV_ALIGN_BOTTOM_RIGHT, -8, -8);
+            g_cvol_bar = lv_slider_create(box); lv_obj_remove_style_all(g_cvol_bar);
+            lv_obj_set_size(g_cvol_bar, 192, 14); lv_obj_align(g_cvol_bar, LV_ALIGN_BOTTOM_MID, -2, -12);
+            lv_slider_set_range(g_cvol_bar, 0, VOL_MAX);
+            lv_obj_set_style_border_width(g_cvol_bar, 2, LV_PART_MAIN); lv_obj_set_style_border_color(g_cvol_bar, TC(TEXT_PRIMARY), LV_PART_MAIN);
+            lv_obj_set_style_radius(g_cvol_bar, 7, LV_PART_MAIN); lv_obj_set_style_pad_all(g_cvol_bar, 3, LV_PART_MAIN);
+            lv_obj_set_style_bg_opa(g_cvol_bar, LV_OPA_COVER, LV_PART_INDICATOR); lv_obj_set_style_bg_color(g_cvol_bar, TC(TEXT_PRIMARY), LV_PART_INDICATOR);
+            lv_obj_set_style_radius(g_cvol_bar, 4, LV_PART_INDICATOR); lv_obj_set_style_bg_opa(g_cvol_bar, LV_OPA_TRANSP, LV_PART_KNOB);
+            lv_obj_set_ext_click_area(g_cvol_bar, 16);
+            lv_obj_add_event_cb(g_cvol_bar, cvol_bar_cb, LV_EVENT_VALUE_CHANGED, NULL);
+            lv_obj_add_event_cb(g_cvol_bar, cvol_bar_cb, LV_EVENT_RELEASED, NULL);
+            lv_obj_add_event_cb(g_cvol_bar, cvol_bar_cb, LV_EVENT_PRESS_LOST, NULL);
+            kit_keep(box); kit_keep(g_cvol_bar);
+        }
     }
     if(th_braun2()) vol2_gain_paint();             /* gain may have changed in Settings or QS */
     if(th_zune() && !g_zvol_cap) zvol_build();
     int zvol_opening=th_zune()&&lv_obj_has_flag(g_vol_panel,LV_OBJ_FLAG_HIDDEN);
     if(th_zune()){zvol_paint();lv_obj_set_style_bg_color(g_zvol_mark,ui_current_accent(),0);}
-    if(!th_braun_family()){ lv_color_t acc = ui_current_accent();       /* follow an accent change (Braun: always orange) */
+    if(!th_braun_family() && !th_classic()){ lv_color_t acc = ui_current_accent();       /* follow an accent change (Braun: always orange) */
       lv_obj_set_style_arc_color(g_vol_arc, acc, LV_PART_INDICATOR);
       lv_obj_set_style_bg_color(g_vol_arc, acc, LV_PART_KNOB);
       lv_obj_set_style_text_color(lv_obj_get_child(lv_obj_get_parent(g_vol_num), 0), acc, 0); }
@@ -5094,9 +5212,10 @@ void ui_show_volume(int vol)
     /* Don't yank the arc out from under an active finger drag: while the arc is
      * pressed, vol_arc_cb already tracks the live value, and a lagging a714 echo
      * would jump it back. Skip the programmatic value/number set in that case. */
-    if(!(lv_obj_get_state(g_vol_arc) & LV_STATE_PRESSED)){
+    if(!(lv_obj_get_state(g_vol_arc) & LV_STATE_PRESSED) && !(g_cvol_bar && (lv_obj_get_state(g_cvol_bar) & LV_STATE_PRESSED))){
         g_vol_suppress = 1;
         lv_arc_set_value(g_vol_arc, vol);
+        if(g_cvol_bar) lv_slider_set_value(g_cvol_bar, vol, LV_ANIM_OFF);
         vol_needle(vol);
         dvol_paint(vol);
         g_vol_suppress = 0;
