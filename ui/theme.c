@@ -717,13 +717,14 @@ void theme_init(void){
     if(cfg_get_int("theme_auto",0)){
         if(cfg_set_int("theme_variant",2)==0) cfg_set_int("theme_auto",0);
     }
-    int outdoor = cfg_get_int("outdoor", 0) == 1;
-    g_outdoor = outdoor;
-    g_variant = (outdoor || cfg_get_int("theme_variant", 0) == 1) ? 1 : 0;
     g_preset = cfg_get_int("theme_preset", THEME_PRESET_DISCO);
     if(g_preset!=THEME_PRESET_CUSTOM&&!theme_preset_available(g_preset)){
         g_preset=THEME_PRESET_DISCO;cfg_set_int("theme_preset",g_preset);
     }
+    /* Zune hides the Outdoor toggle: a value saved under another theme must not lock it in Light */
+    int outdoor = cfg_get_int("outdoor", 0) == 1 && g_preset != THEME_PRESET_ZUNE;
+    g_outdoor = outdoor;
+    g_variant = (outdoor || cfg_get_int("theme_variant", 0) == 1) ? 1 : 0;
     if(g_preset==THEME_PRESET_NULL)g_variant=0;   /* dark-only themes */
     if(theme_auto_supported() && cfg_get_int("theme_variant",0)==2 && !outdoor){
         time_t now=time(NULL); struct tm tm; localtime_r(&now,&tm);

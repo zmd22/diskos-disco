@@ -3330,6 +3330,8 @@ int main(int argc, char **argv){
         fprintf(stderr,"fbpan try %d failed, retry\n",i); fflush(stderr); usleep(250000); }
     if(!fbok){ fprintf(stderr,"fbpan failed (gave up)\n"); return 1; }
     cfg_load();
+    { char *a[] = { "hwclock", "-s", NULL };
+      run_bounded(a, 6000); }                    /* load system clock from RTC (kept in local time) before Auto picks day / night */
     theme_init();   /* the palette for this run: before any screen is built */
     swipe_thresh_load();
     settings_apply_startup();   /* restore saved brightness */
@@ -3338,8 +3340,6 @@ int main(int argc, char **argv){
     home_set_settings_click_cb(go_settings);
     library_set_song_click_cb(on_song_play);   /* tap a song -> play it */
     search_set_song_click_cb(on_search_play);   /* search result -> play in all-songs scope (no stale drill ctx) */
-    { char *a[] = { "hwclock", "-s", NULL };
-      run_bounded(a, 6000); }                    /* load system clock from RTC; bounded so a busy I2C/RTC can't wedge boot */
     lv_timer_create(hwclock_save_tick, 300000, NULL); /* write system time back to the RTC every 5 min */
     lv_timer_create(clock_tick, 10000, NULL);   /* refresh wall clock every 10s */
     g_t_book = lv_timer_create(book_tick, 400, NULL);   /* drive the audiobook session: confirm load, resume, checkpoint */
