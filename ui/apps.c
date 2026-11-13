@@ -58,6 +58,7 @@ static void scan_apps(void){
         md5_hex("builtin:stats", 13, a->id);
         snprintf(a->name, sizeof a->name, "Listening Stats"); snprintf(a->exec, sizeof a->exec, "%s", APP_BUILTIN_STATS);
     }
+    {app_t*a=&g_apps[g_napps++];md5_hex("cat-dash",8,a->id);snprintf(a->name,sizeof a->name,"Cat Dash");snprintf(a->exec,sizeof a->exec,"%s",APP_BUILTIN_RUNNER);}   /* built-in game */
     {app_t*a=&g_apps[g_napps++];md5_hex("disc-shelf",10,a->id);snprintf(a->name,sizeof a->name,"Disc Shelf");snprintf(a->exec,sizeof a->exec,"%s",APP_BUILTIN_SHELF);}
     DIR *d = opendir(APPS_DIR);
     if(!d) return;
