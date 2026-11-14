@@ -2,7 +2,7 @@
 
 > `dev` is experimental. Use tagged releases. [Dev notes](docs/DEV.md)
 
-**3.6.0:** progressive lyrics (words light up as they're sung, tap a line to seek), Cat Dash, a built-in game, and fixes for Zune and Disc Shelf SMB. [Release notes](docs/releases/v3.6.0.md) · [Bluetooth](docs/BLUETOOTH.md) · [Changelog](CHANGELOG.md)
+**3.6.1:** Graphite, a new monochrome LCD-style theme with a white, grey or amber backlight. [Release notes](docs/releases/v3.6.1.md) · [Bluetooth](docs/BLUETOOTH.md) · [Changelog](CHANGELOG.md)
 
 <p align="center">
   <b>Your music. Your kind of Disco.</b><br>
@@ -44,7 +44,7 @@
 
 ## Features
 
-- 8 themes: Disco, Null, Squash, Zune, Braun 2.0, Ring, Braun, Stone
+- 9 themes: Disco, Null, Squash, Zune, Graphite, Braun 2.0, Ring, Braun, Stone
 - Local library, playlists, Queue; List, Wall, Coverflow and Wheel views; Immersive mode with progressive lyrics
 - Built-in apps: SongSphere, Listening Stats, Album Roulette, Boomshine, Cat Dash, Disc Shelf
 - Bluetooth: SBC, AAC, LDAC, aptX / aptX HD ([experimental](docs/BLUETOOTH.md))
@@ -91,7 +91,7 @@ With the Disc off, hold **Volume Down** and plug in USB (screen stays black). Wi
 **Windows / Linux app:** use the Update tab ([Windows](docs/WINDOWS.md#update-from-the-sd-card), [Linux](docs/LINUX.md)). **CLI:** sign the release `mq_ui` with the keys installed on the Disc:
 
 ```sh
-sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 3.6.0      # -> ./diskos-update/
+sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 3.6.1      # -> ./diskos-update/
 ```
 
 Copy the six files to `<SD>/diskos-update/`, overwriting, then **Settings › System › Maintenance › Update from SD Card › Update** and restart. The update boots as a trial: **Keep** (or confirmed playback) accepts it, **Go back** or a failure rolls back. [Details](docs/UPDATING.md)

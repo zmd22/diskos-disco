@@ -1,16 +1,16 @@
 {
-  "version": "3.6.0",
-  "revision": "Progressive lyrics in Lyrics and Immersive: smooth line motion, Enhanced LRC word timing, optional estimated word timing, tap a timed line to seek (#29, without its Now Playing links); Cat Dash, a built-in endless runner (#26); Zune ignores a saved Outdoor mode and the RTC is read before the Auto appearance (#27); Disc Shelf SMB downloads complete on older FAT/exFAT cards by an exclusive bounded copy, with operation-specific errors (#28)",
-  "baseline": "v3.5.1",
-  "ui_source_sha256": "807f6027c1bd3a71c6209d76e4cef2ef5484699903cb23f0fc1b88e3d29ad9a4",
+  "version": "3.6.1",
+  "revision": "Graphite, a monochrome LCD-style list theme in ChicagoFLF with a White, Grey or Amber backlight and optional Now Playing spectrum bars (#31)",
+  "baseline": "v3.6.0",
+  "ui_source_sha256": "63f8b3fef7a7d194dab3e424035128c7e7243dff75f675ed6873cd4970cfd414",
   "ui_source_hash_recipe": "sorted tracked ui paths: path + NUL + file bytes + NUL",
-  "compiler": "musl-cross-make GCC 11.2.0, musl 1.2.6; mipsel-linux-musl, -ffp-contract=off",
+  "compiler": "GCC 11.2.0 (gcc-mirror releases/gcc-11.2.0) and musl 1.2.6 with musl-cross-make 227df8b patches, Linux headers 4.19.88-2; binutils 2.42 (Ubuntu binutils-mipsel-linux-gnu); mipsel-linux-musl, -ffp-contract=off",
   "abi": "static little-endian MIPS32r2, o32, FP64, NaN2008",
-  "status": "Fresh static MIPS build from a clean export of source_base_commit. Host tests (theme check, lyrics, SMB publication and encrypted SMB3 integration) passed. The same source with the test label \"dev1\" was signed as 3.5.1-dev1 and run on a Disc: clean start, no stalls or crashes, memory steady, Immersive with progressive lyrics on and off measured. This exact binary has not itself been physically tested.",
+  "status": "Fresh static MIPS build from a clean export of source_base_commit. Host: check-theme and the host-render build passed. The maintainer reports Graphite was tested on a Disc by others; this exact binary has not itself been physically tested.",
   "binary": {
-    "sha256": "8701f47f67041e6000404ef7301fbcddf990d43bbc91c8dbb76045600d96823b",
-    "md5": "03c56e54a255f1f3df115176b38ab2c5",
-    "bytes": 7859716
+    "sha256": "058de8b9df3a54e2cc55c303cdc4e199c9e2b2809fd0a5b9d4411bbb026dc78b",
+    "md5": "d85c225f98f28caefb2edecbd5d1e162",
+    "bytes": 8099632
   },
   "artwork_helper": {
     "bytes": 119424,
@@ -26,10 +26,10 @@
     "bluealsa": "BlueALSA 4.0.0 (MIT) with build/bluealsa-aptx/patches/0001-0003, embedded in mq_ui",
     "libfreeaptx": "0.1.1 (LGPL-2.1-or-later), embedded as a separate shared library; source in ui/vendor/aptx"
   },
-  "baseline_commit": "c8441a037466a0bf1a72f95b62df511391e975fa",
-  "source_identity": "Built from source_base_commit (DISCO_VERSION 3.6.0, empty test label). ui_source_sha256 identifies the exact tracked UI snapshot.",
-  "release_tag": "v3.6.0",
-  "source_base_commit": "167dcac58ff65ccb22ca3a3bc7f1e6847a70b06b",
+  "baseline_commit": "577931424c49b2b4fd790e968f26a22d68d1669d",
+  "source_identity": "Built from source_base_commit (DISCO_VERSION 3.6.1, empty test label). ui_source_sha256 identifies the exact tracked UI snapshot.",
+  "release_tag": "v3.6.1",
+  "source_base_commit": "72a39fda0420e21598d306ccd7d25c84e897504b",
   "crypto": "Monocypher 4.0.2 (BSD-2-Clause or CC0-1.0), unmodified, in ui/vendor/monocypher",
   "flac": "dr_flac 0.13.4 (Unlicense or MIT-0), unmodified, in ui/vendor/dr_flac"
 }

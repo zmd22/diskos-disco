@@ -14,7 +14,7 @@ All themes share seven root categories. Rows depend on theme and firmware: inapp
 
 ## Display
 
-- **Theme** selects Disco, Ring, Braun, Braun 2.0, Stone, Null, Squash or Zune. 
+- **Theme** selects Disco, Ring, Braun, Braun 2.0, Stone, Null, Squash, Zune or Graphite. 
 - **<theme> settings** holds Appearance, Music screen, Navigation, Quick settings layout and Screensaver design, where applicable.
 - **Light / dark** Dark, Light or Auto (day = 07:00–19:00, switches while the screen is off). Null is dark only.
 - **Immersive** Style (Vinyl/CD/Cover), lyrics, Circular control (Duration/Volume).
@@ -34,6 +34,7 @@ All themes share seven root categories. Rows depend on theme and firmware: inapp
 | Squash | Plain/Blur/Cover background, independent Music font preference, playback state/mode indicators, gesture Music controls and fixed right-side navigation/QS layout. No custom accent selector. |
 | Zune | Dark/Light/Auto, accent and main-icon/menu assignments, lock-screen content and clock tint. No separate Now Playing style selector. |
 | Braun 2.0 | Dark/Light/Auto, fixed orange accent, Music Controls (Buttons/Gestures) and Layout (Art left/Art on top), independent eight-item Quick Settings selection, and shared saver choices. |
+| Graphite | Dark/Light/Auto with Outdoor right under it, Backlight (White/Grey/Amber, Light only), Spectrum bars on Now Playing (Off shows the track's format), fixed ink accent, its own Quick Settings selection. |
 | Ring / Braun / Stone | Own appearance, Music and saver controls. The **Ring Now Playing layout** is unrelated to the **Ring theme**. |
 
 ## Other paths

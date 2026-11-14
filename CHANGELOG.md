@@ -2,6 +2,14 @@
 
 User-facing changes in diskOS Disco!. Details of each release are in [docs/releases](docs/releases/); everything else is in the Git history. diskOS is beta software.
 
+## 3.6.1
+
+**Graphite.** [Release notes](docs/releases/v3.6.1.md)
+
+- **Graphite**, a new theme: a monochrome LCD look with a title bar, one fixed menu column and inverted selection, in
+  the ChicagoFLF font. Light offers a White, Grey or Amber backlight; Dark is ink on black. Optional spectrum bars on
+  Now Playing (#31, by @ericklv).
+
 ## 3.6.0
 
 **Progressive lyrics and Cat Dash.** [Release notes](docs/releases/v3.6.0.md)

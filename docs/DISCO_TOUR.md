@@ -1,4 +1,4 @@
-# Disco 3.6.0 tour
+# Disco 3.6.1 tour
 
 Touch UI for the round Snowsky Disc. FiiO's stock player handles audio; Disco handles browsing, controls and built-in
 apps. Full menus: [Settings](DISPLAY_SETTINGS.md).
@@ -13,6 +13,8 @@ first pull shows now playing).
 
 Guides for Disco, Null, Squash and Zune are in the [docs index](README.md). **Braun 2.0** (3.3.0) is a Rams-inspired
 light/dark theme: wall-clock Home, radio-dial seek scale, shaded keys with orange icons. Ring, Braun and Stone remain.
+**Graphite** (3.6.1) is a monochrome LCD-style list theme in ChicagoFLF: a title bar, one menu column and inverted
+selection, with a White, Grey or Amber backlight in Light.
 Appearance, accents, fonts and shortcuts: **Settings › Display**.
 
 ## Music and Immersive
