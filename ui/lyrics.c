@@ -443,7 +443,7 @@ static int show_timed(const char *lrc)
         lv_label_set_long_mode(l, LV_LABEL_LONG_WRAP);
         lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, 0);
         lv_obj_set_style_text_font(l, th_zune() ? zune_font(&font_zune_light_32) :
-                                  th_braun_family() ? br_font(20,0) : ui_font_cjk(20), 0);
+                                  th_braun_family() ? br_font(20,0) : th_classic() ? TF(UI_24) : ui_font_cjk(20), 0);
         lv_obj_set_style_text_line_space(l, 6, 0);
         lv_obj_set_style_text_color(l, TC(TEXT_MUTED), 0);
         lv_obj_set_style_text_opa(l, 170, 0);
@@ -755,7 +755,7 @@ void lyrics_create(lv_obj_t *root)
     lv_obj_set_width(g_text, 280);
     lv_label_set_long_mode(g_text, LV_LABEL_LONG_WRAP);
     lv_obj_set_style_text_align(g_text, LV_TEXT_ALIGN_CENTER, 0);
-    lv_obj_set_style_text_font(g_text, ui_font_cjk(20), 0);   /* larger; CJK lyrics render via Source Han Sans fallback */
+    lv_obj_set_style_text_font(g_text, th_classic() ? TF(UI_24) : ui_font_cjk(20), 0);   /* larger; CJK lyrics render via Source Han Sans fallback */
     lv_obj_set_style_text_color(g_text, TC(TEXT_LYRICS), 0);
     lv_obj_set_style_text_line_space(g_text, 6, 0);
     lv_label_set_text(g_text, "");

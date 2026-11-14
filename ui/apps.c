@@ -3,6 +3,7 @@
 /* Copyright (C) 2026 diskOS contributors */
 #include "screens.h"
 #include "theme.h"
+#include "classic.h"
 #include "theme_kit.h"
 #include "anim.h"
 #include "theme.h"
@@ -114,7 +115,7 @@ static const scdef_t SC[] = {
 #define NSCDEF ((int)(sizeof SC / sizeof SC[0]))
 static const char *const SC_DEFAULT[NSC] = { "weather", "eq", "folders", "immersive", "allapps", "search" };
 typedef struct { const char *icon; char name[64]; int kind; int idx; int font; } aitem_t;  /* kind: 0 Last.fm, 1 app, 2 Settings, 3 shortcut */
-static aitem_t g_items[MAX_APPS + 2];
+static aitem_t g_items[MAX_APPS + 2 + NSC];   /* Graphite lists the shortcuts and every app together */
 static int g_nitems, g_page, g_all;          /* g_all: showing All apps instead of the shortcuts */
 static lv_obj_t *g_box;
 static orbit_t g_orb;
@@ -308,11 +309,39 @@ static void b2_build(void){
         ui_on(b, b2_pick_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i, "apps.pick", UI_CORE); br2_keep_tree(b);
     }
 }
+/* Graphite: Shortcuts / All apps as its menu, every entry on one scrolling list */
+/* Graphite: the built-in pastimes (Cat Dash, Disc Shelf) move up to the 4th and 5th rows; absent ones are skipped */
+static void classic_promote(void){
+    static const char *const FEAT[] = { "builtin:cat-dash", APP_BUILTIN_SHELF };
+    int at = 3;
+    for(int f = 0; f < 2; f++) for(int i = 0; i < g_nitems; i++){
+        if(g_items[i].kind != 1 || g_items[i].idx < 0 || strcmp(g_apps[g_items[i].idx].exec, FEAT[f])) continue;
+        if(i > at){ aitem_t t = g_items[i]; memmove(&g_items[at + 1], &g_items[at], (size_t)(i - at) * sizeof t); g_items[at] = t; }
+        if(i >= at) at++;
+        break;
+    }
+}
+static void classic_build(void){
+    g_page = 0;
+    classic_header(g_box, "Apps", NULL);
+    if(g_nitems < 1){
+        lv_obj_t *l = lv_label_create(g_box); lv_label_set_text(l, "Choose shortcuts in\nSettings > Display > Shortcuts");
+        lv_obj_set_style_text_align(l, LV_TEXT_ALIGN_CENTER, 0); lv_obj_set_style_text_color(l, TC(TEXT_SECONDARY), 0);
+        lv_obj_align(l, LV_ALIGN_CENTER, 0, 0);
+        return;
+    }
+    lv_obj_t *list = classic_list(g_box, CLASSIC_LIST_Y, CLASSIC_LIST_H);
+    for(int i = 0; i < g_nitems; i++){
+        lv_obj_t *r = classic_row(list, g_items[i].name, 1);
+        ui_on(r, b2_pick_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i, "apps.pick", UI_CORE);
+    }
+}
 static void build_page(void){
     if(!g_box) return;
     lv_obj_clean(g_box);
     memset(&g_orb, 0, sizeof g_orb);
     if(th_zune()){ zune_build(); return; }
+    if(th_classic()){ classic_build(); return; }
     if(th_braun2()){ b2_build(); return; }
     if((th_disco_family() || th_null())){ disco_build(); return; }
     int per = g_all ? PER_PAGE : sc_count();
@@ -351,18 +380,19 @@ void apps_reload(void){
         for(int s2 = 0; s2 < sc_count(); s2++){
             const char *k = sc_key(s2); const char *gl; int f;
             snprintf(g_sckey[s2], sizeof g_sckey[s2], "%s", k);
-            if(!k[0] || !sc_describe(k, &gl, g_items[g_nitems].name, sizeof g_items[0].name, &f)) continue;
+            if(!k[0] || (th_classic() && !strcmp(k, "allapps")) || !sc_describe(k, &gl, g_items[g_nitems].name, sizeof g_items[0].name, &f)) continue;
             g_items[g_nitems].icon = gl; g_items[g_nitems].font = f; g_items[g_nitems].kind = 3; g_items[g_nitems].idx = s2; g_nitems++;
         }
-        build_page(); return;
+        if(!th_classic()){ build_page(); return; }
     }
-    /* All apps: Last.fm, the homebrew apps, Settings */
+    /* All apps: Last.fm, the homebrew apps, Settings (Graphite: after the shortcuts, on the same list) */
     g_items[g_nitems].icon = LFM_ICON; g_items[g_nitems].font = 1; snprintf(g_items[g_nitems].name, sizeof g_items[0].name, "Last.fm"); g_items[g_nitems].kind = 0; g_items[g_nitems].idx = -1; g_nitems++;
-    for(int i = 0; i < g_napps && g_nitems < MAX_APPS + 1; i++){
+    for(int i = 0; i < g_napps && g_nitems < MAX_APPS + 1 + NSC; i++){
         g_items[g_nitems].icon = app_glyph(i); g_items[g_nitems].font = 1; snprintf(g_items[g_nitems].name, sizeof g_items[0].name, "%.63s", g_apps[i].name);
         g_items[g_nitems].kind = 1; g_items[g_nitems].idx = i; g_nitems++;
     }
     g_items[g_nitems].icon = LV_SYMBOL_SETTINGS; g_items[g_nitems].font = 1; snprintf(g_items[g_nitems].name, sizeof g_items[0].name, "Settings"); g_items[g_nitems].kind = 2; g_items[g_nitems].idx = -1; g_nitems++;
+    if(th_classic()) classic_promote();
     build_page();
 }
 

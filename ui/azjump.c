@@ -285,7 +285,7 @@ void azjump_position(azjump_t*a,char letter,int x,int y){
         (void)x;(void)y;return;
     }
     lv_obj_set_size(a->btn,28,28);lv_obj_set_pos(a->btn,x-14,y-14);
-    lv_obj_set_style_radius(a->btn,th_null()?0:LV_RADIUS_CIRCLE,0);
+    lv_obj_set_style_radius(a->btn,th_null()?0:th_classic()?4:LV_RADIUS_CIRCLE,0);
     lv_obj_set_style_bg_color(a->btn,TC(ACCENT_PRIMARY),0);lv_obj_set_style_bg_opa(a->btn,LV_OPA_COVER,0);kit_keep(a->btn);
     lv_obj_t*l=lv_obj_get_child(a->btn,0);char text[2]={wheel_glyph(wheel_letters[a->current]),0};lv_label_set_text(l,text);
     lv_obj_set_style_text_font(l,TF(UI_18),0);lv_obj_set_style_text_color(l,TC(ON_ACCENT),0);lv_obj_center(l);kit_keep(l);
@@ -320,9 +320,9 @@ static void grid_bg_cb(lv_event_t *e){                       /* a tap outside th
 /* the keypad as it opens: above everything (Null keeps its lists in a higher layer), letters the list doesn't have
  * dimmed and untappable, the list's current letter filled in the accent */
 static void keypad_prepare(azjump_t *a){
-    if(!rim_mode() || th_zune()) return;
+    if((!rim_mode() && !th_classic()) || th_zune()) return;
     lv_obj_set_parent(a->grid, lv_layer_top());
-    lv_obj_set_style_bg_color(a->grid, TC(CANVAS), 0); lv_obj_set_style_bg_opa(a->grid, 250, 0);   /* set as it opens: no theme pass undoes it */
+    lv_obj_set_style_bg_color(a->grid, TC(CANVAS), 0); lv_obj_set_style_bg_opa(a->grid, th_classic() ? LV_OPA_COVER : 250, 0);   /* set as it opens: no theme pass undoes it */
     unsigned char have[27]; present_letters(a, have);
     const char *p = a->at ? strchr(wheel_letters, a->at) : NULL; int cur = p && *p ? (int)(p - wheel_letters) : -1;
     for(int i = 0; i < 27; i++){
@@ -331,6 +331,14 @@ static void keypad_prepare(azjump_t *a){
         const char *kp = l ? strchr(wheel_letters, toupper((unsigned char)lv_label_get_text(l)[0])) : NULL;
         int li = kp && *kp ? (int)(kp - wheel_letters) : 0;
         int on = have[li], now = li == cur;
+        if(th_classic()){   /* Graphite: framed keys; the current one filled in ink, missing ones faded */
+            lv_obj_set_style_bg_color(cell, now ? TC(TEXT_PRIMARY) : TC(CANVAS), 0); lv_obj_set_style_bg_opa(cell, LV_OPA_COVER, 0);
+            lv_obj_set_style_border_color(cell, on ? TC(TEXT_PRIMARY) : TC(BORDER), 0);
+            lv_obj_set_style_text_color(cell, now ? TC(CANVAS) : on ? TC(TEXT_PRIMARY) : TC(TEXT_DISABLED), 0);
+            if(l) lv_obj_remove_local_style_prop(l, LV_STYLE_TEXT_COLOR, LV_PART_MAIN);   /* the key's colour, pressed too */
+            if(on) lv_obj_add_flag(cell, LV_OBJ_FLAG_CLICKABLE); else lv_obj_remove_flag(cell, LV_OBJ_FLAG_CLICKABLE);
+            continue;
+        }
         lv_obj_set_style_bg_color(cell, now ? TC(ACCENT_PRIMARY) : TC(SURFACE_RAISED), 0);
         lv_obj_set_style_bg_opa(cell, on ? LV_OPA_COVER : LV_OPA_30, 0);
         if(l) lv_obj_set_style_text_color(l, now ? TC(ON_ACCENT) : on ? TC(TEXT_PRIMARY) : theme_color_mix(TC(CANVAS), TC(TEXT_PRIMARY), 190), 0);
@@ -436,19 +444,20 @@ void azjump_create(azjump_t *a, lv_obj_t *root, azjump_cb_t jump, const char *ta
             lv_obj_set_user_data(cell, (void *)(intptr_t)AZ[i]);
         }
     }
-    if(rim_mode() && !th_zune()){   /* a round keypad - rows of 5, 6, 6, 6, 4 round keys that follow the circle */
+    if((rim_mode() || th_classic()) && !th_zune()){   /* a round keypad - rows of 5, 6, 6, 6, 4 round keys that follow the circle */
         static const int ROWN[5] = { 5, 6, 6, 6, 4 };
-        lv_obj_set_style_bg_color(a->grid, TC(CANVAS), 0); lv_obj_set_style_bg_opa(a->grid, 240, 0); kit_keep(a->grid);   /* the list recedes fully */
+        lv_obj_set_style_bg_color(a->grid, TC(CANVAS), 0); lv_obj_set_style_bg_opa(a->grid, th_classic() ? LV_OPA_COVER : 240, 0); kit_keep(a->grid);   /* the list recedes fully */
         lv_obj_align(gt, LV_ALIGN_TOP_MID, 0, 34);
         for(int i = 0; i < n; i++){
             int row = 0, base = 0; while(row < 4 && i >= base + ROWN[row]){ base += ROWN[row]; row++; }
             int col = i - base, cx = 180 + (col - (ROWN[row] - 1) / 2.0f) * 50, cy = 92 + row * 50;
             lv_obj_t *cell = lv_obj_get_child(a->grid, (int32_t)(i + 1));   /* child 0 is the "Jump to" label */
             lv_obj_set_size(cell, 42, 42); lv_obj_set_pos(cell, cx - 21, cy - 21);
-            lv_obj_set_style_radius(cell, th_null() ? 4 : LV_RADIUS_CIRCLE, 0);
+            lv_obj_set_style_radius(cell, th_null() || th_classic() ? 4 : LV_RADIUS_CIRCLE, 0);
             lv_obj_set_style_bg_color(cell, TC(SURFACE_RAISED), 0); lv_obj_set_style_bg_opa(cell, LV_OPA_COVER, 0);
             if(th_null()){ lv_obj_set_style_border_width(cell, 1, 0); lv_obj_set_style_border_color(cell, TC(BORDER), 0); }
-            lv_obj_t *l = lv_obj_get_child(cell, 0); if(l){ lv_obj_set_style_text_font(l, TF(UI_20), 0); lv_obj_center(l); }
+            if(th_classic()){ lv_obj_set_style_border_width(cell, 2, 0); lv_obj_set_style_bg_color(cell, TC(CANVAS), 0); }   /* Graphite: framed keys */
+            lv_obj_t *l = lv_obj_get_child(cell, 0); if(l){ lv_obj_set_style_text_font(l, TF(UI_20), 0); lv_obj_center(l); kit_keep(l); }
             kit_keep(cell);
         }
     }

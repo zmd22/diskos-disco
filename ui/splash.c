@@ -98,9 +98,11 @@ static int disc_make(uint32_t bg){
 
 /* ---- the timeline ---- */
 static void zframe(float t);
+static void cframe(float t);
 static void splash_frame(int ms){
     float t = ms / (float)SP_MS;
     if(th_zune()){ zframe(t); return; }
+    if(th_classic()){ cframe(t); return; }
     /* spin: up to speed by 0.42, then slowing to a stop at 0.64 (the angle is the integral of the speed) */
     float ang;
     if(t < 0.42f){ float u = t / 0.42f; ang = 2900 * u * u * u; }                  /* degrees, accelerating */
@@ -172,8 +174,10 @@ static lv_obj_t *word_label(lv_obj_t *parent, const char *s, lv_color_t c){
     return l;
 }
 static int zbuild(void);
+static int cbuild(void);
 static int build(void){
     if(th_zune()) return zbuild();
+    if(th_classic()) return cbuild();
     if(!disc_make((uint32_t)lv_color_to_u32(TC(FIXED_SPLASH_BG)) & 0xFFFFFF)) return 0;
     g_sp.root = plain(lv_layer_top());
     lv_obj_set_size(g_sp.root, 360, 360);
@@ -225,7 +229,7 @@ void splash_cover(void){
     if(g_cover || g_sp.root) return;
     g_cover = plain(lv_layer_top());
     lv_obj_set_size(g_cover, 360, 360);
-    lv_obj_set_style_bg_color(g_cover, TC(FIXED_SPLASH_BG), 0); lv_obj_set_style_bg_opa(g_cover, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_color(g_cover, th_classic() ? TC(CANVAS) : TC(FIXED_SPLASH_BG), 0); lv_obj_set_style_bg_opa(g_cover, LV_OPA_COVER, 0);
     lv_obj_add_flag(g_cover, LV_OBJ_FLAG_CLICKABLE);
 }
 static void cover_off(void){ if(g_cover){ lv_obj_delete(g_cover); g_cover = NULL; } }
@@ -303,5 +307,55 @@ static void zframe(float t){
     int a = 270 + (int)(720 * ease(t));                                   /* two turns, easing out */
     int len = 40 + (int)(80 * smooth(seg(t, 0, 0.5f)));
     lv_arc_set_bg_angles(g_zload, a % 360, (a + len) % 360);
+    lv_obj_set_style_opa(g_sp.root, (lv_opa_t)(255 * (1 - seg(t, 0.9f, 1))), 0);
+}
+
+/* ==== Graphite: a seal - its ring drawing itself round the screen edge, the GR mark and the wordmark coming up,
+ * a pill bar between two dots filling; then Home ==== */
+LV_IMAGE_DECLARE(img_classic_mark);
+LV_IMAGE_DECLARE(img_classic_word);
+static lv_obj_t *g_cring, *g_cmark, *g_cword, *g_cbar, *g_cdot[2];
+static lv_obj_t *cimage(const lv_image_dsc_t *src, int y){
+    lv_obj_t *o = lv_image_create(g_sp.root); kit_keep(o);
+    lv_image_set_src(o, src);                                      /* A8 coverage: drawn in the recolour (ink) */
+    lv_obj_set_style_image_recolor(o, TC(TEXT_PRIMARY), 0); lv_obj_set_style_image_recolor_opa(o, LV_OPA_COVER, 0);
+    lv_obj_align(o, LV_ALIGN_TOP_MID, 0, y);
+    return o;
+}
+static int cbuild(void){
+    g_sp.root = plain(lv_layer_top());
+    lv_obj_set_size(g_sp.root, 360, 360);
+    lv_obj_set_style_bg_color(g_sp.root, TC(CANVAS), 0); lv_obj_set_style_bg_opa(g_sp.root, LV_OPA_COVER, 0);
+    lv_obj_add_flag(g_sp.root, LV_OBJ_FLAG_CLICKABLE);
+    g_cring = lv_arc_create(g_sp.root); kit_keep(g_cring);
+    lv_obj_remove_style(g_cring, NULL, LV_PART_KNOB); lv_obj_remove_flag(g_cring, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_set_size(g_cring, 336, 336); lv_obj_center(g_cring);
+    lv_arc_set_rotation(g_cring, 270); lv_arc_set_bg_angles(g_cring, 0, 360); lv_arc_set_angles(g_cring, 0, 0);
+    lv_obj_set_style_arc_opa(g_cring, LV_OPA_TRANSP, LV_PART_MAIN);
+    lv_obj_set_style_arc_width(g_cring, 7, LV_PART_INDICATOR); lv_obj_set_style_arc_color(g_cring, TC(TEXT_PRIMARY), LV_PART_INDICATOR);
+    lv_obj_set_style_arc_rounded(g_cring, false, LV_PART_INDICATOR);
+    g_cmark = cimage(&img_classic_mark, 74);
+    g_cword = cimage(&img_classic_word, 208);
+    g_cbar = lv_bar_create(g_sp.root); lv_obj_remove_style_all(g_cbar); kit_keep(g_cbar);
+    lv_obj_set_size(g_cbar, 110, 14); lv_obj_align(g_cbar, LV_ALIGN_TOP_MID, 0, 270); lv_bar_set_range(g_cbar, 0, 1000);
+    lv_obj_set_style_border_width(g_cbar, 2, LV_PART_MAIN); lv_obj_set_style_border_color(g_cbar, TC(TEXT_PRIMARY), LV_PART_MAIN);
+    lv_obj_set_style_radius(g_cbar, 7, LV_PART_MAIN); lv_obj_set_style_pad_all(g_cbar, 3, LV_PART_MAIN);
+    lv_obj_set_style_bg_opa(g_cbar, LV_OPA_COVER, LV_PART_INDICATOR); lv_obj_set_style_bg_color(g_cbar, TC(TEXT_PRIMARY), LV_PART_INDICATOR);
+    lv_obj_set_style_radius(g_cbar, 4, LV_PART_INDICATOR);
+    for(int i = 0; i < 2; i++){                                    /* the dots either side of the bar */
+        g_cdot[i] = plain(g_sp.root); kit_keep(g_cdot[i]);
+        lv_obj_set_size(g_cdot[i], 8, 8); lv_obj_set_style_radius(g_cdot[i], LV_RADIUS_CIRCLE, 0);
+        lv_obj_set_style_bg_color(g_cdot[i], TC(TEXT_PRIMARY), 0); lv_obj_set_style_bg_opa(g_cdot[i], LV_OPA_COVER, 0);
+        lv_obj_align(g_cdot[i], LV_ALIGN_TOP_MID, i ? 71 : -71, 273);
+    }
+    return 1;
+}
+static void cframe(float t){
+    lv_arc_set_angles(g_cring, 0, (int)(360 * ease(seg(t, 0, 0.36f))));   /* the ring draws itself clockwise */
+    lv_obj_set_style_image_opa(g_cmark, (lv_opa_t)(255 * smooth(seg(t, 0.15f, 0.42f))), 0);
+    lv_obj_set_style_image_opa(g_cword, (lv_opa_t)(255 * smooth(seg(t, 0.3f, 0.5f))), 0);
+    lv_opa_t b = (lv_opa_t)(255 * smooth(seg(t, 0.28f, 0.38f)));
+    lv_obj_set_style_opa(g_cbar, b, 0); lv_obj_set_style_bg_opa(g_cdot[0], b, 0); lv_obj_set_style_bg_opa(g_cdot[1], b, 0);
+    lv_bar_set_value(g_cbar, (int32_t)(1000 * ease(seg(t, 0.3f, 0.88f))), LV_ANIM_OFF);
     lv_obj_set_style_opa(g_sp.root, (lv_opa_t)(255 * (1 - seg(t, 0.9f, 1))), 0);
 }

@@ -260,7 +260,7 @@ static void disco_faders_paint(void){
     for(int i = 0; i < NB; i++){
         int x = dxp(i), o = doff(i), mid = DMID + o, t = clampi(g_t[i], -GMAX, GMAX), s = (i == g_sel && g_editable);
         int y = (int)lroundf(mid - t / 10.0f * DKPX);
-        lv_color_t c = !g_editable ? TC(TEXT_SECONDARY) : (th_null() || simple_cfg_get_int("disco_eq", 0)) ? (th_null()?TC(TEXT_PRIMARY):ui_current_accent()) : theme_color_from_rgb(IRI[i]);   /* Display > Equalizer: Disco / Accent */
+        lv_color_t c = !g_editable ? TC(TEXT_SECONDARY) : (th_null() || th_classic() || simple_cfg_get_int("disco_eq", 0)) ? ((th_null()||th_classic())?TC(TEXT_PRIMARY):ui_current_accent()) : theme_color_from_rgb(IRI[i]);   /* Display > Equalizer: Disco / Accent */
         int a = y < mid ? y : mid, b = y < mid ? mid : y; if(b - a < 2){ a = mid - 1; b = mid + 1; }
         lv_obj_set_pos(g_dfill[i], x - 7, a); lv_obj_set_size(g_dfill[i], 14, b - a);
         lv_obj_set_style_bg_color(g_dfill[i], c, 0);
@@ -343,9 +343,9 @@ static uint32_t c32(lv_color_t c){ return ((uint32_t)c.red << 16) | ((uint32_t)c
 static void paint_band(int b, uint32_t *fb){
     int grey = !g_editable, s = (b == g_sel), disco = (th_disco_family() || th_null() || th_zune());
     lv_color_t accc = grey ? TC(EQ_READONLY) : (th_null()?TC(TEXT_PRIMARY):ui_current_accent());
-    uint32_t acc = c32(accc), empty = theme_ring_light()?c32(TC(SURFACE_RAISED)):0x1A1A1C,
-             lineE = theme_ring_light()?c32(TC(CONTROL_TRACK_STRONG)):0x2E2E32,
-             dash = theme_ring_light()?c32(TC(TEXT_MUTED)):0x78787C;
+    uint32_t acc = c32(accc), empty = (theme_ring_light()||th_classic())?c32(TC(SURFACE_RAISED)):0x1A1A1C,
+             lineE = (theme_ring_light()||th_classic())?c32(TC(CONTROL_TRACK_STRONG)):0x2E2E32,
+             dash = (theme_ring_light()||th_classic())?c32(TC(TEXT_MUTED)):0x78787C;
     uint32_t soft = mix32(empty, acc, s ? 171 : 110), bright = s ? acc : mix32(empty, acc, 220);
     int lvl16 = (int)(rr(clampi(g_t[b], -GMAX, GMAX)) * 16.0f + 0.5f), r0_16 = R0 * 16;
     for(int i = g_bstart[b]; i < g_bstart[b + 1]; i++){
@@ -754,6 +754,17 @@ void eqcustom_create(lv_obj_t *root){
     g_glbl = centre_lbl(root, 8, glbl_cb);
     g_minus = round_btn(root, LV_SYMBOL_MINUS, -34, -1);
     g_plus  = round_btn(root, LV_SYMBOL_PLUS, 34, +1);
+    if(th_classic()){   /* Graphite: finger-sized steps, framed in ink */
+        lv_obj_t *pm[2] = { g_minus, g_plus };
+        for(int i = 0; i < 2; i++){
+            lv_obj_set_size(pm[i], 42, 42); lv_obj_align(pm[i], LV_ALIGN_CENTER, i ? 40 : -40, 44);
+            lv_obj_set_ext_click_area(pm[i], 10);
+            lv_obj_set_style_bg_color(pm[i], TC(CANVAS), 0); lv_obj_set_style_border_width(pm[i], 2, 0); lv_obj_set_style_border_color(pm[i], TC(TEXT_PRIMARY), 0);
+            lv_obj_set_style_bg_color(pm[i], TC(TEXT_PRIMARY), LV_STATE_PRESSED);
+            lv_obj_t *l = lv_obj_get_child(pm[i], 0); lv_obj_set_style_text_font(l, TF(UI_20), 0);
+            lv_obj_set_style_text_color(l, TC(CANVAS), LV_STATE_PRESSED); lv_obj_add_flag(l, LV_OBJ_FLAG_EVENT_BUBBLE);
+        }
+    }
     g_modecap = lv_label_create(root);
     lv_obj_set_style_text_font(g_modecap, TF(UI_10), 0); lv_obj_set_style_text_color(g_modecap, TC(TEXT_DISABLED), 0);
     lv_obj_align(g_modecap, LV_ALIGN_CENTER, 0, 39);

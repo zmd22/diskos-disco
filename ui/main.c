@@ -3813,7 +3813,7 @@ int main(int argc, char **argv){
                     } else
                     if(cur==SCR_QUICK && vert && dy<0 && ady>=g_swipe_thresh && dt<700){
                         onboarding_discovered(HINT_QUICK);screen_back();                       /* swipe up closes quick settings */
-                    } else if(cur!=SCR_HOME && cur!=SCR_SAVER && cur!=SCR_NOWPLAYING && sy>320 &&
+                    } else if(cur!=SCR_HOME && cur!=SCR_SAVER && (cur!=SCR_NOWPLAYING || th_classic()) && sy>320 &&
                               vert && dy<0 && ady>=g_swipe_thresh*2 && dt<700){
                         /* fork: swipe UP from the bottom edge = go Home. Mirrors the top-edge pull-down.
                          * Starts below y=320 and needs twice the normal travel so it can't be confused

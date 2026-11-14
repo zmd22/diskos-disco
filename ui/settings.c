@@ -10,6 +10,7 @@
 #include "fork_build.h"
 #include "braun.h"
 #include "theme.h"
+#include "classic.h"
 #include "curvelist.h"
 #include "orbit.h"
 #include "theme_kit.h"
@@ -185,6 +186,8 @@ static void theme_reload_or_revert(const char *key){
     if(g_reload_tm) lv_timer_set_repeat_count(g_reload_tm, 1); else reload_go(NULL);
 }
 static void apply_appearance(int v){ (void)v; theme_reload_or_revert("theme_variant"); }
+static void apply_backlight(int v){ (void)v; theme_reload_or_revert("classic_backlight"); }
+static void apply_classic_bars(int v){ (void)v; classic_np_bars_apply(); }
 static void apply_outdoor(int v){ (void)v; theme_reload_or_revert("outdoor"); }
 static void apply_theme_preset(int v){ (void)v; theme_reload_or_revert("theme_preset"); }
 static void apply_simple_background(int v){(void)v;theme_reload_or_revert("simple_background");}
@@ -719,6 +722,7 @@ static const char *const OPT_IDLE_OFF[POWER_IDLE_N] = { "Off","5 min","10 min","
 static const char *const OPT_POWER[] = { "Off","30 sec","1 min","2 min","5 min" };  /* idx->TMAP secs in main.c */
 static const char *const OPT_NPSTYLE[] = { "Cover", "Vinyl", "Poster", "Ring" };
 static const char *const OPT_APPEARANCE[] = { "Dark", "Light", "Auto" };
+static const char *const OPT_BACKLIGHT[] = { "White", "Grey", "Amber" };
 static const char *const OPT_NPFONT[] = {"Original", "Inter Semibold", "Nunito Bold"};
 static const char *const OPT_FONTSIZE[] = { "Small", "Medium", "Large" };
 static const char *const OPT_ALBUMVIEW[] = { "List", "Wall", "Coverflow" };
@@ -863,6 +867,10 @@ static const setting_t TABLE[] = {
       "Online album art and lyrics, the art cache, weather on Home, Shortcuts and the album view.", NULL },
     { "Theme Colours",  "Theme",       ST_CHOICE, "theme_preset", 0,0,0, theme_preset_names, THEME_PRESET_COUNT, NULL, apply_theme_preset, THEME_PRESET_DISCO,
       "Choose the UI theme. Restarts the screen; music continues.", NULL },
+    { "Display", "Backlight", ST_CYCLER, "classic_backlight", 0,0,0, OPT_BACKLIGHT, 3, NULL, apply_backlight, 0,
+      "Graphite: the LCD backlight colour in Light. Dark is always ink on black.", NULL },
+    { "Display", "Spectrum bars", ST_TOGGLE, "classic_bars", 0,1,1, NULL, 0, NULL, apply_classic_bars, 1,
+      "Graphite: decorative bars on Now Playing. Off shows the track's format instead.", NULL },
     { "Theme Colours",  "Appearance",  ST_CYCLER, "theme_variant", 0,0,0, OPT_APPEARANCE, 3, NULL, apply_appearance, 0,
       "For themes supporting light and dark appearances only. Auto uses Dark from 7pm to 7am and Light from 7am to 7pm, using the device clock. Automatic changes apply when the screen is off. Outdoor mode keeps Light on.", NULL },
     { "Theme Colours",  "Outdoor Mode", ST_TOGGLE, "outdoor",  0,1,1, NULL, 0, NULL, apply_outdoor, 0,
@@ -1423,8 +1431,39 @@ static void list_back_cb(lv_event_t *e);
 static lv_obj_t *make_list(lv_obj_t *root);
 /* Themes offered: Disco first; the other presets stay in the code and keep working if already selected, but are not
  * offered here for now (retired IDs have no name). Rows still carry the real preset index. */
-static const int THEME_SHOWN[] = { THEME_PRESET_DISCO, THEME_PRESET_NULL, THEME_PRESET_SIMPLE, THEME_PRESET_ZUNE, THEME_PRESET_RING, THEME_PRESET_BRAUN, THEME_PRESET_BRAUN2, THEME_PRESET_STONE };
+static const int THEME_SHOWN[] = { THEME_PRESET_DISCO, THEME_PRESET_NULL, THEME_PRESET_SIMPLE, THEME_PRESET_ZUNE, THEME_PRESET_RING, THEME_PRESET_BRAUN, THEME_PRESET_BRAUN2, THEME_PRESET_STONE, THEME_PRESET_CLASSIC };
 #define N_THEME_SHOWN ((int)(sizeof THEME_SHOWN / sizeof THEME_SHOWN[0]))
+static void detail_choice_cb(lv_event_t *e);
+static void classic_choice_cb(lv_event_t *e){
+    if(g_active && theme_outdoor() && g_active->cfg_key && !strcmp(g_active->cfg_key, "theme_variant")){ ui_toast("Outdoor Mode keeps Light on"); return; }
+    detail_choice_cb(e);
+}
+/* Graphite: a cycler / choice as its menu list, the current option ticked; Light / dark reads Light, Dark, Auto.
+ * Returns the y under the list (for the description), 0 when the setting keeps the shared layout. */
+static int classic_detail_list(const setting_t *s, int v){
+    if(!th_classic() || !(s->type == ST_CYCLER || s->type == ST_CHOICE) || !s->opts || nav_setting(s)
+       || (s->cfg_key && !strcmp(s->cfg_key, "disco_side_pick"))) return 0;
+    int is_theme = s->cfg_key && !strcmp(s->cfg_key, "theme_preset");
+    int is_variant = s->cfg_key && !strcmp(s->cfg_key, "theme_variant");
+    static const int VARIANT_ORDER[3] = { 1, 0, 2 };
+    int n = is_theme ? N_THEME_SHOWN : shown_opts(s);
+    int h = (n < 6 ? n : 6) * 34;
+    lv_obj_t *list = classic_list(g_detail_root, 78, h), *cur = NULL;
+    if(n <= 6){ lv_obj_set_style_pad_bottom(list, 0, 0); lv_obj_remove_flag(list, LV_OBJ_FLAG_SCROLLABLE); }   /* all fit: a still list */
+    for(int r = 0; r < n; r++){
+        int i = is_theme ? THEME_SHOWN[r] : (is_variant && n == 3) ? VARIANT_ORDER[r] : r;
+        char nm[40]; snprintf(nm, sizeof nm, "%s", tr(s->opts[i]));
+        if(is_theme && nm[0] >= 'a' && nm[0] <= 'z' && !strchr(nm, '_')) nm[0] -= 'a' - 'A';   /* "stone" -> "Stone" */
+        lv_obj_t *row = classic_row(list, nm, 0);
+        if(s->opts == i18n_lang_names) lv_obj_set_style_text_font(lv_obj_get_child(row, 0), TF(USER_16), 0);   /* native names: any script */
+        ui_on(row, classic_choice_cb, LV_EVENT_CLICKED, (void *)(intptr_t)i, "settings.detail_choice", UI_CORE);
+        if(i == v){ lv_obj_t *ck = lv_label_create(row); lv_label_set_text(ck, LV_SYMBOL_OK);
+                    lv_obj_set_style_text_font(ck, TF(UI_16), 0); lv_obj_set_style_text_color(ck, TC(TEXT_PRIMARY), 0);
+                    lv_obj_align(ck, LV_ALIGN_RIGHT_MID, -10, 0); cur = row; }
+    }
+    if(cur && n > 6){ lv_obj_update_layout(list); lv_obj_scroll_to_view(cur, LV_ANIM_OFF); }   /* a long list: the ticked option in view */
+    return 78 + h + 10;
+}
 static void zlower(char *o, size_t n, const char *s){
     size_t i = 0; for(; s && s[i] && i + 1 < n; i++) o[i] = (s[i] >= 'A' && s[i] <= 'Z') ? s[i] + 32 : s[i]; o[i] = 0;
 }
@@ -1679,7 +1718,9 @@ void setting_detail_refresh(void){
     int v = nav_setting(s)?g_nav_pending:get_val(s);
     if(th_null() && s->cfg_key && !strcmp(s->cfg_key,"null_side"))v=0;
 
-    if(s->type == ST_SLIDER){
+    int clist = classic_detail_list(s, v);   /* Graphite: every option as a menu row */
+    if(clist){}
+    else if(s->type == ST_SLIDER){
         lv_obj_t *sl = lv_slider_create(g_detail_root);
         lv_obj_set_size(sl, 220, 12);
         lv_obj_set_ext_click_area(sl, 14);
@@ -1830,7 +1871,7 @@ void setting_detail_refresh(void){
         lv_label_set_text(d, tr(desc));
         lv_label_set_long_mode(d,LV_LABEL_LONG_WRAP);
         int apply=nav_setting(s)||(s->cfg_key && !strcmp(s->cfg_key,"disco_side_pick"));
-        int y=apply?282:s->type==ST_CHOICE?286:238;
+        int y=apply?282:clist?clist:s->type==ST_CHOICE?286:238;
         lv_obj_t *help=lv_obj_create(g_detail_root);lv_obj_remove_style_all(help);
         lv_obj_set_size(help,264,326-y);lv_obj_align(help,LV_ALIGN_TOP_MID,0,y);
         lv_obj_set_scroll_dir(help,LV_DIR_VER);lv_obj_set_scrollbar_mode(help,LV_SCROLLBAR_MODE_AUTO);
@@ -1981,6 +2022,9 @@ void settings_create(lv_obj_t *root){
         for(int g=0;g<N_GROUPS;g++){lv_obj_t *r=setting_card(list);ui_on(r,disco_cat_cb,LV_EVENT_CLICKED,(void*)(intptr_t)g,"settings.category",UI_CORE);
             lv_obj_t *n=lv_label_create(r);lv_label_set_text(n,GROUPS[g]);lv_obj_set_pos(n,24,16);lv_obj_set_width(n,222);lv_label_set_long_mode(n,LV_LABEL_LONG_DOT);theme_list_row(r);}
         curvelist_update(&cl);return;}
+    if(th_classic()){ ui_header(root,"Settings"); lv_obj_t *list=classic_list(root,CLASSIC_LIST_Y,CLASSIC_LIST_H);   /* Classic: the categories as its menu */
+        for(int g=0;g<N_GROUPS;g++){lv_obj_t *r=classic_row(list,GROUPS[g],1);ui_on(r,disco_cat_cb,LV_EVENT_CLICKED,(void*)(intptr_t)g,"settings.category",UI_CORE);}
+        return;}
     if(th_disco_family() || th_null()){ settings_disco_list(root); return; }
     if(th_zune()) return;                                   /* Zune: the dial is built on every entry */
     /* The same seven categories, presented with this theme's circular controls. */
@@ -2024,6 +2068,37 @@ static const char *row_value(const setting_t *s,char *buf,int n){
 void settings_row_values_refresh(void){
     char b[40];
     for(int i=0;i<N_SETTINGS;i++) if(g_list_rows[i] && lv_obj_is_valid(g_list_rows[i])) setting_text_if_changed(g_list_rows[i], row_value(&TABLE[i],b,sizeof b));
+}
+
+/* Graphite: one category as the theme's compact list, value right-aligned on each row */
+static void classic_setlist(void){
+    lv_obj_t *list = classic_list(g_setlist_root, CLASSIC_LIST_Y, CLASSIC_LIST_H);
+    int indices[N_SETTINGS], count = settings_collect(g_active_group, indices);
+    for(int ri = 0; ri < count; ri++){
+        int i = indices[ri]; const setting_t *s = &TABLE[i];
+        lv_obj_t *row = classic_row(list, display_label(s), 0);
+        ui_on(row, row_cb, LV_EVENT_CLICKED, (void*)(uintptr_t)i, "settings.row", UI_CORE);
+        lv_obj_t *lbl = lv_obj_get_child(row, 0);
+        char b[40]; const char *v = row_value(s, b, sizeof b);
+        lv_obj_t *vl = lv_label_create(row);
+        lv_label_set_text(vl, v);
+        lv_obj_set_style_text_font(vl, TF(UI_16), 0);
+        lv_obj_set_style_text_color(vl, TC(TEXT_SECONDARY), 0);
+        lv_point_t sz; lv_text_get_size(&sz, v, TF(UI_16), 0, 0, LV_COORD_MAX, LV_TEXT_FLAG_NONE);
+        int vw = sz.x > 110 ? 110 : sz.x + 2;
+        lv_obj_set_width(vl, vw); lv_label_set_long_mode(vl, LV_LABEL_LONG_SCROLL_CIRCULAR);
+        lv_obj_set_style_text_align(vl, LV_TEXT_ALIGN_RIGHT, 0);
+        lv_obj_align(vl, LV_ALIGN_RIGHT_MID, -10, 0);
+        lv_obj_set_width(lbl, 260 - 30 - vw);
+        lv_label_set_long_mode(lbl, LV_LABEL_LONG_SCROLL_CIRCULAR);
+        if(display_disabled_reason(s)){ lv_obj_set_style_text_color(lbl, TC(TEXT_MUTED), 0); lv_obj_set_style_text_color(vl, TC(TEXT_MUTED), 0); }
+        g_list_rows[i] = vl;
+        if(s->apply == apply_rescan){
+            rescan_row_t *rr = malloc(sizeof *rr);
+            if(rr){ rr->lbl = lbl; rr->vl = vl; rr->tm = lv_timer_create(rescan_row_tick, 400, rr);
+                    lv_obj_add_event_cb(row, rescan_row_del_cb, LV_EVENT_DELETE, rr); rescan_row_tick(rr->tm); }
+        }
+    }
 }
 
 /* ---- one category's rows (SCR_SETLIST), rebuilt on every entry so values are always live ---- */
@@ -2094,10 +2169,13 @@ void setlist_refresh(void){
     memset(g_list_rows, 0, sizeof g_list_rows);   /* the old rows are gone: never write to their freed labels */
     lv_obj_set_style_bg_color(g_setlist_root, TC(CANVAS), 0);
     lv_obj_set_style_bg_opa(g_setlist_root, LV_OPA_COVER, 0);
-    ui_header_cb(g_setlist_root, settings_page_title(g_active_group), list_back_cb);   /* title = category; back pops to categories */
+    const char *ttl = settings_page_title(g_active_group);
+    if(th_classic() && !strcmp(ttl, "Graphite settings")) ttl = "Graphite";   /* fits the title bar */
+    ui_header_cb(g_setlist_root, ttl, list_back_cb);   /* title = category; back pops to categories */
 
     if(th_zune() && strcmp(g_active_group, "How to")){ lv_obj_clean(g_setlist_root); zsetlist(g_setlist_root); return; }
     if(!strcmp(g_active_group,"How to")){howto_body(g_setlist_root);return;}
+    if(th_classic()){ classic_setlist(); return; }
     lv_obj_t *list = make_list(g_setlist_root);
     static curvelist_t cl; curvelist_attach(&cl, list, g_setlist_root, 288);   /* theme: every list curves + dots */
     int indices[N_SETTINGS],count=settings_collect(g_active_group,indices);

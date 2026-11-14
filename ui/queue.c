@@ -15,6 +15,7 @@
 #include "screens.h"
 #include "modes.h"
 #include "braun.h"
+#include "classic.h"
 #include "theme.h"
 #include "curvelist.h"
 #include "musicdb.h"
@@ -481,7 +482,8 @@ static void handle_cb(lv_event_t *e){
     if(c == LV_EVENT_PRESSED){
         g_drag = (int)lv_obj_get_index(row) - row_child0; g_drag_row0 = g_drag;
         lv_obj_remove_flag(g_list, LV_OBJ_FLAG_SCROLLABLE);       /* the drag moves the row, not the list */
-        lv_obj_set_style_bg_color(row, TC(QUEUE_DRAG), 0);
+        lv_obj_set_style_bg_color(row, th_classic() ? TC(SURFACE_STRONG) : TC(QUEUE_DRAG), 0);
+        if(th_classic()) lv_obj_set_style_bg_opa(row, LV_OPA_COVER, 0);
     } else if(c == LV_EVENT_PRESSING && g_drag >= 0){
         lv_indev_t *in = lv_indev_active(); if(!in) return;
         lv_point_t p; lv_indev_get_point(in, &p);
@@ -583,6 +585,23 @@ static lv_obj_t *qrow(const char *t, const char *a, int now, int idx){
                lv_obj_t *g = lv_obj_get_child(h, 0); if(g) lv_obj_set_style_text_color(g, TC(TEXT_MUTED), 0); } }
         lv_obj_set_user_data(r, NULL);                       /* let the curve size it afresh */
     }
+    if(th_classic()){   /* Graphite: a 34 px menu row - the title (a play mark on the current song), the handle */
+        lv_obj_set_size(r, 260, 34); lv_obj_set_style_bg_opa(r, LV_OPA_TRANSP, 0); lv_obj_set_style_border_width(r, 0, 0);
+        lv_obj_remove_flag(r, LV_OBJ_FLAG_USER_1);
+        lv_obj_remove_event_cb(r, row_size_cb);
+        int x = now ? 30 : 10;
+        if(now){ lv_obj_t *ic = lv_obj_get_child(r, 0); lv_label_set_text(ic, LV_SYMBOL_PLAY);
+                 lv_obj_set_style_text_font(ic, TF(UI_14), 0); lv_obj_set_style_text_color(ic, TC(TEXT_PRIMARY), 0); lv_obj_align(ic, LV_ALIGN_LEFT_MID, 10, 0); }
+        lv_obj_t *tl = lv_obj_get_child(r, now ? 1 : 0), *al = lv_obj_get_child(r, now ? 2 : 1);
+        lv_obj_add_flag(al, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_set_style_text_font(tl, ui_font_user(20), 0); lv_obj_set_style_text_color(tl, TC(TEXT_PRIMARY), 0);
+        lv_label_set_long_mode(tl, LV_LABEL_LONG_DOT);
+        lv_obj_set_size(tl, 260 - x - (now ? 10 : 44), lv_font_get_line_height(ui_font_user(20)));
+        lv_obj_align(tl, LV_ALIGN_LEFT_MID, x, 0);
+        if(!now){ lv_obj_t *h = lv_obj_get_child(r, -1); lv_obj_set_size(h, 40, 34); lv_obj_align(h, LV_ALIGN_RIGHT_MID, 0, 0);
+                  lv_obj_t *g = lv_obj_get_child(h, 0); if(g) lv_obj_set_style_text_color(g, TC(TEXT_PRIMARY), 0); }
+        classic_row_style(r);
+    }
     return r;
 }
 static void queue_position_cb(lv_event_t *e){
@@ -595,7 +614,7 @@ static void queue_position_cb(lv_event_t *e){
     }
     if(row_child0 >= (int)lv_obj_get_child_count(g_list))return;
     lv_obj_t *first=lv_obj_get_child(g_list,row_child0);
-    int idx=(lv_obj_get_scroll_y(g_list)-lv_obj_get_y(first))/78;
+    int idx=(lv_obj_get_scroll_y(g_list)-lv_obj_get_y(first))/(th_classic()?34:78);
     if(idx<0)idx=0;if(idx>=g_qn)idx=g_qn-1;
     char b[48];snprintf(b,sizeof b,"%d / %d up next",idx+1,g_qn);lv_label_set_text(g_sub,b);
 }
@@ -693,6 +712,25 @@ void queue_create(lv_obj_t *root){
     lv_obj_set_scroll_dir(g_list, LV_DIR_VER);
     lv_obj_set_scrollbar_mode(g_list, LV_SCROLLBAR_MODE_OFF);
     lv_obj_add_flag(g_list, LV_OBJ_FLAG_SCROLL_MOMENTUM);
+    if(th_classic()){   /* Graphite: its header, the summary under the rule, framed buttons, a menu list */
+        lv_obj_add_flag(hb, LV_OBJ_FLAG_HIDDEN);
+        ui_header_cb(root, "Queue", back_cb);
+        lv_obj_set_style_text_font(g_sub, TF(UI_14), 0); lv_obj_align(g_sub, LV_ALIGN_TOP_MID, 0, 76);
+        lv_obj_t *b3[3] = { g_play_btn, g_shuffle_btn, g_clear_btn }; int w3[3] = { 86, 44, 86 }, x = 180 - (86 + 44 + 86 + 16) / 2;
+        for(int k = 0; k < 3; k++){
+            lv_obj_t *b = b3[k]; lv_obj_set_size(b, w3[k], 30); lv_obj_set_pos(b, x, 98); x += w3[k] + 8;
+            lv_obj_set_style_radius(b, 15, 0); lv_obj_set_style_border_width(b, 2, 0); lv_obj_set_style_border_color(b, TC(TEXT_PRIMARY), 0);
+            lv_obj_set_style_bg_color(b, TC(TEXT_PRIMARY), 0); lv_obj_set_style_bg_opa(b, k == 0 ? LV_OPA_COVER : LV_OPA_TRANSP, 0);
+            for(uint32_t c = 0; c < lv_obj_get_child_count(b); c++){ lv_obj_t *l = lv_obj_get_child(b, c);
+                lv_obj_set_style_text_font(l, TF(UI_16), 0); lv_obj_set_style_text_color(l, k == 0 ? TC(CANVAS) : TC(TEXT_PRIMARY), 0); kit_keep(l); }
+            if(lv_obj_get_child_count(b) > 1){ lv_obj_align(lv_obj_get_child(b, 0), LV_ALIGN_LEFT_MID, 12, 0); lv_obj_align(lv_obj_get_child(b, 1), LV_ALIGN_LEFT_MID, 34, 0); }
+            else lv_obj_center(lv_obj_get_child(b, 0));
+            kit_keep(b);
+        }
+        int ly = CLASSIC_LIST_END - 5 * CLASSIC_ROW_H;   /* the menu box: whole rows to its end */
+        lv_obj_set_pos(g_list, 50, ly); lv_obj_set_size(g_list, 260, CLASSIC_LIST_END - ly);
+        lv_obj_set_style_pad_row(g_list, 0, 0); lv_obj_set_style_pad_bottom(g_list, CLASSIC_ROW_H, 0);
+    }
     if(th_zune()){
         lv_obj_add_flag(hb, LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(g_sub, LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(g_play_btn, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(g_shuffle_btn, LV_OBJ_FLAG_HIDDEN); lv_obj_add_flag(g_clear_btn, LV_OBJ_FLAG_HIDDEN);

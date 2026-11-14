@@ -1313,7 +1313,11 @@ int main(int argc, char **argv){
             int before=send_count; lv_obj_send_event(t,LV_EVENT_LONG_PRESSED,NULL); assert(send_count==before);
         }
         for(int i=0;i<40;i++){lv_tick_inc(10);lv_timer_handler();}
-        if(getenv("LIB_AZ")){lv_obj_t*l=find_text(root,"A - Z");assert(l);lv_obj_send_event(lv_obj_get_parent(l),LV_EVENT_CLICKED,NULL);kit_pass(root);
+        if(getenv("LIB_AZ")){lv_obj_t*l=find_text(root,"A - Z");if(!l)l=find_text(root,"A-Z");assert(l);lv_obj_send_event(lv_obj_get_parent(l),LV_EVENT_CLICKED,NULL);
+            lv_obj_send_event(lv_obj_get_parent(l),LV_EVENT_SHORT_CLICKED,NULL);kit_pass(root);
+            if(getenv("LIB_AZ_PRESS")){lv_obj_t*m=find_visible_text(lv_layer_top(),"M");if(!m)m=find_visible_text(root,"M");assert(m);lv_obj_add_state(lv_obj_get_parent(m),LV_STATE_PRESSED);}
+            if(getenv("LIB_AZ_PICK")){lv_obj_t*m=find_visible_text(lv_layer_top(),"M");if(!m)m=find_visible_text(root,"M");assert(m);lv_obj_send_event(lv_obj_get_parent(m),LV_EVENT_CLICKED,NULL);
+                for(int i=0;i<40;i++){lv_tick_inc(10);lv_timer_handler();}}
             if(getenv("REVIEW_SIMPLE_AZ")){lv_obj_t*m=find_visible_text(root,"M");assert(m);lv_obj_send_event(lv_obj_get_parent(m),LV_EVENT_CLICKED,NULL);assert(!lv_obj_is_visible(m));assert(lv_obj_get_scroll_y(library_scroller())>0);puts("PASS: Squash A-Z opens, jumps to M and closes");}}
         goto render;
     }

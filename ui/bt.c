@@ -6,6 +6,7 @@
 #include "screens.h"
 #include "zune_dial.h"
 #include "braun.h"
+#include "classic.h"
 #include "theme.h"
 #include "null_theme.h"
 #include "simple_theme.h"
@@ -1746,7 +1747,19 @@ static void add_dev_row(const char *mac, const char *name, int connected, const 
     lv_obj_set_style_text_color(sl, connected ? (th_null()?TC(TEXT_PRIMARY):g_b2?b2_accent():ui_current_accent()) : TC(TEXT_SECONDARY), 0);
     if(g_b2){ lv_obj_set_pos(ic, 14, 23); lv_obj_set_pos(t, 42, 6); lv_obj_set_width(t, 280 - 42 - (connected ? 40 : 16)); lv_obj_set_pos(sl, 42, 36); }
     if(connected){ lv_obj_t *ch = lv_label_create(r); lv_label_set_text(ch, LV_SYMBOL_RIGHT);   /* opens its details */
-                   lv_obj_align(ch, LV_ALIGN_RIGHT_MID, -16, 0); lv_obj_set_style_text_color(ch, TC(TEXT_DISABLED), 0); }
+                   lv_obj_align(ch, LV_ALIGN_RIGHT_MID, -16, 0); lv_obj_set_style_text_color(ch, TC(TEXT_DISABLED), 0);
+                   if(th_classic()){ lv_obj_set_style_text_font(ch, TF(UI_14), 0); lv_obj_set_style_text_color(ch, TC(TEXT_PRIMARY), 0); lv_obj_align(ch, LV_ALIGN_RIGHT_MID, -10, 0); } }
+    if(th_classic()){   /* Graphite: a 34 px menu row - the name, and the codec (or "On") when connected */
+        lv_obj_set_size(r, 260, 34); lv_obj_set_style_bg_opa(r, LV_OPA_TRANSP, 0);
+        lv_obj_add_flag(ic, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text(sl, connected ? ((codec && codec[0]) ? codec : "On") : "");
+        lv_obj_set_style_text_font(sl, TF(UI_16), 0); lv_obj_set_style_text_color(sl, TC(TEXT_SECONDARY), 0);
+        lv_obj_align(sl, LV_ALIGN_RIGHT_MID, connected ? -28 : -10, 0);
+        lv_label_set_long_mode(t, LV_LABEL_LONG_DOT);
+        lv_obj_set_size(t, connected ? 150 : 236, lv_font_get_line_height(ui_font_cjk(20)));
+        lv_obj_align(t, LV_ALIGN_LEFT_MID, 10, 0);
+        classic_row_style(r);
+    }
 }
 
 /* Show only real AUDIO devices (bluez Icon = audio-card / audio-headset / ...),
@@ -2255,6 +2268,7 @@ void bt_create(lv_obj_t *root){
         lv_obj_set_style_text_font(g_hsub, TF(UI_18), 0);              /* Null keeps its layout; the hint a bit larger */
         lv_label_set_long_mode(g_hname, LV_LABEL_LONG_SCROLL_CIRCULAR); }
     if(th_zune())zune_radio_skin(root,"bluetooth","bluetooth on","scan for devices",g_hring,g_hglyph,g_hname,g_hsub,g_sw,rb,g_list);
+    if(th_classic())classic_radio_skin(root,"Bluetooth",g_hring,g_hglyph,g_hname,g_hsub,g_sw,rb,g_list);
     g_b2 = th_simple() || th_disco();
     if(g_b2){                                                  /* Squash / Disco: the B2 header (see b2_ring) */
         const int cy = 52;                                       /* the control row's centre */
