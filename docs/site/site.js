@@ -122,3 +122,45 @@ document.querySelectorAll('[data-gallery]').forEach(card => {
     dialog.showModal();
   });
 });
+
+/* Graphite: actual captures in each backlight. */
+(() => {
+  const hero = document.querySelector('.graphite-hero'); if (!hero) return;
+  const steps = [
+    ['menu','Main menu','Everything in one column.','Music, Now Playing, Search, Queue and the rest line up under a title bar that keeps play state and battery in view.'],
+    ['music','Now Playing','The song, plainly.','Title, artist and album over optional spectrum bars, with progress and controls drawn in the same ink. Turn the bars off to see the track’s format.'],
+    ['library','Library','Lists, the classic way.','Albums, artists and songs in a fixed column with counts on the right. The A–Z key is still a tap away.'],
+    ['quick','Quick Settings','Settings as a list.','Wi-Fi, Bluetooth, Gain, Shuffle, Sleep and Modes, each with its state, plus a brightness slider. Graphite keeps its own selection.']
+  ];
+  const names = {dark:'Dark',white:'White',grey:'Grey',amber:'Amber'};
+  const image = hero.querySelector('#graphite-screen'), link = hero.querySelector('.zune-enlarge');
+  const stepButtons = [...hero.querySelectorAll('.graphite-steps [data-step]')], lookButtons = [...hero.querySelectorAll('.graphite-looks [data-look]')];
+  let step = 0, look = 'dark';
+  const show = () => {
+    const [file, name, title, copy] = steps[step], src = `site/graphite/${look}-${file}.webp`;
+    image.src = src; link.href = src; image.alt = `Graphite ${name}, ${names[look]}`;
+    link.setAttribute('aria-label', `Enlarge Graphite ${name}`);
+    hero.dataset.look = look;
+    hero.querySelector('#graphite-look-name').textContent = names[look];
+    hero.querySelector('#graphite-counter').textContent = `${String(step+1).padStart(2,'0')} / 04 · ${name}`;
+    hero.querySelector('#graphite-step-title').textContent = title;
+    hero.querySelector('#graphite-step-copy').textContent = copy;
+    stepButtons.forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.step === step)));
+    lookButtons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.look === look)));
+  };
+  const advance = d => { step = (step + d + steps.length) % steps.length; show(); };
+  stepButtons.forEach(b => b.addEventListener('click', () => { step = +b.dataset.step; show(); }));
+  lookButtons.forEach(b => b.addEventListener('click', () => { look = b.dataset.look; show(); }));
+  hero.querySelector('#graphite-prev').addEventListener('click', () => advance(-1));
+  hero.querySelector('#graphite-next').addEventListener('click', () => advance(1));
+  hero.querySelector('.graphite-steps').addEventListener('keydown', e => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    e.preventDefault(); advance(e.key === 'ArrowRight' ? 1 : -1); hero.querySelector(`.graphite-steps [data-step="${step}"]`).focus();
+  });
+  Object.values(steps).forEach(([f]) => Object.keys(names).forEach(l => { const i = new Image(); i.src = `site/graphite/${l}-${f}.webp`; }));
+  link.addEventListener('click', e => {
+    if (typeof dialog === 'undefined' || !dialog || typeof dialog.showModal !== 'function') return;
+    e.preventDefault(); dialog.querySelector('img').src = link.href; dialog.querySelector('img').alt = image.alt;
+    dialog.querySelector('p').textContent = `Graphite · ${steps[step][1]} · ${names[look]}`; dialog.showModal();
+  });
+})();

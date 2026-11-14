@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('--output', type=Path, default=ROOT/'docs/site')
 p.add_argument('--allow-host-fixtures', action='store_true')
+p.add_argument('--only', help='render only captures whose file starts with this prefix; other entries in captures.json are kept')
 a = p.parse_args()
 if not a.allow_host_fixtures: p.error('--allow-host-fixtures is required; never run on a player')
 colors = {'magenta':'ec008c', 'cyan':'00b7d8', 'orange':'ff751f', 'lime':'9bd238'}
@@ -68,9 +69,12 @@ with tempfile.TemporaryDirectory(prefix='disco-site-') as temp:
     dest=Path('/usr/data/fiio/db/song.db');dest.parent.mkdir(parents=True,exist_ok=True)
     manifest=[]
     def capture(name,theme,mode,extra=None,light=0):
+        if a.only and not name.startswith(a.only):return
         extra=extra or {};shutil.copy2(db,dest)
         # Each render starts clean; settings from a preceding scene must not leak.
         (ROOT/'ui/tests/host_build/diskos.conf').unlink(missing_ok=True)
+        if 'SITE_CONF' in extra:   # settings read at startup (e.g. Graphite's backlight) must be in the file before the run
+            (ROOT/'ui/tests/host_build/diskos.conf').write_text(extra.pop('SITE_CONF')+'\n')
         env={**os.environ,'ZNP_PATH':str(art/'0/01.png'),'SITE_CAPTURE':'1','PREVIEW_TECH':'1','NULL_DEMO_FLAC':'1','CFG_INT':'disco_hints=2','NP_TITLE':'Sunset','NP_ALBUM':'Endless Summer',**extra}
         if mode.startswith('statsapp'):env['STATS_ART_DIR']=str(art)
         ppm=tmp/'capture.ppm';output=a.output/f'{name}.webp';output.parent.mkdir(parents=True,exist_ok=True)
@@ -84,6 +88,10 @@ with tempfile.TemporaryDirectory(prefix='disco-site-') as temp:
             capture(f'zune/{color}-{page}',13,mode,{'SITE_ACCENT':rgb,**extra})
     for page,mode,extra in [('music','preview-np',{}),('menu','preview-home',{'ZHFOCUS':'0'}),('wall','preview-albums',{'ALBUM_VIEW':'1','ZUNE_LIBRARY_FIXTURE':'1','PREVIEW_SETTLE':'3200'})]:
         capture(f'zune/light-{page}',13,mode,{'SITE_ACCENT':'ec008c',**extra},light=1)
+    # Graphite (15): Dark, and Light under each backlight (0 White, 1 Grey, 2 Amber)
+    for look,light,bl in [('dark',0,0),('white',1,0),('grey',1,1),('amber',1,2)]:
+        for page,mode,extra in [('menu','preview-home',{}),('music','preview-np',{}),('library','preview-albums',{'ZUNE_LIBRARY_FIXTURE':'1','ALBUM_VIEW':'0','PREVIEW_SETTLE':'3200'}),('quick','preview-quick',{})]:
+            capture(f'graphite/{look}-{page}',15,mode,{'SITE_CONF':f'classic_backlight={bl}',**extra},light)
     for name,theme,mode,extra,light in [
         ('disco-music',10,'preview-home',{},0),('disco-immersive',10,'preview-immersive',{},0),('disco-stats',10,'statsapp',{'STATS_WRAP':'0'},0),
         ('null-music',11,'preview-np',{},0),('null-quick',11,'preview-quick',{},0),('null-menu',11,'preview-home',{},0),
@@ -97,4 +105,7 @@ with tempfile.TemporaryDirectory(prefix='disco-site-') as temp:
         ('help-howto',10,'preview-howto',{},0)]:
         capture(f'screens/{name}',theme,mode,extra,light)
     revision=subprocess.check_output(['git','rev-parse','HEAD'],cwd=ROOT,text=True).strip()
+    if a.only:
+        prior=json.loads((a.output/'captures.json').read_text()).get('captures',[])
+        manifest=[c for c in prior if not c['file'].startswith(a.only)]+manifest
     (a.output/'captures.json').write_text(json.dumps({'release':'v'+re.search(r'#define DISCO_VERSION\s+"([^"]+)"',(ROOT/'ui/version.h').read_text())[1],'source_commit':revision,'renderer':'LVGL host-render; production screen code with sample catalog and listening history','artwork':'Original geometric demo sleeves, not official album artwork','captures':manifest},indent=2)+'\n')

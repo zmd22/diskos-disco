@@ -1,6 +1,6 @@
 {
-  "release": "v3.2.2",
-  "source_commit": "458e4d44a6dba75767583711e05f30ca5c18d3ba",
+  "release": "v3.6.1",
+  "source_commit": "c4ff8e83eb6f6dfb24d7a6ab9ebf5d78eb357b96",
   "renderer": "LVGL host-render; production screen code with sample catalog and listening history",
   "artwork": "Original geometric demo sleeves, not official album artwork",
   "captures": [
@@ -475,29 +475,134 @@
       "variant": 0,
       "scene": "preview-howto",
       "options": {}
-    }
-  ],
-  "additional_captures": [
+    },
     {
-      "file": "screens/braun2-home.webp",
-      "theme": 14,
+      "file": "graphite/dark-menu.webp",
+      "theme": 15,
       "variant": 0,
-      "source_commit": null,
-      "provenance": "Existing Braun 2.0 host preview; original capture revision not recorded."
+      "scene": "preview-home",
+      "options": {}
     },
     {
-      "file": "screens/braun2-music.webp",
-      "theme": 14,
-      "variant": 1,
-      "source_commit": null,
-      "provenance": "Existing Braun 2.0 host preview; original capture revision not recorded."
+      "file": "graphite/dark-music.webp",
+      "theme": 15,
+      "variant": 0,
+      "scene": "preview-np",
+      "options": {}
     },
     {
-      "file": "screens/braun2-quick.webp",
-      "theme": 14,
+      "file": "graphite/dark-library.webp",
+      "theme": 15,
+      "variant": 0,
+      "scene": "preview-albums",
+      "options": {
+        "ZUNE_LIBRARY_FIXTURE": "1",
+        "ALBUM_VIEW": "0",
+        "PREVIEW_SETTLE": "3200"
+      }
+    },
+    {
+      "file": "graphite/dark-quick.webp",
+      "theme": 15,
+      "variant": 0,
+      "scene": "preview-quick",
+      "options": {}
+    },
+    {
+      "file": "graphite/white-menu.webp",
+      "theme": 15,
       "variant": 1,
-      "source_commit": null,
-      "provenance": "Existing Braun 2.0 host preview; original capture revision not recorded."
+      "scene": "preview-home",
+      "options": {}
+    },
+    {
+      "file": "graphite/white-music.webp",
+      "theme": 15,
+      "variant": 1,
+      "scene": "preview-np",
+      "options": {}
+    },
+    {
+      "file": "graphite/white-library.webp",
+      "theme": 15,
+      "variant": 1,
+      "scene": "preview-albums",
+      "options": {
+        "ZUNE_LIBRARY_FIXTURE": "1",
+        "ALBUM_VIEW": "0",
+        "PREVIEW_SETTLE": "3200"
+      }
+    },
+    {
+      "file": "graphite/white-quick.webp",
+      "theme": 15,
+      "variant": 1,
+      "scene": "preview-quick",
+      "options": {}
+    },
+    {
+      "file": "graphite/grey-menu.webp",
+      "theme": 15,
+      "variant": 1,
+      "scene": "preview-home",
+      "options": {}
+    },
+    {
+      "file": "graphite/grey-music.webp",
+      "theme": 15,
+      "variant": 1,
+      "scene": "preview-np",
+      "options": {}
+    },
+    {
+      "file": "graphite/grey-library.webp",
+      "theme": 15,
+      "variant": 1,
+      "scene": "preview-albums",
+      "options": {
+        "ZUNE_LIBRARY_FIXTURE": "1",
+        "ALBUM_VIEW": "0",
+        "PREVIEW_SETTLE": "3200"
+      }
+    },
+    {
+      "file": "graphite/grey-quick.webp",
+      "theme": 15,
+      "variant": 1,
+      "scene": "preview-quick",
+      "options": {}
+    },
+    {
+      "file": "graphite/amber-menu.webp",
+      "theme": 15,
+      "variant": 1,
+      "scene": "preview-home",
+      "options": {}
+    },
+    {
+      "file": "graphite/amber-music.webp",
+      "theme": 15,
+      "variant": 1,
+      "scene": "preview-np",
+      "options": {}
+    },
+    {
+      "file": "graphite/amber-library.webp",
+      "theme": 15,
+      "variant": 1,
+      "scene": "preview-albums",
+      "options": {
+        "ZUNE_LIBRARY_FIXTURE": "1",
+        "ALBUM_VIEW": "0",
+        "PREVIEW_SETTLE": "3200"
+      }
+    },
+    {
+      "file": "graphite/amber-quick.webp",
+      "theme": 15,
+      "variant": 1,
+      "scene": "preview-quick",
+      "options": {}
     }
   ]
 }
