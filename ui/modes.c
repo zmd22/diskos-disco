@@ -623,6 +623,22 @@ static long card_gb(void){                                   /* SD capacity from
     long long sec = 0; if(fscanf(f, "%lld", &sec) != 1) sec = 0; fclose(f);
     return (long)((sec * 512LL + 500000000LL) / 1000000000LL);
 }
+#ifndef UAC_HWP_GLOB
+#define UAC_HWP_GLOB "/proc/asound/card*/pcm*c/sub*/hw_params"
+#endif
+/* The host's rate: the song JSON keeps the last local track's rate, but the player reopens the gadget's
+ * capture stream at each rate the host picks (the Disc has no other capture device). 0 = not open. */
+static int uac_rate(void){
+    glob_t g = {0}; int hz = 0;
+    if(glob(UAC_HWP_GLOB, 0, NULL, &g) == 0)
+        for(size_t i = 0; i < g.gl_pathc && hz <= 0; i++){
+            FILE *f = fopen(g.gl_pathv[i], "r"); char l[64];
+            if(!f) continue;
+            while(fgets(l, sizeof l, f)) if(sscanf(l, "rate: %d", &hz) == 1) break;
+            fclose(f);
+        }
+    globfree(&g); return hz > 0 ? hz : 0;
+}
 static void mi_spin_exec(void *var, int32_t v){ lv_arc_set_rotation((lv_obj_t *)var, v % 360); }
 static void mi_set_wait(int wait){                           /* Ring: a turning arc while waiting, a full ring when connected */
     if(wait == g_mi_wait) return;
@@ -664,7 +680,8 @@ static void modeinfo_fill(int m){
             snprintf(st, sizeof st, host ? "Connected" : "Waiting for USB host");
             if(host){
                 snprintf(d1, sizeof d1, "Volume %d", ts.volume > 0 ? ts.volume : 0);
-                if(ts.sample_rate > 0) snprintf(d2, sizeof d2, "%d.%d kHz", ts.sample_rate / 1000, (ts.sample_rate % 1000) / 100);
+                int hz = uac_rate();
+                if(hz > 0) snprintf(d2, sizeof d2, "%d.%d kHz", hz / 1000, (hz % 1000) / 100);
             } else snprintf(d1, sizeof d1, "Plug the Disc into a computer");
         } break;
         case 3: {                                            /* USB storage */
