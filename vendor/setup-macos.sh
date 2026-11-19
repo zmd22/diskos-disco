@@ -41,12 +41,19 @@ brew list dylibbundler  >/dev/null 2>&1 || brew install dylibbundler
 
 # Keep bundled binaries aligned with corresponding-source/macos-arm64/.
 check_brew_version() {
-  local name="$1" version="$2" installed
-  installed="$(brew list --versions "$name")"
-  if [ "$installed" != "$name $version" ]; then
-    echo "ERROR: expected Homebrew $name $version; found '${installed:-not installed}'. Install the pinned version before rebuilding." >&2
-    exit 2
-  fi
+  # Checks the LINKED keg (the one the build actually uses via `brew --prefix`),
+  # not `brew list --versions`, which prints every installed keg. Homebrew
+  # rebuild suffixes (_1, _2 ...) don't change the upstream source, so accept them.
+  local name="$1" version="$2" linked
+  linked="$(basename "$(readlink "$(brew --prefix "$name")" 2>/dev/null)" 2>/dev/null)"
+  case "$linked" in
+    "$version"|"$version"_[0-9]*) ;;
+    *)
+      echo "ERROR: expected Homebrew $name $version linked; found '${linked:-not installed}'" >&2
+      echo "       installed kegs: $(brew list --versions "$name" 2>/dev/null || echo none)" >&2
+      echo "       Install $name $version and make it the linked version, then rebuild." >&2
+      exit 2 ;;
+  esac
 }
 check_brew_version squashfs 4.7.5
 check_brew_version libusb 1.0.30
