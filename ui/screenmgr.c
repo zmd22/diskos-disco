@@ -119,7 +119,10 @@ static void transition(int from, int to, int dir)
     if(from != to && npshade_active()) npshade_dismiss();   /* the Shade belongs to the screen it was pulled over (saver, Home...) */
     if(th_zune()&&from!=to){zune_overlays_close();zsaver_set_visible(to==SCR_SAVER);quicksettings_zune_visible(to==SCR_QUICK&&!ui_display_is_off());}
     if(from==SCR_NOWPLAYING && to!=SCR_NOWPLAYING)ui_imm_control_cancel();
-    if(to==SCR_HOME && ui_np_fsart_active())ui_np_fsart_drop();   /* Home over Queue/Search/QS opened from Immersive */
+    if(to!=SCR_NOWPLAYING && ui_np_fsart_active()){            /* Immersive left open under Queue/Search/QS: once Back can't */
+        int keep=0; for(int i=0;i<s_sp;i++) if(s_stack[i]==SCR_NOWPLAYING) keep=1;   /* reach it any more, end it */
+        if(!keep) ui_np_fsart_drop();
+    }
     azjump_close_active();
     albumwall_visible(to==SCR_ALBUMWALL);
     crash_crumb(to);

@@ -3731,7 +3731,8 @@ int main(int argc, char **argv){
                     s_press_scr=screen_current();   /* a gesture belongs to the screen it STARTED on */
                     cover_tap = 0;
                     shade_touch = npshade_active();
-                    fsart_touch = ui_np_fsart_active();   /* latch: overlay owns this whole gesture */
+                    fsart_touch = ui_np_fsart_active() && screen_current()==SCR_NOWPLAYING;   /* latch: overlay owns this whole gesture
+                                                         * (only on its own screen: Search, Queue or QS opened from it sit on top) */
                     sleep_touch = ui_volume_overlay_visible() || ui_np_overlay_active() || azjump_owns_point(p.x,p.y)   /* latch: the sleep popover owns this whole gesture, */
                                || (screen_current()==SCR_EQ_EDITOR && eqcustom_owns_point(p.x, p.y))    /* and so does the EQ dial (fork) */
                                || (screen_current()==SCR_SPHERE && sphere_ui_owns_point(p.x, p.y));     /* and SongSphere's marker */
@@ -3814,7 +3815,7 @@ int main(int argc, char **argv){
                         seek_consumed = ui_np_seek_release(lastx, lasty);
                     }
                     int vert = ady > adx*2, horiz = adx > ady*2;
-                    if(lvgl_owned || ui_np_fsart_active()){
+                    if(lvgl_owned || (cur==SCR_NOWPLAYING && ui_np_fsart_active())){
                         /* swallow - LVGL handled (or will handle) the open/close */
                     } else if(!seek_consumed){
                     if(npshade_active()){   /* the shade: swipes start anywhere on it, even on the cover */
