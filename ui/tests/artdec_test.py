@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Native decoder contracts for both sharp-cover clients; no device access."""
+import base64
 import pathlib
 import struct
 import subprocess
@@ -15,6 +16,32 @@ def png(width, height, rgb):
             chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)) +
             chunk(b"IDAT", zlib.compress((b"\0" + bytes(rgb) * width) * height)) +
             chunk(b"IEND", b""))
+
+
+def ogg_page(packet, serial, sequence, flags=0, continues=False):
+    lacing = []
+    remaining = len(packet)
+    while remaining >= 255:
+        lacing.append(255)
+        remaining -= 255
+    if remaining or not continues:
+        lacing.append(remaining)
+    header = (b"OggS\0" + bytes((flags,)) + b"\0" * 8 +
+              struct.pack("<II", serial, sequence) + b"\0" * 4 +
+              bytes((len(lacing),)) + bytes(lacing))
+    page = bytearray(header + packet)
+    crc = 0
+    for byte in page:
+        crc ^= byte << 24
+        for _ in range(8):
+            crc = ((crc << 1) ^ 0x04C11DB7) & 0xFFFFFFFF if crc & 0x80000000 else (crc << 1) & 0xFFFFFFFF
+    page[22:26] = struct.pack("<I", crc)
+    return bytes(page)
+
+
+def flac_picture(image):
+    return (struct.pack(">I", 3) + struct.pack(">I", 9) + b"image/png" +
+            struct.pack(">I", 0) + struct.pack(">IIIII", 4, 4, 24, 0, len(image)) + image)
 
 
 class SharpDecoderTest(unittest.TestCase):
@@ -67,6 +94,44 @@ class SharpDecoderTest(unittest.TestCase):
         result = subprocess.run([str(self.exe), "poster", str(source), str(output)])
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(output.read_bytes(), b"previous")
+
+    def test_opus_ogg_cover_art_across_pages(self):
+        image = png(4, 4, (209, 57, 12))
+        picture = base64.b64encode(flac_picture(image))
+        comment = b"METADATA_BLOCK_PICTURE=" + picture
+        tags = (b"OpusTags" + struct.pack("<I", 200) + b"test" + b"x" * 196 +
+                struct.pack("<I", 1) + struct.pack("<I", len(comment)) + comment)
+        source = self.root / "cover.opus"
+        head = b"OpusHead" + b"\x01\x02" + b"\0" * 9
+        source.write_bytes(
+            ogg_page(head, 1234, 0, 2) +
+            ogg_page(tags[:255], 1234, 1, 0, continues=True) +
+            ogg_page(tags[255:], 1234, 2, 1))
+
+        output = self.root / "opus.bgra"
+        subprocess.run([str(self.exe), "poster", str(source), str(output)], check=True)
+        self.assertEqual(output.read_bytes(), bytes((12, 57, 209, 255)) * 364 * 364)
+
+    def test_vorbis_ogg_cover_art(self):
+        image = png(4, 4, (209, 57, 12))
+        ident = (b"\x01vorbis" + struct.pack("<I", 0) + b"\x02" +
+                 struct.pack("<I", 48000) + struct.pack("<iii", 0, 128000, 0) + b"\xb6\x01")
+        self.assertEqual(len(ident), 30)
+        comments = (
+            ("METADATA_BLOCK_PICTURE", base64.b64encode(flac_picture(image))),
+            ("COVERART", base64.b64encode(image)),
+        )
+        for key, value in comments:
+            with self.subTest(key=key):
+                comment = key.encode() + b"=" + value
+                packet = (b"\x03vorbis" + struct.pack("<I", 4) + b"test" +
+                          struct.pack("<I", 1) + struct.pack("<I", len(comment)) + comment + b"\x01")
+                source = self.root / (key + ".ogg")
+                source.write_bytes(ogg_page(ident, 5678, 0, 2) + ogg_page(packet, 5678, 1))
+
+                output = self.root / (key + ".bgra")
+                subprocess.run([str(self.exe), "poster", str(source), str(output)], check=True)
+                self.assertEqual(output.read_bytes(), bytes((12, 57, 209, 255)) * 364 * 364)
 
 
 if __name__ == "__main__":
