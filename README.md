@@ -2,7 +2,7 @@
 
 > `dev` is experimental. Use tagged releases. [Dev notes](docs/DEV.md)
 
-**3.6.1:** Graphite, a new monochrome LCD-style theme with a white, grey or amber backlight. [Release notes](docs/releases/v3.6.1.md) · [Bluetooth](docs/BLUETOOTH.md) · [Changelog](CHANGELOG.md)
+**3.7.0:** shortcuts from Immersive to Queue, Search and Quick Settings, a Back swipe in Search everywhere, the real sample rate in USB DAC mode and Ogg cover art. [Release notes](docs/releases/v3.7.0.md) · [Bluetooth](docs/BLUETOOTH.md) · [Changelog](CHANGELOG.md)
 
 <p align="center">
   <b>Your music. Your kind of Disco.</b><br>
@@ -91,7 +91,7 @@ With the Disc off, hold **Volume Down** and plug in USB (screen stays black). Wi
 **Windows / Linux app:** use the Update tab ([Windows](docs/WINDOWS.md#update-from-the-sd-card), [Linux](docs/LINUX.md)). **CLI:** sign the release `mq_ui` with the keys installed on the Disc:
 
 ```sh
-sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 3.6.1      # -> ./diskos-update/
+sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 3.7.0      # -> ./diskos-update/
 ```
 
 Copy the six files to `<SD>/diskos-update/`, overwriting, then **Settings › System › Maintenance › Update from SD Card › Update** and restart. The update boots as a trial: **Keep** (or confirmed playback) accepts it, **Go back** or a failure rolls back. [Details](docs/UPDATING.md)

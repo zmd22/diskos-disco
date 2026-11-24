@@ -1,16 +1,16 @@
 {
-  "version": "3.6.1",
-  "revision": "Graphite, a monochrome LCD-style list theme in ChicagoFLF with a White, Grey or Amber backlight and optional Now Playing spectrum bars (#31)",
-  "baseline": "v3.6.0",
-  "ui_source_sha256": "63f8b3fef7a7d194dab3e424035128c7e7243dff75f675ed6873cd4970cfd414",
+  "version": "3.7.0",
+  "revision": "Immersive edge shortcuts on the controls (hint arrows; tap or pull to Queue / Up Next and Search, pull down for Quick Settings) and a back swipe on the modal keyboard, so Search takes Back in every theme; USB DAC mode shows the host's sample rate (#34); embedded cover art from Ogg Opus / Vorbis files (#35)",
+  "baseline": "v3.6.1",
+  "ui_source_sha256": "452a99dbad32985ad767763278d87e7515d6f1da62338ebdb820bd22396a8349",
   "ui_source_hash_recipe": "sorted tracked ui paths: path + NUL + file bytes + NUL",
-  "compiler": "GCC 11.2.0 (gcc-mirror releases/gcc-11.2.0) and musl 1.2.6 with musl-cross-make 227df8b patches, Linux headers 4.19.88-2; binutils 2.42 (Ubuntu binutils-mipsel-linux-gnu); mipsel-linux-musl, -ffp-contract=off",
+  "compiler": "musl-cross-make GCC 11.2.0, musl 1.2.6, binutils 2.44 (the versions pinned in ui/toolchain/mcm-config.mak); mipsel-linux-musl, -ffp-contract=off",
   "abi": "static little-endian MIPS32r2, o32, FP64, NaN2008",
-  "status": "Fresh static MIPS build from a clean export of source_base_commit. Host: check-theme and the host-render build passed. The maintainer reports Graphite was tested on a Disc by others; this exact binary has not itself been physically tested.",
+  "status": "Fresh static MIPS build from a clean export of source_base_commit. Host: host-render build, the Immersive edge touch test in all nine themes, artdec Ogg tests and the USB DAC rate test passed. The same source with the label 3.7.0-test (before the keyboard back swipe) was signed and copied to a Disc. This exact binary has not itself been physically tested.",
   "binary": {
-    "sha256": "058de8b9df3a54e2cc55c303cdc4e199c9e2b2809fd0a5b9d4411bbb026dc78b",
-    "md5": "d85c225f98f28caefb2edecbd5d1e162",
-    "bytes": 8099632
+    "sha256": "f7f5bcad389c374df4f9b454f6c10e790eac9c62601dd7eb433d51ea8a577442",
+    "md5": "7bd3aa4eb82d299abb4ebe85af06ec5b",
+    "bytes": 8107832
   },
   "artwork_helper": {
     "bytes": 119424,
@@ -26,10 +26,10 @@
     "bluealsa": "BlueALSA 4.0.0 (MIT) with build/bluealsa-aptx/patches/0001-0003, embedded in mq_ui",
     "libfreeaptx": "0.1.1 (LGPL-2.1-or-later), embedded as a separate shared library; source in ui/vendor/aptx"
   },
-  "baseline_commit": "577931424c49b2b4fd790e968f26a22d68d1669d",
-  "source_identity": "Built from source_base_commit (DISCO_VERSION 3.6.1, empty test label). ui_source_sha256 identifies the exact tracked UI snapshot.",
-  "release_tag": "v3.6.1",
-  "source_base_commit": "72a39fda0420e21598d306ccd7d25c84e897504b",
+  "baseline_commit": "c4ff8e83eb6f6dfb24d7a6ab9ebf5d78eb357b96",
+  "source_identity": "Built from source_base_commit (DISCO_VERSION 3.7.0, empty test label). ui_source_sha256 identifies the exact tracked UI snapshot.",
+  "release_tag": "v3.7.0",
+  "source_base_commit": "757eea3e6d51922552e2643160a634765b47dce9",
   "crypto": "Monocypher 4.0.2 (BSD-2-Clause or CC0-1.0), unmodified, in ui/vendor/monocypher",
   "flac": "dr_flac 0.13.4 (Unlicense or MIT-0), unmodified, in ui/vendor/dr_flac"
 }

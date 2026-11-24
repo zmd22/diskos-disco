@@ -22,6 +22,18 @@ resumes from the release angle; crossing the centre re-anchors without a jump.
 
 With Circular control on, tapping the cover doesn't exit; use the Back swipe (there's no exit arrow).
 
+## Shortcuts (3.7.0)
+
+While the controls are showing, small arrows sit at the bottom and right edges:
+
+- **Bottom:** tap, or pull up from the bottom edge: the **Queue**, or **Up Next** when nothing is queued.
+- **Right:** tap, or pull in from the right edge: **Search**.
+- **Top:** pull down from the top edge: **Quick Settings**, without the now-playing Shade.
+
+Each opens the theme's own screen; Back returns to Immersive, and going Home ends Immersive. With the controls hidden
+the edges do nothing special, so Circular control keeps the whole rim. A pull counts only when it heads towards the
+centre; a drag along the rim stays a seek or volume drag.
+
 ## Null
 
 Null's regular Music screen also supports hold-and-drag seeking with a time preview and a single seek on release.

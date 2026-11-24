@@ -1,4 +1,4 @@
-# Disco 3.6.1 tour
+# Disco 3.7.0 tour
 
 Touch UI for the round Snowsky Disc. FiiO's stock player handles audio; Disco handles browsing, controls and built-in
 apps. Full menus: [Settings](DISPLAY_SETTINGS.md).
@@ -22,6 +22,8 @@ Appearance, accents, fonts and shortcuts: **Settings › Display**.
 Tap the title for the track menu: Favourite, Lyrics, Album, Artist, View queue, Info, +Queue, +Playlist.
 [Immersive](IMMERSIVE_CONTROLS.md) shows a spinning record, CD or cover with lyrics.
 With Progressive lyrics, lines glide and words light up as they're sung; tap a timed line to jump there.
+With its controls showing, the arrows at the bottom and right open the Queue (or Up Next) and Search, and a pull
+down from the top opens Quick Settings; Back returns to Immersive.
 
 ## Library
 

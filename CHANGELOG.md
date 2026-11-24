@@ -2,6 +2,17 @@
 
 User-facing changes in diskOS Disco!. Details of each release are in [docs/releases](docs/releases/); everything else is in the Git history. diskOS is beta software.
 
+## 3.7.0
+
+**Immersive shortcuts, Back in Search, USB DAC rate, Ogg covers.** [Release notes](docs/releases/v3.7.0.md)
+
+- **Immersive shortcuts:** with the controls showing, hint arrows at the bottom and right open the Queue (or Up Next)
+  and Search, by a tap or an inward pull; a pull down from the top opens Quick Settings without the Shade. Back
+  returns to Immersive. **lyrics on / off** sits a little higher.
+- **Search:** a Back swipe in every theme, including over the keyboard Zune opens Search into.
+- **USB DAC** mode shows the sample rate the computer sends (#34, by @powahbeng).
+- **Ogg Opus / Vorbis** embedded cover art (#35, by @mean-ui-thread).
+
 ## 3.6.1
 
 **Graphite.** [Release notes](docs/releases/v3.6.1.md)
