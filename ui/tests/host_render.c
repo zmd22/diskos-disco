@@ -265,6 +265,17 @@ static void nav_touch(lv_point_t point,int ms){
     nav_pointer.point=point;nav_pointer.state=LV_INDEV_STATE_PRESSED;nav_wait(ms);
     nav_pointer.state=LV_INDEV_STATE_RELEASED;nav_wait(40);
 }
+static void nav_drag(lv_point_t a,lv_point_t b,int steps){   /* press at a, slide to b in 10 ms steps, release */
+    nav_pointer.point=a;nav_pointer.state=LV_INDEV_STATE_PRESSED;nav_wait(30);
+    for(int i=1;i<=steps;i++){nav_pointer.point=(lv_point_t){a.x+(b.x-a.x)*i/steps,a.y+(b.y-a.y)*i/steps};nav_wait(10);}
+    nav_pointer.state=LV_INDEV_STATE_RELEASED;nav_wait(40);
+}
+static void nav_touch_object(lv_obj_t *obj,int ms);
+static void imm_test_leave(void){   /* leave a screen opened from Immersive as a user would */
+    if(kbinput_active()){ kbinput_cancel(); nav_wait(50); assert(!kbinput_active()); }   /* the keyboard's back swipe */
+    else screen_back();
+    nav_wait(600);
+}
 static void nav_touch_object(lv_obj_t *obj,int ms){
  assert(obj && lv_obj_is_visible(obj));lv_obj_update_layout(obj);lv_area_t a;lv_obj_get_coords(obj,&a);
  nav_touch((lv_point_t){(a.x1+a.x2)/2,(a.y1+a.y2)/2},ms);
@@ -1925,7 +1936,46 @@ int main(int argc, char **argv){
         if(getenv("ZUNE_SLEEP")){ ui_set_sleep_timer(atoi(getenv("ZUNE_SLEEP"))); zune_status_refresh(); nav_wait(100); }
         if(getenv("ZUNE_LYRICS")){ sd_io_init(media_local); sd_io_resume(); cfg_set_int_deferred("online_lyrics",0); lyrics_open();
             for(int i=0;i<300;i++){ lv_tick_inc(10); lv_timer_handler(); lyrics_poll(NULL); usleep(2000); } }
-        if(getenv("ZUNE_IMM")){ void ui_zune_imm_preview(int,int); nav_wait(200); if(th_disco_family()||th_null()){disco_open_np_immersive();nav_wait(900);} ui_zune_imm_preview(atoi(getenv("ZUNE_IMM")),550); nav_wait(300); }
+        if(getenv("ZUNE_IMM")){ void ui_zune_imm_preview(int,int); nav_wait(200); if(th_disco_family()||th_null()){disco_open_np_immersive();nav_wait(900);} ui_zune_imm_preview(atoi(getenv("ZUNE_IMM")),550); nav_wait(300);
+            if(getenv("IMM_PULL_TEST")){   /* real touches on Immersive: edge pulls, handle taps, a rim drag that must stay a drag */
+                lv_indev_t *pin=lv_indev_create();lv_indev_set_type(pin,LV_INDEV_TYPE_POINTER);lv_indev_set_read_cb(pin,nav_read);lv_timer_set_period(lv_indev_get_read_timer(pin),10);
+                int want_below=queue_count()>0?SCR_QUEUE:SCR_UPNEXT;
+                struct { lv_point_t a,b; int want; const char *name; } pulls[]={
+                    {{180,350},{180,240},want_below,"pull up from the bottom"},{{350,180},{240,180},SCR_SEARCH,"pull in from the right"},
+                    {{180,8},{180,130},SCR_QUICK,"pull down from the top"} };
+                setvbuf(stdout,NULL,_IONBF,0);
+                for(int i=0;i<3;i++){ nav_wait(4000); assert(screen_current()==SCR_NOWPLAYING&&ui_np_fsart_active());
+                    nav_drag(pulls[i].a,pulls[i].b,12); nav_wait(500);
+                    printf("%-26s -> controls hidden: screen %d\n",pulls[i].name,screen_current()); assert(screen_current()==SCR_NOWPLAYING);
+                    ui_zune_imm_preview(2,0); nav_wait(100);
+                    nav_drag(pulls[i].a,pulls[i].b,12); nav_wait(500);
+                    printf("%-26s -> screen %d (want %d)\n",pulls[i].name,screen_current(),pulls[i].want); assert(screen_current()==pulls[i].want);
+                    imm_test_leave(); assert(screen_current()==SCR_NOWPLAYING&&ui_np_fsart_active()); }
+                ui_zune_imm_preview(2,0); nav_wait(100);
+                nav_drag((lv_point_t){180,345},(lv_point_t){110,330},14); nav_wait(400);
+                assert(screen_current()==SCR_NOWPLAYING&&ui_np_fsart_active()); puts("rim drag at the bottom     -> stays on Immersive (circular control)");
+                nav_drag((lv_point_t){350,180},(lv_point_t){340,250},14); nav_wait(400);
+                assert(screen_current()==SCR_NOWPLAYING); puts("rim drag at the right      -> stays on Immersive");
+                nav_drag((lv_point_t){180,350},(lv_point_t){180,330},4); nav_wait(400);
+                assert(screen_current()==SCR_NOWPLAYING); puts("short nudge at the bottom  -> stays on Immersive");
+                nav_wait(4000); ui_zune_imm_preview(2,0); nav_wait(100);
+                int lyr=simple_cfg_get_int("imm_lyrics",1); nav_touch((lv_point_t){180,309},80); nav_wait(200);
+                assert(simple_cfg_get_int("imm_lyrics",1)!=lyr&&screen_current()==SCR_NOWPLAYING); puts("tap lyrics on/off          -> toggles, stays");
+                nav_touch((lv_point_t){180,309},80); nav_wait(200);
+                ui_zune_imm_preview(2,0); nav_wait(100); nav_touch((lv_point_t){180,339},80); nav_wait(500);
+                assert(screen_current()==want_below); puts("tap bottom arrow           -> Queue / Up Next"); screen_back(); nav_wait(600);
+                ui_zune_imm_preview(2,0); nav_wait(100); nav_touch((lv_point_t){339,180},80); nav_wait(500);
+                assert(screen_current()==SCR_SEARCH); puts("tap right arrow            -> Search"); imm_test_leave();
+                nav_wait(4000); assert(screen_current()==SCR_NOWPLAYING&&ui_np_fsart_active());
+                nav_touch((lv_point_t){180,339},80); nav_wait(300); assert(screen_current()==SCR_NOWPLAYING); puts("tap bottom, controls hidden -> only shows the controls");
+                ui_zune_imm_preview(2,0); nav_wait(100);
+                nav_drag((lv_point_t){180,350},(lv_point_t){180,240},12); nav_wait(500); assert(screen_current()==want_below);
+                screen_home(); nav_wait(600); assert(!ui_np_fsart_active()&&screen_current()==SCR_HOME); puts("Home from there            -> Immersive ended, Home");
+                lv_indev_delete(pin); puts("PASS immersive edge pulls and handles"); exit(0);
+            }
+            if(getenv("IMM_EDGE")){ int edge=atoi(getenv("IMM_EDGE")); ui_imm_edge_open(edge); nav_wait(600);
+                int want=edge==1?SCR_QUICK:edge==3?SCR_SEARCH:queue_count()>0?SCR_QUEUE:SCR_UPNEXT; assert(screen_current()==want&&ui_np_fsart_active());
+                if(getenv("IMM_EDGE_SNAP")) motion_frame(getenv("IMM_EDGE_SNAP"),"edge"); if(getenv("IMM_EDGE_BACK")){ screen_back(); nav_wait(600); assert(ui_np_fsart_active()&&screen_current()==SCR_NOWPLAYING); } if(getenv("IMM_EDGE_HOME")){ screen_home(); nav_wait(600); assert(!ui_np_fsart_active()); } } }
         if(getenv("ZUNE_SI")){ songinfo_set(&st); nav_wait(200); }
         if(getenv("ZSEARCH_Q")){ void search_test_query(const char*); void kbinput_close(void); nav_wait(100); search_test_query(getenv("ZSEARCH_Q")); for(int i=0;i<20;i++){lv_tick_inc(10);lv_timer_handler();} }
         if(getenv("ZAZ")){ void azjump_test_grid(void); azjump_test_grid(); for(int i=0;i<10;i++){lv_tick_inc(10);lv_timer_handler();} }

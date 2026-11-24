@@ -124,6 +124,7 @@ static void do_save(void){
 }
 static void save_btn(lv_event_t *e){ if(lv_event_get_code(e)==LV_EVENT_CLICKED) do_save(); }
 static void cancel_btn(lv_event_t *e){ if(lv_event_get_code(e)==LV_EVENT_CLICKED) finish(NULL); }
+void kbinput_cancel(void){ if(g_modal) finish(NULL); }   /* the back swipe: the same as cancel */
 
 static void pill(lv_obj_t *parent, int x, int y, const char *sym, lv_color_t col, lv_event_cb_t cb){
     lv_obj_t *b = lv_button_create(parent);

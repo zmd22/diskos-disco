@@ -359,6 +359,7 @@ void kbinput_open(const char *title, const char *initial, kbinput_done_cb_t cb);
 /* same modal, but the text field is masked (dots) - for secrets like Wi-Fi passwords. */
 void kbinput_open_password(const char *title, const char *initial, kbinput_done_cb_t cb);
 int  kbinput_active(void);   /* 1 while the modal keyboard is up (suppress gestures) */
+void kbinput_cancel(void);   /* close it as cancelled (the back swipe) */
 /* search */
 void search_create(lv_obj_t *root);
 void ui_clock_refresh(void);
@@ -431,6 +432,8 @@ int  ui_np_seek_release(int x, int y);
 void ui_np_fsart_open(void);
 void ui_np_fsart_close(void);
 int  ui_np_fsart_active(void);   /* 1 while the full-screen art is up (suppress NP seek/nav) */
+void ui_np_fsart_drop(void);     /* end Immersive without its exit animation (Home reached over it) */
+void ui_imm_edge_open(int which); /* Immersive edge: 1 Quick Settings, 2 Queue / Up Next, 3 Search */
 const char *ui_current_cover_src(void);
 const void *ui_current_backdrop_img(void);  /* the blurred backdrop decoded in RAM, else its file path */
 void ui_np_rescroll(void);                  /* Now Playing shown: let a long title scroll again */

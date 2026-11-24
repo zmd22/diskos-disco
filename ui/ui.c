@@ -130,6 +130,7 @@ static int32_t imm_angle;
 static int imm_in_tag;
 
 static int imm_tracking,imm_dragging,imm_anchor_valid,imm_edge,imm_action,imm_last_angle,imm_dirty;
+static int imm_pull,imm_pull_live;   /* an edge pull: IMM_PULL_TOP/BOTTOM/RIGHT; live once it reads as inward */
 static int imm_volume_target,imm_volume_sent,imm_volume_failed;
 static int64_t imm_units;
 static long imm_seek_target;
@@ -1467,6 +1468,36 @@ static const lv_font_t *imm_null_font(int max_height){
     }
     return TF(UI_12);
 }
+/* Edge hints on the controls layer: a small arrow at the bottom and at the right. While the controls are up, a tap
+ * on one or an inward pull from that edge opens what it points to, and a pull down from the top opens Quick Settings.
+ * With the controls hidden the edges belong to the record (circular control); a drag along the rim stays one. */
+enum { IMM_PULL_NONE, IMM_PULL_TOP, IMM_PULL_BOTTOM, IMM_PULL_RIGHT };
+static void zi_hint_arrow(lv_obj_t *par, const char *glyph, lv_align_t align, int x, int y){
+    lv_obj_t *l = lv_label_create(par); kit_keep(l); lv_label_set_text(l, glyph);
+    lv_obj_set_style_text_font(l, TF(UI_14), 0); lv_obj_set_style_text_color(l, TC(FIXED_MEDIA_WHITE), 0);
+    lv_obj_set_style_text_opa(l, 150, 0); lv_obj_align(l, align, x, y);
+    lv_obj_remove_flag(l, LV_OBJ_FLAG_CLICKABLE);             /* the overlay's own handler reads taps and pulls */
+}
+static int imm_pull_zone(lv_point_t p){                      /* where a press may start an edge pull */
+    if(p.y <= 28 && abs(p.x - 180) <= 90) return IMM_PULL_TOP;
+    if(p.y >= 316 && abs(p.x - 180) <= 70) return IMM_PULL_BOTTOM;
+    if(p.x >= 316 && abs(p.y - 180) <= 70) return IMM_PULL_RIGHT;
+    return IMM_PULL_NONE;
+}
+static int imm_handle_hit(lv_point_t p){                     /* a tap on a hint arrow (controls up) */
+    if(p.y >= 326 && abs(p.x - 180) <= 46) return IMM_PULL_BOTTOM;
+    if(p.x >= 322 && abs(p.y - 180) <= 46) return IMM_PULL_RIGHT;
+    return IMM_PULL_NONE;
+}
+/* Immersive stays underneath: Back from any of these returns to it. */
+void ui_imm_edge_open(int which){
+    if(!fsart_on) return;
+    imm_control_reset(); imm_pull = imm_pull_live = 0;
+    if(g_zi_dim){ zi_scrub(0, 0, 0); if(g_zi_ctl_on) zi_controls(0); }
+    if(which == IMM_PULL_BOTTOM){ if(queue_count() > 0) queue_open(); else upnext_open(); }
+    else if(which == IMM_PULL_RIGHT) screen_show(SCR_SEARCH);
+    else if(which == IMM_PULL_TOP){ onboarding_discovered(HINT_QUICK); screen_show(SCR_QUICK); quicksettings_refresh(ui_is_playing()); }   /* straight to QS: no Shade over Immersive */
+}
 static void imm_controls_build(lv_obj_t *fs){
     g_zi_title_input[0]=g_zi_artist_input[0]=0;
     if(th_zune()){                  /* once, on top of the record's layers */
@@ -1505,14 +1536,16 @@ static void imm_controls_build(lv_obj_t *fs){
     zi_btn(g_zi_ctl, LV_SYMBOL_PREV, -78, 52, "0201000C0002", "imm.zune.prev", 0);
     g_zi_pp=zi_btn(g_zi_ctl, LV_SYMBOL_PAUSE, 0, 68, "0201000C0000", "imm.zune.pp", 1);
     zi_btn(g_zi_ctl, LV_SYMBOL_NEXT, 78, 52, "0201000C0001", "imm.zune.next", 0);
-    g_zi_times = zi_label(g_zi_ctl, TF(UI_12), TC(FIXED_MEDIA_WHITE), 0, 258);
+    g_zi_times = zi_label(g_zi_ctl, TF(UI_12), TC(FIXED_MEDIA_WHITE), 0, 255);
     lv_obj_set_style_text_letter_space(g_zi_times, 1, 0);
-    g_zi_fmt = zi_label(g_zi_ctl, TF(UI_10), zi_accent(), 300, 282);
+    g_zi_fmt = zi_label(g_zi_ctl, TF(UI_10), zi_accent(), 300, 278);
     lv_obj_set_height(g_zi_fmt,lv_font_get_line_height(TF(UI_10)));
     lv_obj_set_style_text_letter_space(g_zi_fmt, 1, 0);
-    g_zi_lyr = zi_label(g_zi_ctl, TF(UI_14), zi_accent(), 0, 310);      /* lyrics on / off */
-    lv_obj_add_flag(g_zi_lyr, LV_OBJ_FLAG_CLICKABLE); lv_obj_set_ext_click_area(g_zi_lyr, 14);
+    g_zi_lyr = zi_label(g_zi_ctl, TF(UI_14), zi_accent(), 0, 302);      /* lyrics on / off */
+    lv_obj_add_flag(g_zi_lyr, LV_OBJ_FLAG_CLICKABLE); lv_obj_set_ext_click_area(g_zi_lyr, 8);   /* clear of the bottom handle */
     ui_on(g_zi_lyr, zi_lyr_cb, LV_EVENT_CLICKED, NULL, "imm.zune.lyrics", UI_REACHABLE);
+    zi_hint_arrow(g_zi_ctl, LV_SYMBOL_UP, LV_ALIGN_BOTTOM_MID, 0, -16);      /* Queue / Up Next */
+    zi_hint_arrow(g_zi_ctl, LV_SYMBOL_LEFT, LV_ALIGN_RIGHT_MID, -16, 0);     /* Search */
     lv_obj_add_flag(g_zi_ctl, LV_OBJ_FLAG_HIDDEN);
     g_zi_big = zi_label(fs, &font_zune_light_72, TC(FIXED_MEDIA_WHITE), 0, 118);
     lv_obj_set_style_text_letter_space(g_zi_big, -3, 0);
@@ -1550,6 +1583,17 @@ void ui_np_fsart_close(void){
     } else anim_fade(fsart, LV_OPA_COVER, LV_OPA_TRANSP, 200, fsart_hidden_cb);
 }
 int ui_np_fsart_active(void){ return fsart_on; }
+/* Home reached from a screen opened over Immersive (Queue, Search, QS): Immersive ends quietly, its buffers go and
+ * Disco's Music pieces come back, as after a Back swipe. */
+void ui_np_fsart_drop(void){
+    if(!fsart || !fsart_on) return;
+    if(g_zi_dim){ zi_scrub(0, 0, 0); if(g_zi_ctl_on) zi_controls(0); }
+    imm_lyric_reset(); lv_anim_delete(&imm_in_tag, NULL); lv_anim_delete(&imm_out_tag, NULL); lv_anim_delete(fsart, NULL);
+    imm_control_reset(); imm_pull = imm_pull_live = 0; fsart_on = 0; imm_volume_input_restore();
+    if(imm_timer){ lv_timer_delete(imm_timer); imm_timer = NULL; }
+    imm_boost = 0; lv_obj_add_flag(fsart, LV_OBJ_FLAG_HIDDEN); imm_cold_release();
+    if(th_disco_family()) dhome_imm_return();
+}
 static void imm_control_reset(void){
     ui_back_hint_left(imm_press.y,0);
     imm_tracking=imm_dragging=imm_anchor_valid=imm_edge=imm_dirty=0;
@@ -1657,12 +1701,19 @@ static void fsart_click_cb(lv_event_t *e){
         lv_indev_t *zin = lv_indev_active(); lv_point_t zp = { 0, 0 }; if(zin) lv_indev_get_point(zin, &zp);
         if(c == LV_EVENT_PRESSED){g_zi_p0=zp;g_zi_moved=0;}
         if(c==LV_EVENT_PRESSING&&(abs(zp.x-g_zi_p0.x)>=16||abs(zp.y-g_zi_p0.y)>=16))g_zi_moved=1;
-        if(c == LV_EVENT_CLICKED){ if(!g_zi_moved && abs(zp.x - g_zi_p0.x) < 16 && abs(zp.y - g_zi_p0.y) < 16 && g_zi_p0.x > 24) zi_controls(!g_zi_ctl_on); return; }
+        if(c == LV_EVENT_CLICKED){
+            if(!g_zi_moved && abs(zp.x - g_zi_p0.x) < 16 && abs(zp.y - g_zi_p0.y) < 16 && g_zi_p0.x > 24){
+                int h = g_zi_ctl_on ? imm_handle_hit(g_zi_p0) : IMM_PULL_NONE;
+                if(h) ui_imm_edge_open(h); else zi_controls(!g_zi_ctl_on);
+            }
+            return;
+        }
     }
     if(c==LV_EVENT_CLICKED)return; /* Left-edge back gesture replaces exit-on-tap. */
     if(!in)return;
     if(c==LV_EVENT_PRESSED){
         imm_control_reset();imm_press=p;imm_edge=p.x<=24;
+        imm_pull=imm_edge||!g_zi_ctl_on?IMM_PULL_NONE:imm_pull_zone(p);imm_pull_live=0;   /* edge pulls only with the controls up */
         if(imm_edge || !imm_control_enabled())return;
         ipc_get_state(&imm_drag_track);imm_action=simple_cfg_get_int("imm_scrub_action",0)==1;
         if(!imm_drag_track.have_track || (!imm_action && imm_drag_track.duration_ms<=0))return;
@@ -1680,6 +1731,23 @@ static void fsart_click_cb(lv_event_t *e){
         int dx=p.x-imm_press.x,dy=abs(p.y-imm_press.y);
         ui_back_hint_left(imm_press.y,0);
         imm_control_reset();if(dx>=ui_get_swipe_thresh() && dx>dy*2)ui_np_fsart_close();return;
+    }
+    if(imm_pull && (c==LV_EVENT_PRESSING || c==LV_EVENT_RELEASED)){
+        int dx=p.x-imm_press.x,dy=p.y-imm_press.y;
+        int in_=imm_pull==IMM_PULL_TOP?dy:imm_pull==IMM_PULL_BOTTOM?-dy:-dx;      /* travel towards the centre */
+        int along=imm_pull==IMM_PULL_RIGHT?abs(dy):abs(dx);
+        if(!imm_pull_live){
+            if(abs(dx)<12 && abs(dy)<12){ if(c==LV_EVENT_PRESSING)return; imm_pull=0; }   /* undecided: no record drag yet */
+            else if(in_>0 && in_>=2*along){ imm_pull_live=1; imm_tracking=0; }           /* inward: the pull owns it */
+            else imm_pull=0;                                                               /* along the rim: circular control */
+        }
+        if(imm_pull_live){
+            if(c==LV_EVENT_RELEASED){
+                int which=imm_pull; imm_pull=imm_pull_live=0;
+                if(in_>=ui_get_swipe_thresh() && in_>=2*along) ui_imm_edge_open(which);
+            }
+            return;
+        }
     }
     if(!imm_tracking)return;
     if(c==LV_EVENT_PRESSING || c==LV_EVENT_RELEASED)imm_control_sample(p);

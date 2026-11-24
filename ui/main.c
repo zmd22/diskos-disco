@@ -3704,8 +3704,19 @@ int main(int argc, char **argv){
         if(g_touch){
             lv_indev_state_t ts = lv_indev_get_state(g_touch);
             lv_point_t p; lv_indev_get_point(g_touch, &p);
+            static int kb_back, kb_sx, kb_sy; static uint32_t kb_ms;
             if(kbinput_active()){
-                /* the modal keyboard owns all touch - don't run nav gestures */
+                /* the modal keyboard owns all touch, except a back swipe from the side edge: it cancels, as the
+                 * keyboard's own cancel does (Zune's Search opens straight into this keyboard) */
+                if(ts==LV_INDEV_STATE_PRESSED && prev_ts==LV_INDEV_STATE_RELEASED){
+                    last_activity = lv_tick_get(); kb_back = BACK_EDGE(p.x); kb_sx = p.x; kb_sy = p.y; kb_ms = lv_tick_get();
+                } else if(ts==LV_INDEV_STATE_PRESSED && kb_back){
+                    if(SIDE_DX(p.x - kb_sx) > 0 && abs(p.x - kb_sx) > 2 * abs(p.y - kb_sy)) ui_back_hint(p.y, SIDE_DX(p.x - kb_sx)); else ui_back_hint(0, 0);
+                } else if(ts==LV_INDEV_STATE_RELEASED && prev_ts==LV_INDEV_STATE_PRESSED && kb_back){
+                    int dx = p.x - kb_sx, adx = abs(dx), ady = abs(p.y - kb_sy);
+                    kb_back = 0; ui_back_hint(0, 0);
+                    if(SIDE_DX(dx) > 0 && adx > ady * 2 && adx >= g_swipe_thresh && lv_tick_elaps(kb_ms) < 700){ onboarding_discovered(HINT_BACK); kbinput_cancel(); }
+                }
             } else if(ts==LV_INDEV_STATE_PRESSED && prev_ts==LV_INDEV_STATE_RELEASED){
                 /* press edge: start of a potential swipe */
                 last_activity = lv_tick_get();
