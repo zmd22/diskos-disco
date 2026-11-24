@@ -422,10 +422,11 @@ void csaver_create(lv_obj_t *root){
 }
 static void sv_progress(void){
     if(!g_sv_bar) return;
-    track_state_t st; ipc_get_state(&st);
-    int v = st.have_track && st.duration_ms > 0 ? (int)(st.position_ms * 1000 / st.duration_ms) : 0;
+    long pos, dur; int playing, on = saver_song(&pos, &dur, &playing);   /* the song's progress */
+    int v = on && dur > 0 ? (int)(pos * 1000 / dur) : 0;
     lv_bar_set_value(g_sv_bar, v < 0 ? 0 : v > 1000 ? 1000 : v, LV_ANIM_OFF);
-    if(g_sv_state) lv_label_set_text(g_sv_state, st.have_track ? (ui_is_playing() ? LV_SYMBOL_PLAY : LV_SYMBOL_PAUSE) : "");
+    if(on) lv_obj_remove_flag(g_sv_bar, LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(g_sv_bar, LV_OBJ_FLAG_HIDDEN);
+    if(g_sv_state) lv_label_set_text(g_sv_state, on ? (playing ? LV_SYMBOL_PLAY : LV_SYMBOL_PAUSE) : "");
 }
 void csaver_set_clock(const char *t, const char *date){
     if(g_sv_clock) lv_label_set_text(g_sv_clock, t ? t : "--:--");
@@ -437,7 +438,6 @@ void csaver_set_track(const char *title, const char *artist){
     int have = title != NULL;
     lv_label_set_text(g_sv_title, have ? (title[0] ? title : "Untitled") : "");
     lv_label_set_text(g_sv_artist, have && artist ? artist : "");
-    if(have) lv_obj_remove_flag(g_sv_bar, LV_OBJ_FLAG_HIDDEN); else lv_obj_add_flag(g_sv_bar, LV_OBJ_FLAG_HIDDEN);
     sv_progress();
 }
 

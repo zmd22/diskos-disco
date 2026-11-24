@@ -1513,11 +1513,49 @@ static void bt_disconnect(const char *mac){
 /* The connected device (any kind: a phone in BT-receiving mode, a speaker when streaming), found by a bounded
  * background probe so the UI thread never waits on bluetoothctl. Cached; re-probed at most every 4 s. */
 static pthread_mutex_t g_pr_mu = PTHREAD_MUTEX_INITIALIZER;
-static char g_pr_name[64]; static int g_pr_conn = 0, g_pr_running = 0; static uint32_t g_pr_at = 0, g_pr_have = 0;
+static char g_pr_name[64], g_pr_codec[16]; static int g_pr_conn = 0, g_pr_running = 0; static uint32_t g_pr_at = 0, g_pr_have = 0;
 /* N04 (Bluetooth findings, 21 Oct): this BlueZ (5.54) can't list only connected devices, so each pass asks about at
  * most 8 of the known ones - first the one found connected last time, then 8 more starting where the previous pass
  * stopped - so a connected device anywhere in a long list is found within a few passes. */
 static int g_pr_offset; static char g_pr_last[18];          /* [g_pr_mu] */
+/* BT DAC song info. The phone only sends title, artist and position after the Disc opens the remote-control link
+ * (AVRCP), which the stock firmware never does. This open it once per connection and then read the phone's player. */
+static bt_track_t g_pt; static uint32_t g_pt_at; static char g_pt_opened[40];   /* guarded by g_pr_mu */
+static void pt_str(const char *buf, const char *key, char *out, int cap){        /* a text value from dbus-send output */
+    out[0] = 0; const char *k = strstr(buf, key); if(!k) return;
+    const char *q = strstr(k + strlen(key), "string \""); if(!q) return;
+    q += 8; int n = 0;
+    while(q[n] && q[n] != '"' && q[n] != '\n' && n < cap - 1) n++;
+    memcpy(out, q, n); out[n] = 0;
+}
+static long pt_num(const char *buf, const char *key){                           /* a number value, -1 if missing */
+    const char *k = strstr(buf, key); if(!k) return -1;
+    const char *q = strstr(k + strlen(key), "uint32 "); return q ? atol(q + 7) : -1;
+}
+static void bt_peer_track(void){                              /* reads the phone's song info, and it run on the background thread */
+    char dev[40] = "", out[4096], cmd[400];
+    if(run_cap_to("bluealsa-cli list-pcms 2>/dev/null | grep -m1 -oE 'dev_[0-9A-F_]{17}'", dev, sizeof dev, 1500) <= 0) return;
+    dev[strcspn(dev, "\r\n")] = 0;
+    for(int i = 0; dev[i]; i++) if(!isalnum((unsigned char)dev[i]) && dev[i] != '_') return;   
+    pthread_mutex_lock(&g_pr_mu); int opened = !strcmp(g_pt_opened, dev); pthread_mutex_unlock(&g_pr_mu);
+    if(!opened){
+        snprintf(cmd, sizeof cmd, "dbus-send --system --print-reply --reply-timeout=5000 --dest=org.bluez /org/bluez/hci0/%s "
+                 "org.bluez.Device1.ConnectProfile string:0000110c-0000-1000-8000-00805f9b34fb >/dev/null 2>&1", dev);
+        run_cap_to(cmd, out, sizeof out, 6000);
+        pthread_mutex_lock(&g_pr_mu); snprintf(g_pt_opened, sizeof g_pt_opened, "%s", dev); pthread_mutex_unlock(&g_pr_mu);
+    }
+    bt_track_t t = {0};
+    snprintf(cmd, sizeof cmd, "p=$(dbus-send --system --print-reply --dest=org.bluez /org/bluez/hci0/%s org.freedesktop.DBus.Properties.Get "
+             "string:org.bluez.MediaControl1 string:Player 2>/dev/null | grep -oE '/org/bluez/[^\"]*'); [ -n \"$p\" ] && dbus-send --system "
+             "--print-reply --dest=org.bluez \"$p\" org.freedesktop.DBus.Properties.GetAll string:org.bluez.MediaPlayer1 2>/dev/null", dev);
+    if(run_cap_to(cmd, out, sizeof out, 1500) > 0){
+        pt_str(out, "\"Title\"", t.title, sizeof t.title); pt_str(out, "\"Artist\"", t.artist, sizeof t.artist);
+        char st[16]; pt_str(out, "\"Status\"", st, sizeof st);
+        t.playing = !strcmp(st, "playing"); t.pos_ms = pt_num(out, "\"Position\""); t.dur_ms = pt_num(out, "\"Duration\"");
+        t.have = t.title[0] != 0;
+    }
+    pthread_mutex_lock(&g_pr_mu); g_pt = t; g_pt_at = lv_tick_get(); pthread_mutex_unlock(&g_pr_mu);
+}
 static void *peer_worker(void *a){
     (void)a; char buf[4096], name[64] = {0}; int conn = 0;
     if(run_cap_to("bluetoothctl devices 2>/dev/null", buf, sizeof buf, 2500) > 0){
@@ -1549,7 +1587,18 @@ static void *peer_worker(void *a){
         if(!conn && n) g_pr_offset = (off + (asked > 8 ? 8 : asked)) % n;   /* next pass continues after these */
         pthread_mutex_unlock(&g_pr_mu);
     }
+    /* BT DAC: the codec the phone is sending, e.g. "AAC" (empty when unknown) */
+    char codec[16] = "", line[160];
+    if(conn && run_cap_to("for p in $(bluealsa-cli list-pcms 2>/dev/null | grep a2dpsnk); do bluealsa-cli info \"$p\" 2>/dev/null; done"
+                          " | grep -i -m1 -E '^[[:space:]]*(selected )?codec:'", line, sizeof line, 1500) > 0){
+        char *c = strchr(line, ':'); int k = 0;
+        if(c) for(c++; *c == ' ' || *c == '\t'; c++);
+        while(c && *c && k < (int)sizeof codec - 1 && (isalnum((unsigned char)*c) || *c == '-')) codec[k++] = (char)toupper((unsigned char)*c++);
+        codec[k] = 0;
+    }
+    if(conn && codec[0]) bt_peer_track(); else { pthread_mutex_lock(&g_pr_mu); g_pt.have = 0; g_pt_opened[0] = 0; pthread_mutex_unlock(&g_pr_mu); }
     pthread_mutex_lock(&g_pr_mu);
+    snprintf(g_pr_codec, sizeof g_pr_codec, "%s", codec);
     g_pr_conn = conn; snprintf(g_pr_name, sizeof g_pr_name, "%s", name); g_pr_have = 1; g_pr_running = 0;
     pthread_mutex_unlock(&g_pr_mu);
     return NULL;
@@ -1569,6 +1618,14 @@ int bt_peer_name(char *out, int cap){
         else { pthread_mutex_lock(&g_pr_mu); g_pr_running = 0; pthread_mutex_unlock(&g_pr_mu); }
     }
     return conn;
+}
+void bt_peer_codec(char *out, int cap){                       /* the last codec read in the background */
+    pthread_mutex_lock(&g_pr_mu); snprintf(out, (size_t)cap, "%s", g_pr_codec); pthread_mutex_unlock(&g_pr_mu);
+}
+int bt_peer_song(bt_track_t *t){                              /* the last song read, position counts on while playing */
+    pthread_mutex_lock(&g_pr_mu); *t = g_pt; uint32_t age = lv_tick_elaps(g_pt_at); pthread_mutex_unlock(&g_pr_mu);
+    if(t->have && t->playing && t->pos_ms >= 0){ t->pos_ms += age; if(t->dur_ms > 0 && t->pos_ms > t->dur_ms) t->pos_ms = t->dur_ms; }
+    return t->have;
 }
 
 /* ---- details screen (SCR_BT_INFO) --------------------------------------- */

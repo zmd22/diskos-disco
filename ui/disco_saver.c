@@ -62,8 +62,8 @@ static lv_obj_t *rim_arc(lv_obj_t *root, lv_color_t c, int w, int opa){
 static void progress(void){                                       /* once a minute */
     if(!g_seg[0]) return;
     int m = simple_cfg_get_int("disco_progress", 0); if(m < 0 || m > 2) m = 0;
-    track_state_t st; ipc_get_state(&st);
-    int deg = (st.have_track && st.duration_ms > 0) ? (int)((long long)st.position_ms * 360 / st.duration_ms) : 0;
+    long pos, dur; int playing;
+    int deg = saver_song(&pos, &dur, &playing) && dur > 0 ? (int)((long long)pos * 360 / dur) : 0;
     if(deg > 360) deg = 360;
     if(th_simple()){static int old_deg=-1,old_mode=-1;if(deg==old_deg&&m==old_mode)return;old_deg=deg;old_mode=m;}
     if(m == 2) lv_obj_add_flag(g_tr, LV_OBJ_FLAG_HIDDEN); else lv_obj_remove_flag(g_tr, LV_OBJ_FLAG_HIDDEN);
@@ -133,7 +133,7 @@ void dsaver_set_weather(const char *s){                           /* "<icon>  14
 }
 void dsaver_set_track(const char *title, const char *artist){
     ptext(g_ti, title ? title : ""); ptext(g_ar, artist ? artist : "");
-    if(g_img){ const void *src = saver_art();
+    if(g_img){ const void *src = saver_mode_active() ? NULL : saver_art();
         if(th_simple()){extern unsigned ui_art_revision(void);static unsigned revision;static const void*previous;static int seen;unsigned current=ui_art_revision();if(seen&&revision==current&&previous==src){if(screen_current()==SCR_SAVER)progress();return;}seen=1;revision=current;previous=src;}
         if(src){ lv_image_set_src(g_img, src); lv_obj_remove_flag(g_img, LV_OBJ_FLAG_HIDDEN); } else lv_obj_add_flag(g_img, LV_OBJ_FLAG_HIDDEN); }
     progress();
