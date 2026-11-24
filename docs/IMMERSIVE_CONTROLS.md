@@ -22,7 +22,7 @@ resumes from the release angle; crossing the centre re-anchors without a jump.
 
 With Circular control on, tapping the cover doesn't exit; use the Back swipe (there's no exit arrow).
 
-## Shortcuts (3.7.0)
+## Shortcuts (3.7.0, fixed in 3.7.1)
 
 While the controls are showing, small arrows sit at the bottom and right edges:
 
@@ -33,6 +33,9 @@ While the controls are showing, small arrows sit at the bottom and right edges:
 Each opens the theme's own screen; Back returns to Immersive, and going Home ends Immersive. With the controls hidden
 the edges do nothing special, so Circular control keeps the whole rim. A pull counts only when it heads towards the
 centre; a drag along the rim stays a seek or volume drag.
+
+In 3.7.0 the Back, Quick Settings and Home gestures stopped working everywhere after one of these shortcuts was
+used; 3.7.1 fixes it.
 
 ## Null
 

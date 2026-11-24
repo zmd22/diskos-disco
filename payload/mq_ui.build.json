@@ -1,15 +1,15 @@
 {
-  "version": "3.7.0",
-  "revision": "Immersive edge shortcuts on the controls (hint arrows; tap or pull to Queue / Up Next and Search, pull down for Quick Settings) and a back swipe on the modal keyboard, so Search takes Back in every theme; USB DAC mode shows the host's sample rate (#34); embedded cover art from Ogg Opus / Vorbis files (#35)",
-  "baseline": "v3.6.1",
-  "ui_source_sha256": "452a99dbad32985ad767763278d87e7515d6f1da62338ebdb820bd22396a8349",
+  "version": "3.7.1",
+  "revision": "Fix: after Queue, Search or Quick Settings was opened from Immersive, the touch loop treated Immersive as owning every touch, so Back, the Quick Settings pull-down and the Home swipe stopped working on every screen. Immersive now owns gestures only on its own screen and ends once Back can no longer reach it.",
+  "baseline": "v3.7.0",
+  "ui_source_sha256": "a1decd3d0853a3f1cb2a9cc17ce8e77b92aa94538e7160d1f0bac8bb366a6f6a",
   "ui_source_hash_recipe": "sorted tracked ui paths: path + NUL + file bytes + NUL",
   "compiler": "musl-cross-make GCC 11.2.0, musl 1.2.6, binutils 2.44 (the versions pinned in ui/toolchain/mcm-config.mak); mipsel-linux-musl, -ffp-contract=off",
   "abi": "static little-endian MIPS32r2, o32, FP64, NaN2008",
-  "status": "Fresh static MIPS build from a clean export of source_base_commit. Host: host-render build, the Immersive edge touch test in all nine themes, artdec Ogg tests and the USB DAC rate test passed. The same source with the label 3.7.0-test (before the keyboard back swipe) was signed and copied to a Disc. This exact binary has not itself been physically tested.",
+  "status": "Fresh static MIPS build from a clean export of source_base_commit. Host: host-render build and the Immersive edge touch test (Disco, Squash, Zune, Null) passed. The same fix labelled 3.7.1-test was signed and copied to the reporting Disc. The broken gesture path runs only on the device; this exact binary has not itself been physically tested.",
   "binary": {
-    "sha256": "f7f5bcad389c374df4f9b454f6c10e790eac9c62601dd7eb433d51ea8a577442",
-    "md5": "7bd3aa4eb82d299abb4ebe85af06ec5b",
+    "sha256": "964eb2eda95f9e74d3241d476babe52bf5a42ce436f7bbd20a3bf1462e808157",
+    "md5": "f4d17e1c8c4d41e9d10523175e71bca8",
     "bytes": 8107832
   },
   "artwork_helper": {
@@ -26,10 +26,10 @@
     "bluealsa": "BlueALSA 4.0.0 (MIT) with build/bluealsa-aptx/patches/0001-0003, embedded in mq_ui",
     "libfreeaptx": "0.1.1 (LGPL-2.1-or-later), embedded as a separate shared library; source in ui/vendor/aptx"
   },
-  "baseline_commit": "c4ff8e83eb6f6dfb24d7a6ab9ebf5d78eb357b96",
-  "source_identity": "Built from source_base_commit (DISCO_VERSION 3.7.0, empty test label). ui_source_sha256 identifies the exact tracked UI snapshot.",
-  "release_tag": "v3.7.0",
-  "source_base_commit": "757eea3e6d51922552e2643160a634765b47dce9",
+  "baseline_commit": "ca844252f32626ba307e0d0d48dfd221e2bd54dc",
+  "source_identity": "Built from source_base_commit (DISCO_VERSION 3.7.1, empty test label). ui_source_sha256 identifies the exact tracked UI snapshot.",
+  "release_tag": "v3.7.1",
+  "source_base_commit": "146794a2017882ae866f9d17a4f16c578eb91a92",
   "crypto": "Monocypher 4.0.2 (BSD-2-Clause or CC0-1.0), unmodified, in ui/vendor/monocypher",
   "flac": "dr_flac 0.13.4 (Unlicense or MIT-0), unmodified, in ui/vendor/dr_flac"
 }

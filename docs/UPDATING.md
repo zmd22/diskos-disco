@@ -20,6 +20,7 @@ until you sign it (step 3).
 
 ## Notes
 
+- **3.7.1** is a normal SD update. Update from 3.7.0: it fixes gestures that stop working after an Immersive shortcut.
 - **3.7.0** is a normal SD update.
 - **3.6.1** is a normal SD update.
 - **3.6.0** is a normal SD update.
@@ -78,7 +79,7 @@ Self-built: `ui/mq_ui` ([DEV_WORKFLOW.md](DEV_WORKFLOW.md)). Never put `host-ren
 ## 3. Sign
 
 ```sh
-sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 3.7.0    # keys in ./diskos-keys, output ./diskos-update/
+sh ui/tools/owner-keys/diskos-sign.sh path/to/mq_ui 3.7.1    # keys in ./diskos-keys, output ./diskos-update/
 ```
 
 Full form: `diskos-sign.sh <binary> [label] [keys-folder] [output-folder]`. The label (≤32 chars of `A-Za-z0-9._-`)

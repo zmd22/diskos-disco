@@ -2,6 +2,13 @@
 
 User-facing changes in diskOS Disco!. Details of each release are in [docs/releases](docs/releases/); everything else is in the Git history. diskOS is beta software.
 
+## 3.7.1
+
+**Fix for 3.7.0.** [Release notes](docs/releases/v3.7.1.md)
+
+- After Queue, Up Next, Search or Quick Settings was opened from Immersive's shortcuts, the Back swipe, the Quick
+  Settings pull-down and the Home swipe stopped working on every screen. Fixed; please update from 3.7.0.
+
 ## 3.7.0
 
 **Immersive shortcuts, Back in Search, USB DAC rate, Ogg covers.** [Release notes](docs/releases/v3.7.0.md)
