@@ -3928,7 +3928,7 @@ int main(int argc, char **argv){
          * brightness=0 while leaving bl_power=0 (FB_BLANK_UNBLANK) - the panel is black but the LED
          * rail is still powered (device-measured 2026-09-02: power-off -> br 6->0, bl_power stays 0).
          * diskOS never writes brightness=0 itself (ui_backlight(0) writes ONLY bl_power=4), so
-         * brightness==0 && bl_power==0 is unambiguously a player-side blank. Catch it on a slow poll,
+         * brightness==0 is unambiguously a player-side blank, whatever bl_power reads. Catch it on a slow poll,
          * fully power the rail down (bl_power=4) and sync bl_state=2 so only a touch wakes. When the
          * player raises brightness again (a second power press), bring the panel back to match. */
         if(lv_tick_elaps(last_blpoll) >= 250){
@@ -3943,9 +3943,18 @@ int main(int argc, char **argv){
                 else if(cbr == 0){ player_blanked = 1; lock_sent = 0; }
                 else if(lv_tick_elaps(lock_sent) > 3000){ fprintf(stderr, "lock: the player did not lock\n"); lock_sent = 0; }
             }
-            if(cbr == 0 && cbp == 0){
-                /* player blanked via brightness-only -> cut the rail. Won't re-fire (bl_power now 4). */
+            if(cbr == 0 && !player_blanked){
+                /* player blanked (brightness 0) -> cut the rail. Also when diskOS had already cut it itself: the
+                 * Screen Off timer leaves the player believing the screen is lit, so a power press on that dark screen
+                 * makes the player sleep panel and touch (touch can no longer wake it) while bl_power is already 4.
+                 * Checking bl_power == 0 here missed that press, the next one woke the player but not the backlight,
+                 * and the screen stayed black until a reboot. The press was meant to wake: press once more so the
+                 * player wakes panel and touch, and the branch below lights the screen. Not with Lock on Timeout, whose
+                 * own off already goes through the player and whose lock may land late. Won't re-fire (player_blanked). */
+                int ui_was_off = cbp == 4 && bl_state == 2 && !simple_cfg_get_int("lock_on_timeout", 0);
                 ui_backlight(0); bl_state = 2; player_blanked = 1;
+                if(ui_was_off && player_power_press() != 0)
+                    fprintf(stderr, "screen: could not wake the player after its blank\n");
             } else if(player_blanked && cbr > 0){
                 /* player un-blanked (2nd power press restored brightness) -> restore the panel. */
                 /* The player restores ITS OWN remembered level, not the one set in Quick Settings / Display, so the
