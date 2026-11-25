@@ -18,6 +18,8 @@ Restore. The tabbed layout (3.4.0) is experimental; screenshots show the earlier
   <img src="windows/install.png" width="400" alt="Install: installing on the Disc">
 </p>
 
+**Video walkthrough here: https://www.youtube.com/watch?v=BAjo35i0ULM by /u/mo1988ali/ on reddit**
+
 **[Download diskOS-Disco-for-Windows.zip](https://github.com/zmd22/diskos-disco/releases/latest/download/diskOS-Disco-for-Windows.zip)**
 
 ## How it works
