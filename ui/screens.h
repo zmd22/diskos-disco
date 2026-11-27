@@ -158,6 +158,12 @@ void modes_create(lv_obj_t *root);        /* Working Mode (audio source) picker 
 void modeinfo_create(lv_obj_t *root);     /* SCR_MODEINFO: the active working mode, big icon + live status */
 void modeinfo_refresh(void);
 int  bt_peer_name(char *out, int cap);    /* connected BT device (cached, non-blocking): 1 + its name, or 0 */
+void bt_peer_codec(char *out, int cap);   /* BT DAC: the phone's codec, e.g. "AAC"; empty if unknown */
+typedef struct { int have, playing; long pos_ms, dur_ms; char title[96], artist[96]; } bt_track_t;
+int  bt_peer_song(bt_track_t *t);         /* BT DAC: the phone's song; returns 1 if there is one */
+int  saver_song(long *pos_ms, long *dur_ms, int *playing);   /* song progress for the screensaver; returns 0 if none */
+void modes_saver_lines(int m, char *l1, int c1, char *l2, int c2);   /* screensaver text for a mode: name (+ rate/codec), song */
+int  saver_mode_active(void);             /* 1 when the screensaver shows a mode instead of the local song */
 void modes_open(void);                     /* refresh selection + show SCR_WORKMODE */
 /* source/working mode: 0=Local 1=USB-DAC 2=BT-Receiving 3=USB-Storage */
 int  ui_set_source_mode(int mode);         /* replay the stock V2.28 switch sequence; 0=ok -1=bad arg */

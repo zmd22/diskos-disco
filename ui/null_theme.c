@@ -727,7 +727,7 @@ void null_art_changed(void)
         lv_image_set_src(saver_bg,lv_image_get_src(bg));
         lv_image_set_scale(saver_bg,lv_image_get_scale_x(bg));
         lv_obj_update_layout(bg);lv_obj_set_pos(saver_bg,lv_obj_get_x(bg),lv_obj_get_y(bg));
-        if(lv_obj_has_flag(bg,LV_OBJ_FLAG_HIDDEN))lv_obj_add_flag(saver_bg,LV_OBJ_FLAG_HIDDEN);
+        if(lv_obj_has_flag(bg,LV_OBJ_FLAG_HIDDEN)||saver_mode_active())lv_obj_add_flag(saver_bg,LV_OBJ_FLAG_HIDDEN);
         else lv_obj_remove_flag(saver_bg,LV_OBJ_FLAG_HIDDEN);
         lv_obj_set_style_bg_opa(saver_wash,(kind==2?164:153)+26,0);
     }
@@ -1284,6 +1284,7 @@ void null_saver_weather(const char *w)
 void null_saver_track(const char *t,const char *a)
 {
     char upper[192];theme_upper(upper,sizeof upper,t?t:"");text_set(strack,upper);text_set(sartist,a?a:"");
+    if(saver_bg&&saver_mode_active())lv_obj_add_flag(saver_bg,LV_OBJ_FLAG_HIDDEN);   /* other modes: hide the cover */
 }
 /* Shared screen grammar: black canvas, square controls, pixel headers, fine
  * pixel reading text. No screen is rebuilt here, so its action registry, list

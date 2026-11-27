@@ -67,8 +67,8 @@ static void ring_place(int frac){
 }
 static void ring_progress(void){                /* called when the minute changes */
     if(!g_rring) return;
-    track_state_t st; ipc_get_state(&st);
-    int f = (st.have_track && st.duration_ms > 0) ? (int)((long long)st.position_ms * 1000 / st.duration_ms) : 0;
+    long pos, dur; int playing, on = saver_song(&pos, &dur, &playing);
+    int f = on && dur > 0 ? (int)((long long)pos * 1000 / dur) : 0;
     if(f > 1000) f = 1000;
     lv_arc_set_value(g_rring, f); ring_place(f);
 }
@@ -403,7 +403,7 @@ static void relayout(int style)
                                           ring && theme_ring_light() ? TC(SURFACE) : TC(SCRIM), 0);
     lv_obj_t *rparts[] = { g_rring, g_rdisc };
     for (unsigned i = 0; i < 2; i++)
-        if (rparts[i]) { if (ring && g_have_track) lv_obj_remove_flag(rparts[i], LV_OBJ_FLAG_HIDDEN);
+        if (rparts[i]) { long p_, d_; int pl_; if (ring && saver_song(&p_, &d_, &pl_)) lv_obj_remove_flag(rparts[i], LV_OBJ_FLAG_HIDDEN);
                          else lv_obj_add_flag(rparts[i], LV_OBJ_FLAG_HIDDEN); }
     lv_color_t dimw = ring ? TC(SAVER_TITLE) : TC(FIXED_MEDIA_WHITE);
     if (g_clock) lv_obj_set_style_text_color(g_clock, dimw, 0);
@@ -590,8 +590,40 @@ void saver_set_accent(lv_color_t c)
 
 /* apply the saved style + current accent immediately when the saver is shown, rather
  * than waiting for the next clock tick (which is where style changes were applied). */
+int saver_mode_active(void){ int m = ui_get_source_mode(); return (m >= 1 && m <= 3) || m == 5; }   /* USB DAC, BT DAC, USB storage, AirPlay */
+int saver_song(long *pos_ms, long *dur_ms, int *playing){
+    int m = ui_get_source_mode();
+    if(m == 2){
+        bt_track_t t; if(!bt_peer_song(&t) || t.dur_ms <= 0) return 0;
+        *pos_ms = t.pos_ms < 0 ? 0 : t.pos_ms; *dur_ms = t.dur_ms; *playing = t.playing; return 1;
+    }
+    if(m != 0 && m != 5) return 0;
+    track_state_t st; ipc_get_state(&st);
+    if(!st.have_track || (m == 5 && st.duration_ms <= 0)) return 0;
+    *pos_ms = st.position_ms; *dur_ms = st.duration_ms; *playing = ui_is_playing(); return 1;
+}
+/* Outside Playback the screensaver shows the mode on line 1 (with rate or codec) and the song, if known, on line 2.
+ * Back in Playback it shows the current song again. */
+static void saver_put(const char *title, const char *artist, const void *backdrop_src, const char *path);
+static void saver_mode_sync(void)
+{
+    static int was; static char last[240];
+    int on = saver_mode_active();
+    if(!on && !was) return;
+    was = on;
+    if(on){
+        char l1[32], l2[200], now[240]; modes_saver_lines(ui_get_source_mode(), l1, sizeof l1, l2, sizeof l2);
+        snprintf(now, sizeof now, "%s\n%s", l1, l2);
+        if(strcmp(now, last)){ snprintf(last, sizeof last, "%s", now); saver_put(l1, l2, NULL, NULL); }
+        return;
+    }
+    last[0] = 0;
+    track_state_t st; ipc_get_state(&st);
+    saver_put(st.have_track ? st.title : NULL, st.have_track ? st.artist : NULL, ui_current_backdrop_src(), st.have_track ? st.path : NULL);
+}
 void saver_show_sync(void)
 {
+    saver_mode_sync();
     if(th_braun() || th_disco_family() || th_null() || th_zune() || th_classic()) return;
     int s = simple_cfg_get_int("saver_style", 0);
     if (s != g_style) { relayout(s); g_style = s; }
@@ -658,6 +690,7 @@ static void saver_clock_style_cb(lv_event_t *e)
 
 void saver_set_clock(const char *t, const char *date)
 {
+    if(screen_current() == SCR_SAVER) saver_mode_sync();   /* keep rate, codec and song up to date */
     if(th_null()){null_saver_clock(t,date);return;}
     if(th_disco_family()){ dsaver_set_clock(t); return; }
     if(th_braun()){ bsaver_set_clock(t); return; }
@@ -701,7 +734,13 @@ void saver_set_weather(const char *text)
     weather_apply();
 }
 
+/* Outside Playback, a song update redraws the mode lines instead of showing the local song. */
 void saver_set_track(const char *title, const char *artist, const void *backdrop_src, const char *path)
+{
+    if(!saver_mode_active()) saver_put(title, artist, backdrop_src, path);
+    else if(screen_current() == SCR_SAVER) saver_mode_sync();
+}
+static void saver_put(const char *title, const char *artist, const void *backdrop_src, const char *path)
 {
     if(th_null()){null_saver_track(title,artist);return;}
     if(th_disco_family()){ dsaver_set_track(title, artist); return; }
@@ -710,8 +749,8 @@ void saver_set_track(const char *title, const char *artist, const void *backdrop
     if(th_classic()){ csaver_set_track(title, artist); return; }
     /* The caller passes a non-NULL title iff st.have_track (NULL when no track), so key off
      * NULL-ness, not emptiness - a valid but untitled file still counts as a loaded track. */
-    g_have_track = (title != NULL);
-    if (g_rdisc_img){ const void *dsc = ui_current_cover_dsc(); lv_image_set_src(g_rdisc_img, NULL);
+    g_have_track = (title != NULL) && !saver_mode_active();
+    if (g_rdisc_img){ const void *dsc = saver_mode_active() ? NULL : ui_current_cover_dsc(); lv_image_set_src(g_rdisc_img, NULL);
         if (dsc){ const lv_image_dsc_t *d = dsc; lv_image_set_src(g_rdisc_img, dsc);
                   if (d->header.w > 0) lv_image_set_scale(g_rdisc_img, (uint32_t)(SR_DISC * 256 / d->header.w) + 2);
                   lv_obj_center(g_rdisc_img); } }

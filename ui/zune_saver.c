@@ -28,7 +28,7 @@ static struct {
     lv_obj_t *mt, *mmer, *mdate, *mtitle, *martist, *hint;    /* with music */
     lv_obj_t *ptrack, *pfill, *ptime;                         /* with music: how far into the song */
     lv_obj_t *it, *ic, *im, *imer, *iday, *idate;             /* idle: hours, colon, minutes as three labels (tint) */
-    int have;
+    int have, md;
     char t[32];int clock_ready,day_key,tint_key,source_key,prog_ready;uint32_t accent_key,prog_at;unsigned art_revision;
 
 } Z;
@@ -47,11 +47,13 @@ static void zprog_tick(lv_timer_t *t){
     (void)t;
     if(!Z.root||!Z.ptrack||Z.have<=0||screen_current()!=SCR_SAVER||ui_display_is_off())return;
     if(Z.prog_ready&&lv_tick_elaps(Z.prog_at)<500)return;Z.prog_ready=1;Z.prog_at=lv_tick_get();
-    track_state_t st; ipc_get_state(&st);
-    long dur = st.duration_ms, pos = st.position_ms; if(pos > dur && dur > 0) pos = dur;
+    long dur = 0, pos = 0; int playing, on = saver_song(&pos, &dur, &playing);
+    int vis = on && simple_cfg_get_int("zlock_src", 0) == 0; show(Z.ptrack, vis); show(Z.ptime, vis);
+    if(!on) return;
+    if(pos > dur && dur > 0) pos = dur;
     char a[16], b[16], l[40]; fmt_ms(a, sizeof a, pos); fmt_ms(b, sizeof b, dur);
     if(dur > 0) snprintf(l, sizeof l, "%s / %s", a, b); else snprintf(l, sizeof l, "%s", a);
-    if(strcmp(lv_label_get_text(Z.ptime),st.have_track?l:""))lv_label_set_text(Z.ptime,st.have_track?l:"");
+    if(strcmp(lv_label_get_text(Z.ptime),l))lv_label_set_text(Z.ptime,l);
     int width=dur>0?(int)(132LL*pos/dur):0;if(width<0)width=0;if(width>132)width=132;
     if(lv_obj_get_style_width(Z.pfill,0)!=width)lv_obj_set_width(Z.pfill,width);
 }
@@ -96,7 +98,8 @@ void zsaver_create(lv_obj_t *root){
 }
 static void layout(void){
     int m = Z.have > 0 && simple_cfg_get_int("zlock_src", 0) == 0;   /* Clock Only: the big clock even with music */
-    show(Z.art, m); show(Z.mt, m); show(Z.mdate, m); show(Z.mtitle, m); show(Z.martist, m); show(Z.hint, m); show(Z.ptrack, m); show(Z.ptime, m);
+    int song = m && !Z.md;                                          /* other modes: no cover; zprog_tick shows progress */
+    show(Z.art, song); show(Z.mt, m); show(Z.mdate, m); show(Z.mtitle, m); show(Z.martist, m); show(Z.hint, m); show(Z.ptrack, song); show(Z.ptime, song);
     show(Z.it, !m); show(Z.ic, !m); show(Z.im, !m); show(Z.iday, !m); show(Z.idate, !m);
     show(Z.mmer, m && lv_label_get_text(Z.mmer)[0]); show(Z.imer, !m && lv_label_get_text(Z.imer)[0]);
     zsaver_set_visible(screen_current()==SCR_SAVER&&!ui_display_is_off());
@@ -172,7 +175,7 @@ void zsaver_set_visible(int on){
 }
 void zsaver_set_track(const char *title,const char *artist){
     if(!Z.root)return;
-    int have=title!=NULL,changed=Z.have!=have;Z.have=have;
+    int have=title!=NULL,md=saver_mode_active(),changed=Z.have!=have||Z.md!=md;Z.have=have;Z.md=md;
     zsaver_set_visible(screen_current()==SCR_SAVER&&!ui_display_is_off());
     if(strcmp(lv_label_get_text(Z.mtitle),title?title:""))lv_label_set_text(Z.mtitle,title?title:"");
     if(strcmp(lv_label_get_text(Z.martist),artist?artist:""))lv_label_set_text(Z.martist,artist?artist:"");

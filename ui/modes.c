@@ -639,6 +639,22 @@ static int uac_rate(void){
         }
     globfree(&g); return hz > 0 ? hz : 0;
 }
+void modes_saver_lines(int m, char *l1, int c1, char *l2, int c2){
+    l2[0] = 0;
+    if(m == 1){
+        snprintf(l1, c1, "USB DAC");
+        int hz = udc_host_connected() ? uac_rate() : 0;
+        if(hz > 0) snprintf(l2, c2, "%d.%d kHz", hz / 1000, (hz % 1000) / 100);
+    } else if(m == 2){                                       /* "BT AAC", then the phone's song */
+        char nm[64], cd[16] = ""; bt_track_t t;
+        if(bt_peer_name(nm, sizeof nm)) bt_peer_codec(cd, sizeof cd);
+        snprintf(l1, c1, "BT%s%s", cd[0] ? " " : " DAC", cd);
+        if(bt_peer_song(&t)) snprintf(l2, c2, "%s%s%s", t.title, t.artist[0] ? " - " : "", t.artist);
+    } else if(m == 5){
+        track_state_t ts; ipc_get_state(&ts); snprintf(l1, c1, "AirPlay");
+        if(ts.have_track && ts.title[0]) snprintf(l2, c2, "%s%s%s", ts.title, ts.artist[0] ? " - " : "", ts.artist);
+    } else snprintf(l1, c1, "USB storage");
+}
 static void mi_spin_exec(void *var, int32_t v){ lv_arc_set_rotation((lv_obj_t *)var, v % 360); }
 static void mi_set_wait(int wait){                           /* Ring: a turning arc while waiting, a full ring when connected */
     if(wait == g_mi_wait) return;
@@ -693,8 +709,11 @@ static void modeinfo_fill(int m){
         case 2: {                                            /* BT DAC: a phone / computer plays to the Disc */
             char nm[64]; int c = bt_peer_name(nm, sizeof nm); wait = !c;
             snprintf(st, sizeof st, c ? "Connected" : "Waiting for a device");
-            if(c) snprintf(d1, sizeof d1, "%s", nm); else snprintf(d1, sizeof d1, "Pair from the other device");
-            snprintf(d2, sizeof d2, "Volume %d", ts.volume > 0 ? ts.volume : 0);
+            bt_track_t t;
+            if(c && bt_peer_song(&t)) snprintf(d1, sizeof d1, "%s%s%s", t.title, t.artist[0] ? " - " : "", t.artist);
+            else if(c) snprintf(d1, sizeof d1, "%s", nm); else snprintf(d1, sizeof d1, "Pair from the other device");
+            char cd[16] = ""; if(c) bt_peer_codec(cd, sizeof cd);
+            snprintf(d2, sizeof d2, "%s%sVolume %d", cd, cd[0] ? " - " : "", ts.volume > 0 ? ts.volume : 0);
         } break;
         case 4: {                                            /* BT streaming: the Disc plays to a speaker */
             char nm[64]; int c = bt_peer_name(nm, sizeof nm); wait = !c;
