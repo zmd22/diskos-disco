@@ -112,6 +112,47 @@ class SharpDecoderTest(unittest.TestCase):
         subprocess.run([str(self.exe), "poster", str(source), str(output)], check=True)
         self.assertEqual(output.read_bytes(), bytes((12, 57, 209, 255)) * 364 * 364)
 
+    def opus_file(self, name, value, prefix=b""):
+        comment = b"METADATA_BLOCK_PICTURE=" + value
+        tags = (b"OpusTags" + struct.pack("<I", 4) + b"test" +
+                struct.pack("<I", 1) + struct.pack("<I", len(comment)) + comment)
+        head = b"OpusHead" + b"\x01\x02" + b"\0" * 9
+        source = self.root / name
+        source.write_bytes(prefix + ogg_page(head, 1234, 0, 2) + ogg_page(tags, 1234, 1))
+        return source
+
+    def test_opus_cover_base64_variants(self):
+        # a one-colour picture whose FLAC picture block is not a multiple of 3 bytes, so its base64 carries padding
+        image = next(png(w, 4, (209, 57, 12)) for w in range(4, 12) if len(flac_picture(png(w, 4, (209, 57, 12)))) % 3)
+        encoded = base64.b64encode(flac_picture(image))
+        self.assertTrue(encoded.endswith(b"="))   # the unpadded case below really drops padding
+        wrapped = b"\n".join(encoded[i:i + 76] for i in range(0, len(encoded), 76))
+        for label, value in (("unpadded", encoded.rstrip(b"=")), ("wrapped", wrapped),
+                             ("crlf", wrapped.replace(b"\n", b"\r\n") + b"\r\n")):
+            with self.subTest(label=label):
+                source = self.opus_file(label + ".opus", value)
+                output = self.root / (label + ".bgra")
+                subprocess.run([str(self.exe), "poster", str(source), str(output)], check=True)
+                self.assertEqual(output.read_bytes(), bytes((12, 57, 209, 255)) * 364 * 364)
+        for label, value in (("short-pad", encoded.rstrip(b"=") + b"=" * 3),
+                             ("data-after-pad", encoded + b"QQ=="), ("bad-char", encoded[:8] + b"*" + encoded[9:])):
+            with self.subTest(label=label):
+                source = self.opus_file(label + ".opus", value)
+                output = self.root / (label + ".bgra")
+                result = subprocess.run([str(self.exe), "poster", str(source), str(output)], capture_output=True)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertFalse(output.exists())
+
+    def test_id3_tag_before_ogg(self):
+        image = png(4, 4, (209, 57, 12))
+        frame = b"TIT2" + struct.pack(">I", 3) + b"\0\0" + b"\0ab"
+        size = bytes(((len(frame) >> 21) & 127, (len(frame) >> 14) & 127, (len(frame) >> 7) & 127, len(frame) & 127))
+        source = self.opus_file("id3.opus", base64.b64encode(flac_picture(image)),
+                                prefix=b"ID3\x04\0\0" + size + frame)
+        output = self.root / "id3.bgra"
+        subprocess.run([str(self.exe), "poster", str(source), str(output)], check=True)
+        self.assertEqual(output.read_bytes(), bytes((12, 57, 209, 255)) * 364 * 364)
+
     def test_vorbis_ogg_cover_art(self):
         image = png(4, 4, (209, 57, 12))
         ident = (b"\x01vorbis" + struct.pack("<I", 0) + b"\x02" +

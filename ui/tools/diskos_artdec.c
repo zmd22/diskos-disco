@@ -394,37 +394,41 @@ static int ascii_equal(const unsigned char *p, size_t n, const char *s){
     return i == n && s[i] == 0;
 }
 
+static int b64_val(unsigned char c){
+    if(c >= 'A' && c <= 'Z') return c - 'A';
+    if(c >= 'a' && c <= 'z') return c - 'a' + 26;
+    if(c >= '0' && c <= '9') return c - '0' + 52;
+    if(c == '+') return 62;
+    if(c == '/') return 63;
+    return -1;
+}
+static int b64_space(unsigned char c){ return c == ' ' || c == '\t' || c == '\r' || c == '\n'; }
+/* Lenient where real taggers differ, strict everywhere else: whitespace anywhere is skipped (base64 wrapped at 76
+ * columns, as the `base64` tool writes it) and the '=' padding may be left out; padding, when present, must be
+ * complete and come last, and any other byte rejects the value. */
 static int decode_base64(const unsigned char *p, size_t n, unsigned char **out, size_t *outlen){
-    if(n == 0 || (n & 3)) return -1;
-    size_t pad = p[n - 1] == '=' ? 1 : 0;
-    if(n > 1 && p[n - 2] == '=') pad++;
-    size_t len = n / 4 * 3 - pad;
+    size_t digits = 0, pad = 0;
+    for(size_t i = 0; i < n; i++){
+        unsigned char c = p[i];
+        if(b64_space(c)) continue;
+        if(c == '='){ pad++; continue; }
+        if(pad || b64_val(c) < 0) return -1;                 /* data after padding, or not base64 */
+        digits++;
+    }
+    size_t rem = digits & 3;
+    if(digits == 0 || rem == 1 || pad > 2 || (pad && (rem == 0 || rem + pad != 4))) return -1;
+    size_t len = digits / 4 * 3 + (rem ? rem - 1 : 0);
     if(len > MAX_PIC_BYTES + (64u << 10)){ g_limited = 1; return -1; }
     unsigned char *q = bmalloc(len);
     if(!q){ g_limited = 1; return -1; }
     size_t o = 0;
-    for(size_t i = 0; i < n; i += 4){
-        unsigned int v = 0;
-        int count = 0;
-        for(int j = 0; j < 4; j++){
-            unsigned char c = p[i + (size_t)j];
-            int x;
-            if(c >= 'A' && c <= 'Z') x = c - 'A';
-            else if(c >= 'a' && c <= 'z') x = c - 'a' + 26;
-            else if(c >= '0' && c <= '9') x = c - '0' + 52;
-            else if(c == '+') x = 62;
-            else if(c == '/') x = 63;
-            else if(c == '=' && i + 4 == n && j >= 2 && !(j == 2 && p[i + 3] != '=')) x = 0;
-            else { bfree(q); return -1; }
-            if(c != '=') count++;
-            v = (v << 6) | (unsigned int)x;
-        }
-        if((i + 4 < n && count != 4) || (i + 4 == n && count != 4 - (int)pad)){
-            bfree(q); return -1;
-        }
-        if(o < len) q[o++] = (unsigned char)(v >> 16);
-        if(o < len) q[o++] = (unsigned char)(v >> 8);
-        if(o < len) q[o++] = (unsigned char)v;
+    unsigned int v = 0;
+    int bits = 0;
+    for(size_t i = 0; i < n && o < len; i++){
+        int x = b64_val(p[i]);
+        if(x < 0) continue;                                   /* whitespace or the trailing padding */
+        v = (v << 6) | (unsigned int)x; bits += 6;
+        if(bits >= 8){ bits -= 8; q[o++] = (unsigned char)(v >> bits); v &= (1u << bits) - 1; }
     }
     *out = q; *outlen = len;
     return 0;
@@ -503,8 +507,8 @@ static void parse_vorbis_comments(const unsigned char *p, size_t n){
     parse_comment_fields(p, n, 7, 1);
 }
 
-static void parse_ogg(void){
-    uint64_t off = 0;
+static void parse_ogg(uint64_t start){
+    uint64_t off = start;
     uint32_t serial = 0;
     int have_serial = 0, packet_no = 0, packet_open = 0, tags_seen = 0, pages = 0, codec = 0;
     unsigned char *packet = NULL;
@@ -1019,13 +1023,17 @@ int main(int argc, char **argv){
             parse_id3_at(0, g_fsize);
             uint64_t after = 10 + (uint64_t)sz + ((h10[5] & 0x10) ? 10 : 0);   /* v2.4 footer */
             unsigned char f4[4];
-            if(after + 4 <= g_fsize && rd(after, f4, 4) == 0 && !memcmp(f4, "fLaC", 4)) parse_flac(after);
+            if(after + 4 <= g_fsize && rd(after, f4, 4) == 0){
+                if(!memcmp(f4, "fLaC", 4)) parse_flac(after);
+                /* an ID3v2 tag some tools put in front of an Ogg file: the Ogg stream (and its cover) follows it */
+                else if(!memcmp(f4, "OggS", 4)) parse_ogg(after);
+            }
         } else g_malformed = 1;
     }
     else if(hn >= 4 && !memcmp(head, "fLaC", 4)) parse_flac(0);
     else if(hn >= 8 && !memcmp(head + 4, "ftyp", 4)) mp4_walk(0, g_fsize, 0, 0);
     else if(hn >= 12 && !memcmp(head, "RIFF", 4) && !memcmp(head + 8, "WAVE", 4)) parse_wav();
-    else if(hn >= 4 && !memcmp(head, "OggS", 4)) parse_ogg();
+    else if(hn >= 4 && !memcmp(head, "OggS", 4)) parse_ogg(0);
     else if(img_sig(head, hn)) add_cand(1, NULL, 0, g_fsize);
     else if(hn == 0) return ST_MALFORMED;
     else if(g_fsize > 3 && (head[0] == 0xFF && (head[1] & 0xE0) == 0xE0)) return ST_NOPIC;   /* bare MPEG audio */
