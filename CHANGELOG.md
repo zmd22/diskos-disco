@@ -2,6 +2,15 @@
 
 User-facing changes in diskOS Disco!. Details of each release are in [docs/releases](docs/releases/); everything else is in the Git history. diskOS is beta software.
 
+## 3.7.2
+
+**Screensaver modes, a black-screen fix, more Opus covers.** [Release notes](docs/releases/v3.7.2.md)
+
+- **Screensaver:** shows USB DAC (with the rate), BT DAC (codec and the phone's song), AirPlay or USB storage instead
+  of the last local song (#36, by @powahbeng).
+- **Screen Off:** a power press on a screen that had turned off by itself no longer leaves the Disc black (#37, by @ericklv).
+- **Covers:** Opus / Ogg pictures with line-wrapped or unpadded data, and Ogg files with an ID3 tag in front.
+
 ## 3.7.1
 
 **Fix for 3.7.0.** [Release notes](docs/releases/v3.7.1.md)
